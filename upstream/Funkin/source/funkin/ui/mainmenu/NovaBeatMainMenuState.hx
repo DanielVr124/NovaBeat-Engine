@@ -8,6 +8,7 @@ import flixel.text.FlxTextAlign;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
 import funkin.save.Save;
 import funkin.audio.FunkinSound;
@@ -180,19 +181,20 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int(height * 0.62));
+    logo.setGraphicSize(0, Std.int(height * 0.54));
     logo.updateHitbox();
-    logo.screenCenter();
-    logo.y = height * 0.035;
+    logo.x = (width - logo.width) * 0.5;
+    logo.y = height * 0.43 - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
     titleLogo = logo;
     add(logo);
 
-    titlePrompt = addLabel(0, height * 0.815, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
-    titleTapHint = addLabel(0, height * 0.875, width, 'OR TAP ANYWHERE TO START', 12, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
+    titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
+    titleTapHint = addLabel(0, height * 0.915, width, 'OR TAP ANYWHERE TO START', 12, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
 
-    titleOptionsButton = addLabel(width - 88, 25, 62, '⚙', 30, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
+    addRoundRect(width - 86, 25, 48, 48, 15, 15, 0xB806102D);
+    titleOptionsButton = addLabel(width - 86, 30, 48, '⚙', 24, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
     titleOptionsButton.alpha = 0.9;
     titleOptionsButton.scrollFactor.set();
   }
@@ -297,8 +299,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     homeAudioButton = addLabel(FlxG.width - margin - 118, buttonY, 48, '♫', 25, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
     homeOptionsButton = addLabel(FlxG.width - margin - 58, buttonY, 48, '⚙', 25, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
 
-    addSolid(FlxG.width - margin - 118, buttonY - 3, 48, 48, 0xB806102D);
-    addSolid(FlxG.width - margin - 58, buttonY - 3, 48, 48, 0xB806102D);
+    addRoundRect(FlxG.width - margin - 118, buttonY - 3, 48, 48, 15, 15, 0xB806102D);
+    addRoundRect(FlxG.width - margin - 58, buttonY - 3, 48, 48, 15, 15, 0xB806102D);
     // Draw the glyphs after their button plates so they stay on top.
     bringToFront(homeAudioButton);
     bringToFront(homeOptionsButton);
@@ -339,11 +341,11 @@ class NovaBeatMainMenuState extends MusicBeatState
       var itemX:Float = tileLayout ? firstX + column * (buttonW + gap) : firstX;
       var itemY:Float = firstY + row * (buttonH + gap);
 
-      var panel:FlxSprite = addSolid(itemX, itemY, buttonW, buttonH, 0xFF0D1935);
+      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 14, 14, 0xFF0D1935);
       panel.alpha = 0.93;
       rowBackgrounds.push(panel);
 
-      var accent:FlxSprite = addSolid(itemX, itemY + buttonH * 0.16, 4, buttonH * 0.68, accentColor());
+      var accent:FlxSprite = addRoundRect(itemX, itemY + buttonH * 0.16, 4, buttonH * 0.68, 3, 3, accentColor());
       accent.alpha = 0.38;
       rowAccents.push(accent);
 
@@ -389,15 +391,15 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     featureKicker = addLabel(x + 34, y + 38, width - 68, 'YOUR GAME. YOUR WAY.', 11, 0xFF8EA4DC, FlxTextAlign.LEFT, 'Arial');
     featureTitle = addLabel(x + 34, y + 78, width - 68, ITEM_TITLES[0], 54, 0xFFF8FAFF, FlxTextAlign.LEFT, 'Arial Black');
-    featureTitle.lineSpacing = -4;
     featureDescription = addLabel(x + 34, y + 192, width - 68, ITEM_DESCRIPTIONS[0], 15, 0xFFB1BFDC, FlxTextAlign.LEFT, 'Arial');
     featureDescription.wordWrap = true;
+    featureDescription.autoSize = false;
 
     var metaY:Float = y + height * 0.60;
     for (index in 0...ITEM_META[0].length)
     {
       var pillX:Float = x + 34 + index * 118;
-      var pill:FlxSprite = addSolid(pillX, metaY, 108, 27, 0x231A2C58);
+      var pill:FlxSprite = addRoundRect(pillX, metaY, 108, 27, 13, 13, 0x231A2C58);
       var pillText:FlxText = addLabel(pillX + 5, metaY + 7, 98, ITEM_META[0][index], 9, 0xFFB9C9EC, FlxTextAlign.CENTER, 'Arial');
       pill.alpha = 1;
       featureMeta.push(pillText);
@@ -571,8 +573,18 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function addPanel(x:Float, y:Float, width:Float, height:Float, borderColor:FlxColor):Void
   {
-    addSolid(x, y, width, height, borderColor);
-    addSolid(x + 2, y + 2, width - 4, height - 4, 0xF0061028);
+    addRoundRect(x, y, width, height, 28, 28, borderColor);
+    addRoundRect(x + 2, y + 2, width - 4, height - 4, 26, 26, 0xF0061028);
+  }
+
+  function addRoundRect(x:Float, y:Float, width:Float, height:Float, radiusX:Float, radiusY:Float, color:FlxColor):FlxSprite
+  {
+    var sprite:FlxSprite = new FlxSprite(x, y);
+    FlxSpriteUtil.drawRoundRect(sprite, 0, 0, width, height, radiusX, radiusY, color);
+    sprite.scrollFactor.set();
+    sprite.cameras = [uiCamera];
+    add(sprite);
+    return sprite;
   }
 
   function addSolid(x:Float, y:Float, width:Float, height:Float, color:FlxColor):FlxSprite
@@ -597,7 +609,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   ):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(fontName, size, color, alignment);
+    label.setFormat(fontName, size, color, alignment, null, FlxColor.TRANSPARENT, false);
     label.scrollFactor.set();
     label.cameras = [uiCamera];
     add(label);
