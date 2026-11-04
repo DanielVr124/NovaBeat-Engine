@@ -1,0 +1,172 @@
+name: NovaBeat HTML5 browser test build
+
+# Separate experimental browser build. Native Windows/Android builds remain unchanged.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - ".gitmodules"
+      - "upstream/Funkin/**"
+      - ".github/workflows/novabeat-html5.yml"
+      - "docs/HTML5_TESTING.md"
+      - "README.md"
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - ".gitmodules"
+      - "upstream/Funkin/**"
+      - ".github/workflows/novabeat-html5.yml"
+      - "docs/HTML5_TESTING.md"
+      - "README.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: novabeat-html5-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  html5:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[web-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
+    name: HTML5 browser test build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out NovaBeat and pinned FNF asset repositories
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: "4.3.7"
+
+      - name: Confirm source and pinned content repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f upstream/Funkin/source/Main.hx
+          test -f upstream/Funkin/project.hxp
+          test -f upstream/Funkin/LICENSE.md
+          test -f upstream/Funkin/assets/LICENSE.md
+          test -f upstream/Funkin/art/LICENSE.md
+
+      - name: Configure patched Haxe libraries and install pinned dependencies
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib fixrepo --global || true
+          haxelib --debug --never --global install haxelib 4.1.0
+          haxelib --debug --never --global set haxelib 4.1.0
+          haxelib --global remove haxelib git || true
+          haxelib --global remove hmm || true
+          rm -rf .haxelib
+          haxelib --debug --never --global git haxelib https://github.com/FunkinCrew/haxelib.git funkin-patches --skip-dependencies
+          haxelib --debug --never --global git hmm https://github.com/FunkinCrew/hmm funkin-patches
+          haxelib --debug --never newrepo
+          haxelib --global run hmm install -q
+
+      - name: Install Linux Wayland build prerequisites for Lime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+          command -v wayland-scanner
+          wayland-scanner --version
+
+      - name: Compile HXCPP support tools required by Lime
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Build Lime native support tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
+      - name: Build HTML5 release
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime build html5 -v -release -DGITHUB_BUILD
+
+      - name: Verify and package browser build
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+
+          index_file="$(find export -type f -name index.html -print -quit)"
+          if [[ -z "$index_file" ]]; then
+            echo "::error title=HTML5 output missing::Lime completed without producing an index.html. Inspect the build log above."
+            find export -maxdepth 5 -type f -print 2>/dev/null | head -200 || true
+            exit 1
+          fi
+
+          web_root="$(dirname "$index_file")"
+          test -s "$index_file"
+
+          js_file="$(find "$web_root" -maxdepth 2 -type f -name '*.js' -print -quit)"
+          if [[ -z "$js_file" ]]; then
+            echo "::error title=JavaScript bundle missing::The HTML5 output has no JavaScript bundle."
+            find "$web_root" -maxdepth 3 -type f -print | head -200 || true
+            exit 1
+          fi
+
+          cat > "$web_root/NOVABEAT-WEB-TESTING.txt" <<'EOF'
+          NovaBeat Engine — private HTML5 browser test build
+
+          This is a static browser build of NovaBeat Engine. Extract the complete
+          ZIP before running it; do not open index.html directly from File Explorer.
+
+          Windows:
+            1. Open PowerShell in this extracted folder.
+            2. Run: py -m http.server 8000
+            3. Open http://localhost:8000 in Chrome.
+
+          macOS / Linux:
+            1. Open a terminal in this extracted folder.
+            2. Run: python3 -m http.server 8000
+            3. Open http://localhost:8000 in your browser.
+
+          Keep the local server terminal open while testing. Press Ctrl+C to stop it.
+
+          Browser-only limitations may apply. Editors and features that depend on
+          native desktop APIs are not expected to be available in this test build.
+          EOF
+
+          package="$PWD/export/NovaBeat-HTML5.zip"
+          mkdir -p "$(dirname "$package")"
+          (cd "$web_root" && zip -qr "$package" .)
+          test -s "$package"
+
+          digest="$(sha256sum "$package" | awk '{print $1}')"
+          {
+            echo "## NovaBeat HTML5 browser build succeeded"
+            echo
+            echo "- Web root: $web_root"
+            echo "- Package: upstream/Funkin/export/NovaBeat-HTML5.zip"
+            echo "- SHA-256: `$digest`"
+            echo "- Includes a local HTTP server quick-start guide."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML5 package for automatic release publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-html5
+          path: upstream/Funkin/export/NovaBeat-HTML5.zip
+          if-no-files-found: error
+          retention-days: 14
