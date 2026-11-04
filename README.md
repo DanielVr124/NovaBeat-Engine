@@ -22,25 +22,17 @@ iOS is intentionally outside the project scope. NovaBeat does not plan to ship a
 
 See [ROADMAP.md](ROADMAP.md) for the prioritized plan and [docs/APPROVED_BACKLOG.md](docs/APPROVED_BACKLOG.md) for the approved proposal list.
 
-## Current source baseline
+## Repository status
 
-The initial development baseline supplied for this project is Friday Night Funkin' **0.8.6**.
+This repository currently contains the project README, roadmap, and approved backlog. The complete upstream FNF source tree has **not** yet been imported into this repository.
 
-The `patches/FNF-0.8.6-Mod-Manager.patch` file contains the initial native desktop Mod Manager source changes prepared against that baseline. It is a patch, not a complete copy of the upstream game source. The Windows build and runtime behavior have **not** yet been verified.
+The owner-provided baseline archive is Friday Night Funkin' **0.8.6**. A separate updated source ZIP and a patch-only ZIP have been prepared in the development conversation, but the GitHub integration available in this session cannot push a multi-file binary archive or bulk-import the full source tree. Do not treat this repository as buildable yet.
 
-The supplied source archive references the official `assets` and `art` Git submodules. Those contents are not included in the uploaded archive and must be initialized separately before a complete build can be produced.
+The source archive also references the official `assets` and `art` Git submodules. Those contents were not included in the uploaded archive and must be initialized separately before a complete build can be produced.
 
-## Applying the initial patch
+## Source import next step
 
-1. Obtain the exact FNF 0.8.6 source tree and initialize its required submodules.
-2. From the root of that source tree, apply the patch:
-   ```sh
-   git apply /path/to/FNF-0.8.6-Mod-Manager.patch
-   ```
-3. Review the changes, install the Haxe/Lime dependencies, and build the Windows target using the upstream compiling guide.
-4. Run the mod-manager test checklist in `docs/MOD_MANAGER.md`.
-
-The current patch is desktop-first. Android support for the native manager, Android file importing, portrait/landscape layouts, and orientation-aware transitions are planned work and must not be considered implemented yet.
+To make this repository independently buildable, import the complete FNF 0.8.6 source tree, preserve its upstream license notices, initialize the `assets` and `art` submodules, and then apply/review the NovaBeat Mod Manager source changes. The current Mod Manager integration is desktop-first; Android manager UI, Android file importing, portrait/landscape layouts, and orientation-aware transitions remain planned work.
 
 ## Upstream and licensing
 
