@@ -140,11 +140,141 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  android:
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
+    name: Android mobile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Check out NovaBeat and pinned FNF asset repositories
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK, build tools, and the Lime-compatible NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-29 platforms;android-35 build-tools;35.0.0 ndk;29.0.13113456"
+
+      - name: Configure Android SDK and NDK paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/.android/sdk}}"
+          ndk_root="$sdk_root/ndk/29.0.13113456"
+          test -d "$sdk_root/platforms/android-35"
+          test -d "$ndk_root"
+          {
+            echo "ANDROID_HOME=$sdk_root"
+            echo "ANDROID_SDK_ROOT=$sdk_root"
+            echo "ANDROID_SDK=$sdk_root"
+            echo "ANDROID_NDK_HOME=$ndk_root"
+            echo "ANDROID_NDK_ROOT=$ndk_root"
+            echo "ANDROID_NDK=$ndk_root"
+          } >> "$GITHUB_ENV"
+
+      - name: Confirm upstream assets were checked out
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f upstream/Funkin/source/Main.hx
+          test -f upstream/Funkin/project.hxp
+          test -f upstream/Funkin/LICENSE.md
+          test -f upstream/Funkin/assets/LICENSE.md
+          test -f upstream/Funkin/art/LICENSE.md
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: "4.3.7"
+
+      - name: Configure patched Haxe libraries and install pinned dependencies
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib fixrepo --global || true
+          haxelib --debug --never --global install haxelib 4.1.0
+          haxelib --debug --never --global set haxelib 4.1.0
+          haxelib --global remove haxelib git || true
+          haxelib --global remove hmm || true
+          rm -rf .haxelib
+          haxelib --debug --never --global git haxelib https://github.com/FunkinCrew/haxelib.git funkin-patches --skip-dependencies
+          haxelib --debug --never --global git hmm https://github.com/FunkinCrew/hmm funkin-patches
+          haxelib --debug --never newrepo
+          haxelib --global run hmm install -q
+
+      - name: Install Linux Wayland build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+          command -v wayland-scanner
+          wayland-scanner --version
+
+      - name: Compile HXCPP support tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Build Lime native tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
+      - name: Configure Lime Android SDK paths
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime config ANDROID_SDK "$ANDROID_SDK"
+          haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_ROOT"
+          haxelib run lime config JAVA_HOME "$JAVA_HOME"
+          haxelib run lime config ANDROID_SETUP true
+
+      - name: Build Android debug APK
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime build android -v -debug -DGITHUB_BUILD
+
+      - name: Verify Android APK
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          apk="$(find export -type f -name '*.apk' ! -name 'NovaBeat-Android.apk' -print -quit)"
+          test -n "$apk"
+          test -s "$apk"
+          cp "$apk" export/NovaBeat-Android.apk
+          test -s export/NovaBeat-Android.apk
+          digest="$(sha256sum export/NovaBeat-Android.apk | awk '{print $1}')"
+          {
+            echo "## Android mobile build succeeded"
+            echo
+            echo "- Output: export/NovaBeat-Android.apk"
+            echo "- SHA-256: `$digest`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Android package for automatic release publishing
         uses: actions/upload-artifact@v4
         with:
           name: novabeat-android
-          path: upstream/Funkin/export/**/*.apk
+          path: upstream/Funkin/export/NovaBeat-Android.apk
           if-no-files-found: error
           retention-days: 14
 
