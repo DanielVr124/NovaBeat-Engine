@@ -11,6 +11,7 @@ on:
       - "docs/BUILDING.md"
       - "README.md"
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
@@ -26,6 +27,7 @@ concurrency:
 
 jobs:
   windows:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
     name: Windows desktop
     runs-on: windows-2022
     timeout-minutes: 180
@@ -82,7 +84,6 @@ jobs:
           set -euo pipefail
           haxelib run lime rebuild cpp -64
 
-
       - name: Build Windows release
         shell: bash
         working-directory: upstream/Funkin
@@ -106,6 +107,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   android:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
     name: Android mobile
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -172,7 +174,7 @@ jobs:
           rm -rf .haxelib
           haxelib --debug --never --global git haxelib https://github.com/FunkinCrew/haxelib.git funkin-patches --skip-dependencies
           haxelib --debug --never --global git hmm https://github.com/FunkinCrew/hmm funkin-patches
-          haxelib --debug --never newrepo
+          haxelib --global newrepo
           haxelib --global run hmm install -q
 
       - name: Install Linux Wayland build prerequisites
@@ -208,7 +210,6 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_ROOT"
           haxelib run lime config JAVA_HOME "$JAVA_HOME"
           haxelib run lime config ANDROID_SETUP true
-
 
       - name: Build Android debug APK
         shell: bash

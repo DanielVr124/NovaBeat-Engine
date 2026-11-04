@@ -9,6 +9,16 @@ NovaBeat currently uses the official Friday Night Funkin' v0.8.6 source tree ven
 
 Android's upstream v0.8.6 project configuration currently targets landscape orientation. A successful Android compile does not mean NovaBeat's separate portrait-and-landscape UI requirement is complete.
 
+## Build cadence
+
+Full platform compiles are intentionally **not** run for every small code change.
+
+- Small changes and individual fixes are reviewed without launching the full Windows and Android toolchains.
+- Run both platform builds after a requested feature set is implemented or a substantial batch of changes is ready.
+- Run a full build before treating a milestone as build-verified.
+
+The [NovaBeat platform build checks workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) is opt-in. It runs when manually dispatched, when a relevant commit to `main` includes `[full-build]` in its commit message, or when a pull request title includes `[full-build]`. For a pull request, add the marker only when the feature batch is ready to compile, then remove it after the run to prevent later small updates from triggering another full build.
+
 ## Clone the repository
 
 Use recursive submodule checkout so the exact pinned `assets` and `art` revisions are available:
@@ -97,16 +107,7 @@ haxelib run lime build android -v -debug -DGITHUB_BUILD
 
 The debug build does not need a release keystore. Lime writes the APK beneath the Android export directory under `export/`.
 
-## Automated build checks
-
-GitHub Actions workflow [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) builds Windows and Android independently on pushes to `main`, pull requests, and manual runs. Each job verifies the expected executable/APK exists and records its SHA-256 in the workflow summary.
-
-The workflow intentionally does **not** upload or publish EXE/APK binaries. The upstream `assets` and `art` repositories contain proprietary material whose licenses prohibit public redistribution by anyone other than the copyright owner. Keep any personally produced build private and follow those licenses.
-
 ## What a green build means
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. Neither result alone verifies runtime behavior on every PC or phone, and neither completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
 
-## Run the checks manually
-
-Open the repository's **Actions** tab, select **NovaBeat platform build checks**, and choose **Run workflow** to start both platform builds on demand.
