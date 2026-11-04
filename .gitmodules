@@ -1,0 +1,3 @@
+[submodule "upstream/Funkin"]
+	path = upstream/Funkin
+	url = https://github.com/FunkinCrew/Funkin.git
