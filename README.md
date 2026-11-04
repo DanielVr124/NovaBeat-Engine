@@ -33,7 +33,7 @@ The repository includes independent Windows desktop and Android build checks, pl
 
 ## Build verification
 
-The [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) workflow compiles a Windows release executable and an Android debug APK independently. The separate [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) packages the experimental browser build. Builds containing upstream FNF art and assets are delivered only through the private NovaBeat-Builds repository because those content licenses prohibit public redistribution.
+The [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) workflow compiles Windows and Android independently. The separate [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) packages the experimental browser build. Every successfully packaged target, including pull-request builds, is automatically published by a separate workflow to the private NovaBeat-Builds Releases because upstream FNF art and assets cannot be redistributed publicly.
 
 ## Development status
 
