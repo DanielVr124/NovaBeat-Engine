@@ -93,7 +93,7 @@ jobs:
           {
             echo "## Windows desktop build succeeded"
             echo
-            echo "- Output: `$exe`"
+            echo "- Output: $exe"
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -167,6 +167,16 @@ jobs:
           haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
+      - name: Configure Lime Android SDK paths
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime config ANDROID_SDK "$ANDROID_SDK"
+          haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_ROOT"
+          haxelib run lime config JAVA_HOME "$JAVA_HOME"
+          haxelib run lime config ANDROID_SETUP true
+
       - name: Compile HXCPP support tools
         shell: bash
         working-directory: upstream/Funkin
@@ -194,7 +204,7 @@ jobs:
           {
             echo "## Android mobile build succeeded"
             echo
-            echo "- Output: `$apk`"
+            echo "- Output: $apk"
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 

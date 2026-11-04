@@ -85,9 +85,13 @@ Set the Android toolchain paths before building:
 - `ANDROID_NDK_HOME`, `ANDROID_NDK_ROOT`, and `ANDROID_NDK` to its `ndk/29.0.13113456` directory.
 - `JAVA_HOME` to the JDK 17 installation.
 
-Then build from `upstream/Funkin/`:
+Then, from `upstream/Funkin/`, register the toolchain paths with Lime and build:
 
 ```bash
+haxelib run lime config ANDROID_SDK "$ANDROID_HOME"
+haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_HOME"
+haxelib run lime config JAVA_HOME "$JAVA_HOME"
+haxelib run lime config ANDROID_SETUP true
 haxelib run lime build android -v -debug -DGITHUB_BUILD
 ```
 
