@@ -161,7 +161,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-    background.setGraphicSize(width, height);
+    var backgroundScale:Float = Math.max(width / background.width, height / background.height);
+    background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
@@ -179,7 +180,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(Std.int(Math.min(width * 0.56, height * 0.56)), Std.int(height * 0.62));
+    logo.setGraphicSize(0, Std.int(height * 0.62));
     logo.updateHitbox();
     logo.screenCenter();
     logo.y = height * 0.035;
@@ -244,7 +245,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     compactLayout = screenW < 950 || screenH > screenW * 1.12;
 
     // Preserve the V4 full-screen composition, not the upstream menuBG scene.
-    buildBackdrop();
+    if (backgroundSprite == null) buildBackdrop();
 
     var margin:Float = compactLayout ? Math.max(20, screenW * 0.035) : screenW * 0.042;
     buildTopBar(margin);
@@ -391,7 +392,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     featureTitle.lineSpacing = -4;
     featureDescription = addLabel(x + 34, y + 192, width - 68, ITEM_DESCRIPTIONS[0], 15, 0xFFB1BFDC, FlxTextAlign.LEFT, 'Arial');
     featureDescription.wordWrap = true;
-    featureDescription.autoSize = false;
 
     var metaY:Float = y + height * 0.60;
     for (index in 0...ITEM_META[0].length)
@@ -481,7 +481,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var options = Save.instance.options;
     if (!options.menuReduceMotion && options.menuAnimatedBackground && backgroundSprite != null)
     {
-      backgroundSprite.alpha = 1.0 + Math.sin(animationClock * 0.45) * 0.012;
+      backgroundSprite.alpha = 0.985 + Math.sin(animationClock * 0.45) * 0.015;
     }
 
     if (!options.menuReduceMotion && options.menuAudioVisualizer)
