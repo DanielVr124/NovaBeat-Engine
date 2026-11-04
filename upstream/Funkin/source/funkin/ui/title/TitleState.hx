@@ -206,17 +206,22 @@ class TitleState extends MusicBeatState
 
   function playMenuMusic():Void
   {
-    var shouldFadeIn:Bool = (FlxG.sound.music == null);
-    // Load music. Includes logic to handle BPM changes.
-    FunkinSound.playMusic('freakyMenu', {
+    // playMusic returns true only when it actually starts a new track. Checking
+    // whether the previous music object was null is not enough: Flixel can retain
+    // a stopped music object, which would otherwise leave this track at volume 0.
+    var didStart:Bool = FunkinSound.playMusic('freakyMenu', {
       startingVolume: 0.0,
       overrideExisting: true,
       restartTrack: false,
       // Continue playing this music between states, until a different music track gets played.
       persist: true
     });
-    // Fade from 0.0 to 1 over 4 seconds
-    if (shouldFadeIn) FlxG.sound.music.fadeIn(4.0, 0.0, 1.0);
+
+    // Fade in every newly-started track; leave an already-playing freakyMenu untouched.
+    if (didStart && FlxG.sound.music != null)
+    {
+      FlxG.sound.music.fadeIn(4.0, 0.0, 1.0);
+    }
   }
 
   function getIntroTextShit():Array<Array<String>>
