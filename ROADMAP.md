@@ -1,167 +1,349 @@
-# NovaBeat Engine — Prioritized Development Roadmap
+# NovaBeat Engine — Complete Milestone Roadmap
 
 **Project:** Friday Night Funkin': NovaBeat Engine  
 **Tagline:** A New Rhythm. A New Experience.  
-**Initial code baseline:** Friday Night Funkin' 0.8.6  
-**Targets:** Windows PC and Android phones/tablets  
-**Android layouts:** Portrait and landscape  
-**Out of scope:** iOS; a separate launcher
+**Engine baseline:** Friday Night Funkin' 0.8.6  
+**Supported targets:** Windows PC and Android phones/tablets  
+**Android layouts:** Portrait and landscape are both required  
+**Not planned:** iOS or a separate launcher
 
-This roadmap organizes the approved proposals into implementation stages. It is a plan, not a claim that these systems already exist. Items should move to "complete" only after implementation, compilation, and testing on the relevant platforms.
+This is the master implementation plan for the approved NovaBeat backlog. It groups the work into milestones in dependency order. It is a plan, not a claim that the listed features already exist. A milestone is complete only after its code is merged, the relevant builds pass, and its acceptance checks are completed.
 
-## Guiding principles
+## Product rules
 
-1. Keep the familiar FNF experience intact while adding optional NovaBeat capabilities.
-2. Build shared engine systems once, then provide platform-specific Windows and Android interfaces where filesystem, input, or display behavior differs.
-3. Treat Android portrait and landscape as first-class layouts, not a rotated desktop UI.
-4. Prefer stable, testable releases over adding every proposal at once.
-5. Design extension points and mod APIs before building advanced editors that depend on them.
-6. Treat mods as untrusted packages: validate archives, avoid path traversal, show dependency and compatibility information, and make recovery possible.
-7. Do not promise instant enable/disable when the game needs a restart to rebuild asset registries.
+1. **Keep the original FNF experience intact.** NovaBeat should feel like the familiar official game first: preserve its core gameplay, songs, characters, timing, animations, and established flows. NovaBeat systems should extend the game rather than replace the original experience without a clear reason.
+2. **The Mod Manager is in-game.** It belongs inside the game menus. NovaBeat is not getting a separate launcher.
+3. **Windows and Android are first-class targets.** Shared systems should be implemented once where practical, with platform-specific file access, input, storage, display, and UI behavior where necessary.
+4. **Android is not just a rotated desktop layout.** Phone portrait, phone landscape, and tablet layouts need deliberate responsive design, with orientation-specific HUD arrangements.
+5. **Mods are untrusted packages.** Validate archives, block path traversal, detect invalid metadata and conflicts, explain dependencies, and provide backup/recovery.
+6. **Build only at useful checkpoints.** Small changes get code review and focused checks. Full Windows and Android builds are reserved for substantial feature batches, platform-sensitive changes, and release candidates.
+7. **Do not overstate completion.** A feature is not "done" because a screen exists; its workflows, error handling, persistence, relevant platforms, and regression tests must work.
 
-## Priority and release stages
+## Current project status
 
-### Stage 0 — Establish the source and build foundation
-**Priority: P0 — required before feature work can be validated**
+<badge color="warning">Foundation in progress</badge>
 
-- Import the complete FNF 0.8.6 source tree into this repository, including the correct upstream notices and required submodules.
-- Record the precise upstream revision and document how NovaBeat changes are applied.
-- Restore and verify the `assets` and `art` submodules; the supplied source ZIP did not include their contents.
-- Set up reproducible Windows and Android build instructions.
-- Produce baseline builds before introducing further changes.
-- Add regression checks for startup, save migration, mod loading, gameplay, and platform-specific file access.
-- Introduce platform capability wrappers for file pickers, archive import, storage paths, orientation, and window operations.
-- Establish an issue/bug-report template and a clear development status convention.
+- The FNF 0.8.6 source tree has been imported into upstream/Funkin; the separately licensed upstream assets and art repositories remain pinned submodules.
+- The opt-in Windows/Android build workflow and private build-delivery workflow are in the repository.
+- A Windows native compilation has succeeded in CI once, but the earlier run did not retain a downloadable package. Private release delivery is being wired through the separate private NovaBeat-Builds repository.
+- Android compilation has not yet been confirmed as successful.
+- The Mod Manager and the other approved NovaBeat feature proposals remain planned work; they are not implemented by the source import or build setup.
+- Android currently inherits the upstream landscape-only configuration. Portrait support and responsive layouts remain unfinished.
 
-**Exit criteria:** Clean Windows and Android builds from the repository, with baseline gameplay and save data verified.
+The first completed milestone must prove that clean, downloadable baseline builds can be produced and that original FNF behavior remains intact before feature work expands.
 
-### Stage 1 — Native Mod Manager MVP
-**Priority: P1 — first user-facing milestone**
+---
 
-Build the Mod Manager as a real FNF screen, accessible from the game's own menus. Do not require a separate launcher.
+# Milestones
 
-**Core capabilities**
-- Browse installed mods and display title, author, version, description, compatibility, enabled state, and package information.
-- Enable/disable mods with persistent settings and clear restart-required indicators.
-- Install compatible ZIP packages and reject unsafe or malformed archives.
+## M0 — Repository, source, and delivery foundation
+**Priority:** P0 · **Status:** In progress
+
+**Purpose:** Make the project reproducible and establish a dependable way to build and deliver both supported platforms.
+
+**Work**
+- Keep the exact FNF 0.8.6 source revision pinned and document how upstream changes are adopted.
+- Preserve all upstream license notices and the separate assets/art submodule pins.
+- Keep the Windows and Android dependency versions documented and reproducible.
+- Maintain independent Windows-only, Android-only, and combined build selections.
+- Package the Windows output as a ZIP containing the required runtime files, not just an isolated executable.
+- Package the Android output as an APK.
+- Publish successful outputs to Releases in the private NovaBeat-Builds repository; never publish proprietary game assets through the public source repository.
+- Record build commit, platform, package name, size, and SHA-256 in release notes or the workflow summary.
+- Keep build logs and failure summaries easy to inspect.
+
+**Acceptance checks**
+- A clean Windows CI build produces a launchable package.
+- A clean Android CI build produces an installable debug APK.
+- Windows-only and Android-only runs do not build the other platform.
+- Private release uploads are confirmed by checking the actual release and its downloadable assets.
+- Build instructions, required dependencies, and delivery location are documented.
+
+**Exit:** Both baseline platforms can be built and their output packages can be downloaded from the private build repository.
+
+## M1 — Original FNF parity and platform baseline
+**Priority:** P0 · **Status:** Planned; follows M0
+
+**Purpose:** Establish that NovaBeat remains recognizably and functionally the original FNF before layering on new systems.
+
+**Shared FNF behavior to preserve**
+- Main-menu navigation and the original game flow.
+- Story Mode, Freeplay, song selection, difficulties, and results.
+- Character, stage, animation, chart, note, scoring, health, and timing behavior.
+- Existing options, input behavior, save data, and supported original content.
+- Existing mod loading behavior while the new manager is being developed.
+- Existing cutscenes, audio playback, transitions, and gameplay rendering.
+
+**Windows baseline**
+- Keyboard, mouse, and controller navigation.
+- Windowed and fullscreen modes.
+- Save/configuration persistence and normal file access.
+- Existing chart/gameplay behavior and supported mod folders.
+
+**Android baseline**
+- Official-style touch gameplay and mobile navigation.
+- Android lifecycle behavior, pause/resume, and audio focus.
+- Native document/file access where the upstream engine supports it.
+- Phone and tablet input and rendering checks.
+- Build and test the actual Android package; compilation alone is not proof of behavior.
+
+**Acceptance checks**
+- Start the game, navigate menus, play songs, finish/retry, change settings, restart, and confirm saved settings persist.
+- Compare core flows against the FNF 0.8.6 baseline; document intentional NovaBeat differences.
+- Confirm no regressions to note timing, audio sync, or input response.
+- Verify the existing mod loading path still works.
+
+**Exit:** Original game flows are verified on Windows and Android, and a baseline regression checklist exists.
+
+## M2 — Android mobile experience: portrait, landscape, and tablets
+**Priority:** P0/P1 · **Status:** Planned
+
+**Purpose:** Make Android feel like a proper mobile FNF build rather than a desktop game forced onto a phone.
+
+**Major work**
+- Remove the inherited landscape-only assumption and support both portrait and landscape.
+- Create intentional portrait and landscape layouts for menus, gameplay, HUD, results, options, and future manager screens.
+- Adapt layouts to phone and tablet aspect ratios, safe areas, cutouts, and different screen sizes.
+- Smoothly respond to device rotation without broken layout, lost input, black frames, or interrupted state.
+- Allow optional orientation lock in settings.
+- Save separate HUD arrangements for portrait and landscape.
+- Ensure touch controls remain usable and configurable in both orientations.
+
+**Android QoL**
+- Adjustable touch-button size, spacing, position, and hitbox transparency.
+- Multiple touchscreen control presets.
+- Adjustable touch feedback vibration.
+- Bluetooth/external controller support.
+- Android share-sheet mod importing and ZIP import from downloads.
+- Correct scoped-storage and permission handling.
+- Battery-saving performance preset and automatic graphics-quality adjustment.
+- Tablet-specific interface layouts.
+- Automatic pause/audio handling when the app is backgrounded.
+
+**Acceptance checks**
+- Test representative phone and tablet sizes in portrait and landscape.
+- Rotate during menus and gameplay; verify no broken or overlapping UI and no lost progress.
+- Test touch, Bluetooth controller, pause/resume, audio focus, ZIP import, and storage permissions.
+- Verify each orientation's saved HUD layout is restored correctly.
+
+**Exit:** Android supports usable portrait and landscape experiences on phones and tablets, with mobile input and storage flows verified.
+
+## M3 — Native in-game Mod Manager MVP
+**Priority:** P1 · **Status:** Planned · **First major NovaBeat feature**
+
+**Purpose:** Give players a polished, safe way to manage mods without leaving the game or using a separate launcher.
+
+**Core manager**
+- Add a Mod Manager entry to the game's own menus.
+- Browse installed mods with title, author, version, description, compatibility, enabled state, and package information.
+- Provide a detail page with metadata, screenshots where supplied, and changelog.
+- Install compatible ZIP packages and reject malformed, unsafe, or unsupported archives.
+- Enable and disable mods with persistent settings and a clear restart-required indicator where a restart is necessary.
 - Delete mods only after confirmation.
-- Search by title and author; sort and filter by compatibility, version, and installation date.
-- Show mod changelogs and a detail page with screenshots where metadata provides them.
-- Detect duplicates, missing dependencies, incompatible versions, and likely conflicts.
-- Support an import queue, batch installation/removal, and progress feedback.
-- Provide one-click backup and restoration, plus recently deleted recovery.
-- Support local groups, personal notes, labels, and favorites.
-- Offer safe mode and useful mod-loading error reports.
+- Search, sort, and filter installed mods.
+- Detect duplicate mods, missing dependencies, incompatible versions, and likely conflicts.
+- Provide safe mode and clear mod-loading error reports.
+- Support a queue for imports and show progress, success, and failure states.
 
 **Windows implementation**
-- Native file picker and drag-and-drop ZIP installation.
-- Open the mods directory in Explorer.
-- Remember separate keyboard/controller preferences and selected manager item.
+- Native file picker.
+- Drag-and-drop ZIP installation.
+- Open the mods directory in Windows Explorer.
 
 **Android implementation**
 - Native Android document picker and share-sheet import.
-- Use app-accessible storage locations and handle scoped-storage permissions properly.
-- Portrait and landscape layouts for all manager pages.
-- Tablet layouts and adaptive controls.
-- Make archive import, backup, restore, and delete work within Android storage rules.
+- Import compatible ZIP files from Downloads and other provider apps.
+- Use app-accessible storage and respect scoped-storage rules.
+- Every manager screen works in portrait and landscape.
 
-**Exit criteria:** Verified install/enable/restart/disable/delete cycles on Windows and Android, including portrait and landscape testing on Android.
+**Acceptance checks**
+- Install, enable, restart, disable, update/replace, and delete a test mod.
+- Try malformed ZIPs, unsafe paths, duplicate packages, missing dependencies, and incompatible versions.
+- Confirm the base game still launches when a mod fails.
+- Verify all flows with mouse/keyboard/controller on Windows and touch/controller on Android.
 
-### Stage 2 — NovaBeat UI identity and navigation
-**Priority: P1/P2 — establish a consistent engine feel**
+**Exit:** A player can safely install and manage local mods end-to-end on both platforms.
 
-- Apply consistent NovaBeat styling to the main menus, Options, Mod Manager, loading screens, and results screens.
-- Add a reusable transition service so screens do not implement unrelated one-off wipes.
-- Add the requested diagonal transition as the signature NovaBeat transition (full specification below).
-- Implement interface scaling, per-resolution layouts, compact mode, animation-speed controls, notification behavior, and navigation history.
-- Add global settings search, contextual help, a searchable shortcut list, and first-run guidance.
-- Ensure all menus work with mouse, keyboard, controller, and Android touch.
+## M4 — Mod Manager Plus and local mod library
+**Priority:** P1/P2 · **Status:** Planned
 
-**Requested signature transition — Nova Diagonal Dissolve**
-- **Reveal / undissolve:** a soft diagonal reveal travels from the top-left corner toward the bottom-right corner.
-- **Cover / load-away:** the opposite direction, from bottom-right toward top-left.
-- Use a smooth eased edge rather than a harsh straight cut; the diagonal boundary should travel continuously across the screen.
-- Reuse the same transition implementation for menu navigation, editor entry/exit, song loading, results, and other state changes.
-- Keep it performant on lower-end Android devices and avoid a black-frame flash.
-- Respect a future reduced-motion option and allow duration/easing to be tuned centrally.
-- This should become a signature visual treatment, not a reason to delay core functionality.
+**Purpose:** Expand the MVP into a convenient library for players with larger mod collections.
 
-**Exit criteria:** Consistent navigation and transition behavior across the game's major screens, with portrait/landscape-safe rendering.
+**Major work**
+- Local searchable mod repository/library.
+- Isolated mod saves and separate mod/profile progress.
+- Mod compatibility graph showing dependencies and conflicts.
+- Compatible dependency discovery and user-approved automatic dependency installation.
+- Mod pages/details, changelogs, author/version information, and compatibility status.
+- Import queue for multiple mods.
+- Remember last selected mod and manager location.
 
-### Stage 3 — Mod architecture and developer extension foundation
-**Priority: P2 — make future systems safe and extensible**
+**Mod Manager QoL**
+- Batch install and batch removal.
+- Mod folders, groups, favorites, notes, and personal labels.
+- Automatic duplicate detection and clearer duplicate resolution.
+- One-click mod backup and restore.
+- Recently deleted mod recovery.
+- Queue progress and per-package error reporting.
+- Search by author and version.
+- Filters for compatibility and recently installed.
+- Bulk export selected mods.
 
-- Publish the NovaBeat Mod SDK and documented external developer API.
-- Add versioned mod configuration schemas and a browsable Mod API Explorer.
-- Add an engine event bus and stable registration points for custom gameplay components and asset types.
-- Design extension modules and optional plugin architecture with explicit compatibility checks.
-- Add script performance inspection and developer diagnostics.
-- Support isolated mod save data so different mods or mod profiles do not overwrite unrelated progress.
-- Visualize dependencies and conflicts in a compatibility graph.
-- Install dependencies only after compatibility checks and user approval.
-- Maintain a searchable local mod repository.
-- Add third-party editor integration points.
-- Document extension permissions and validate packages before enabling them.
+**Acceptance checks**
+- Manage a larger test library with duplicates, dependencies, incompatible versions, and multiple profiles.
+- Verify isolated saves do not overwrite unrelated progress.
+- Verify backup, restore, recovery, batch, and export operations.
+- Confirm no mod operation can write outside its approved storage area.
 
-**Online Mod Hub — defer until the local manager and security model are stable**
-- Browse community-hosted mods, collections, and mod pages.
-- Display descriptions, screenshots, authors, versions, ratings/reviews, and changelogs.
-- Support update discovery and dependency acquisition.
-- Include package integrity checks, clear download sources, moderation/reporting paths, and safe rollback.
-- The hub should be optional; local installation must continue to work offline.
+**Exit:** The Mod Manager supports larger local libraries safely and predictably.
 
-**Exit criteria:** A documented, versioned extension API with example mods and automated compatibility tests.
+## M5 — NovaBeat UI identity, navigation, and signature transition
+**Priority:** P1/P2 · **Status:** Planned
 
-### Stage 4 — Gameplay systems
-**Priority: P3 — expand what players and mods can create**
+**Purpose:** Give NovaBeat a recognizable, polished interface while keeping the familiar FNF flow.
 
-- Custom game modes that mods can register.
-- Per-song gameplay rules and custom gameplay component registration.
-- Replay capture and a replay timeline for inspecting gameplay moments.
-- Alternative scoring engines and configurable combo milestones.
-- Custom result summaries and optional detailed hit-timing statistics.
-- Quick restart and quick song switching from results.
-- Remember per-song difficulty and gameplay modifiers.
-- Adjustable countdown behavior and configurable hit feedback.
-- Customizable health-bar positioning and per-song volume preferences.
-- Automatic replay after a failed attempt, with a user setting to disable it.
+**Major work**
+- Establish a consistent visual system for menus, options, Mod Manager, loading, and results.
+- Add the approved **Nova Diagonal Dissolve / Reveal** transition as a reusable screen-transition service.
+- Reveal direction: top-left toward bottom-right.
+- Cover direction: bottom-right toward top-left.
+- Use a soft moving edge, smooth easing, and consistent timing.
+- Reuse the transition across menus, editors, loading, and results rather than making unrelated one-off effects.
+- Add mod-specific UI themes and consistent notification behavior.
+- Ensure mouse, keyboard, controller, and touch navigation remain coherent.
 
-**Exit criteria:** Gameplay APIs documented; custom game modes and scoring extensions tested with multiple mods and save profiles.
+**Settings/interface QoL**
+- Global settings search.
+- Searchable keyboard shortcut list.
+- Customizable keyboard shortcuts and controller bindings.
+- Adjustable menu animation speed.
+- Adjustable interface scaling.
+- Remember window size and position.
+- Remember previous menu location and navigation history.
+- Context-sensitive help and first-time setup guide.
+- Per-resolution UI layouts and compact interface mode.
+- Customizable notification duration.
 
-### Stage 5 — Audio and music presentation
-**Priority: P3**
+**Acceptance checks**
+- Navigate all major screens with each supported input method.
+- Test transitions between screens and into/out of gameplay without black-frame flashes or lost input.
+- Test UI scaling, resolution changes, reduced motion, Android rotation, and mod themes.
 
-- Optional audio effects and configurable processing.
-- BPM-synchronized visual/audio effects.
-- Custom audio transitions between tracks.
-- Synchronized lyrics display.
-- Audio track comparison and advanced previews with playback controls.
-- Visual waveform and audio inspection tools.
-- Per-song volume preferences and better stem/audio routing where the source architecture supports it.
+**Exit:** A consistent NovaBeat interface and reusable signature transition work across major screens and both platforms.
 
-**Exit criteria:** No timing regressions; audio effects and previews do not disrupt note timing or gameplay synchronization.
+## M6 — NovaBeat Mod SDK and engine extension architecture
+**Priority:** P2 · **Status:** Planned · **Dependency for advanced mod features**
 
-### Stage 6 — Visual presentation and themes
-**Priority: P3/P4**
+**Purpose:** Give mod authors stable, documented ways to extend the engine without relying on fragile internal implementation details.
 
-- Animated menu backgrounds and custom menu particle effects.
-- Dynamic background-music visualizers.
-- Custom song introductions and post-song cinematics.
-- Animated gameplay HUD elements and custom song-completion animations.
-- Advanced transitions and per-song visual presets.
-- Custom loading screen animations.
-- Reactive stage lighting.
-- Mod-specific UI themes.
-- Preserve readable gameplay and provide reduced-motion/accessibility fallbacks.
+**Major work**
+- Official NovaBeat Mod SDK.
+- Versioned external developer API.
+- Mod-specific configuration schemas.
+- Engine event bus for extensions.
+- Custom gameplay component registration.
+- Custom asset-type registration.
+- Custom input-device API.
+- Custom engine extension modules.
+- Optional plugin architecture with explicit compatibility checks.
+- Mod API Explorer.
+- Script performance inspector.
+- Third-party editor integration points.
+- Permission model and package validation rules.
 
-**Exit criteria:** Visual systems are configurable, performant, and do not obscure gameplay information.
+**Acceptance checks**
+- Produce example mods using documented APIs.
+- Test API version mismatch and extension incompatibility behavior.
+- Ensure extension failures can be isolated and diagnosed.
+- Verify mod saves and config data remain scoped correctly.
 
-### Stage 7 — Creator toolkit
-**Priority: P4 — build on the stable SDK**
+**Exit:** The SDK is documented and versioned, and example extensions pass compatibility tests.
 
+## M7 — Gameplay systems and gameplay QoL
+**Priority:** P2/P3 · **Status:** Planned · **Depends on M6**
+
+**Major engine features**
+- Custom Game Modes that mods can register.
+- Replay Timeline for rewinding and inspecting gameplay moments.
+- Per-Song Gameplay Rules.
+- Custom Combo Milestones.
+- Alternative Scoring Engines.
+- Custom gameplay component support through the SDK.
+
+**Gameplay QoL**
+- Automatic song replay after a failed attempt, with a setting to disable it.
+- Remember last-used difficulty per song.
+- Remember last-used gameplay modifiers.
+- Customizable song result summaries.
+- Optional detailed hit-timing statistics.
+- Quick chart restart from a configurable hotkey.
+- Optional real-time accuracy graph.
+- Adjustable countdown behavior.
+- Configurable note-hit visual feedback.
+- Customizable health-bar positioning.
+- Per-song volume preferences.
+- Quick song switching from results.
+
+**Acceptance checks**
+- Test each game mode and scoring system against normal FNF gameplay.
+- Confirm replay capture/playback and timeline seeking are deterministic enough for the documented use.
+- Confirm timing, accuracy, score, health, and save data remain correct.
+- Verify settings persist and can be disabled where appropriate.
+
+**Exit:** Custom gameplay systems work through documented extension points without breaking standard songs or scoring.
+
+## M8 — Audio and music systems
+**Priority:** P3 · **Status:** Planned
+
+**Major engine features**
+- Optional Audio Effects and filters.
+- BPM-Synchronized Effects.
+- Custom Audio Transitions between tracks.
+- Synchronized Lyrics Display.
+- Audio Track Comparison for alternate versions.
+- Advanced Audio Preview with adjustable playback controls.
+- Audio waveform inspection and improved stem/audio routing where supported.
+
+**Acceptance checks**
+- Test audio timing against chart timing at multiple BPMs.
+- Check seek, pause, resume, transitions, preview, and track switching.
+- Verify optional processing can be disabled and does not add avoidable latency.
+- Test audio behavior on Windows and Android, including app background/resume.
+
+**Exit:** Audio systems remain synchronized with gameplay and behave correctly across both platforms.
+
+## M9 — Visual and presentation systems
+**Priority:** P3/P4 · **Status:** Planned
+
+**Major engine features**
+- Animated Menu Background System.
+- Dynamic Background Music Visualizers.
+- Custom Song Introduction Sequences.
+- Animated Gameplay HUD Elements.
+- Custom Song Completion Animations.
+- Custom Menu Particle Effects.
+- Advanced Transition Effects.
+- Per-Song Visual Presets.
+- Custom Loading Screen Animations.
+- Custom Post-Song Cinematics.
+- Reactive Stage Lighting.
+- Mod-Specific UI Themes.
+
+**Acceptance checks**
+- Check visual timing against music and gameplay.
+- Keep notes, characters, and important HUD information readable.
+- Provide reduced-motion options and performance fallbacks.
+- Profile representative lower-end Android hardware as well as Windows.
+
+**Exit:** Visual features are optional, configurable, performant, and do not obscure gameplay.
+
+## M10 — Creator toolkit and chart-editor expansion
+**Priority:** P4 · **Status:** Planned · **Depends on M6**
+
+**Creator tools**
 - Visual Event Builder.
 - Camera Path Editor.
-- Cutscene Timeline Editor.
+- Cutscene Timeline Editor for animation, dialogue, and audio.
 - Sprite Atlas Editor.
 - Shader Editor and live shader previews.
 - Stage Prop Editor.
@@ -170,51 +352,172 @@ Build the Mod Manager as a real FNF screen, accessible from the game's own menus
 - Animation Transition Editor.
 - Dialogue Branching Editor.
 - Visual Script Graph.
-- Multi-file mod projects and live preview windows.
-- Improve chart editing with multi-chart tabs, chart comparison, bulk note/event edits, copy/paste across charts, custom timeline markers, waveform controls, custom editor panels, workspace presets, validation warnings, and event search/replace.
+- Multi-File Mod Projects.
+- Live Preview Windows.
 
-**Exit criteria:** A small creator workflow can build, validate, preview, and package a mod without external tools for the supported task.
+**Chart Editor QoL**
+- Automatic recovery after a crash.
+- Visible unsaved-changes indicator.
+- Multiple charts open simultaneously.
+- Chart comparison mode.
+- Bulk note editing and bulk event editing.
+- Copy/paste between charts.
+- Custom timeline markers.
+- Adjustable waveform display.
+- Customizable editor panels and workspace presets.
+- Inline chart validation warnings.
+- Search and replace chart events.
 
-### Stage 8 — Quality, accessibility, and platform polish
-**Priority: continuous; release gate for every milestone**
+**Acceptance checks**
+- Build a sample mod using the creator workflow.
+- Save, reopen, validate, preview, and package it.
+- Test crash recovery and unsaved changes.
+- Ensure editor functions are clearly marked when unavailable on Android or other restricted form factors.
 
-**General**
-- Crash recovery and automatic recovery after a crash.
-- Detailed crash reports, built-in log viewer, and one-click diagnostic export.
-- Startup troubleshooting and safe-mode suggestions after repeated crashes.
-- Memory-usage warnings, missing-asset detection, and performance bottleneck explanations.
-- Colorblind-friendly indicators, reduced motion, high contrast, adjustable text size, visual audio cues, and configurable background dimming.
+**Exit:** A documented creator workflow can build, validate, preview, and package supported mod content.
 
-**Windows**
-- Drag-and-drop files, multi-monitor positioning, resizable windows, quick fullscreen toggle, graphics presets, controller hot-plug detection, editor mouse sensitivity, quick developer tools, compatible archive file association, and remembered PC control configurations.
+## M11 — Windows, accessibility, diagnostics, and recovery QoL
+**Priority:** Continuous · **Status:** Planned and applied incrementally
 
-**Android**
-- Portrait/landscape layouts and saved per-orientation HUD positions.
-- Smooth rotation transitions and optional orientation lock.
-- Adjustable touch-button size, spacing, position, transparency, and control presets.
-- Touch vibration intensity, Bluetooth controller support, and tablet layouts.
-- Share-sheet/ZIP imports, scoped storage handling, battery-saving preset, adaptive graphics quality, and correct pause/audio behavior when backgrounded.
+**Windows PC QoL**
+- Drag-and-drop files into the game.
+- Multi-monitor window positioning.
+- Customizable window dimensions.
+- Quick fullscreen toggle.
+- Automatic graphics quality presets.
+- Improved controller hot-plug detection.
+- Configurable mouse sensitivity in editors.
+- Quick access developer tools.
+- Windows file association for compatible mod archives.
+- Remember separate PC control configurations.
 
-**Exit criteria:** Each release passes Windows and Android regression tests; Android tests include phone and tablet layouts in both portrait and landscape.
+**Accessibility**
+- Colorblind-friendly gameplay indicators.
+- Reduced animation and motion mode.
+- High-contrast interface theme.
+- Adjustable interface text size.
+- Optional visual audio cues.
+- Configurable background dimming.
 
-## Suggested release milestones
+**Diagnostics and recovery**
+- Detailed crash reports.
+- Built-in log viewer.
+- One-click diagnostic report export.
+- Startup troubleshooting mode.
+- Safe-mode suggestion after repeated crashes.
+- Memory usage warnings.
+- Missing asset detection.
+- Performance bottleneck explanations.
 
-| Milestone | Contents | Release gate |
-|---|---|---|
-| **NovaBeat 0.1 — Foundation** | Complete source tree, reproducible builds, baseline tests, shared platform abstractions | Windows and Android compile |
-| **NovaBeat 0.2 — Mod Manager** | Native manager, install/enable/disable/delete, profiles, safe import, backup, Android support | End-to-end mod workflow verified on both platforms |
-| **NovaBeat 0.3 — Nova UI** | Signature diagonal transition, coherent menus, settings search, UI scaling | Navigation and orientation regressions pass |
-| **NovaBeat 0.4 — Mod SDK** | API, configuration schemas, event bus, dependencies, isolated saves | Example extension mods pass compatibility tests |
-| **NovaBeat 0.5 — Gameplay & Audio** | Custom game modes, replay timeline, scoring rules, audio features | Timing and save tests pass |
-| **NovaBeat 0.6 — Creator Tools** | Visual editors, preview windows, packaging and validation | A sample mod can be built and packaged |
-| **NovaBeat 1.0 — Stable Engine** | Mature features, diagnostics, accessibility, documentation, platform QA | Release checklist and regression suite pass |
+**Acceptance checks**
+- Test Windows window management, multi-monitor behavior, controller reconnection, file drop, and file associations.
+- Test accessibility settings throughout menus and gameplay.
+- Verify diagnostic reports avoid exposing private data and contain actionable information.
+- Verify recovery paths preserve user saves and mod files.
 
-## Scope decisions
+**Exit:** The engine has practical accessibility, diagnostics, and recovery tools, with Windows-specific QoL complete.
 
-- Windows and Android are the only planned platforms.
-- Android portrait and landscape are both required.
-- No separate launcher is planned.
-- The Mod Manager is the first major product milestone.
-- The Online Mod Hub is deliberately later than local mod management; it depends on a stable API, package validation, and a clear trust/safety model.
-- Advanced creator editors depend on the SDK and stable extension points.
-- Roadmap items remain proposals until implemented and verified.
+## M12 — Online Mod Hub and community services
+**Priority:** P4 · **Status:** Planned · **Deliberately deferred until local manager and SDK are stable**
+
+**Major engine features**
+- Built-in Online Mod Hub.
+- Online Mod Pages with descriptions, screenshots, authors, version information, and changelogs.
+- Browse and search community-hosted mods and collections.
+- Update discovery.
+- Dependency discovery and installation after compatibility checks and user approval.
+- Mod ratings/reviews where moderation and abuse controls are available.
+- Clear download sources, package integrity verification, moderation/reporting, and safe rollback.
+
+**Rules**
+- The Hub is optional; local mod installation must continue to work offline.
+- Never silently execute or install untrusted packages.
+- Validate compatibility and integrity before installation.
+- Make source, permissions, and dependency changes clear to the player.
+- Do not begin this milestone until the local Mod Manager, SDK, and package security model are stable.
+
+**Acceptance checks**
+- Test the Hub while online, offline, and under unreliable network conditions.
+- Test invalid, removed, incompatible, and malicious package scenarios.
+- Verify user approval is required for install/update/dependency changes.
+- Test rollback and local-only workflows.
+
+**Exit:** The optional online ecosystem is safe, maintainable, and does not compromise offline use.
+
+## M13 — NovaBeat 1.0 release hardening
+**Priority:** Release gate · **Status:** Planned
+
+**Purpose:** Turn the accumulated features into a stable, supportable release.
+
+**Work**
+- Freeze the release feature set and fix high-impact bugs.
+- Complete Windows and Android regression suites.
+- Verify Android phone/tablet portrait and landscape layouts.
+- Verify original FNF gameplay and representative third-party mods.
+- Verify save migration, mod isolation, backup/restore, and recovery.
+- Run performance, memory, startup, long-session, and low-storage tests.
+- Verify crash reporting, safe mode, and diagnostics.
+- Audit license notices, package contents, version metadata, and private distribution.
+- Produce release notes and a known-issues list.
+- Publish verified Windows and Android deliverables to the private NovaBeat-Builds repository.
+
+**1.0 acceptance gate**
+- Windows package installs/launches and passes the supported smoke/regression tests.
+- Android APK installs/launches and passes phone/tablet, portrait/landscape, touch, lifecycle, and storage tests.
+- No known release-blocking data-loss, save-corruption, security, or gameplay-timing issues.
+- Both downloadable packages match the tested source commit and have recorded SHA-256 hashes.
+
+**Exit:** NovaBeat 1.0 is tagged, documented, and downloadable for Windows and Android.
+
+---
+
+# Cross-milestone quality-of-life policy
+
+QoL work is tracked separately from major engine features. It can be delivered alongside a milestone when it is low-risk and relevant, but it must not silently delay the core milestone.
+
+- **Gameplay QoL** is delivered with M7.
+- **Mod Manager QoL** is delivered with M4.
+- **Settings and navigation QoL** is delivered with M5.
+- **Chart Editor QoL** is delivered with M10.
+- **Android QoL** is split between the mobile foundation in M2 and later refinements.
+- **Windows QoL** is delivered with M11.
+- **Accessibility, diagnostics, and recovery** are improved continuously and consolidated in M11/M13.
+
+The approved backlog remains the detailed item inventory. This roadmap determines the intended sequence and acceptance gates; it does not remove any approved proposal.
+
+# Build, testing, and delivery policy
+
+- **Small code changes:** review and run focused/static checks; do not launch both full native builds automatically.
+- **Feature milestone or large batch:** compile the affected platform(s); compile both platforms when shared engine code changes.
+- **Platform-specific work:** run the relevant platform build and tests.
+- **Release candidate:** run full Windows and Android builds, verify the packages, and smoke-test them.
+- **Windows-only build:** must not start Android.
+- **Android-only build:** must not start Windows.
+- **Distribution:** successful Windows packages and Android APKs go to the private NovaBeat-Builds repository, never to public releases.
+- **Verification:** compilation success is not the same as runtime testing. Report each state separately: implemented, compiled, package delivered, and behavior tested.
+
+# Dependency order at a glance
+
+1. M0 — Source/build/delivery foundation.
+2. M1 — Original FNF parity and platform baseline.
+3. M2 — Android portrait/landscape and mobile experience.
+4. M3 — Native in-game Mod Manager MVP.
+5. M4 — Mod Manager Plus and local library.
+6. M5 — NovaBeat UI identity and navigation.
+7. M6 — Mod SDK and extension architecture.
+8. M7 — Gameplay systems.
+9. M8 — Audio systems.
+10. M9 — Visual/presentation systems.
+11. M10 — Creator toolkit.
+12. M11 — Windows QoL, accessibility, diagnostics, and recovery (continuous).
+13. M12 — Online Mod Hub (after M4 and M6; intentionally late).
+14. M13 — NovaBeat 1.0 release hardening (after the required feature set).
+
+## Scope reminder
+
+- Windows PC and Android phones/tablets only.
+- Android portrait and landscape are required.
+- Preserve the original FNF experience as the default.
+- The Mod Manager is built into the game; no separate launcher.
+- Keep major engine features and QoL improvements distinct.
+- All roadmap items remain planned until implementation, platform verification, and acceptance checks are complete.
