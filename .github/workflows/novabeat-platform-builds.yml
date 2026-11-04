@@ -67,13 +67,6 @@ jobs:
           haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
-      - name: Build Lime native tools
-        shell: bash
-        working-directory: upstream/Funkin
-        run: |
-          set -euo pipefail
-          haxelib run lime rebuild cpp -64
-
       - name: Compile HXCPP support tools
         shell: bash
         working-directory: upstream/Funkin
@@ -81,6 +74,14 @@ jobs:
           set -euo pipefail
           cd .haxelib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
+
+      - name: Build Lime native tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
 
       - name: Build Windows release
         shell: bash
@@ -183,6 +184,14 @@ jobs:
           command -v wayland-scanner
           wayland-scanner --version
 
+      - name: Compile HXCPP support tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
       - name: Build Lime native tools
         shell: bash
         working-directory: upstream/Funkin
@@ -200,13 +209,6 @@ jobs:
           haxelib run lime config JAVA_HOME "$JAVA_HOME"
           haxelib run lime config ANDROID_SETUP true
 
-      - name: Compile HXCPP support tools
-        shell: bash
-        working-directory: upstream/Funkin
-        run: |
-          set -euo pipefail
-          cd .haxelib/hxcpp/git/tools/hxcpp
-          haxe compile.hxml
 
       - name: Build Android debug APK
         shell: bash
