@@ -1,0 +1,127 @@
+name: Publish NovaBeat build releases
+
+# This privileged workflow only handles package files produced by the build workflows.
+# It never checks out or executes pull-request source code.
+on:
+  workflow_run:
+    workflows:
+      - NovaBeat platform build checks
+      - NovaBeat HTML5 browser test build
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  publish:
+    name: Publish successful build packages
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check which packages were produced
+        id: artifacts
+        env:
+          GH_TOKEN: \${{ github.token }}
+          SOURCE_REPOSITORY: \${{ github.repository }}
+          SOURCE_RUN_ID: \${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$SOURCE_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" > "$RUNNER_TEMP/build-artifacts.json"
+
+          has_artifact() {
+            jq -e --arg name "$1" \
+              'any(.artifacts[]?; .name == $name and .expired == false)' \
+              "$RUNNER_TEMP/build-artifacts.json" >/dev/null
+          }
+
+          for target in windows android html5; do
+            case "$target" in
+              windows) artifact_name="novabeat-windows" ;;
+              android) artifact_name="novabeat-android" ;;
+              html5) artifact_name="novabeat-html5" ;;
+            esac
+            value=false
+            if has_artifact "$artifact_name"; then value=true; fi
+            echo "$target=$value" >> "$GITHUB_OUTPUT"
+            echo "- $target package artifact: $value" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Download Windows package
+        if: steps.artifacts.outputs.windows == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: novabeat-windows
+          path: release-assets
+          repository: \${{ github.repository }}
+          run-id: \${{ github.event.workflow_run.id }}
+          github-token: \${{ github.token }}
+          merge-multiple: true
+
+      - name: Download Android package
+        if: steps.artifacts.outputs.android == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: novabeat-android
+          path: release-assets
+          repository: \${{ github.repository }}
+          run-id: \${{ github.event.workflow_run.id }}
+          github-token: \${{ github.token }}
+          merge-multiple: true
+
+      - name: Download HTML5 package
+        if: steps.artifacts.outputs.html5 == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: novabeat-html5
+          path: release-assets
+          repository: \${{ github.repository }}
+          run-id: \${{ github.event.workflow_run.id }}
+          github-token: \${{ github.token }}
+          merge-multiple: true
+
+      - name: Publish every available package to NovaBeat-Builds Releases
+        env:
+          GH_TOKEN: \${{ secrets.NOVABEAT_BUILDS_TOKEN }}
+          BUILDS_REPO: DanielVr124/NovaBeat-Builds
+          SOURCE_REPOSITORY: \${{ github.repository }}
+          SOURCE_RUN_ID: \${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: \${{ github.event.workflow_run.run_attempt }}
+          SOURCE_RUN_NUMBER: \${{ github.event.workflow_run.run_number }}
+          SOURCE_SHA: \${{ github.event.workflow_run.head_sha }}
+          SOURCE_BRANCH: \${{ github.event.workflow_run.head_branch }}
+          SOURCE_EVENT: \${{ github.event.workflow_run.event }}
+        run: |
+          set -euo pipefail
+          assets=()
+          [[ -s release-assets/NovaBeat-Windows.zip ]] && assets+=(release-assets/NovaBeat-Windows.zip)
+          [[ -s release-assets/NovaBeat-Android.apk ]] && assets+=(release-assets/NovaBeat-Android.apk)
+          [[ -s release-assets/NovaBeat-HTML5.zip ]] && assets+=(release-assets/NovaBeat-HTML5.zip)
+
+          if (( \${#assets[@]} == 0 )); then
+            echo "No successful build packages were attached to this run; nothing will be published."
+            echo "No package artifacts were available to publish." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [[ -z "\${GH_TOKEN:-}" ]]; then
+            echo "::error title=Private delivery is not configured::NOVABEAT_BUILDS_TOKEN is missing. It must have Contents: Read and write access to DanielVr124/NovaBeat-Builds."
+            exit 1
+          fi
+
+          tag="novabeat-\${SOURCE_RUN_ID}-\${SOURCE_RUN_ATTEMPT}"
+          gh release create "$tag" "\${assets[@]}" \
+            --repo "$BUILDS_REPO" \
+            --title "NovaBeat build #\${SOURCE_RUN_NUMBER} (attempt \${SOURCE_RUN_ATTEMPT})" \
+            --notes "Build outputs from \${SOURCE_REPOSITORY} commit \${SOURCE_SHA}. Source branch: \${SOURCE_BRANCH}. Trigger: \${SOURCE_EVENT}. Original build run: https://github.com/\${SOURCE_REPOSITORY}/actions/runs/\${SOURCE_RUN_ID}. Each uploaded asset corresponds to a platform job that completed packaging successfully."
+
+          release_url="https://github.com/$BUILDS_REPO/releases/tag/$tag"
+          {
+            echo
+            echo "## Published NovaBeat release"
+            echo
+            echo "- Release: $release_url"
+            for asset in "\${assets[@]}"; do echo "- Asset: $(basename "$asset")"; done
+          } >> "$GITHUB_STEP_SUMMARY"
