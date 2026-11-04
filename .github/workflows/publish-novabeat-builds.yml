@@ -24,9 +24,9 @@ jobs:
       - name: Check which packages were produced
         id: artifacts
         env:
-          GH_TOKEN: \${{ github.token }}
-          SOURCE_REPOSITORY: \${{ github.repository }}
-          SOURCE_RUN_ID: \${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
           gh api "repos/$SOURCE_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" > "$RUNNER_TEMP/build-artifacts.json"
@@ -55,9 +55,9 @@ jobs:
         with:
           name: novabeat-windows
           path: release-assets
-          repository: \${{ github.repository }}
-          run-id: \${{ github.event.workflow_run.id }}
-          github-token: \${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
           merge-multiple: true
 
       - name: Download Android package
@@ -66,9 +66,9 @@ jobs:
         with:
           name: novabeat-android
           path: release-assets
-          repository: \${{ github.repository }}
-          run-id: \${{ github.event.workflow_run.id }}
-          github-token: \${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
           merge-multiple: true
 
       - name: Download HTML5 package
@@ -77,22 +77,22 @@ jobs:
         with:
           name: novabeat-html5
           path: release-assets
-          repository: \${{ github.repository }}
-          run-id: \${{ github.event.workflow_run.id }}
-          github-token: \${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
           merge-multiple: true
 
       - name: Publish every available package to NovaBeat-Builds Releases
         env:
-          GH_TOKEN: \${{ secrets.NOVABEAT_BUILDS_TOKEN }}
+          GH_TOKEN: ${{ secrets.NOVABEAT_BUILDS_TOKEN }}
           BUILDS_REPO: DanielVr124/NovaBeat-Builds
-          SOURCE_REPOSITORY: \${{ github.repository }}
-          SOURCE_RUN_ID: \${{ github.event.workflow_run.id }}
-          SOURCE_RUN_ATTEMPT: \${{ github.event.workflow_run.run_attempt }}
-          SOURCE_RUN_NUMBER: \${{ github.event.workflow_run.run_number }}
-          SOURCE_SHA: \${{ github.event.workflow_run.head_sha }}
-          SOURCE_BRANCH: \${{ github.event.workflow_run.head_branch }}
-          SOURCE_EVENT: \${{ github.event.workflow_run.event }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          SOURCE_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
         run: |
           set -euo pipefail
           assets=()
@@ -100,22 +100,22 @@ jobs:
           [[ -s release-assets/NovaBeat-Android.apk ]] && assets+=(release-assets/NovaBeat-Android.apk)
           [[ -s release-assets/NovaBeat-HTML5.zip ]] && assets+=(release-assets/NovaBeat-HTML5.zip)
 
-          if (( \${#assets[@]} == 0 )); then
+          if (( ${#assets[@]} == 0 )); then
             echo "No successful build packages were attached to this run; nothing will be published."
             echo "No package artifacts were available to publish." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          if [[ -z "\${GH_TOKEN:-}" ]]; then
+          if [[ -z "${GH_TOKEN:-}" ]]; then
             echo "::error title=Private delivery is not configured::NOVABEAT_BUILDS_TOKEN is missing. It must have Contents: Read and write access to DanielVr124/NovaBeat-Builds."
             exit 1
           fi
 
-          tag="novabeat-\${SOURCE_RUN_ID}-\${SOURCE_RUN_ATTEMPT}"
-          gh release create "$tag" "\${assets[@]}" \
+          tag="novabeat-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+          gh release create "$tag" "${assets[@]}" \
             --repo "$BUILDS_REPO" \
-            --title "NovaBeat build #\${SOURCE_RUN_NUMBER} (attempt \${SOURCE_RUN_ATTEMPT})" \
-            --notes "Build outputs from \${SOURCE_REPOSITORY} commit \${SOURCE_SHA}. Source branch: \${SOURCE_BRANCH}. Trigger: \${SOURCE_EVENT}. Original build run: https://github.com/\${SOURCE_REPOSITORY}/actions/runs/\${SOURCE_RUN_ID}. Each uploaded asset corresponds to a platform job that completed packaging successfully."
+            --title "NovaBeat build #${SOURCE_RUN_NUMBER} (attempt ${SOURCE_RUN_ATTEMPT})" \
+            --notes "Build outputs from ${SOURCE_REPOSITORY} commit ${SOURCE_SHA}. Source branch: ${SOURCE_BRANCH}. Trigger: ${SOURCE_EVENT}. Original build run: https://github.com/${SOURCE_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}. Each uploaded asset corresponds to a platform job that completed packaging successfully."
 
           release_url="https://github.com/$BUILDS_REPO/releases/tag/$tag"
           {
@@ -123,5 +123,5 @@ jobs:
             echo "## Published NovaBeat release"
             echo
             echo "- Release: $release_url"
-            for asset in "\${assets[@]}"; do echo "- Asset: $(basename "$asset")"; done
+            for asset in "${assets[@]}"; do echo "- Asset: $(basename "$asset")"; done
           } >> "$GITHUB_STEP_SUMMARY"
