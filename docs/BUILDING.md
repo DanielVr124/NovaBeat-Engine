@@ -2,10 +2,11 @@
 
 NovaBeat currently uses the official Friday Night Funkin' v0.8.6 source tree vendored under `upstream/Funkin/`. Its two required upstream asset repositories are pinned as Git submodules.
 
-## Supported build targets
+## Release and test build targets
 
 - **Windows desktop:** release executable.
 - **Android mobile:** debug APK, suitable for installation/testing after the user obtains the build output from an authorized private build environment.
+- **HTML5 browser test:** experimental release-mode browser build, distributed privately for local browser testing. This is not yet a supported public release target; see [HTML5 browser testing](HTML5_TESTING.md).
 
 Android's upstream v0.8.6 project configuration currently targets landscape orientation. A successful Android compile does not mean NovaBeat's separate portrait-and-landscape UI requirement is complete.
 
@@ -17,11 +18,11 @@ Full platform compiles are intentionally **not** run for every small code change
 - Run both platform builds after a requested feature set is implemented or a substantial batch of changes is ready.
 - Run a full build before treating a milestone as build-verified.
 
-The [NovaBeat platform build checks workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) is opt-in. It runs when manually dispatched, when a relevant commit to `main` includes `[full-build]` in its commit message, or when a pull request title includes `[full-build]`. For a pull request, add the marker only when the feature batch is ready to compile, then remove it after the run to prevent later small updates from triggering another full build.
+The [NovaBeat platform build checks workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) is opt-in. It runs when manually dispatched, when a relevant commit to `main` includes `[full-build]` in its commit message, or when a pull request title includes `[full-build]`. The separate [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) runs when manually dispatched or when a relevant commit to `main` includes `[web-build]`. Both build workflows are kept separate so browser testing does not add time or failure points to Windows/Android builds.
 
 ## Private build downloads
 
-Successful Windows and Android builds publish their outputs as separate releases in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds). Windows is packaged as a ZIP containing the complete native output folder; Android is uploaded as the generated APK. Pull-request validation builds do not publish releases.
+Successful Windows, Android, and HTML5 builds publish their outputs as separate releases in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds). Windows is packaged as a ZIP containing the complete native output folder; Android is uploaded as the generated APK; HTML5 is packaged as `NovaBeat-HTML5.zip`. The browser ZIP includes instructions for running a local HTTP server and opening the game in Chrome. Pull-request validation builds do not publish releases.
 
 The first time this is configured, create a **fine-grained personal access token** on GitHub:
 
@@ -33,7 +34,7 @@ The first time this is configured, create a **fine-grained personal access token
 
 The token is used only by trusted pushes to `main` and manual workflow runs; it is not exposed to pull-request builds. It is scoped to the private delivery repository and cannot write to other repositories.
 
-To build only Android without recompiling Windows, open the [platform build workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml), choose **Run workflow**, and select `android`. Choose `both` for a full milestone build.
+To build only Android without recompiling Windows, open the [platform build workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml), choose **Run workflow**, and select `android`. Choose `both` for a full milestone build. To build HTML5 independently, open the [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) and choose **Run workflow**.
 
 ## Clone the repository
 
@@ -123,7 +124,11 @@ haxelib run lime build android -v -debug -DGITHUB_BUILD
 
 The debug build does not need a release keystore. Lime writes the APK beneath the Android export directory under `export/`.
 
+## HTML5 browser testing
+
+The browser build is intentionally separate from the native platform workflow. It compiles with `haxelib run lime build html5 -v -release -DGITHUB_BUILD`, verifies that an HTML entry point and JavaScript bundle were generated, and publishes a ZIP only to the private NovaBeat-Builds repository. The complete manual test steps and current web limitations are documented in [HTML5_TESTING.md](HTML5_TESTING.md). Do not publish this build through public GitHub Pages or public Actions artifacts: the pinned upstream asset and art license files prohibit public redistribution of their content.
+
 ## What a green build means
 
-A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. Neither result alone verifies runtime behavior on every PC or phone, and neither completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
+A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. A green HTML5 job means the game compiled into a browser bundle and the private ZIP was published. None of these results alone verifies runtime behavior on every PC, phone, or browser, and none completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
 
