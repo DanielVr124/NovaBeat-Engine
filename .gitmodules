@@ -1,3 +1,6 @@
-[submodule "upstream/Funkin"]
-	path = upstream/Funkin
-	url = https://github.com/FunkinCrew/Funkin.git
+[submodule "Funkin-assets"]
+	path = upstream/Funkin/assets
+	url = https://github.com/FunkinCrew/Funkin.assets.git
+[submodule "Funkin-art"]
+	path = upstream/Funkin/art
+	url = https://github.com/FunkinCrew/Funkin.art.git

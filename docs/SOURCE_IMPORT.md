@@ -1,45 +1,32 @@
-# Upstream source checkout
+# Vendored upstream source
 
-NovaBeat tracks the official Friday Night Funkin' v0.8.6 repository as a Git submodule.
+The official Friday Night Funkin' v0.8.6 source files are stored directly in this repository at .
 
-- **Submodule path:** `upstream/Funkin`
-- **Upstream repository:** https://github.com/FunkinCrew/Funkin
-- **Pinned tag:** `v0.8.6`
-- **Pinned commit:** `ee9d492becfc1178b2c80487167d09a880f90146`
+- Upstream: https://github.com/FunkinCrew/Funkin
+- Version: v0.8.6
+- Exact source commit: 
 
-This avoids requiring a GitHub fork. The submodule pointer lives in the NovaBeat repository; the upstream files are checked out into the working directory when Git initializes submodules.
+This is a vendored source tree, not a link to a fork or a source submodule. The engine code, project files, build scripts, documentation, and upstream license notices are ordinary files committed in NovaBeat.
 
-## First-time clone
+## Artwork and asset repositories
 
-```bash
-git clone --recurse-submodules https://github.com/DanielVr124/NovaBeat-Engine.git
-cd NovaBeat-Engine
-```
+Upstream FNF stores  and  in separate repositories. They remain pinned as Git submodules at the exact revisions recorded by FNF v0.8.6, because they have separate licensing terms.
 
-## Existing clone
+To fetch those two submodules after cloning:
 
-From the NovaBeat repository directory:
+Submodule path 'upstream/Funkin/art': checked out '429ab728b19272dca834c83d97b1646455b22579'
+Submodule path 'upstream/Funkin/assets': checked out '9300719cb261d23f72344807055be6d109c9949c'
 
-```bash
-git submodule update --init --recursive
-```
+Or clone NovaBeat and initialize them in one step:
 
-The recursive step is important. The upstream FNF repository contains its own `assets` and `art` submodules. Those are separate repositories, pinned by the upstream FNF commit.
+Submodule path 'upstream/Funkin': checked out 'ee9d492becfc1178b2c80487167d09a880f90146'
+Submodule path 'upstream/Funkin/art': checked out '429ab728b19272dca834c83d97b1646455b22579'
+Submodule path 'upstream/Funkin/assets': checked out '9300719cb261d23f72344807055be6d109c9949c'
 
-## Build location
+## Build status
 
-The upstream game project is under:
+Importing source does not mean the project has been compiled or tested. Follow  for desktop setup and  for mobile setup. NovaBeat's Windows build, Android build, Android portrait/landscape UI, Mod Manager integration, and regression tests still require implementation and verification.
 
-```text
-upstream/Funkin/
-```
+## Licensing
 
-Read the upstream `docs/COMPILING.md` for desktop prerequisites and `docs/COMPILING_MOBILE.md` for mobile/Android prerequisites. Do not assume a successful clone means the project has already compiled.
-
-## Licensing and redistribution
-
-The upstream source repository identifies its code as Apache-2.0 and includes its license notice in `upstream/Funkin/LICENSE.md`. The `assets` and `art` submodules have separate licensing terms. Keep the submodules pinned as upstream specifies, and do not redistribute artwork, music, or other protected assets unless the applicable license permits it.
-
-## NovaBeat status
-
-This import establishes the source baseline only. It does not mark any proposed NovaBeat backlog item as implemented. NovaBeat's Windows and Android build setup, Android portrait/landscape behavior, Mod Manager integration, and regression testing must be completed and verified separately.
+FNF source code includes its upstream Apache-2.0 license notice in . The separate  and  repositories have their own licenses. Retain the upstream notices and do not redistribute material from those repositories unless their applicable licenses permit it.
