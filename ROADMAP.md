@@ -21,11 +21,11 @@ This is the master implementation plan for the approved NovaBeat backlog. It gro
 
 ## Current project status
 
-<badge color="warning">Foundation in progress</badge>
+**Current status: Foundation in progress.**
 
 - The FNF 0.8.6 source tree has been imported into upstream/Funkin; the separately licensed upstream assets and art repositories remain pinned submodules.
 - The opt-in Windows/Android build workflow and private build-delivery workflow are in the repository.
-- A Windows native compilation has succeeded in CI once, but the earlier run did not retain a downloadable package. Private release delivery is being wired through the separate private NovaBeat-Builds repository.
+- A Windows native compilation has succeeded in CI once, but the earlier run did not retain a downloadable package. Private release delivery is configured to use the separate private NovaBeat-Builds repository; the first end-to-end release upload still needs to be verified.
 - Android compilation has not yet been confirmed as successful.
 - The Mod Manager and the other approved NovaBeat feature proposals remain planned work; they are not implemented by the source import or build setup.
 - Android currently inherits the upstream landscape-only configuration. Portrait support and responsive layouts remain unfinished.
