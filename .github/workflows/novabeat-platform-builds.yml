@@ -22,8 +22,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: novabeat-platform-builds-${{ github.ref }}
-  cancel-in-progress: true
+  group: novabeat-platform-builds-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   windows:
@@ -174,7 +174,7 @@ jobs:
           rm -rf .haxelib
           haxelib --debug --never --global git haxelib https://github.com/FunkinCrew/haxelib.git funkin-patches --skip-dependencies
           haxelib --debug --never --global git hmm https://github.com/FunkinCrew/hmm funkin-patches
-          haxelib --global newrepo
+          haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
       - name: Install Linux Wayland build prerequisites
