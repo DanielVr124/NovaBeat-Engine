@@ -130,28 +130,14 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (showTitleOnCreate)
     {
-      FunkinSound.playMusic('novabeat-menu', {
-        startingVolume: 0.0,
-        overrideExisting: true,
-        restartTrack: true,
-        persist: true
-      });
+      playMenuTheme(true, 0.0);
       if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(4.0, 0.0, 0.82);
       buildBackdrop();
       buildTitleScreen();
     }
     else
     {
-      if (FlxG.sound.music == null)
-      {
-        FunkinSound.playMusic('novabeat-menu', {
-          startingVolume: 0.0,
-          overrideExisting: true,
-          restartTrack: false,
-          persist: true
-        });
-        if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(1.0, 0.0, 0.82);
-      }
+      playMenuTheme(false, 0.82);
       buildInterface();
     }
   }
@@ -634,8 +620,38 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
   }
 
+  function playMenuTheme(restart:Bool, startingVolume:Float):Void
+  {
+    #if web
+    var musicPath:String = Paths.file('music/novabeat-menu/novabeat-menu.ogg');
+    if (restart || FlxG.sound.music == null || !FlxG.sound.music.playing)
+    {
+      if (FlxG.sound.music != null)
+      {
+        FlxG.sound.music.fadeTween?.cancel();
+        FlxG.sound.music.stop();
+        FlxG.sound.music.kill();
+      }
+
+      var music = FunkinSound.load(musicPath, startingVolume, true, false, true, true);
+      if (music != null) FunkinSound.setMusic(music);
+    }
+    #else
+    FunkinSound.playMusic('novabeat-menu', {
+      startingVolume: startingVolume,
+      overrideExisting: true,
+      restartTrack: restart,
+      persist: true
+    });
+    #end
+  }
+
   function playSfx(name:String, volume:Float):Void
   {
+    #if web
+    FunkinSound.playOnce(Paths.file('sounds/novabeat/' + name + '.ogg'), volume);
+    #else
     FunkinSound.playOnce(Paths.sound('novabeat/' + name), volume);
+    #end
   }
 }
