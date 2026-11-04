@@ -1,11 +1,11 @@
 name: Import official FNF 0.8.6 source
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - ".github/workflows/import-fnf-source.yml"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: false
 
       - name: Check out the exact FNF 0.8.6 source revision
         shell: bash
@@ -40,35 +41,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Replace the top-level FNF source submodule with ordinary tracked files.
-          git rm -f upstream/Funkin
+          # Remove the previous top-level source gitlink without depending on
+          # whether its submodule working directory has been initialized.
+          git update-index --force-remove upstream/Funkin
+          rm -rf upstream/Funkin
           mkdir -p upstream/Funkin
           rsync -a --exclude='.git' --exclude='assets' --exclude='art' /tmp/funkin-upstream/ upstream/Funkin/
 
-          # FNF keeps artwork and assets in separately licensed upstream repos.
-          # Keep their exact upstream gitlink commits instead of copying their contents.
+          # The upstream source keeps separately licensed artwork/assets in
+          # separate repositories. Preserve their exact pinned gitlink SHAs.
           test -n "$FNF_ASSETS_COMMIT"
           test -n "$FNF_ART_COMMIT"
-          git update-index --add --cacheinfo "160000,$FNF_ASSETS_COMMIT,upstream/Funkin/assets"
-          git update-index --add --cacheinfo "160000,$FNF_ART_COMMIT,upstream/Funkin/art"
 
-          cat > .gitmodules <<'EOF'
+          cat > .gitmodules <<'GITMODULES'
           [submodule "Funkin-assets"]
           	path = upstream/Funkin/assets
           	url = https://github.com/FunkinCrew/Funkin.assets.git
           [submodule "Funkin-art"]
           	path = upstream/Funkin/art
           	url = https://github.com/FunkinCrew/Funkin.art.git
-          EOF
+          GITMODULES
 
-          cat > docs/SOURCE_IMPORT.md <<EOF
+          cat > docs/SOURCE_IMPORT.md <<'DOC'
           # Vendored upstream source
 
           The official Friday Night Funkin' v0.8.6 source files are stored directly in this repository at `upstream/Funkin/`.
 
           - Upstream: https://github.com/FunkinCrew/Funkin
           - Version: v0.8.6
-          - Exact source commit: `$FNF_SOURCE_COMMIT`
+          - Exact source commit: `@FNF_SOURCE_COMMIT@`
 
           This is a vendored source tree, not a link to a fork or a source submodule. The engine code, project files, build scripts, documentation, and upstream license notices are ordinary files committed in NovaBeat.
 
@@ -95,9 +96,10 @@ jobs:
           ## Licensing
 
           FNF source code includes its upstream Apache-2.0 license notice in `upstream/Funkin/LICENSE.md`. The separate `assets` and `art` repositories have their own licenses. Retain the upstream notices and do not redistribute material from those repositories unless their applicable licenses permit it.
-          EOF
+          DOC
+          sed -i "s/@FNF_SOURCE_COMMIT@/$FNF_SOURCE_COMMIT/g" docs/SOURCE_IMPORT.md
 
-          cat > README.md <<EOF
+          cat > README.md <<'README'
           # Friday Night Funkin': NovaBeat Engine
 
           **A New Rhythm. A New Experience.**
@@ -124,7 +126,7 @@ jobs:
 
           ## Source repository
 
-          The complete FNF v0.8.6 **source code is stored directly in this repository** under `upstream/Funkin/`, pinned to upstream commit `$FNF_SOURCE_COMMIT`. This is a vendored copy of the source tree, not a fork or source submodule.
+          The complete FNF v0.8.6 source code is stored directly in this repository under `upstream/Funkin/`, pinned to upstream commit `@FNF_SOURCE_COMMIT@`. This is a vendored copy of the source tree, not a fork or source submodule.
 
           The separately licensed upstream `assets` and `art` repositories remain pinned as submodules. Run `git submodule update --init --recursive` to fetch them, or use `git clone --recurse-submodules` when cloning NovaBeat.
 
@@ -143,8 +145,16 @@ jobs:
           - Upstream source: https://github.com/FunkinCrew/Funkin
           - Upstream release: https://github.com/FunkinCrew/Funkin/releases/tag/v0.8.6
           - Modding documentation: https://funkincrew.github.io/funkin-modding-docs/
-          EOF
+          README
+          sed -i "s/@FNF_SOURCE_COMMIT@/$FNF_SOURCE_COMMIT/g" README.md
 
+          # Stage ordinary files first, then restore the separately pinned
+          # upstream gitlinks so git add -A cannot drop them.
           git add -A .gitmodules README.md docs/SOURCE_IMPORT.md upstream/Funkin
+          git update-index --add --cacheinfo "160000,$FNF_ASSETS_COMMIT,upstream/Funkin/assets"
+          git update-index --add --cacheinfo "160000,$FNF_ART_COMMIT,upstream/Funkin/art"
+
+          git status --short
+          git diff --cached --stat
           git commit -m "Vendor complete FNF 0.8.6 source tree"
           git push origin HEAD:main
