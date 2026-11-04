@@ -64,6 +64,15 @@ jobs:
           haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
+      - name: Install Linux Wayland build prerequisites for Lime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+          command -v wayland-scanner
+          wayland-scanner --version
+
       - name: Compile HXCPP support tools required by Lime
         shell: bash
         working-directory: upstream/Funkin
