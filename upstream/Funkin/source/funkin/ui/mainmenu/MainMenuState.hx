@@ -1,5 +1,7 @@
 package funkin.ui.mainmenu;
 
+import funkin.Preferences;
+
 import flixel.addons.transition.FlxTransitionableState;
 #if FEATURE_DEBUG_MENU
 import funkin.ui.debug.DebugMenuSubState;
@@ -90,6 +92,15 @@ class MainMenuState extends MusicBeatState
 
   override function create():Void
   {
+    // Keep the upstream FNF menu as the default. NovaBeat is an explicit
+    // preference and is routed here only after the player opts in.
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      super.create();
+      FlxG.switchState(() -> new NovaBeatMainMenuState());
+      return;
+    }
+
     #if FEATURE_DISCORD_RPC
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end

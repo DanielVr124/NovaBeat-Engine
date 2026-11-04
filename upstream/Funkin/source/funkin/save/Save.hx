@@ -98,6 +98,7 @@ class Save implements ConsoleClass
       options: {
         // Reasonable defaults.
         framerate: #if mobile refreshRate #else 60 #end,
+        menuStyle: "Original FNF",
         naughtyness: true,
         downscroll: false,
         flashingLights: true,
@@ -1103,6 +1104,12 @@ typedef SaveScoreTallyData =
  */
 typedef SaveDataOptions =
 {
+  /**
+   * Main-menu presentation selected by the player.
+   * @default "Original FNF"
+   */
+  var menuStyle:String;
+
   /**
    * FPS
    * @default `60`
