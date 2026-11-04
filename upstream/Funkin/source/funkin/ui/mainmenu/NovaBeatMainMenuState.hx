@@ -4,7 +4,6 @@ import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
-import flixel.text.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;
 import funkin.graphics.FunkinCamera;
@@ -43,11 +42,11 @@ class NovaBeatMainMenuState extends MusicBeatState
   ];
 
   static final ITEM_DESCRIPTIONS:Array<String> = [
-    'Continue the original Friday Night Funkin\\' story, choose a week, and play through the campaign.',
+    'Continue the original Friday Night Funkin\' story, choose a week, and play through the campaign.',
     'Jump straight into the song library. Search for a track and choose your preferred difficulty.',
     'Browse the local Polymod library, inspect mod information, enable or disable mods, and arrange load priority.',
     'Adjust your game preferences, controls, accessibility, and the menu presentation.',
-    'View the people and projects behind Friday Night Funkin\\' and NovaBeat Engine.'
+    'View the people and projects behind Friday Night Funkin\' and NovaBeat Engine.'
   ];
 
   var uiCamera:FlxCamera;

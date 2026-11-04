@@ -3,7 +3,6 @@ package funkin.ui.options;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
-import flixel.text.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.modding.PolymodHandler;
 import funkin.save.Save;
@@ -42,6 +41,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var detailText:FlxText;
   var statusText:FlxText;
   var helpText:FlxText;
+  var emptyStateText:Null<FlxText>;
 
   public function new()
   {
@@ -126,14 +126,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     for (row in rows) remove(row, true);
     for (background in rowBackgrounds) remove(background, true);
+    if (emptyStateText != null)
+    {
+      remove(emptyStateText, true);
+      emptyStateText = null;
+    }
     rows = [];
     rowBackgrounds = [];
 
     if (detectedMods.length == 0)
     {
-      var emptyText:FlxText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
-      rows.push(new ModMenuItem(emptyText.x, emptyText.y, emptyText.width, emptyText.text, 18, -1));
-      remove(rows[0]);
+      emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
       return;
     }
 
@@ -167,7 +170,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (detectedMods.length == 0)
     {
       detailTitle.text = 'NO MODS INSTALLED';
-      detailText.text = 'Put a Polymod-compatible mod folder inside the game mods folder, then press R to scan again.\\n\\nThe manager will show detected mods here.';
+      detailText.text = 'Put a Polymod-compatible mod folder inside the game mods folder, then press R to scan again.\n\nThe manager will show detected mods here.';
       return;
     }
 
@@ -177,13 +180,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var description:String = metadataValue(mod, 'description', 'No description was provided.');
     detailTitle.text = mod.title;
     detailText.text = 'AUTHOR: ' + author
-      + '\\nVERSION: ' + Std.string(mod.modVersion)
-      + '\\nID: ' + mod.id
-      + '\\nFOLDER: ' + mod.dirName
-      + '\\nSTATUS: ' + (enabled ? 'ENABLED' : 'DISABLED')
-      + '\\n\\n' + description
-      + '\\n\\nACCEPT / SPACE: ' + (enabled ? 'DISABLE MOD' : 'ENABLE MOD')
-      + '\\nLEFT / RIGHT: CHANGE LOAD PRIORITY';
+      + '\nVERSION: ' + Std.string(mod.modVersion)
+      + '\nID: ' + mod.id
+      + '\nFOLDER: ' + mod.dirName
+      + '\nSTATUS: ' + (enabled ? 'ENABLED' : 'DISABLED')
+      + '\n\n' + description
+      + '\n\nACCEPT / SPACE: ' + (enabled ? 'DISABLE MOD' : 'ENABLE MOD')
+      + '\nLEFT / RIGHT: CHANGE LOAD PRIORITY';
   }
 
   function metadataValue(mod:ModMetadata, field:String, fallback:String):String
