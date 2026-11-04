@@ -4,7 +4,7 @@ name: NovaBeat HTML5 browser test build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
