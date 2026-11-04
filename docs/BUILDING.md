@@ -22,7 +22,7 @@ The [NovaBeat platform build checks workflow](https://github.com/DanielVr124/Nov
 
 ## Private build downloads
 
-Successful Windows, Android, and HTML5 builds publish their outputs as separate releases in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds). Windows is packaged as a ZIP containing the complete native output folder; Android is uploaded as the generated APK; HTML5 is packaged as `NovaBeat-HTML5.zip`. The browser ZIP includes instructions for running a local HTTP server and opening the game in Chrome. Pull-request validation builds do not publish releases.
+Every successfully packaged Windows, Android, or HTML5 target is automatically published to a release in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds), including pull-request builds. Each build job first uploads its package as a short-lived private Actions artifact; the separate `Publish NovaBeat build releases` workflow then collects the successful platform packages and creates the private release. This separation is required because GitHub does not expose repository secrets to pull-request build jobs. If one platform fails but another finishes packaging successfully, the successful platform is still published. Windows is packaged as `NovaBeat-Windows.zip`, Android as `NovaBeat-Android.apk`, and HTML5 as `NovaBeat-HTML5.zip`.
 
 The first time this is configured, create a **fine-grained personal access token** on GitHub:
 
@@ -32,7 +32,7 @@ The first time this is configured, create a **fine-grained personal access token
 4. Under **Repository permissions**, grant **Contents: Read and write**. Metadata read access is included automatically.
 5. Create the token, then immediately add it as an Actions secret in the public engine repository at https://github.com/DanielVr124/NovaBeat-Engine/settings/secrets/actions/new. Name the secret exactly `NOVABEAT_BUILDS_TOKEN` and paste the token as its value. Never put the token in source code or chat.
 
-The token is used only by trusted pushes to `main` and manual workflow runs; it is not exposed to pull-request builds. It is scoped to the private delivery repository and cannot write to other repositories.
+The token is used only by the separate release-publisher workflow after a build completes; it is never exposed to the Windows, Android, or HTML5 build jobs, including pull-request builds. It is scoped to the private delivery repository and cannot write to other repositories.
 
 To build only Android without recompiling Windows, open the [platform build workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml), choose **Run workflow**, and select `android`. Choose `both` for a full milestone build. To build HTML5 independently, open the [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) and choose **Run workflow**.
 
