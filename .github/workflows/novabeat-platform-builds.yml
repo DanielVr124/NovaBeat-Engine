@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   windows:
-    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'windows')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-windows]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'windows')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-windows]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-windows]')))
     name: Windows desktop
     runs-on: windows-2022
     timeout-minutes: 180
@@ -132,30 +132,16 @@ jobs:
           if ((Get-Item $package).Length -le 0) { throw "Windows package is empty" }
           "Windows package SHA-256: $( (Get-FileHash $package -Algorithm SHA256).Hash )" >> $env:GITHUB_STEP_SUMMARY
 
-      - name: Publish Windows package to private builds repository
-        if: github.event_name != 'pull_request'
-        shell: bash
-        working-directory: upstream/Funkin
-        env:
-          GH_TOKEN: ${{ secrets.NOVABEAT_BUILDS_TOKEN }}
-          BUILDS_REPO: DanielVr124/NovaBeat-Builds
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error title=Private delivery is not configured::Add NOVABEAT_BUILDS_TOKEN to NovaBeat-Engine Actions secrets. See docs/BUILDING.md."
-            exit 1
-          fi
-          package="export/release/windows/NovaBeat-Windows.zip"
-          test -s "$package"
-          tag="novabeat-${GITHUB_RUN_ID}-windows"
-          gh release create "$tag" "$package" \
-            --repo "$BUILDS_REPO" \
-            --title "NovaBeat Windows build #${GITHUB_RUN_NUMBER}" \
-            --notes "Windows x64 build from NovaBeat-Engine commit ${GITHUB_SHA}. This release is in the private NovaBeat-Builds repository."
-          echo "- Private download: https://github.com/$BUILDS_REPO/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Windows package for automatic release publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-windows
+          path: upstream/Funkin/export/release/windows/NovaBeat-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
 
   android:
-    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-android]')))
     name: Android mobile
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -271,39 +257,24 @@ jobs:
         working-directory: upstream/Funkin
         run: |
           set -euo pipefail
-          apk="$(find export -type f -name '*.apk' -print -quit)"
+          apk="$(find export -type f -name '*.apk' ! -name 'NovaBeat-Android.apk' -print -quit)"
           test -n "$apk"
           test -s "$apk"
-          digest="$(sha256sum "$apk" | awk '{print $1}')"
+          cp "$apk" export/NovaBeat-Android.apk
+          test -s export/NovaBeat-Android.apk
+          digest="$(sha256sum export/NovaBeat-Android.apk | awk '{print $1}')"
           {
             echo "## Android mobile build succeeded"
             echo
-            echo "- Output: $apk"
+            echo "- Output: export/NovaBeat-Android.apk"
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish Android APK to private builds repository
-        if: github.event_name != 'pull_request'
-        shell: bash
-        working-directory: upstream/Funkin
-        env:
-          GH_TOKEN: ${{ secrets.NOVABEAT_BUILDS_TOKEN }}
-          BUILDS_REPO: DanielVr124/NovaBeat-Builds
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error title=Private delivery is not configured::Add NOVABEAT_BUILDS_TOKEN to NovaBeat-Engine Actions secrets. See docs/BUILDING.md."
-            exit 1
-          fi
-          apk="$(find export -type f -name '*.apk' -print -quit)"
-          test -s "$apk"
-          tag="novabeat-${GITHUB_RUN_ID}-android"
-          gh release create "$tag" "$apk" \
-            --repo "$BUILDS_REPO" \
-            --title "NovaBeat Android build #${GITHUB_RUN_NUMBER}" \
-            --notes "Android debug APK build from NovaBeat-Engine commit ${GITHUB_SHA}. This release is in the private NovaBeat-Builds repository."
-          echo "- Private download: https://github.com/$BUILDS_REPO/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Android package for automatic release publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-android
+          path: upstream/Funkin/export/NovaBeat-Android.apk
+          if-no-files-found: error
+          retention-days: 14
 
-# Successful non-PR builds publish their packaged binaries only to the private
-# NovaBeat-Builds repository using the scoped NOVABEAT_BUILDS_TOKEN secret.
-# Windows-only build request marker; job selection is controlled by the commit message.
