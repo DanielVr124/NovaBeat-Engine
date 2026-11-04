@@ -155,26 +155,10 @@ jobs:
             echo "- Includes a local HTTP server quick-start guide."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish private HTML5 test package
-        shell: bash
-        working-directory: upstream/Funkin
-        env:
-          GH_TOKEN: ${{ secrets.NOVABEAT_BUILDS_TOKEN }}
-          BUILDS_REPO: DanielVr124/NovaBeat-Builds
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error title=Private delivery is not configured::Add NOVABEAT_BUILDS_TOKEN to NovaBeat-Engine Actions secrets. It needs Contents: Read and write access to DanielVr124/NovaBeat-Builds."
-            exit 1
-          fi
-
-          package="export/NovaBeat-HTML5.zip"
-          test -s "$package"
-          tag="novabeat-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-html5"
-
-          gh release create "$tag" "$package" \
-            --repo "$BUILDS_REPO" \
-            --title "NovaBeat HTML5 browser test #${GITHUB_RUN_NUMBER}" \
-            --notes "Private HTML5 browser test build from NovaBeat-Engine commit ${GITHUB_SHA}. Extract the ZIP and follow NOVABEAT-WEB-TESTING.txt to run it locally. This release contains upstream FNF content and is intentionally kept in the private NovaBeat-Builds repository."
-
-          echo "- Private browser-test download: https://github.com/$BUILDS_REPO/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload HTML5 package for automatic release publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-html5
+          path: upstream/Funkin/export/NovaBeat-HTML5.zip
+          if-no-files-found: error
+          retention-days: 14
