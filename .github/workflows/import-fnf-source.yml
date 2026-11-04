@@ -46,7 +46,7 @@ jobs:
           git update-index --force-remove upstream/Funkin
           rm -rf upstream/Funkin
           mkdir -p upstream/Funkin
-          rsync -a --exclude='.git' --exclude='assets' --exclude='art' /tmp/funkin-upstream/ upstream/Funkin/
+          rsync -a --exclude='/.git' --exclude='/assets' --exclude='/art' /tmp/funkin-upstream/ upstream/Funkin/
 
           # The upstream source keeps separately licensed artwork/assets in
           # separate repositories. Preserve their exact pinned gitlink SHAs.
@@ -153,6 +153,12 @@ jobs:
           git add -A .gitmodules README.md docs/SOURCE_IMPORT.md upstream/Funkin
           git update-index --add --cacheinfo "160000,$FNF_ASSETS_COMMIT,upstream/Funkin/assets"
           git update-index --add --cacheinfo "160000,$FNF_ART_COMMIT,upstream/Funkin/art"
+
+          test -f upstream/Funkin/source/Main.hx
+          test -f upstream/Funkin/project.hxp
+          test -f upstream/Funkin/LICENSE.md
+          git ls-files -s upstream/Funkin/assets | grep -q "^160000 "
+          git ls-files -s upstream/Funkin/art | grep -q "^160000 "
 
           git status --short
           git diff --cached --stat
