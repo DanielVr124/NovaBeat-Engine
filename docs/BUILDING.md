@@ -19,6 +19,22 @@ Full platform compiles are intentionally **not** run for every small code change
 
 The [NovaBeat platform build checks workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) is opt-in. It runs when manually dispatched, when a relevant commit to `main` includes `[full-build]` in its commit message, or when a pull request title includes `[full-build]`. For a pull request, add the marker only when the feature batch is ready to compile, then remove it after the run to prevent later small updates from triggering another full build.
 
+## Private build downloads
+
+Successful Windows and Android builds publish their outputs as separate releases in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds). Windows is packaged as a ZIP containing the complete native output folder; Android is uploaded as the generated APK. Pull-request validation builds do not publish releases.
+
+The first time this is configured, create a **fine-grained personal access token** on GitHub:
+
+1. Open https://github.com/settings/personal-access-tokens/new.
+2. Give it a name such as `NovaBeat private build uploader` and an expiry you are comfortable with.
+3. Under **Repository access**, choose **Only select repositories** and select `DanielVr124/NovaBeat-Builds` only.
+4. Under **Repository permissions**, grant **Contents: Read and write**. Metadata read access is included automatically.
+5. Create the token, then immediately add it as an Actions secret in the public engine repository at https://github.com/DanielVr124/NovaBeat-Engine/settings/secrets/actions/new. Name the secret exactly `NOVABEAT_BUILDS_TOKEN` and paste the token as its value. Never put the token in source code or chat.
+
+The token is used only by trusted pushes to `main` and manual workflow runs; it is not exposed to pull-request builds. It is scoped to the private delivery repository and cannot write to other repositories.
+
+To build only Android without recompiling Windows, open the [platform build workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml), choose **Run workflow**, and select `android`. Choose `both` for a full milestone build.
+
 ## Clone the repository
 
 Use recursive submodule checkout so the exact pinned `assets` and `art` revisions are available:
