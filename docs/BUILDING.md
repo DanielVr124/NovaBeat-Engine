@@ -106,3 +106,7 @@ The workflow intentionally does **not** upload or publish EXE/APK binaries. The 
 ## What a green build means
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. Neither result alone verifies runtime behavior on every PC or phone, and neither completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
+
+## Run the checks manually
+
+Open the repository's **Actions** tab, select **NovaBeat platform build checks**, and choose **Run workflow** to start both platform builds on demand.
