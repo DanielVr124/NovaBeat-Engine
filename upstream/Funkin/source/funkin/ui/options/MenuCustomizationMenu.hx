@@ -162,9 +162,15 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var options = Save.instance.options;
     switch (index)
     {
-      case 1: options.menuBackgroundIntensity = Std.int(Math.max(65, Math.min(125, options.menuBackgroundIntensity + direction)));
-      case 2: options.menuPanelGlow = Std.int(Math.max(0, Math.min(150, options.menuPanelGlow + direction)));
-      case 4: options.menuInterfaceScale = Std.int(Math.max(85, Math.min(115, options.menuInterfaceScale + (direction > 0 ? 5 : -5))));
+      case 1:
+        var next:Int = options.menuBackgroundIntensity + direction;
+        options.menuBackgroundIntensity = next > 125 ? 65 : (next < 65 ? 125 : next);
+      case 2:
+        var next:Int = options.menuPanelGlow + direction;
+        options.menuPanelGlow = next > 150 ? 0 : (next < 0 ? 150 : next);
+      case 4:
+        var next:Int = options.menuInterfaceScale + (direction > 0 ? 5 : -5);
+        options.menuInterfaceScale = next > 115 ? 85 : (next < 85 ? 115 : next);
       default:
     }
   }
@@ -190,10 +196,13 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     for (index in 0...optionRows.length)
     {
       var itemIndex:Int = index;
-      optionRows[index].setItem(LABELS[index] + '   < ' + values[index] + ' >', function()
+      var displayLabel:String = LABELS[index] + '   < ' + values[index] + ' >';
+      optionRows[index].setItem(displayLabel, function()
       {
         activate(itemIndex);
       });
+      optionRows[index].atlasText.text = displayLabel;
+      optionRows[index].atlasText.updateHitbox();
     }
   }
 
