@@ -306,3 +306,4 @@ jobs:
 
 # Successful non-PR builds publish their packaged binaries only to the private
 # NovaBeat-Builds repository using the scoped NOVABEAT_BUILDS_TOKEN secret.
+# Windows-only build request marker; job selection is controlled by the commit message.
