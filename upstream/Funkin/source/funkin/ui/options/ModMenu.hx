@@ -50,9 +50,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     refreshModList();
 
     #if mobile
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, exit, 1.0, true);
+    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
     add(backButton);
     #end
+  }
+
+  function goBack():Void
+  {
+    onExit.dispatch();
   }
 
   function buildLayout():Void
