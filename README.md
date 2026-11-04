@@ -8,6 +8,7 @@ NovaBeat Engine is an unofficial community engine project based on Friday Night 
 
 - **Windows PC**
 - **Android phones and tablets**, with both portrait and landscape layouts
+- **Experimental HTML5 browser test build** for private testing; this is not yet a supported release platform
 
 iOS is intentionally outside the project scope. NovaBeat does not plan to ship a separate launcher; it remains a game you launch directly.
 
@@ -28,15 +29,15 @@ The complete FNF v0.8.6 source code is stored directly in this repository under 
 
 The separately licensed upstream `assets` and `art` repositories remain pinned as submodules. Run `git submodule update --init --recursive` to fetch them, or use `git clone --recurse-submodules` when cloning NovaBeat.
 
-The repository now includes independent Windows desktop and Android build checks in GitHub Actions. A green job verifies that the upstream FNF 0.8.6 baseline compiles for that platform; it does not mean the proposed NovaBeat Mod Manager or other backlog features are implemented. See [docs/BUILDING.md](docs/BUILDING.md) for local build requirements and the known Android orientation limitation.
+The repository includes independent Windows desktop and Android build checks, plus a separate experimental HTML5 browser test workflow. A green job verifies that the upstream FNF 0.8.6 baseline compiles for that platform; it does not mean the proposed NovaBeat Mod Manager or other backlog features are implemented. See [docs/BUILDING.md](docs/BUILDING.md) for build requirements and [docs/HTML5_TESTING.md](docs/HTML5_TESTING.md) for browser testing.
 
 ## Build verification
 
-The [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) workflow compiles a Windows release executable and an Android debug APK independently. It does not publish binaries because the upstream asset and art licenses restrict public redistribution.
+The [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) workflow compiles a Windows release executable and an Android debug APK independently. The separate [HTML5 browser test workflow](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-html5.yml) packages the experimental browser build. Builds containing upstream FNF art and assets are delivered only through the private NovaBeat-Builds repository because those content licenses prohibit public redistribution.
 
 ## Development status
 
-Roadmap and approved backlog entries are proposals until their implementation is reviewed, compiled, and tested. Windows and Android remain the only targets; Android must support both portrait and landscape.
+Roadmap and approved backlog entries are proposals until their implementation is reviewed, compiled, and tested. Windows and Android remain the supported native release targets; Android must support both portrait and landscape. HTML5 is an experimental private testing target.
 
 ## Upstream and licensing
 
