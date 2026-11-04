@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   windows:
-    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'windows')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-windows]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'windows')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-windows]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-windows]')))
     name: Windows desktop
     runs-on: windows-2022
     timeout-minutes: 180
@@ -141,7 +141,7 @@ jobs:
           retention-days: 14
 
   android:
-    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-android]')))
     name: Android mobile
     runs-on: ubuntu-24.04
     timeout-minutes: 180
