@@ -16,6 +16,9 @@ import funkin.audio.FunkinSound;
 import funkin.ui.AtlasText;
 import openfl.Assets;
 import funkin.ui.mainmenu.MainMenuState;
+import funkin.ui.mainmenu.NovaBeatMainMenuState;
+import funkin.Preferences;
+import flixel.FlxG;
 #if FEATURE_NEWGROUNDS
 import funkin.api.newgrounds.Medals;
 #end
@@ -42,6 +45,15 @@ class TitleState extends MusicBeatState
   override public function create():Void
   {
     super.create();
+
+    // The NovaBeat presentation owns its own V4 title screen. Do not render
+    // the upstream FNF title logo or GF dance when this style is selected.
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      FlxG.switchState(() -> new NovaBeatMainMenuState(true));
+      return;
+    }
+
     swagShader = new ColorSwap();
 
     curWacky = FlxG.random.getObject(getIntroTextShit());
