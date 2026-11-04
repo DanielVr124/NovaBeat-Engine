@@ -37,6 +37,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # Replace the top-level FNF source submodule with ordinary tracked files.
           git rm -f upstream/Funkin
@@ -144,6 +146,5 @@ jobs:
           EOF
 
           git add -A .gitmodules README.md docs/SOURCE_IMPORT.md upstream/Funkin
-          git diff --cached --check
           git commit -m "Vendor complete FNF 0.8.6 source tree"
           git push origin HEAD:main
