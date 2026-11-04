@@ -80,6 +80,7 @@ class OptionsState extends MusicBeatState
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
     var mods:ModMenu = optionsCodex.addPage(Mods, new ModMenu());
+    var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -94,6 +95,7 @@ class OptionsState extends MusicBeatState
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
       mods.onExit.add(optionsCodex.switchPage.bind(Options));
+      menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
     }
     else
     {
@@ -182,6 +184,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
     createItem('MOD MANAGER', function() codex.switchPage(Mods));
+    createItem('MENU CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
     #if mobile
     if (ControlsHandler.hasExternalInputDevice)
     #end
@@ -365,6 +368,7 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Controls = 'controls';
   public var Colors = 'colors';
   public var Mods = 'mods';
+  public var MenuCustomization = 'menuCustomization';
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';
   public var SaveData = 'saveData';
