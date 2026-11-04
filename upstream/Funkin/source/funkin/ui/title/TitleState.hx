@@ -67,7 +67,9 @@ class TitleState extends MusicBeatState
 
   function startIntro():Void
   {
-    if (!initialized || FlxG.sound.music == null) playMenuMusic();
+    // playMenuMusic() preserves an already-playing freakyMenu track. Calling it
+    // every time also recovers when Flixel retains a stopped music object.
+    playMenuMusic();
 
     persistentUpdate = true;
 
