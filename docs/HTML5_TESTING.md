@@ -12,7 +12,7 @@ The workflow can also be triggered by a commit to `main` that changes the game s
 haxelib run lime build html5 -v -release -DGITHUB_BUILD
 ```
 
-The workflow checks for the generated HTML entry point and JavaScript bundle, packages the complete browser output, and publishes it as a release in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds).
+The workflow checks for the generated HTML entry point and JavaScript bundle, then uploads the complete browser package for the release publisher. When packaging succeeds, the separate publisher automatically adds `NovaBeat-HTML5.zip` to a release in the private [NovaBeat-Builds repository](https://github.com/DanielVr124/NovaBeat-Builds).
 
 ## Open the build in Chrome
 
@@ -30,7 +30,7 @@ Do not double-click `index.html` from File Explorer. Browsers restrict some asse
 
 The workflow intentionally does not publish a public website or a public Actions artifact. The upstream FNF assets and art are separately licensed proprietary content whose license files prohibit public redistribution. The compiled package therefore goes only to the private NovaBeat-Builds repository.
 
-The upload step uses the existing `NOVABEAT_BUILDS_TOKEN` Actions secret. It must be a fine-grained token with **Contents: Read and write** permission on `DanielVr124/NovaBeat-Builds`. See [Building NovaBeat](BUILDING.md#private-build-downloads) for setup details.
+The separate release-publisher workflow uses the existing `NOVABEAT_BUILDS_TOKEN` Actions secret. The build workflow itself never receives this secret. It must be a fine-grained token with **Contents: Read and write** permission on `DanielVr124/NovaBeat-Builds`. See [Building NovaBeat](BUILDING.md#private-build-downloads) for setup details.
 
 A live hosted test URL would require an authenticated/private static hosting destination. Do not switch this workflow to public GitHub Pages or publish its ZIP as a public artifact.
 
