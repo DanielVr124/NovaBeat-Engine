@@ -11,6 +11,7 @@ on:
       - "docs/BUILDING.md"
       - "README.md"
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
@@ -21,11 +22,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: novabeat-platform-builds-${{ github.ref }}
-  cancel-in-progress: true
+  group: novabeat-platform-builds-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   windows:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
     name: Windows desktop
     runs-on: windows-2022
     timeout-minutes: 180
@@ -75,6 +77,13 @@ jobs:
           cd .haxelib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
 
+      - name: Build Lime native tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
       - name: Build Windows release
         shell: bash
         working-directory: upstream/Funkin
@@ -98,6 +107,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   android:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[full-build]'))
     name: Android mobile
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -167,6 +177,30 @@ jobs:
           haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
+      - name: Install Linux Wayland build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+          command -v wayland-scanner
+          wayland-scanner --version
+
+      - name: Compile HXCPP support tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Build Lime native tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
       - name: Configure Lime Android SDK paths
         shell: bash
         working-directory: upstream/Funkin
@@ -176,14 +210,6 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_ROOT"
           haxelib run lime config JAVA_HOME "$JAVA_HOME"
           haxelib run lime config ANDROID_SETUP true
-
-      - name: Compile HXCPP support tools
-        shell: bash
-        working-directory: upstream/Funkin
-        run: |
-          set -euo pipefail
-          cd .haxelib/hxcpp/git/tools/hxcpp
-          haxe compile.hxml
 
       - name: Build Android debug APK
         shell: bash
