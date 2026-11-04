@@ -64,6 +64,21 @@ jobs:
           haxelib --debug --never newrepo
           haxelib --global run hmm install -q
 
+      - name: Compile HXCPP support tools required by Lime
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Build Lime native support tools
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild cpp -64
+
       - name: Build HTML5 release
         shell: bash
         working-directory: upstream/Funkin
