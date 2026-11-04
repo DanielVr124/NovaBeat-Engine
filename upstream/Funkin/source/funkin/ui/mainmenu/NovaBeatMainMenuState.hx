@@ -3,6 +3,9 @@ package funkin.ui.mainmenu;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
+import funkin.save.Save;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;
@@ -56,6 +59,11 @@ class NovaBeatMainMenuState extends MusicBeatState
   var featureDescription:Null<FlxText>;
   var featureKicker:Null<FlxText>;
   var compactLayout:Bool = false;
+  var backgroundSprite:Null<FlxSprite>;
+  var animationClock:Float = 0;
+  var equalizerBars:Array<FlxSprite> = [];
+  var equalizerBaseY:Array<Float> = [];
+  var equalizerBaseHeight:Array<Float> = [];
 
   override function create():Void
   {
@@ -82,11 +90,12 @@ class NovaBeatMainMenuState extends MusicBeatState
     compactLayout = screenW < 950 || screenH > screenW * 1.12;
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuBG'));
+    backgroundSprite = background;
     background.setGraphicSize(Std.int(screenW * 1.12));
     background.updateHitbox();
     background.screenCenter();
     background.color = 0xFF263D78;
-    background.alpha = 0.38;
+    background.alpha = backgroundIntensityAlpha();
     background.scrollFactor.set();
     background.cameras = [uiCamera];
     add(background);
@@ -95,7 +104,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     var margin:Float = compactLayout ? Math.max(22, screenW * 0.035) : screenW * 0.042;
     addLabel(margin, Math.max(20, screenH * 0.035), screenW * 0.65, 'NOVABEAT ENGINE', compactLayout ? 22 : 30, 0xFFF1F7FF);
-    addLabel(margin, Math.max(53, screenH * 0.085), screenW * 0.75, 'YOUR GAME. YOUR WAY.', 11, 0xFF48E7FF);
+    addLabel(margin, Math.max(53, screenH * 0.085), screenW * 0.75, 'YOUR GAME. YOUR WAY.', 11, accentColor());
 
     var navX:Float = margin;
     var navY:Float = compactLayout ? Math.max(96, screenH * 0.18) : screenH * 0.16;
@@ -116,6 +125,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       featureTitle = addLabel(featureX + 34, featureY + 100, featureW - 68, 'STORY MODE', 38, 0xFFFFFFFF);
       featureDescription = addLabel(featureX + 34, featureY + 162, featureW - 68, ITEM_DESCRIPTIONS[0], 16, 0xFFB6C7E5);
       addLabel(featureX + 34, featureY + featureH - 85, featureW - 68, 'CAMPAIGN     WEEK SELECT     DIFFICULTY', 10, 0xFF8DA8D8);
+      if (Save.instance.options.menuShowEqualizer && Save.instance.options.menuAudioVisualizer)
       buildEqualizer(featureX + 34, featureY + featureH - 55, featureW - 68);
       addLabel(featureX + 34, featureY + featureH - 22, featureW - 68, 'SELECT AN OPTION TO EXPLORE', 9, 0xFF8297C2);
     }
@@ -128,7 +138,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (compactLayout)
     {
-      buttonGap = Math.max(9, screenW * 0.018);
+      buttonGap = Math.max(7, screenW * 0.018) * densityMultiplier();
       buttonW = (navW - 3 * buttonGap) / 2;
       buttonH = Math.max(54, Math.min(100, (navH - 118) / 3));
       firstX = navX + buttonGap;
@@ -136,7 +146,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
     else
     {
-      buttonGap = Math.max(12, screenH * 0.018);
+      buttonGap = Math.max(9, screenH * 0.018) * densityMultiplier();
       buttonW = navW - 48;
       buttonH = Math.min(82, (navH - 190 - buttonGap * 4) / 5);
       buttonH = Math.max(48, buttonH);
@@ -158,7 +168,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       rowBg.alpha = 0.88;
       rowBackgrounds.push(rowBg);
 
-      var accent:FlxSprite = addSolid(x, y, 4, buttonH, 0xFF267CFF);
+      var accent:FlxSprite = addSolid(x, y, 4, buttonH, accentColor());
       accent.alpha = 0.6;
       rowBackgrounds.push(accent);
 
@@ -169,8 +179,22 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.scrollFactor.set();
       item.atlasText.x += compactLayout ? 12 : 20;
       item.atlasText.y += (buttonH - item.atlasText.height) * 0.5;
-      item.atlasText.scale.set(compactLayout ? 0.78 : 0.92, compactLayout ? 0.78 : 0.92);
+      var textScale:Float = Save.instance.options.menuInterfaceScale / 100;
+      if (Save.instance.options.menuLargeText) textScale *= 1.12;
+      item.atlasText.scale.set((compactLayout ? 0.78 : 0.92) * textScale, (compactLayout ? 0.78 : 0.92) * textScale);
       item.atlasText.updateHitbox();
+
+      if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
+      {
+        var finalRowAlpha:Float = rowBg.alpha;
+        var finalAccentAlpha:Float = accent.alpha;
+        rowBg.alpha = 0;
+        accent.alpha = 0;
+        item.alpha = 0;
+        FlxTween.tween(rowBg, {alpha: finalRowAlpha}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(accent, {alpha: finalAccentAlpha}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(item, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+      }
     }
 
     menuItems.onChange.add(function(selected:TextMenuItem)
@@ -187,6 +211,32 @@ class NovaBeatMainMenuState extends MusicBeatState
     else
     {
       addLabel(margin, screenH - 25, screenW - margin * 2, 'UP / DOWN   NAVIGATE       ENTER   SELECT', 10, 0xFF8DA8D8);
+    }
+  }
+
+  override function update(elapsed:Float):Void
+  {
+    super.update(elapsed);
+
+    var options = Save.instance.options;
+    if (options.menuReduceMotion) return;
+
+    if (options.menuAnimatedBackground && backgroundSprite != null)
+    {
+      animationClock += elapsed;
+      backgroundSprite.alpha = backgroundIntensityAlpha() + Math.sin(animationClock * 0.45) * 0.025;
+    }
+
+    if (options.menuAudioVisualizer)
+    {
+      if (animationClock == 0) animationClock = elapsed;
+      for (index in 0...equalizerBars.length)
+      {
+        var scale:Float = 0.65 + (Math.sin(animationClock * 2.2 + index * 0.62) + 1) * 0.19;
+        var bar:FlxSprite = equalizerBars[index];
+        bar.scale.y = scale;
+        bar.y = equalizerBaseY[index] + equalizerBaseHeight[index] * (1 - scale);
+      }
     }
   }
 
@@ -223,7 +273,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       var selected:Bool = i == index;
       rowBackgrounds[rowIndex].color = selected ? 0xFF164B78 : 0xFF0D1935;
       rowBackgrounds[rowIndex].alpha = selected ? 1 : 0.82;
-      rowBackgrounds[rowIndex + 1].color = selected ? 0xFF48E7FF : 0xFF267CFF;
+      rowBackgrounds[rowIndex + 1].color = selected ? accentColor() : 0xFF267CFF;
       rowBackgrounds[rowIndex + 1].alpha = selected ? 1 : 0.38;
       menuItems.members[i].atlasText.color = selected ? FlxColor.WHITE : 0xFFB8C7E2;
     }
@@ -244,9 +294,36 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
   }
 
+  function densityMultiplier():Float
+  {
+    return switch (Save.instance.options.menuDensity)
+    {
+      case "compact": 0.72;
+      case "spacious": 1.32;
+      default: 1.0;
+    };
+  }
+
+  function accentColor():FlxColor
+  {
+    return switch (Save.instance.options.menuAccent)
+    {
+      case "violet": 0xFFB46CFF;
+      case "magenta": 0xFFFF65C9;
+      case "ice": 0xFFF3FFFF;
+      default: 0xFF48E7FF;
+    };
+  }
+
+  function backgroundIntensityAlpha():Float
+  {
+    return 0.26 + (Save.instance.options.menuBackgroundIntensity / 125) * 0.22;
+  }
+
   function addPanel(x:Float, y:Float, width:Float, height:Float):Void
   {
-    addSolid(x, y, width, height, 0xFF4269B5);
+    var border:FlxSprite = addSolid(x, y, width, height, accentColor());
+    border.alpha = Math.min(1, 0.25 + Save.instance.options.menuPanelGlow / 150 * 0.75);
     addSolid(x + 2, y + 2, width - 4, height - 4, 0xF0061028);
   }
 
@@ -263,6 +340,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   function addLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
+    if (Save.instance.options.menuLargeText) size = Std.int(size * 1.12);
     label.setFormat(Paths.font('vcr.ttf'), size, color, FlxTextAlign.LEFT);
     label.scrollFactor.set();
     label.cameras = [uiCamera];
@@ -278,8 +356,11 @@ class NovaBeatMainMenuState extends MusicBeatState
     for (index in 0...count)
     {
       var height:Float = 14 + (index * 17 % 74);
-      var bar:FlxSprite = addSolid(x + index * (barWidth + gap), y + 76 - height, barWidth, height, index % 7 == 0 ? 0xFF8C48FF : 0xFF35C9F7);
+      var bar:FlxSprite = addSolid(x + index * (barWidth + gap), y + 76 - height, barWidth, height, index % 7 == 0 ? 0xFF8C48FF : accentColor());
       bar.alpha = 0.72;
+      equalizerBars.push(bar);
+      equalizerBaseY.push(bar.y);
+      equalizerBaseHeight.push(height);
     }
   }
 }
