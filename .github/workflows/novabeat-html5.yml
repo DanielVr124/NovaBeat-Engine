@@ -11,6 +11,14 @@ on:
       - ".github/workflows/novabeat-html5.yml"
       - "docs/HTML5_TESTING.md"
       - "README.md"
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - ".gitmodules"
+      - "upstream/Funkin/**"
+      - ".github/workflows/novabeat-html5.yml"
+      - "docs/HTML5_TESTING.md"
+      - "README.md"
 
 permissions:
   contents: read
@@ -21,7 +29,7 @@ concurrency:
 
 jobs:
   html5:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[web-build]')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[web-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
     name: HTML5 browser test build
     runs-on: ubuntu-24.04
     timeout-minutes: 180
