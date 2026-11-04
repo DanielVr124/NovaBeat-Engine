@@ -20,7 +20,7 @@ iOS is intentionally outside the project scope. NovaBeat does not plan to ship a
 5. Expand the creator toolchain.
 6. Polish accessibility, performance, and diagnostics.
 
-See [ROADMAP.md](ROADMAP.md), [docs/APPROVED_BACKLOG.md](docs/APPROVED_BACKLOG.md), [docs/SOURCE_IMPORT.md](docs/SOURCE_IMPORT.md), and [docs/BUILDING.md](docs/BUILDING.md).
+See [ROADMAP.md](ROADMAP.md), [docs/APPROVED_BACKLOG.md](docs/APPROVED_BACKLOG.md), and [docs/SOURCE_IMPORT.md](docs/SOURCE_IMPORT.md).
 
 ## Source repository
 
@@ -28,11 +28,7 @@ The complete FNF v0.8.6 source code is stored directly in this repository under 
 
 The separately licensed upstream `assets` and `art` repositories remain pinned as submodules. Run `git submodule update --init --recursive` to fetch them, or use `git clone --recurse-submodules` when cloning NovaBeat.
 
-The repository now includes independent Windows desktop and Android build checks in GitHub Actions. A green job verifies that the upstream FNF 0.8.6 baseline compiles for that platform; it does not mean the proposed NovaBeat Mod Manager or other backlog features are implemented. See [docs/BUILDING.md](docs/BUILDING.md) for local build requirements and the known Android orientation limitation.
-
-## Build verification
-
-The [NovaBeat platform build checks](https://github.com/DanielVr124/NovaBeat-Engine/actions/workflows/novabeat-platform-builds.yml) workflow compiles a Windows release executable and an Android debug APK independently. It does not publish binaries because the upstream asset and art licenses restrict public redistribution.
+The source import does **not** mean NovaBeat is already buildable. Windows and Android dependency setup, baseline compilation, Mod Manager integration, and regression testing still need to be completed.
 
 ## Development status
 

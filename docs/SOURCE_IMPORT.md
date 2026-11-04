@@ -24,12 +24,10 @@ Or clone NovaBeat and initialize them in one step:
 git clone --recurse-submodules https://github.com/DanielVr124/NovaBeat-Engine.git
 ```
 
-## Building
+## Build status
 
-See [BUILDING.md](BUILDING.md) for the Windows desktop and Android toolchains and the reproducible GitHub Actions build checks. The original FNF compilation guides remain available at `upstream/Funkin/docs/COMPILING.md` and `upstream/Funkin/docs/COMPILING_MOBILE.md`.
-
-The Android build check compiles the current upstream landscape-oriented Android configuration. It does not complete NovaBeat's separate requirement for responsive portrait and landscape layouts. Runtime behavior and device testing remain separate from compilation.
+Importing source does not mean the project has been compiled or tested. Follow `upstream/Funkin/docs/COMPILING.md` for desktop setup and `upstream/Funkin/docs/COMPILING_MOBILE.md` for mobile setup. NovaBeat's Windows build, Android build, Android portrait/landscape UI, Mod Manager integration, and regression tests still require implementation and verification.
 
 ## Licensing
 
-FNF source code includes its upstream Apache-2.0 license notice in `upstream/Funkin/LICENSE.md`. The separate `assets` and `art` repositories have their own licenses. Their licenses prohibit public redistribution of their proprietary content by anyone other than the copyright owner. Keep the content private and do not publish game binaries containing it.
+FNF source code includes its upstream Apache-2.0 license notice in `upstream/Funkin/LICENSE.md`. The separate `assets` and `art` repositories have their own licenses. Retain the upstream notices and do not redistribute material from those repositories unless their applicable licenses permit it.
