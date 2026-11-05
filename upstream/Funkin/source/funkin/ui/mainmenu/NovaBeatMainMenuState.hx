@@ -151,6 +151,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
+    // Keep a little extra breathing room around the title artwork on varied screen sizes.
     var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 0.92;
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
