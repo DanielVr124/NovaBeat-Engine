@@ -311,6 +311,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // reliable even when keyboard bindings have been changed.
     if ((FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE) && !controls.BACK_P)
     {
+      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
       return;
     }
