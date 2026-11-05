@@ -278,7 +278,9 @@ jobs:
           pkg-config --exists libpipewire-0.3 libudev wayland-client alsa libpulse
           # Ubuntu stores PipeWire headers in a versioned include directory.
           # Use pkg-config's flags, exactly as the native compiler should.
-          printf '#include <pipewire/pipewire.h>\\n' | cc $(pkg-config --cflags libpipewire-0.3) -x c -fsyntax-only -
+          cat <<'EOF' | cc $(pkg-config --cflags libpipewire-0.3) -x c -fsyntax-only -
+          #include <pipewire/pipewire.h>
+          EOF
           command -v wayland-scanner
           wayland-scanner --version
       - name: Compile HXCPP support tools
