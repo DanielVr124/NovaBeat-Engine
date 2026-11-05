@@ -470,7 +470,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
       #end
 
-      if (pressed || FlxG.mouse.justPressed) beginMenuTransition();
+      if (pressed) beginMenuTransition();
       return;
     }
 
@@ -505,22 +505,6 @@ class NovaBeatMainMenuState extends MusicBeatState
         var scale:Float = 0.60 + (Math.sin(animationClock * 2.15 + index * 0.62) + 1) * 0.20;
         equalizerBars[index].scale.y = scale;
         equalizerBars[index].y = equalizerBaseY[index] + equalizerBaseHeight[index] * (1 - scale);
-      }
-    }
-
-    if (FlxG.mouse.justPressed)
-    {
-      if (homeAudioButton != null && FlxG.mouse.overlaps(homeAudioButton, uiCamera))
-      {
-        playSfx('confirm', 0.7);
-        openOptions();
-        return;
-      }
-      if (homeOptionsButton != null && FlxG.mouse.overlaps(homeOptionsButton, uiCamera))
-      {
-        playSfx('confirm', 0.7);
-        openOptions();
-        return;
       }
     }
 
