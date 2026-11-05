@@ -1,9 +1,60 @@
 package funkin.util;
 
+#if web
+import js.Browser;
+#end
 import lime.system.System;
 
 class DeviceUtil
 {
+  /**
+   * Whether the current HTML5 browser is running on a Meta Quest headset.
+   *
+   * Quest Browser uses a desktop-like Linux user agent in its default mode,
+   * so normal Android/mobile checks do not identify it.
+   */
+  public static var isQuestBrowser(get, never):Bool;
+
+  static function get_isQuestBrowser():Bool
+  {
+    #if web
+    final userAgent:String = Browser.navigator.userAgent.toLowerCase();
+    return userAgent.indexOf("oculusbrowser") >= 0
+      || userAgent.indexOf("quest") >= 0
+      || userAgent.indexOf("mobile vr") >= 0;
+    #else
+    return false;
+    #end
+  }
+
+  /**
+   * Whether the current target should use mobile-friendly menu layouts.
+   * Includes native mobile targets and mobile/Quest browsers in the HTML5 build.
+   */
+  public static var isMobileBrowser(get, never):Bool;
+
+  static function get_isMobileBrowser():Bool
+  {
+    #if mobile
+    return true;
+    #elseif web
+    final userAgent:String = Browser.navigator.userAgent.toLowerCase();
+    final platform:String = Std.string(Reflect.field(Browser.navigator, "platform"));
+    final maxTouchPoints:Int = Std.parseInt(Std.string(Reflect.field(Browser.navigator, "maxTouchPoints"))) ?? 0;
+    final isIPadOS:Bool = platform == "MacIntel" && maxTouchPoints > 1;
+
+    return isQuestBrowser
+      || userAgent.indexOf("android") >= 0
+      || userAgent.indexOf("iphone") >= 0
+      || userAgent.indexOf("ipad") >= 0
+      || userAgent.indexOf("ipod") >= 0
+      || userAgent.indexOf("mobile") >= 0
+      || isIPadOS;
+    #else
+    return false;
+    #end
+  }
+
   // --- iPhone Number Detection ---
   #if ios
   public static var iPhoneNumber(get, never):Int;

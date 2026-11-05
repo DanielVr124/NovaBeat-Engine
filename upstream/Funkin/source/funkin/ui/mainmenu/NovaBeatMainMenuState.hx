@@ -23,10 +23,8 @@ import funkin.ui.story.StoryMenuState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.credits.CreditsState;
 import funkin.ui.options.OptionsState;
-#if mobile
+import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
-import funkin.util.SwipeUtil;
-#end
 
 /**
  * Native implementation of the original NovaBeat V4 menu presentation.
@@ -179,11 +177,14 @@ class NovaBeatMainMenuState extends MusicBeatState
     titleLogo = logo;
     add(logo);
 
-    #if mobile
-    titleTapHint = addLabel(0, height * 0.865, width, 'TAP ANYWHERE TO BEGIN', 20, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
-    #else
-    titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
-    #end
+    if (DeviceUtil.isMobileBrowser)
+    {
+      titleTapHint = addLabel(0, height * 0.865, width, 'TAP ANYWHERE TO BEGIN', 20, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
+    }
+    else
+    {
+      titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
+    }
 
   }
 
@@ -230,7 +231,9 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var screenW:Int = FlxG.width;
     var screenH:Int = FlxG.height;
-    compactLayout = screenW < 950 || screenH > screenW * 1.12;
+    // Quest Browser reports a landscape desktop viewport in its default mode.
+    // Force the touch-friendly tile layout for Quest/mobile browsers anyway.
+    compactLayout = DeviceUtil.isMobileBrowser || screenW < 950 || screenH > screenW * 1.12;
 
     // Preserve the V4 full-screen composition, not the upstream menuBG scene.
     if (backgroundSprite == null) buildBackdrop();
@@ -469,9 +472,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
-      #if mobile
-      if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
-      #end
+      // In HTML5, TouchUtil resolves to FlxMouse; Quest controller clicks and
+      // browser touch taps are therefore recognized without a native mobile build.
+      if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased) pressed = true;
 
       if (pressed) beginMenuTransition();
       return;

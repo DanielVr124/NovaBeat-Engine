@@ -22,8 +22,9 @@ import flixel.FlxG;
 #if FEATURE_NEWGROUNDS
 import funkin.api.newgrounds.Medals;
 #end
-#if mobile
+import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
+#if mobile
 import funkin.util.SwipeUtil;
 #end
 
@@ -137,10 +138,12 @@ class TitleState extends MusicBeatState
     add(logoBl);
     add(gfDance);
 
-    var titleTextPath:String = 'title-screen-text' #if mobile + '-mobile' #end;
+    var mobileTitleLayout:Bool = DeviceUtil.isMobileBrowser;
+    var titleTextPath:String = 'title-screen-text' + (mobileTitleLayout ? '-mobile' : '');
 
-    // On mobile, the text is shifted more to the left to center it properly.
-    titleText = FunkinSprite.createTextureAtlas(#if mobile 50 #else 100 #end + (FullScreenScaleMode.gameCutoutSize.x / 2), FlxG.height * 0.8, titleTextPath, {
+    // On mobile-sized browsers and Quest, use the same title-text atlas placement
+    // as native mobile builds even when the browser is in desktop mode.
+    titleText = FunkinSprite.createTextureAtlas((mobileTitleLayout ? 50 : 100) + (FullScreenScaleMode.gameCutoutSize.x / 2), FlxG.height * 0.8, titleTextPath, {
       cacheOnLoad: true
     });
     titleText.anim.addByFrameLabel('idle', "Idle", 24);
@@ -286,7 +289,12 @@ class TitleState extends MusicBeatState
     if (FlxG.sound.music != null) Conductor.instance.update(FlxG.sound.music.time);
 
     // do controls.PAUSE | controls.ACCEPT instead?
-    var pressedEnter:Bool = FlxG.keys.justPressed.ENTER #if mobile || (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) #end;
+    var pressedEnter:Bool = FlxG.keys.justPressed.ENTER;
+    #if mobile
+    if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressedEnter = true;
+    #elseif web
+    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased) pressedEnter = true;
+    #end
 
     var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
 
