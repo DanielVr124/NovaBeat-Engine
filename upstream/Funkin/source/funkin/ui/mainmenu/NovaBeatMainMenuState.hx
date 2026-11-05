@@ -496,13 +496,13 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (homeAudioButton != null && FlxG.mouse.overlaps(homeAudioButton))
       {
         playSfx('confirm', 0.7);
-        openOptions(false);
+        openOptions();
         return;
       }
       if (homeOptionsButton != null && FlxG.mouse.overlaps(homeOptionsButton))
       {
         playSfx('confirm', 0.7);
-        openOptions(false);
+        openOptions();
         return;
       }
     }
@@ -529,7 +529,7 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 2:
           FlxG.switchState(() -> new NovaBeatModsMenuState());
         case 3:
-          openOptions(false);
+          openOptions();
         case 4:
           FlxG.switchState(() -> new CreditsState());
         default:
@@ -537,9 +537,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     };
   }
 
-  function openOptions(openMods:Bool):Void
+  function openOptions():Void
   {
-    OptionsState.openModsOnStart = openMods;
     FlxG.switchState(() -> new OptionsState());
   }
 

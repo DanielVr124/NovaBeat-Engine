@@ -14,7 +14,6 @@ import flixel.FlxSubState;
 import flixel.group.FlxGroup;
 import flixel.util.FlxSignal;
 import funkin.audio.FunkinSound;
-import funkin.Preferences;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatState;
 import funkin.graphics.shaders.HSVShader;
@@ -59,7 +58,7 @@ class OptionsState extends MusicBeatState
 
     drumsBG = FunkinSound.load(Paths.music('offsetsLoop/drumsLoop'), 0, true, false, false, false);
 
-    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    var novaBeatStyle:Bool = funkin.Preferences.menuStyle == "NovaBeat";
     var menuBG = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
     if (novaBeatStyle)
     {
@@ -148,10 +147,10 @@ class OptionsState extends MusicBeatState
     }
     FlxG.sound.music.fadeOut(0.5, 0, function(tw)
     {
-      FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
+      FunkinSound.playMusic(funkin.Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
         startingVolume: 0,
         overrideExisting: true,
-        restartTrack: Preferences.menuStyle != "NovaBeat",
+        restartTrack: funkin.Preferences.menuStyle != "NovaBeat",
         persist: true,
         mapTimeChanges: false
       });
@@ -200,7 +199,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   {
     super();
 
-    if (Preferences.menuStyle == "NovaBeat")
+    if (funkin.Preferences.menuStyle == "NovaBeat")
     {
       var margin:Float = FlxG.width * 0.055;
       var infoPanel:FlxSprite = new FlxSprite(margin, 92);
@@ -313,7 +312,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     camFocusPoint = new FlxObject(0, 0, 140, 70);
     add(camFocusPoint);
 
-    if (Preferences.menuStyle == "NovaBeat")
+    if (funkin.Preferences.menuStyle == "NovaBeat")
     {
       var startY:Float = Math.max(110, (FlxG.height - items.length * 62) * 0.5);
       for (index in 0...items.length)

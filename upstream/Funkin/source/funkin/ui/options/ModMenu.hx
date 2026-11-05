@@ -6,6 +6,7 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.modding.PolymodHandler;
 import funkin.save.Save;
+import funkin.audio.FunkinSound;
 import funkin.Preferences;
 import funkin.ui.Page;
 import funkin.util.SwipeUtil;
