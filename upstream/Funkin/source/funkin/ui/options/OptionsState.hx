@@ -315,49 +315,90 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   {
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
-    var margin:Float = Math.max(22, width * 0.045);
-    var panelTop:Float = 104;
-    var panelHeight:Float = Math.max(180, height - 150);
-    var leftWidth:Float = width * 0.36;
-    var rightX:Float = width * 0.435;
-    var rightWidth:Float = width * 0.515;
+    var margin:Float = Math.max(20, width * 0.045);
+    var panelTop:Float = 96;
+    var panelHeight:Float = Math.max(170, height - 124);
+    var compactLayout:Bool = width < 950 || height > width * 1.12;
 
-    var leftPanel:FlxSprite = new FlxSprite(margin, panelTop);
-    leftPanel.makeGraphic(Std.int(leftWidth), Std.int(panelHeight), 0xC9091833);
-    add(leftPanel);
+    if (compactLayout)
+    {
+      var panel:FlxSprite = new FlxSprite(margin, panelTop);
+      panel.makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
+      add(panel);
 
-    var rightPanel:FlxSprite = new FlxSprite(rightX, panelTop);
-    rightPanel.makeGraphic(Std.int(rightWidth), Std.int(panelHeight), 0xC9091833);
-    add(rightPanel);
+      var brand:FlxText = new FlxText(margin + 20, 18, width - margin * 2 - 40, 'NOVABEAT ENGINE', 11);
+      brand.setFormat(Paths.font('vcr.ttf'), 11, 0xFF48E7FF);
+      add(brand);
 
-    var brand:FlxText = new FlxText(margin + 28, 25, leftWidth - 48, 'NOVABEAT ENGINE', 12);
-    brand.setFormat(Paths.font('vcr.ttf'), 12, 0xFF48E7FF);
-    add(brand);
+      var heading:FlxText = new FlxText(margin + 20, 42, width - margin * 2 - 40, 'OPTIONS', 27);
+      heading.setFormat(Paths.font('vcr.ttf'), 27, FlxColor.WHITE);
+      add(heading);
 
-    var heading:FlxText = new FlxText(margin + 28, 54, leftWidth - 48, 'OPTIONS', 34);
-    heading.setFormat(Paths.font('vcr.ttf'), 34, FlxColor.WHITE);
-    add(heading);
+      var intro:FlxText = new FlxText(margin + 22, panelTop + 16, width - margin * 2 - 44,
+        'SELECT A SECTION', 11);
+      intro.setFormat(Paths.font('vcr.ttf'), 11, 0xFF48E7FF);
+      add(intro);
 
-    var intro:FlxText = new FlxText(margin + 28, panelTop + 34, leftWidth - 56,
-      'MAKE THE GAME FEEL RIGHT.', 15);
-    intro.setFormat(Paths.font('vcr.ttf'), 15, 0xFF48E7FF);
-    add(intro);
+      novaBeatDescription = new FlxText(margin + 22, panelTop + 42, width - margin * 2 - 44,
+        'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 11);
+      novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 11, 0xFFB7C9E8);
+      novaBeatDescription.wordWrap = true;
+      novaBeatDescription.autoSize = false;
+      add(novaBeatDescription);
 
-    novaBeatDescription = new FlxText(margin + 28, panelTop + 84, leftWidth - 56,
-      'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 15);
-    novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB7C9E8);
-    novaBeatDescription.wordWrap = true;
-    novaBeatDescription.autoSize = false;
-    add(novaBeatDescription);
+      novaBeatListX = margin + 16;
+      novaBeatListY = panelTop + 102;
+      novaBeatListWidth = width - margin * 2 - 32;
 
-    var footer:FlxText = new FlxText(margin + 28, panelTop + panelHeight - 55, leftWidth - 56,
-      'UP / DOWN   SELECT\nENTER   OPEN   •   ESC   BACK', 11);
-    footer.setFormat(Paths.font('vcr.ttf'), 11, 0xFF8297C2);
-    add(footer);
+      var footer:FlxText = new FlxText(margin + 20, height - 28, width - margin * 2 - 40,
+        'UP / DOWN SELECT   •   ENTER OPEN   •   ESC BACK', 9);
+      footer.setFormat(Paths.font('vcr.ttf'), 9, 0xFF8297C2);
+      add(footer);
+    }
+    else
+    {
+      var leftWidth:Float = width * 0.36;
+      var rightX:Float = width * 0.435;
+      var rightWidth:Float = width * 0.515;
 
-    novaBeatListX = rightX + 24;
-    novaBeatListY = panelTop + 26;
-    novaBeatListWidth = rightWidth - 48;
+      var leftPanel:FlxSprite = new FlxSprite(margin, panelTop);
+      leftPanel.makeGraphic(Std.int(leftWidth), Std.int(panelHeight), 0xC9091833);
+      add(leftPanel);
+
+      var rightPanel:FlxSprite = new FlxSprite(rightX, panelTop);
+      rightPanel.makeGraphic(Std.int(rightWidth), Std.int(panelHeight), 0xC9091833);
+      add(rightPanel);
+
+      var brand:FlxText = new FlxText(margin + 28, 25, leftWidth - 48, 'NOVABEAT ENGINE', 12);
+      brand.setFormat(Paths.font('vcr.ttf'), 12, 0xFF48E7FF);
+      add(brand);
+
+      var heading:FlxText = new FlxText(margin + 28, 54, leftWidth - 48, 'OPTIONS', 34);
+      heading.setFormat(Paths.font('vcr.ttf'), 34, FlxColor.WHITE);
+      add(heading);
+
+      var intro:FlxText = new FlxText(margin + 28, panelTop + 34, leftWidth - 56,
+        'MAKE THE GAME FEEL RIGHT.', 15);
+      intro.setFormat(Paths.font('vcr.ttf'), 15, 0xFF48E7FF);
+      add(intro);
+
+      novaBeatDescription = new FlxText(margin + 28, panelTop + 84, leftWidth - 56,
+        'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 15);
+      novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB7C9E8);
+      novaBeatDescription.wordWrap = true;
+      novaBeatDescription.autoSize = false;
+      add(novaBeatDescription);
+
+      var footer:FlxText = new FlxText(margin + 28, panelTop + panelHeight - 55, leftWidth - 56,
+        'UP / DOWN   SELECT\nENTER   OPEN   •   ESC   BACK', 11);
+      footer.setFormat(Paths.font('vcr.ttf'), 11, 0xFF8297C2);
+      add(footer);
+
+      novaBeatListX = rightX + 24;
+      novaBeatListY = panelTop + 26;
+      novaBeatListWidth = rightWidth - 48;
+    }
+
     novaBeatRowHeight = 52;
   }
 
