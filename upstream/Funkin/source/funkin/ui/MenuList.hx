@@ -238,8 +238,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     }
     #end
 
-    // Mouse-wheel scrolling follows the same vertical menu order as keys.
-    // Included in the browser verification build for the Mods navigation regression.
+    // Mouse-wheel scrolling is the only desktop mouse interaction. The
+    // cursor remains hidden and pointer hover/click selection is intentionally disabled.
     #if !mobile
     final wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
     if (wheelAmount != 0 && members.length > 0 && !busy)
