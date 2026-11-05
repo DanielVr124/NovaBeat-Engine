@@ -104,7 +104,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     itemDescBox.updateHitbox();
   }
 
-    /**
+  /**
    * Switch to the soundtrack belonging to the selected menu presentation.
    * Start at zero and fade in so changing the preference is audible immediately
    * without requiring a state restart.
@@ -113,7 +113,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     var track:String = value == "NovaBeat" ? "novabeat-menu" : "freakyMenu";
 
-    FunkinSound.playMusic(track, {
+    var startedTrack:Bool = FunkinSound.playMusic(track, {
       startingVolume: 0.0,
       overrideExisting: true,
       restartTrack: false,
@@ -121,7 +121,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       mapTimeChanges: false
     });
 
-    if (FlxG.sound.music != null)
+    if (startedTrack && FlxG.sound.music != null)
       FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
   }
 
