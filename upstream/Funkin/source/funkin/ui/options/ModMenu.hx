@@ -306,6 +306,16 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (!enabled) return;
 
+    #if !mobile
+    // Page handles the configured BACK control; this fallback keeps Escape
+    // reliable even when keyboard bindings have been changed.
+    if ((FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE) && !controls.BACK_P)
+    {
+      onExit.dispatch();
+      return;
+    }
+    #end
+
     if (FlxG.keys.justPressed.R) refreshModList();
 
     #if !mobile
