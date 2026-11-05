@@ -21,6 +21,7 @@ class NovaBeatModsMenuState extends MusicBeatState
 
   override function create():Void
   {
+    FlxG.keys.enabled = true;
     FlxG.cameras.reset(new FunkinCamera('novaBeatMods'));
     super.create();
 
