@@ -475,8 +475,9 @@ class StoryMenuState extends MusicBeatState
         }
       }
       #end
+    }
 
-if (controls.BACK_P) goBack();
+    if (controls.BACK_P) goBack();
   }
 
   /**
