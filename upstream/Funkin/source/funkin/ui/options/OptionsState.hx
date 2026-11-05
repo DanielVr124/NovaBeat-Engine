@@ -95,8 +95,8 @@ class OptionsState extends MusicBeatState
     var offsets:OffsetMenu = optionsCodex.addPage(Offsets, new OffsetMenu());
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
-    var menuCustomization:Null<MenuCustomizationMenu> = null;
-    if (novaBeatStyle) menuCustomization = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
+    var customization:CustomizationMenu = optionsCodex.addPage(Customization, new CustomizationMenu());
+    var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -110,7 +110,8 @@ class OptionsState extends MusicBeatState
       offsets.onExit.add(exitOffsets);
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
-      if (menuCustomization != null) menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
+      customization.onExit.add(optionsCodex.switchPage.bind(Options));
+      menuCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
     }
     else
     {
@@ -214,7 +215,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     add(items = new TextMenuList());
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
-    if (novaBeatLayout) createItem('CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
+    createItem('CUSTOMIZATION', function() codex.switchPage(Customization));
     #if mobile
     if (ControlsHandler.hasExternalInputDevice)
     #end
@@ -464,7 +465,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     return switch (name)
     {
       case 'PREFERENCES': 'Audio, gameplay, accessibility, and general engine preferences live here.';
-      case 'CUSTOMIZATION': 'Change NovaBeat colours, background treatment, animation, and interface scale.';
+      case 'CUSTOMIZATION': 'Open the customization categories for the NovaBeat menu and other menu styles.';
       case 'CONTROLS': 'View and remap your keyboard, controller, and supported input bindings.';
       case 'LAG ADJUSTMENT': 'Calibrate audio and visual timing to match your display and speakers.';
       case 'RESTORE PURCHASES': 'Restore supported purchases linked to your platform account.';
@@ -584,6 +585,7 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Options = 'options';
   public var Controls = 'controls';
   public var Colors = 'colors';
+  public var Customization = 'customization';
   public var MenuCustomization = 'menuCustomization';
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';

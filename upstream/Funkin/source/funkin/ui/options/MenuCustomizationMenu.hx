@@ -1,18 +1,25 @@
 package funkin.ui.options;
 
 import flixel.FlxG;
+import flixel.FlxCamera;
+import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
+import funkin.Preferences;
+import funkin.graphics.FunkinCamera;
+import funkin.graphics.FunkinSprite;
 import funkin.save.Save;
+import funkin.ui.AtlasText;
+import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MenuList.NavControls;
 import funkin.util.SwipeUtil;
 import funkin.ui.AtlasText.AtlasFont;
-#if mobile
+#if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
 
@@ -41,9 +48,16 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   ];
 
   var items:TextMenuList;
+  var novaBeatLayout:Bool = true;
   var descriptions:Array<String> = [];
   var descriptionText:FlxText;
-  var statusText:FlxText;
+  var statusText:Null<FlxText>;
+  var menuCamera:FlxCamera;
+  var hudCamera:FlxCamera;
+  var camFollow:FlxObject;
+  var itemDesc:FlxText;
+  var itemDescBox:FunkinSprite;
+  var fnfValueLabels:Array<AtlasText> = [];
   var optionRows:Array<TextMenuItem> = [];
   var rowLabels:Array<FlxText> = [];
   var rowValues:Array<FlxText> = [];
@@ -59,6 +73,13 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   public function new()
   {
     super();
+    novaBeatLayout = Preferences.menuStyle == "NovaBeat";
+    if (novaBeatLayout) buildNovaBeatLayout();
+    else buildFNFLayout();
+  }
+
+  function buildNovaBeatLayout():Void
+  {
 
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
@@ -184,10 +205,109 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     refreshLabels();
     updateRowHighlights();
 
-    #if mobile
+    #if FEATURE_TOUCH_CONTROLS
     var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
     add(backButton);
     #end
+  }
+
+  function buildFNFLayout():Void
+  {
+    menuCamera = new FunkinCamera('menuCustomizationFNF');
+    FlxG.cameras.add(menuCamera, false);
+    menuCamera.bgColor = 0x0;
+    hudCamera = new FlxCamera();
+    FlxG.cameras.add(hudCamera, false);
+    hudCamera.bgColor = 0x0;
+    camera = menuCamera;
+
+    items = new TextMenuList(NavControls.Vertical);
+    add(items);
+
+    descriptions = [
+      'Choose the primary NovaBeat highlight and selection colour.',
+      'Adjust how visible the background artwork is behind the interface.',
+      'Change the intensity of panel borders and accent lighting.',
+      'Show or hide the decorative equalizer strip on the main menu.',
+      'Scale the NovaBeat interface without changing the game resolution.',
+      'Choose compact, comfortable, or spacious menu entry spacing.',
+      'Reduce movement and animated accents throughout NovaBeat menus.',
+      'Allow subtle ambient background animation.',
+      'Enable the menu entrance and selection animations.',
+      'Show the animated equalizer while menu music is playing.',
+      'Reduce bright flashes and high-contrast pulses.',
+      'Increase navigation label and heading sizes.'
+    ];
+
+    for (index in 0...LABELS.length)
+    {
+      var itemIndex:Int = index;
+      var itemY:Float = 30 + index * 120;
+      var item:TextMenuItem = items.createItem(0, itemY, LABELS[index], AtlasFont.BOLD, function()
+      {
+        activate(itemIndex);
+      });
+      item.fireInstantly = true;
+      optionRows.push(item);
+
+      var value:AtlasText = new AtlasText(0, itemY, '', AtlasFont.DEFAULT);
+      value.cameras = [menuCamera];
+      fnfValueLabels.push(value);
+      add(value);
+    }
+
+    itemDescBox = new FunkinSprite();
+    itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
+    itemDescBox.alpha = 0.6;
+    itemDescBox.cameras = [hudCamera];
+    add(itemDescBox);
+
+    itemDesc = new FlxText(0, 0, 1180, null, 32);
+    itemDesc.cameras = [hudCamera];
+    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER,
+      FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    itemDesc.borderSize = 3;
+    itemDesc.text = descriptions[0];
+    itemDesc.screenCenter();
+    itemDesc.y += 270;
+    itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+    itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 25));
+    itemDescBox.updateHitbox();
+    add(itemDesc);
+
+    camFollow = new FlxObject(FlxG.width / 2, 30, 140, 70);
+    menuCamera.follow(camFollow, null, 0.085);
+    menuCamera.deadzone.set(0, 160, menuCamera.width, menuCamera.height - 320);
+    menuCamera.minScrollY = 0;
+    items.onChange.add(function(selected:TextMenuItem)
+    {
+      itemDesc.text = descriptions[items.selectedIndex];
+      layoutFNFItems();
+    });
+    refreshLabels();
+    layoutFNFItems();
+
+    #if FEATURE_TOUCH_CONTROLS
+    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+    add(backButton);
+    #end
+  }
+
+  function layoutFNFItems():Void
+  {
+    if (novaBeatLayout || items == null || fnfValueLabels.length != optionRows.length) return;
+
+    for (index in 0...optionRows.length)
+    {
+      var item:TextMenuItem = optionRows[index];
+      var value:AtlasText = fnfValueLabels[index];
+      var valueWidth:Int = value.getWidth();
+      var nameWidth:Int = item.atlasText.getWidth();
+      var indent:Float = items.selectedIndex == index ? 150 : 120;
+      value.x = (FlxG.width / 2) - ((valueWidth + nameWidth + 20) / 2) + indent;
+      value.y = item.y;
+      item.x = value.x + valueWidth + 20;
+    }
   }
 
   function activate(index:Int):Void
@@ -216,7 +336,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     Save.system.flush();
     refreshLabels();
-    statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
+    if (statusText != null) statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
   }
 
   function adjustValue(index:Int, direction:Int):Void
@@ -259,6 +379,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       rowValues[index].text = values[index];
     }
+    for (index in 0...fnfValueLabels.length)
+    {
+      fnfValueLabels[index].text = values[index];
+    }
+    if (!novaBeatLayout) layoutFNFItems();
   }
 
   function updateRowHighlights():Void
@@ -301,6 +426,13 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    if (!novaBeatLayout && camFollow != null && items != null && items.selectedItem != null)
+    {
+      camFollow.y = items.selectedItem.y;
+      layoutFNFItems();
+    }
+
     if (!enabled || optionRows.length == 0) return;
 
     if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
@@ -319,6 +451,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     Save.system.flush();
     refreshLabels();
-    statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
+    if (statusText != null) statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
   }
 }
