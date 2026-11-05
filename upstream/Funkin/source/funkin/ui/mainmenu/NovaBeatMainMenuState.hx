@@ -152,7 +152,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
     // Keep a little extra breathing room around the title artwork on varied screen sizes.
-    var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 0.92;
+    var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 0.96;
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
     background.screenCenter();
@@ -172,7 +172,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int(height * 0.54 * interfaceScale()));
+    logo.setGraphicSize(0, Std.int(height * 0.50 * interfaceScale()));
     logo.updateHitbox();
     logo.x = (width - logo.width) * 0.5;
     logo.y = height * 0.43 - logo.height * 0.5;
