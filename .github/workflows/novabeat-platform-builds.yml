@@ -316,6 +316,21 @@ jobs:
           haxelib run lime config JAVA_HOME "$JAVA_HOME"
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Build Lime Android native libraries
+        timeout-minutes: 45
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          haxelib run lime rebuild android -clean -v
+          ndll=".haxelib/lime/git/ndll/Android"
+          if [[ ! -s "$ndll/liblime-64.so" ]]; then
+            echo "::error title=Android Lime ARM64 library missing::Lime rebuild completed without producing $ndll/liblime-64.so"
+            find "$ndll" -maxdepth 1 -type f -printf '%f (%s bytes)\\n' 2>/dev/null || true
+            exit 1
+          fi
+          echo "Verified Android ARM64 Lime library: $ndll/liblime-64.so"
+
       - name: Build Android debug APK
         shell: bash
         working-directory: upstream/Funkin
