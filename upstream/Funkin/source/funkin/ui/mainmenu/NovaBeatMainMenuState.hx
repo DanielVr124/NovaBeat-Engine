@@ -88,6 +88,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   var animationClock:Float = 0;
 
   var backgroundSprite:Null<FlxSprite>;
+  var backgroundDimmer:Null<FlxSprite>;
   var titleLogo:Null<FlxSprite>;
   var titlePrompt:Null<FlxText>;
   var titleTapHint:Null<FlxText>;
@@ -158,7 +159,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     add(background);
 
     // The V4 reference keeps the background visible but subdued behind the UI.
-    addSolid(0, 0, width, height, 0x8D050817);
+    backgroundDimmer = addSolid(0, 0, width, height, 0xFF050817);
+    backgroundDimmer.alpha = backgroundDimmerAlpha();
     addSolid(0, height * 0.72, width, height * 0.28, 0x3902081C);
   }
 
@@ -167,7 +169,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int(height * 0.54));
+    logo.setGraphicSize(0, Std.int(height * 0.54 * interfaceScale()));
     logo.updateHitbox();
     logo.x = (width - logo.width) * 0.5;
     logo.y = height * 0.43 - logo.height * 0.5;
@@ -275,7 +277,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   function buildTopBar(margin:Float):Void
   {
     var logo:FlxSprite = new FlxSprite(margin, 12).loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, 78);
+    logo.setGraphicSize(0, Std.int(78 * interfaceScale()));
     logo.updateHitbox();
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
@@ -355,6 +357,18 @@ class NovaBeatMainMenuState extends MusicBeatState
       label.y = itemY + (buttonH - label.height) * 0.5;
       label.scrollFactor.set();
       rowLabels.push(label);
+
+      if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
+      {
+        panel.alpha = 0;
+        accent.alpha = 0;
+        icon.alpha = 0;
+        label.alpha = 0;
+        FlxTween.tween(panel, {alpha: 0.93}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(accent, {alpha: 0.38}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(icon, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(label, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+      }
     }
 
     menuItems.onChange.add(function(selected:TextMenuItem)
@@ -391,7 +405,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       featureMeta.push(pillText);
     }
 
-    if (Save.instance.options.menuShowEqualizer && Save.instance.options.menuAudioVisualizer)
+    if (Save.instance.options.menuShowEqualizer)
     {
       buildEqualizer(x + 34, y + height - 136, width - 68);
     }
@@ -409,13 +423,15 @@ class NovaBeatMainMenuState extends MusicBeatState
       var selected:Bool = i == index;
       if (i < rowBackgrounds.length)
       {
-        rowBackgrounds[i].color = selected ? 0xFF12375A : 0xFF0D1935;
+        rowBackgrounds[i].color = selected
+          ? (Save.instance.options.menuReduceFlashing ? 0xFF10283D : 0xFF12375A)
+          : 0xFF0D1935;
         rowBackgrounds[i].alpha = selected ? 1 : 0.84;
       }
       if (i < rowAccents.length)
       {
         rowAccents[i].color = selected ? accentColor() : 0xFF267CFF;
-        rowAccents[i].alpha = selected ? 1 : 0.34;
+        rowAccents[i].alpha = selected ? (Save.instance.options.menuReduceFlashing ? 0.58 : 1) : 0.34;
       }
       if (i < rowLabels.length)
       {
@@ -467,12 +483,14 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     animationClock += elapsed;
     var options = Save.instance.options;
+    if (backgroundDimmer != null) backgroundDimmer.alpha = backgroundDimmerAlpha();
+
     if (!options.menuReduceMotion && options.menuAnimatedBackground && backgroundSprite != null)
     {
       backgroundSprite.alpha = 0.985 + Math.sin(animationClock * 0.45) * 0.015;
     }
 
-    if (!options.menuReduceMotion && options.menuAudioVisualizer)
+    if (!options.menuReduceMotion && options.menuShowEqualizer && options.menuAudioVisualizer)
     {
       for (index in 0...equalizerBars.length)
       {
@@ -536,14 +554,26 @@ class NovaBeatMainMenuState extends MusicBeatState
     FlxG.switchState(() -> new OptionsState());
   }
 
+  function interfaceScale():Float
+  {
+    return Math.max(0.85, Math.min(1.15, Save.instance.options.menuInterfaceScale / 100));
+  }
+
+  function backgroundDimmerAlpha():Float
+  {
+    var normalized:Float = (Save.instance.options.menuBackgroundIntensity - 65) / 60;
+    return 0.78 - normalized * 0.56;
+  }
+
   function densityMultiplier():Float
   {
-    return switch (Save.instance.options.menuDensity)
+    var density:Float = switch (Save.instance.options.menuDensity)
     {
       case "compact": 0.78;
       case "spacious": 1.18;
       default: 1.0;
     };
+    return density * interfaceScale();
   }
 
   function accentColor():FlxColor
@@ -559,7 +589,8 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function addPanel(x:Float, y:Float, width:Float, height:Float, borderColor:FlxColor):Void
   {
-    addRoundRect(x, y, width, height, 28, 28, borderColor);
+    var border:FlxSprite = addRoundRect(x, y, width, height, 28, 28, borderColor);
+    border.alpha = 0.18 + (Save.instance.options.menuPanelGlow / 150) * 0.82;
     addRoundRect(x + 2, y + 2, width - 4, height - 4, 26, 26, 0xF0061028);
   }
 
@@ -594,8 +625,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     fontName:String = 'Arial'
   ):FlxText
   {
-    var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(fontName, size, color, alignment, null, FlxColor.TRANSPARENT, false);
+    var scaledSize:Int = Std.int(Math.max(8, size * interfaceScale() * (Save.instance.options.menuLargeText ? 1.12 : 1.0)));
+    var label:FlxText = new FlxText(x, y, width, value, scaledSize);
+    label.setFormat(fontName, scaledSize, color, alignment, null, FlxColor.TRANSPARENT, false);
     label.scrollFactor.set();
     label.cameras = [uiCamera];
     add(label);
