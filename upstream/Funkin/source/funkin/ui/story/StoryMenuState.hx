@@ -693,6 +693,31 @@ class StoryMenuState extends MusicBeatState
 
   function updateBackground(?previousLevelId:String = ''):Void
   {
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // NovaBeat uses a dark blue story backdrop instead of the upstream
+      // yellow level band. Story registry, props, selection, and scores remain intact.
+      if (levelBackground == null)
+      {
+        levelBackground = new FlxSprite(0, 56);
+        levelBackground.makeGraphic(FlxG.width, 400, 0xFF09142B);
+        levelBackground.zIndex = 100;
+        levelBackground.alpha = 1.0;
+        add(levelBackground);
+
+        var topEdge:FlxSprite = new FlxSprite(0, 56);
+        topEdge.makeGraphic(FlxG.width, 3, 0xFF2879B5);
+        topEdge.zIndex = 101;
+        add(topEdge);
+
+        var bottomEdge:FlxSprite = new FlxSprite(0, 453);
+        bottomEdge.makeGraphic(FlxG.width, 3, 0xFF172B55);
+        bottomEdge.zIndex = 101;
+        add(bottomEdge);
+      }
+      return;
+    }
+
     if (levelBackground == null || previousLevelId == '')
     {
       // Build a new background and display it immediately.
