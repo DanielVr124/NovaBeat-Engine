@@ -87,10 +87,14 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     NovaBeatOptionsChrome.apply(this, 'CONTROLS', menuCamera);
 
     novaBeatRows = new FlxTypedGroup<FunkinSprite>();
+    novaBeatRows.cameras = [menuCamera];
     add(novaBeatRows);
     labels = new FlxTypedGroup<AtlasText>();
+    labels.cameras = [menuCamera];
     var headers:FlxTypedGroup<AtlasText> = new FlxTypedGroup<AtlasText>();
+    headers.cameras = [menuCamera];
     controlGrid = new MenuTypedList(Columns(COLUMNS), Vertical);
+    controlGrid.cameras = [menuCamera];
 
     add(labels);
     add(headers);
@@ -109,8 +113,10 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         devicesBg.makeSolidColor(FlxG.width, 100, 0xFFFAFD6D);
       }
+      devicesBg.cameras = [menuCamera];
       novaBeatRows.add(devicesBg);
       deviceList = new TextMenuList(Horizontal, None);
+      deviceList.cameras = [menuCamera];
       add(deviceList);
       deviceListSelected = true;
 
@@ -195,6 +201,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         var rowW:Float = FlxG.width - rowX * 2;
         var rowBackground:FunkinSprite = new FunkinSprite(rowX, y - 7);
         rowBackground.makeSolidColor(Std.int(rowW), 54, 0xFF0D1935);
+        rowBackground.cameras = [menuCamera];
         novaBeatRows.add(rowBackground);
         novaBeatRowBackgrounds.push(rowBackground);
 
@@ -205,6 +212,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       }
 
       var label = labels.add(new AtlasText(labelX, y, formatName, AtlasFont.BOLD));
+      label.cameras = [menuCamera];
       label.alpha = novaBeatStyle ? 1.0 : 0.6;
       if (novaBeatStyle) label.color = 0xFFB9C8E3;
 
@@ -280,6 +288,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   function addControlHeader(headers:FlxTypedGroup<AtlasText>, title:String, y:Float):Void
   {
     var header:AtlasText = new AtlasText(0, y, title, AtlasFont.BOLD);
+    header.cameras = [menuCamera];
     if (novaBeatStyle)
     {
       header.x = Math.max(20, FlxG.width * 0.035) + 30;
@@ -296,6 +305,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     var plate:FunkinSprite = new FunkinSprite(x - 8, y);
     plate.makeSolidColor(150, 42, 0xFF142747);
+    plate.cameras = [menuCamera];
     novaBeatRows.add(plate);
   }
 
@@ -326,6 +336,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     if (novaBeatStyle)
     {
       item.atlasText.color = 0xFF6FD8EB;
+      item.cameras = [menuCamera];
     }
 
     return controlGrid.addItem(item.name, item);

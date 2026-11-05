@@ -65,9 +65,13 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     // Draw the NovaBeat row panels before the interactive menu items.
     add(novaBeatRowLayer = new FlxTypedSpriteGroup<FlxSprite>());
+    novaBeatRowLayer.cameras = [menuCamera];
     add(items = new TextMenuList());
+    items.cameras = [menuCamera];
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
+    preferenceItems.cameras = [menuCamera];
     add(novaBeatLabelLayer = new FlxTypedSpriteGroup<FlxSprite>());
+    novaBeatLabelLayer.cameras = [menuCamera];
 
     add(itemDescBox = new FunkinSprite());
     itemDescBox.cameras = [hudCamera];
