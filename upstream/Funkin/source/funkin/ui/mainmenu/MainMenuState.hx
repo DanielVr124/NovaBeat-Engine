@@ -730,8 +730,8 @@ class MainMenuModsItem extends MenuListItem
 
   override function destroy():Void
   {
+    label.destroy();
+    shadow.destroy();
     super.destroy();
-    label = null;
-    shadow = null;
   }
 }
