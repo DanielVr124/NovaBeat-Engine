@@ -155,7 +155,7 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     var className = getRuntimeClassName();
     if (className != null && className.indexOf("funkin.ui.") == 0)
     {
-      Cursor.show();
+      Cursor.hide();
     }
     #end
 
