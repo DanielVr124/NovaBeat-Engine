@@ -9,8 +9,6 @@ import funkin.ui.debug.DebugMenuSubState;
 import flixel.FlxObject;
 import flixel.FlxSubState;
 import flixel.FlxSprite;
-import flixel.text.FlxText;
-import flixel.text.FlxText.FlxTextAlign;
 import flixel.effects.FlxFlicker;
 import flixel.math.FlxPoint;
 import flixel.util.typeLimit.NextState;
@@ -201,9 +199,11 @@ class MainMenuState extends MusicBeatState
       }));
     });
 
-    // Put Mods beside the two main game modes, matching the original menu's
-    // navigation flow while opening the existing manager directly.
-    createModsMenuItem();
+    // Use the player's uploaded Sparrow atlas for the Mods button.
+    createMenuItem('mods', 'mainmenu/mods', function()
+    {
+      startExitState(() -> new NovaBeatModsMenuState());
+    });
 
     if (hasUpgraded)
     {
@@ -378,22 +378,6 @@ class MainMenuState extends MusicBeatState
     item.centered = true;
     item.changeAnim('idle');
     menuItems.addItem(name, item);
-  }
-
-  function createModsMenuItem():Void
-  {
-    if (menuItems == null) return;
-
-    // The old sprite atlas sliced the letter edges in its MODS frames.
-    // Render this single item from a real text object instead of trying to
-    // compensate by shifting the other menu entries.
-    var item:ModsTextMenuItem = new ModsTextMenuItem('mods', function()
-    {
-      startExitState(() -> new NovaBeatModsMenuState());
-    });
-    item.ID = menuItems.length;
-    item.scrollFactor.set();
-    menuItems.addItem('mods', item);
   }
 
   var buttonGrp:Array<FlxSprite> = [];
@@ -667,86 +651,3 @@ class MainMenuState extends MusicBeatState
   }
 }
 
-
-/**
- * Code-drawn Mods button for the original FNF menu.
- * It follows MenuListItem selection, flicker, keyboard/gamepad, and touch input,
- * while using the game's VCR font and a matching dark/pink menu palette.
- */
-
-
-/**
- * Crisp text-based Mods entry used in place of the malformed sprite atlas.
- * It retains the normal MenuListItem input, selection, and transition behavior.
- */
-class ModsTextMenuItem extends MenuListItem
-{
-  var label:Null<FlxText> = null;
-
-  public function new(name:String, callback:Void->Void)
-  {
-    super(0, 0, name, callback);
-    makeGraphic(460, 180, FlxColor.TRANSPARENT);
-    updateHitbox();
-    origin.set(width * 0.5, height * 0.5);
-    offset.copyFrom(origin);
-
-    label = new FlxText(0, 0, 460, 'MODS', 54);
-    label.setFormat(Paths.font('vcr.ttf'), 54, FlxColor.WHITE, FlxTextAlign.CENTER);
-    positionLabel();
-  }
-
-  function positionLabel():Void
-  {
-    if (label == null) return;
-    label.x = x - label.width * 0.5;
-    label.y = y - label.height * 0.5;
-  }
-
-  override function set_x(value:Float):Float
-  {
-    var result:Float = super.set_x(value);
-    positionLabel();
-    return result;
-  }
-
-  override function set_y(value:Float):Float
-  {
-    var result:Float = super.set_y(value);
-    positionLabel();
-    return result;
-  }
-
-  override function idle():Void
-  {
-    super.idle();
-    if (label != null) label.alpha = alpha;
-  }
-
-  override function select():Void
-  {
-    super.select();
-    if (label != null) label.alpha = alpha;
-  }
-
-  override function update(elapsed:Float):Void
-  {
-    super.update(elapsed);
-    if (label != null)
-    {
-      label.alpha = alpha;
-      label.update(elapsed);
-    }
-  }
-
-  override function draw():Void
-  {
-    super.draw();
-    if (visible && label != null)
-    {
-      label.cameras = cameras;
-      label.scrollFactor.copyFrom(scrollFactor);
-      label.draw();
-    }
-  }
-}
