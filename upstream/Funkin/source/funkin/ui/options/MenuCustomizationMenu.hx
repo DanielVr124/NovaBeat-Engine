@@ -18,7 +18,6 @@ import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MenuList.NavControls;
 import funkin.util.SwipeUtil;
-import funkin.ui.AtlasText.AtlasFont;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -443,14 +442,27 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     switch (items.selectedIndex)
     {
+      case 0:
+        var current:Int = ACCENTS.indexOf(Save.instance.options.menuAccent);
+        Save.instance.options.menuAccent = ACCENTS[(current + direction + ACCENTS.length) % ACCENTS.length];
       case 1: adjustValue(1, direction * 5);
       case 2: adjustValue(2, direction * 5);
       case 4: adjustValue(4, direction);
+      case 5:
+        var current:Int = DENSITIES.indexOf(Save.instance.options.menuDensity);
+        Save.instance.options.menuDensity = DENSITIES[(current + direction + DENSITIES.length) % DENSITIES.length];
       default: return;
     }
 
     Save.system.flush();
     refreshLabels();
     if (statusText != null) statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
+  }
+
+  override function destroy():Void
+  {
+    super.destroy();
+    if (menuCamera != null && FlxG.cameras.list.contains(menuCamera)) FlxG.cameras.remove(menuCamera);
+    if (hudCamera != null && FlxG.cameras.list.contains(hudCamera)) FlxG.cameras.remove(hudCamera);
   }
 }
