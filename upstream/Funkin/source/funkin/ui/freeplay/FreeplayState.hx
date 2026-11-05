@@ -1764,19 +1764,7 @@ class FreeplayState extends MusicBeatSubState
 
     handleDirectionalInput(elapsed);
 
-    #if !mobile
-    if (Preferences.menuStyle == "NovaBeat" && FlxG.mouse.justPressed)
-    {
-      for (index in 0...grpCapsules.members.length)
-      {
-        var capsule = grpCapsules.members[index];
-        if (capsule == null || !FlxG.mouse.overlaps(capsule.theActualHitbox, funnyCam)) continue;
-        if (index != curSelected) changeSelection(index - curSelected);
-        else currentCapsule.onConfirm();
-        break;
-      }
-    }
-    #end
+
 
     final wheelAmount:Int = Math.round(FlxMath.bound(FlxG.mouse.deltaWheel.y, -1, 1));
 
