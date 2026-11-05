@@ -8,6 +8,8 @@ import funkin.save.Save;
 import funkin.ui.Page;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
+import funkin.ui.MenuList.NavControls;
+import funkin.util.SwipeUtil;
 import funkin.ui.AtlasText.AtlasFont;
 #if mobile
 import funkin.mobile.ui.FunkinBackButton;
@@ -41,32 +43,47 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var descriptionText:FlxText;
   var statusText:FlxText;
   var optionRows:Array<TextMenuItem> = [];
+  var rowWidths:Array<Float> = [];
   var rowHeight:Float = 48;
   var compactLayout:Bool = false;
+  var twoColumnLayout:Bool = false;
 
   public function new()
   {
     super();
 
-    compactLayout = FlxG.height > FlxG.width;
-    rowHeight = Math.max(22, Math.min(compactLayout ? 42 : 52, (FlxG.height - 205) / LABELS.length));
+    compactLayout = FlxG.width < 950 || FlxG.height > FlxG.width * 1.12;
+    twoColumnLayout = FlxG.width > FlxG.height && FlxG.height < 560;
 
     var margin:Float = compactLayout ? 20 : 46;
-    add(makeLabel(margin, 22, FlxG.width - margin * 2, 'NOVABEAT CUSTOMIZATION', compactLayout ? 23 : 30, 0xFFFFFFFF));
-    add(makeLabel(margin, 58, FlxG.width - margin * 2,
+    var headerWidth:Float = FlxG.width - margin * 2;
+    #if mobile
+    headerWidth = Math.max(100, headerWidth - 100);
+    #end
+
+    add(makeLabel(margin, 22, headerWidth, 'NOVABEAT CUSTOMIZATION', compactLayout ? 23 : 30, 0xFFFFFFFF));
+    add(makeLabel(margin, 58, headerWidth,
       'These settings only change the NovaBeat menu. Original FNF remains untouched.', 11, 0xFF48E7FF));
 
-    items = new TextMenuList();
     var listX:Float = margin + 12;
     var listY:Float = 96;
     var listW:Float = FlxG.width - margin * 2 - 24;
+    var columnGap:Float = twoColumnLayout ? 10 : 0;
+    var columnCount:Int = twoColumnLayout ? 2 : 1;
+    var rowCount:Int = twoColumnLayout ? Std.int(Math.ceil(LABELS.length / 2)) : LABELS.length;
+    var cellWidth:Float = (listW - columnGap * (columnCount - 1)) / columnCount;
+    var footerReserve:Float = 106;
+    rowHeight = Math.max(twoColumnLayout ? 22 : 20,
+      Math.min(compactLayout ? 42 : 52, (FlxG.height - listY - footerReserve) / rowCount));
+
+    items = new TextMenuList(twoColumnLayout ? NavControls.Columns(2) : NavControls.Vertical);
 
     var panel:FlxSprite = new FlxSprite(margin, listY - 8);
-    panel.makeGraphic(Std.int(FlxG.width - margin * 2), Std.int(rowHeight * LABELS.length + 18), 0xFF4269B5);
+    panel.makeGraphic(Std.int(FlxG.width - margin * 2), Std.int(rowHeight * rowCount + 18), 0xFF4269B5);
     add(panel);
 
     var panelFill:FlxSprite = new FlxSprite(margin + 2, listY - 6);
-    panelFill.makeGraphic(Std.int(FlxG.width - margin * 2 - 4), Std.int(rowHeight * LABELS.length + 14), 0xF0061028);
+    panelFill.makeGraphic(Std.int(FlxG.width - margin * 2 - 4), Std.int(rowHeight * rowCount + 14), 0xF0061028);
     add(panelFill);
 
     descriptions = [
@@ -87,23 +104,28 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     for (index in 0...LABELS.length)
     {
       var itemIndex:Int = index;
-      var y:Float = listY + index * rowHeight;
-      var row:FlxSprite = new FlxSprite(listX, y);
-      row.makeGraphic(Std.int(listW), Std.int(Math.max(1, rowHeight - 2)), index % 2 == 0 ? 0xFF0C1730 : 0xFF111F3D);
+      var column:Int = twoColumnLayout ? index % 2 : 0;
+      var rowIndex:Int = twoColumnLayout ? Std.int(index / 2) : index;
+      var itemX:Float = listX + column * (cellWidth + columnGap);
+      var y:Float = listY + rowIndex * rowHeight;
+
+      var row:FlxSprite = new FlxSprite(itemX, y);
+      row.makeGraphic(Std.int(cellWidth), Std.int(Math.max(1, rowHeight - 2)), rowIndex % 2 == 0 ? 0xFF0C1730 : 0xFF111F3D);
       add(row);
 
-      var item:TextMenuItem = items.createItem(listX + 10, y + 2, LABELS[index], AtlasFont.BOLD, function()
+      var item:TextMenuItem = items.createItem(itemX + 10, y + 2, LABELS[index], AtlasFont.BOLD, function()
       {
         activate(itemIndex);
       });
-      item.makeGraphic(Std.int(listW - 20), Std.int(Math.max(1, rowHeight - 4)), FlxColor.TRANSPARENT);
+      item.makeGraphic(Std.int(cellWidth - 20), Std.int(Math.max(1, rowHeight - 4)), FlxColor.TRANSPARENT);
       item.updateHitbox();
       var textScale:Float = Math.max(0.35, Math.min(compactLayout ? 0.46 : 0.64, (rowHeight - 4) / 32));
       item.atlasText.scale.set(textScale, textScale);
       item.atlasText.updateHitbox();
-      item.atlasText.x = listX + 15;
+      item.atlasText.x = itemX + 15;
       item.atlasText.y = y + (rowHeight - item.atlasText.height) * 0.5;
       optionRows.push(item);
+      rowWidths.push(cellWidth - 20);
     }
 
     items.onChange.add(function(selected:TextMenuItem)
@@ -116,14 +138,19 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     descriptionText = makeLabel(margin, FlxG.height - 82, FlxG.width - margin * 2, descriptions[0], 11, 0xFFB6C7E5);
     add(descriptionText);
 
+    #if mobile
+    statusText = makeLabel(margin, FlxG.height - 42, FlxG.width - margin * 2,
+      'TAP TO INCREASE   •   SWIPE LEFT / RIGHT TO ADJUST   •   BACK TO RETURN', 9, 0xFF8DA8D8);
+    #else
     statusText = makeLabel(margin, FlxG.height - 42, FlxG.width - margin * 2,
       'LEFT / RIGHT ADJUST   •   ENTER TO CHANGE   •   BACK TO RETURN', 9, 0xFF8DA8D8);
+    #end
     add(statusText);
 
     refreshLabels();
 
     #if mobile
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 130, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
+    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
     add(backButton);
     #end
   }
@@ -203,6 +230,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       });
       optionRows[index].atlasText.text = displayLabel;
       optionRows[index].atlasText.updateHitbox();
+
+      // TextMenuItem.setItem() resets the transparent sprite hitbox to the
+      // text's size. Restore the full row so tapping anywhere on the row works.
+      optionRows[index].width = rowWidths[index];
+      optionRows[index].height = rowHeight - 4;
     }
   }
 
@@ -235,8 +267,8 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (!enabled || optionRows.length == 0) return;
 
-    if (controls.UI_LEFT_P) adjustSelected(-1);
-    if (controls.UI_RIGHT_P) adjustSelected(1);
+    if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
+    if (controls.UI_RIGHT_P || SwipeUtil.swipeRight) adjustSelected(1);
   }
 
   function adjustSelected(direction:Int):Void
