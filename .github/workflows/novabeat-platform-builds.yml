@@ -252,15 +252,33 @@ jobs:
           fi
           haxelib --global run hmm install -q
 
-      - name: Install Linux Wayland build prerequisites
+      - name: Install complete SDL and Lime Linux development dependencies
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y build-essential g++ gcc g++-multilib gcc-multilib libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libx11-dev libxext-dev libxi-dev libxrandr-dev libxinerama-dev libpulse-dev libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev libdbus-1-dev libxcursor-dev libxss-dev libudev-dev
+          sudo apt-get install -y \
+            build-essential g++ gcc g++-multilib gcc-multilib git make pkg-config cmake ninja-build \
+            libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxinerama-dev \
+            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libglu1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libvulkan-dev \
+            libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev \
+            libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libwayland-bin wayland-protocols libdecor-0-dev liburing-dev
+          for header in \
+            /usr/include/X11/extensions/scrnsaver.h \
+            /usr/include/libudev.h \
+            /usr/include/pipewire/pipewire.h \
+            /usr/include/wayland-client.h \
+            /usr/include/alsa/asoundlib.h \
+            /usr/include/pulse/pulseaudio.h; do
+            if [[ ! -f "$header" ]]; then
+              echo "::error title=Missing SDL development header::$header was not installed"
+              exit 1
+            fi
+          done
+          pkg-config --exists libpipewire-0.3 libudev wayland-client alsa libpulse
           command -v wayland-scanner
           wayland-scanner --version
-
       - name: Compile HXCPP support tools
         shell: bash
         working-directory: upstream/Funkin
