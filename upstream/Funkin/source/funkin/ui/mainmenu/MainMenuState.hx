@@ -199,7 +199,8 @@ class MainMenuState extends MusicBeatState
       }));
     });
 
-    // Use the player's uploaded Sparrow atlas for the Mods button.
+    // Use the uploaded Sparrow atlas. mods.xml must export the "mods idle"
+    // and "mods selected" prefixes consumed by AtlasMenuItem.
     createMenuItem('mods', 'mainmenu/mods', function()
     {
       startExitState(() -> new NovaBeatModsMenuState());
