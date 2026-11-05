@@ -476,34 +476,7 @@ class StoryMenuState extends MusicBeatState
       }
       #end
 
-      #if !mobile
-      if (!selectedLevel && FlxG.mouse.justPressed)
-      {
-        if (FlxG.mouse.overlaps(leftDifficultyArrow))
-        {
-          changeDifficulty(-1);
-        }
-        else if (FlxG.mouse.overlaps(rightDifficultyArrow))
-        {
-          changeDifficulty(1);
-        }
-        else
-        {
-          for (index in 0...levelTitles.members.length)
-          {
-            var item:LevelTitle = levelTitles.members[index];
-            if (item.members.length == 0 || !FlxG.mouse.overlaps(item.members[0])) continue;
-            var currentIndex:Int = levelList.indexOf(currentLevelId);
-            if (index == currentIndex) selectLevel();
-            else changeLevel(index - currentIndex);
-            break;
-          }
-        }
-      }
-      #end
-    }
-
-    if (controls.BACK_P) goBack();
+ACK_P) goBack();
   }
 
   /**
