@@ -354,8 +354,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     index = Std.int(Math.max(0, Math.min(index, members.length - 1)));
 
     // Skip unavailable entries in the requested direction without ever
-    // stepping beyond the end of the array. The old comparison used '>'
-    // instead of '>=' and could recurse with members.length as an index.
+    // stepping beyond the end of the array. Keep this check centralized so
+    // every menu (including the Mods entry) uses the same safe selection path.
     if (!members[index].available)
     {
       final direction:Int = (index < selectedIndex) ? -1 : 1;
