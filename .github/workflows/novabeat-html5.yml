@@ -46,6 +46,24 @@ jobs:
         with:
           haxe-version: "4.3.7"
 
+      - name: Locate global Haxe library repository
+        id: haxelib-cache-path
+        shell: bash
+        run: |
+          set -euo pipefail
+          haxelib_repo="$(haxelib config)"
+          test -n "$haxelib_repo"
+          echo "path=$haxelib_repo" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Haxe libraries and Lime tool caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.haxelib-cache-path.outputs.path }}
+            upstream/Funkin/.haxelib
+            ~/.lime
+          key: ${{ runner.os }}-haxe-4.3.7-${{ hashFiles('upstream/Funkin/hmm.json') }}
+
       - name: Confirm source and pinned content repositories
         shell: bash
         run: |
