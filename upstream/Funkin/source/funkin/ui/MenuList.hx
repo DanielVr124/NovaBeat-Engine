@@ -141,6 +141,18 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         navGrid(num, inputUp, inputDown, wrapY, inputLeft, inputRight, wrapX);
     };
 
+    #if !mobile
+    // Some desktop keyboard layouts do not expose arrows through the control
+    // remapping layer. Keep raw arrow keys as a fallback for the main menu.
+    if (_isMainMenuState && newIndex == selectedIndex)
+    {
+      if (FlxG.keys.justPressed.UP && !controls.UI_UP_P)
+        newIndex = navAxis(selectedIndex, members.length, true, false, wrapY);
+      else if (FlxG.keys.justPressed.DOWN && !controls.UI_DOWN_P)
+        newIndex = navAxis(selectedIndex, members.length, false, true, wrapY);
+    }
+    #end
+
     #if FEATURE_TOUCH_CONTROLS
     // Update touch position
     if (TouchUtil.pressed)
@@ -223,6 +235,23 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     {
       playNavigationSound();
       selectItem(newIndex);
+    }
+    #end
+
+    // Mouse-wheel scrolling follows the same vertical menu order as keys.
+    #if !mobile
+    final wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
+    if (wheelAmount != 0 && members.length > 0 && !busy)
+    {
+      var wheelTarget:Int = selectedIndex - wheelAmount;
+      if (wheelTarget < 0) wheelTarget = wrapY ? members.length - 1 : 0;
+      if (wheelTarget >= members.length) wheelTarget = wrapY ? 0 : members.length - 1;
+
+      if (wheelTarget != selectedIndex)
+      {
+        playNavigationSound();
+        selectItem(wheelTarget);
+      }
     }
     #end
 
