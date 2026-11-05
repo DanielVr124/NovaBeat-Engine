@@ -18,6 +18,7 @@ import funkin.ui.MenuList.NavControls;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MusicBeatState;
+import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.credits.CreditsState;
@@ -458,7 +459,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     playSfx('select', 0.30);
   }
 
-  function update(elapsed:Float):Void
+  override function update(elapsed:Float):Void
   {
     super.update(elapsed);
 
