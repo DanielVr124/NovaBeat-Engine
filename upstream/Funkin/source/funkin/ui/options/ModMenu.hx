@@ -101,6 +101,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function refreshModList():Void
   {
+    #if web
+    // Browsers cannot inspect the game's local mods directory. Keep the page navigable
+    // and explain the limitation instead of presenting it as an empty or broken library.
+    detectedMods = [];
+    selectedIndex = 0;
+    countText.text = 'BROWSER BUILD • LOCAL MOD SCANNING UNAVAILABLE';
+    statusText.text = 'Use the Windows or Android build to detect and manage local mods. Press ESC to return.';
+    renderRows();
+    renderDetails();
+    return;
+    #else
     #if sys
     detectedMods = PolymodHandler.getAllMods();
     #else
@@ -125,6 +136,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     statusText.text = 'Changes are saved immediately. Restart the game to reload enabled mods and their assets.';
     renderRows();
     renderDetails();
+    #end
   }
 
   function renderRows():Void
@@ -141,7 +153,11 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (detectedMods.length == 0)
     {
+      #if web
+      emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
+      #else
       emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
+      #end
       return;
     }
 
@@ -174,8 +190,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     if (detectedMods.length == 0)
     {
+      #if web
+      detailTitle.text = 'BROWSER BUILD LIMITATION';
+      detailText.text = 'Web browsers cannot read the game\'s local mods folder. Use the Windows or Android build to detect, enable, and load installed mods.';
+      #else
       detailTitle.text = 'NO MODS INSTALLED';
       detailText.text = 'Put a Polymod-compatible mod folder inside the game mods folder, then press R to scan again.\n\nThe manager will show detected mods here.';
+      #end
       return;
     }
 

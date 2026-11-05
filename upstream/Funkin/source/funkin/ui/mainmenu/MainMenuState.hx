@@ -239,9 +239,9 @@ class MainMenuState extends MusicBeatState
       startExitState(() -> new funkin.ui.credits.CreditsState());
     });
 
-    // Reset position of menu items.
-    // Keep the full menu on-screen when the new Mods entry is present.
-    final spacing:Float = Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
+    // Keep the artwork for each button separate. The camera follows the selected item,
+    // so the menu can scroll instead of shrinking the spacing until the taller Mods atlas overlaps its neighbors.
+    final spacing:Float = 160;
     final top:Float = (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)
@@ -518,8 +518,11 @@ class MainMenuState extends MusicBeatState
     #if !mobile
     if (menuItems != null && canInteract && !menuItems.busy)
     {
-      for (index in 0...menuItems.length)
+      // Hit-test in reverse draw order so an overlapping item cannot steal a click
+      // from the button that is visibly rendered above it.
+      for (reverseIndex in 0...menuItems.length)
       {
+        final index:Int = menuItems.length - 1 - reverseIndex;
         final item = menuItems.members[index];
         if (!item.available || !FlxG.mouse.overlaps(item)) continue;
 
