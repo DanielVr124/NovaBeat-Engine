@@ -41,7 +41,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_NAMES:Array<String> = [
     'STORY MODE',
     'FREEPLAY',
-    'MOD MANAGER',
+    'MODS',
     'OPTIONS',
     'CREDITS'
   ];
@@ -51,7 +51,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_TITLES:Array<String> = [
     'STORY\nMODE',
     'FREEPLAY',
-    'MOD\nMANAGER',
+    'MODS',
     'OPTIONS',
     'CREDITS'
   ];
@@ -93,7 +93,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var titleLogo:Null<FlxSprite>;
   var titlePrompt:Null<FlxText>;
   var titleTapHint:Null<FlxText>;
-  var titleOptionsButton:Null<FlxText>;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
 
@@ -182,10 +181,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
     titleTapHint = addLabel(0, height * 0.915, width, 'OR TAP ANYWHERE TO START', 12, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
 
-    addRoundRect(width - 86, 25, 48, 48, 15, 15, 0xB806102D);
-    titleOptionsButton = addLabel(width - 86, 30, 48, '⚙', 24, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
-    titleOptionsButton.alpha = 0.9;
-    titleOptionsButton.scrollFactor.set();
   }
 
   function titlePromptSize():Int
@@ -221,12 +216,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (titleLogo != null) remove(titleLogo, true);
     if (titlePrompt != null) remove(titlePrompt, true);
     if (titleTapHint != null) remove(titleTapHint, true);
-    if (titleOptionsButton != null) remove(titleOptionsButton, true);
 
     titleLogo = null;
     titlePrompt = null;
     titleTapHint = null;
-    titleOptionsButton = null;
   }
 
   function buildInterface():Void
@@ -343,7 +336,10 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.makeGraphic(Std.int(buttonW), Std.int(buttonH), FlxColor.TRANSPARENT);
       item.updateHitbox();
       item.scrollFactor.set();
+      // Keep the upstream FNF bitmap label hidden. Its parent alpha changes
+      // when selected, so alpha alone is not enough to prevent it drawing.
       item.atlasText.alpha = 0;
+      item.atlasText.visible = false;
 
       var iconSize:Int = tileLayout ? 22 : 26;
       var iconX:Float = itemX + (tileLayout ? 12 : 20);
@@ -471,12 +467,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       #if mobile
       if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
       #end
-
-      if (FlxG.mouse.justPressed && titleOptionsButton != null && FlxG.mouse.overlaps(titleOptionsButton))
-      {
-        openOptions(false);
-        return;
-      }
 
       if (pressed || FlxG.mouse.justPressed) beginMenuTransition();
       return;
@@ -659,36 +649,23 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function playMenuTheme(restart:Bool, startingVolume:Float):Void
   {
-    #if web
-    var musicPath:String = Paths.file('music/novabeat-menu/novabeat-menu.ogg');
+    // Paths.music selects MP3 on web and OGG on native targets.
+    // Browser builds generate MP3 variants from the source OGG files.
     if (restart || FlxG.sound.music == null || !FlxG.sound.music.playing)
     {
-      if (FlxG.sound.music != null)
-      {
-        FlxG.sound.music.fadeTween?.cancel();
-        FlxG.sound.music.stop();
-        FlxG.sound.music.kill();
-      }
-
-      var music = FunkinSound.load(musicPath, startingVolume, true, false, true, true);
-      if (music != null) FunkinSound.setMusic(music);
+      FunkinSound.playMusic('novabeat-menu', {
+        startingVolume: startingVolume,
+        overrideExisting: true,
+        restartTrack: restart,
+        persist: true,
+        mapTimeChanges: false
+      });
     }
-    #else
-    FunkinSound.playMusic('novabeat-menu', {
-      startingVolume: startingVolume,
-      overrideExisting: true,
-      restartTrack: restart,
-      persist: true
-    });
-    #end
   }
 
   function playSfx(name:String, volume:Float):Void
   {
-    #if web
-    FunkinSound.playOnce(Paths.file('sounds/novabeat/' + name + '.ogg'), volume);
-    #else
+    // Paths.sound selects the correct platform extension for this target.
     FunkinSound.playOnce(Paths.sound('novabeat/' + name), volume);
-    #end
   }
 }

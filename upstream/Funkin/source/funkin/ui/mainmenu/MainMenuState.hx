@@ -239,9 +239,8 @@ class MainMenuState extends MusicBeatState
       startExitState(() -> new funkin.ui.credits.CreditsState());
     });
 
-    // The custom Mods atlas is 180px tall. Keep enough room between item centers
-    // for the complete animation frame, instead of letting its bounds overlap adjacent buttons.
-    final spacing:Float = 210;
+    // Restore the original menu spacing. The Mods artwork is corrected independently.
+    final spacing:Float = Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
     final top:Float = (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)

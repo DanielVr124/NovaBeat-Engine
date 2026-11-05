@@ -1,7 +1,6 @@
 package funkin.ui.options;
 
 import flixel.FlxG;
-import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.save.Save;
@@ -44,6 +43,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var statusText:FlxText;
   var optionRows:Array<TextMenuItem> = [];
   var rowWidths:Array<Float> = [];
+  var rowScales:Array<Float> = [];
   var rowHeight:Float = 48;
   var compactLayout:Bool = false;
   var twoColumnLayout:Bool = false;
@@ -78,14 +78,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     items = new TextMenuList(twoColumnLayout ? NavControls.Columns(2) : NavControls.Vertical);
 
-    var panel:FlxSprite = new FlxSprite(margin, listY - 8);
-    panel.makeGraphic(Std.int(FlxG.width - margin * 2), Std.int(rowHeight * rowCount + 18), 0xFF4269B5);
-    add(panel);
-
-    var panelFill:FlxSprite = new FlxSprite(margin + 2, listY - 6);
-    panelFill.makeGraphic(Std.int(FlxG.width - margin * 2 - 4), Std.int(rowHeight * rowCount + 14), 0xF0061028);
-    add(panelFill);
-
     descriptions = [
       'Choose the main NovaBeat highlight and selection colour.',
       'Adjust the visual strength behind the menu panels. Use LEFT / RIGHT to change it.',
@@ -109,10 +101,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       var itemX:Float = listX + column * (cellWidth + columnGap);
       var y:Float = listY + rowIndex * rowHeight;
 
-      var row:FlxSprite = new FlxSprite(itemX, y);
-      row.makeGraphic(Std.int(cellWidth), Std.int(Math.max(1, rowHeight - 2)), rowIndex % 2 == 0 ? 0xFF0C1730 : 0xFF111F3D);
-      add(row);
-
       var item:TextMenuItem = items.createItem(itemX + 10, y + 2, LABELS[index], AtlasFont.BOLD, function()
       {
         activate(itemIndex);
@@ -126,6 +114,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       item.atlasText.y = y + (rowHeight - item.atlasText.height) * 0.5;
       optionRows.push(item);
       rowWidths.push(cellWidth - 20);
+      rowScales.push(textScale);
     }
 
     items.onChange.add(function(selected:TextMenuItem)
@@ -229,6 +218,8 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         activate(itemIndex);
       });
       optionRows[index].atlasText.text = displayLabel;
+      // TextMenuItem.setItem() resets the bitmap font scaling; reapply after refresh.
+      optionRows[index].atlasText.scale.set(rowScales[index], rowScales[index]);
       optionRows[index].atlasText.updateHitbox();
 
       // TextMenuItem.setItem() resets the transparent sprite hitbox to the

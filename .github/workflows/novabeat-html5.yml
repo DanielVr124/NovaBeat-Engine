@@ -9,6 +9,7 @@ on:
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
+      - "novabeat-assets/**"
       - ".github/workflows/novabeat-html5.yml"
       - "docs/HTML5_TESTING.md"
       - "README.md"
@@ -17,6 +18,7 @@ on:
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
+      - "novabeat-assets/**"
       - ".github/workflows/novabeat-html5.yml"
       - "docs/HTML5_TESTING.md"
       - "README.md"
@@ -123,6 +125,23 @@ jobs:
           EOF
           command -v wayland-scanner
           wayland-scanner --version
+      - name: Prepare NovaBeat browser audio assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          while IFS= read -r -d '' input; do
+            output="${input%.ogg}.mp3"
+            ffmpeg -nostdin -hide_banner -loglevel error -y -i "$input" -vn -codec:a libmp3lame -q:a 3 "$output"
+          done < <(find novabeat-assets -type f -name '*.ogg' -print0)
+          test -s novabeat-assets/music/novabeat-menu/novabeat-menu.mp3
+          for sound in enter back confirm select; do
+            test -s "novabeat-assets/sounds/novabeat/${sound}.mp3"
+          done
+
       - name: Compile HXCPP support tools required by Lime
         shell: bash
         working-directory: upstream/Funkin

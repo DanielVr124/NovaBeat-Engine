@@ -43,12 +43,12 @@ class Project extends HXProject
   /**
    * The game's name. Used as the default window title.
    */
-  static final TITLE:String = "Friday Night Funkin'";
+  static final TITLE:String = "Friday Night Funkin': NovaBeat Engine";
 
   /**
    * The game's name on mobile. Used as the title for the game on the home screen.
    */
-  static final TITLE_MOBILE:String = "FNF";
+  static final TITLE_MOBILE:String = "Friday Night Funkin': NovaBeat Engine";
 
   /**
    * A package name used for identifying the app on various app stores.
@@ -570,7 +570,9 @@ class Project extends HXProject
     configureASTCTextures();
     configureAssets();
 
-    if (!isLinux())
+    // Lime skips icon generation on Linux by default, but HTML5 and Android
+    // builds also run on Linux CI runners.
+    if (!isLinux() || isAndroid() || isWeb())
     {
       configureIcons();
     }
@@ -1578,45 +1580,43 @@ class Project extends HXProject
   {
     info('Configuring application icons...');
 
+    var iconPath:String = "../../novabeat-assets/branding/app-icon.png";
+    if (!FileSystem.exists(iconPath))
+    {
+      error('NovaBeat application icon was not found: ' + iconPath);
+      return;
+    }
+
     if (isAndroid())
     {
-      // Adaptive icons
-      adaptiveIcon = new AdaptiveIcon('art/icons/android/', true);
+      // Lime creates Android drawable launcher icons from this shared source.
+      addIcon(iconPath);
     }
     else if (isIOS())
     {
-      // Note: the icons on iOS (and likely even android too) support nice P3 colors space
-      // However, lime's IconHelper.hx` and the general accompyaning encoding stuff to automatically
-      // generate icons of different sizes doesnt accomodate for the nice yummy color space
-      // so we do indeed need to make sure we declare the icons here
-      // on iOS
-
-      // addIcon("icon16_noalpha.png", 16);
-      // addIcon("art/icons/icon32_noalpha.png", 32);
-      // addIcon("art/icons/icon64_noalpha.png", 64);
-      // addIcon("art/icons/iconOG_noalpha.png");
-      addIcon("art/icons/bf-iOS-Default-20x20@2x.png", 40);
-      addIcon("art/icons/bf-iOS-Default-20x20@3x.png", 60);
-      addIcon("art/icons/bf-iOS-Default-29x29.png", 29);
-      addIcon("art/icons/bf-iOS-Default-29x29@2x.png", 58);
-      addIcon("art/icons/bf-iOS-Default-29x29@3x.png", 87);
-      addIcon("art/icons/bf-iOS-Default-40x40@2x.png", 80);
-      addIcon("art/icons/bf-iOS-Default-60x60@2x.png", 120);
-      addIcon("art/icons/bf-iOS-Default-60x60@3x.png", 180);
-      addIcon("art/icons/bf-iOS-Default-1024x1024.png", 1024);
-      addIcon("art/icons/bf-iOS-Default-1024x1024.png");
+      // Use the same NovaBeat artwork for every supported iOS icon size.
+      addIcon(iconPath, 40);
+      addIcon(iconPath, 60);
+      addIcon(iconPath, 29);
+      addIcon(iconPath, 58);
+      addIcon(iconPath, 87);
+      addIcon(iconPath, 80);
+      addIcon(iconPath, 120);
+      addIcon(iconPath, 180);
+      addIcon(iconPath, 1024);
+      addIcon(iconPath);
     }
     else
     {
-      addIcon("art/icons/icon16.png", 16);
-      addIcon("art/icons/icon32.png", 32);
-      addIcon("art/icons/icon64.png", 64);
-      addIcon("art/icons/iconOG.png");
+      // Windows executable/taskbar icons and HTML5 favicons.
+      addIcon(iconPath, 16);
+      addIcon(iconPath, 32);
+      addIcon(iconPath, 64);
+      addIcon(iconPath);
     }
 
     info('Done configuring icons.');
   }
-
   /**
    * Configure the astc textures.
    */

@@ -1,6 +1,8 @@
 package funkin.ui;
 
 import funkin.modding.IScriptedClass.IEventHandler;
+import funkin.Preferences;
+import funkin.input.Cursor;
 import funkin.ui.mainmenu.MainMenuState;
 import flixel.FlxSubState;
 import flixel.addons.transition.FlxTransitionableState;
@@ -137,6 +139,19 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
   override function create()
   {
     super.create();
+
+    #if !mobile
+    // All menu and submenu states are under funkin.ui.*. Gameplay states live
+    // outside this namespace, so this does not force a cursor during songs.
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      var className:Null<String> = Type.getClassName(Type.getClass(this));
+      if (className != null && className.indexOf("funkin.ui.") == 0)
+      {
+        Cursor.show();
+      }
+    }
+    #end
 
     createWatermarkText();
 
