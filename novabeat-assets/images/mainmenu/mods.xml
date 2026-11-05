@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="mods.png" width="460" height="1105">
+  <SubTexture name="mods idle0000" x="0" y="0" width="460" height="180" />
+  <SubTexture name="mods idle0001" x="0" y="185" width="460" height="180" />
+  <SubTexture name="mods idle0002" x="0" y="370" width="460" height="180" />
+  <SubTexture name="mods selected0000" x="0" y="555" width="460" height="180" />
+  <SubTexture name="mods selected0001" x="0" y="740" width="460" height="180" />
+  <SubTexture name="mods selected0002" x="0" y="925" width="460" height="180" />
+</TextureAtlas>

@@ -384,9 +384,7 @@ class MainMenuState extends MusicBeatState
 
   function createModsMenuItem():Void
   {
-    if (menuItems == null) return;
-
-    var item:MainMenuModsItem = new MainMenuModsItem(0, 0, function()
+    createMenuItem('mods', 'mainmenu/mods', function()
     {
       startExitState(() ->
       {
@@ -394,10 +392,6 @@ class MainMenuState extends MusicBeatState
         return new funkin.ui.options.OptionsState();
       });
     });
-
-    item.ID = menuItems.length;
-    item.scrollFactor.set();
-    menuItems.addItem('mods', item);
   }
 
   var buttonGrp:Array<FlxSprite> = [];
@@ -522,6 +516,27 @@ class MainMenuState extends MusicBeatState
       FlxG.sound.music.volume += 0.5 * elapsed;
     }
     handleInputs();
+
+    // Give desktop mouse users the same hover and click behavior as the other menu controls.
+    #if !mobile
+    if (menuItems != null && canInteract && !menuItems.busy)
+    {
+      for (index in 0...menuItems.length)
+      {
+        final item = menuItems.members[index];
+        if (!item.available || !FlxG.mouse.overlaps(item)) continue;
+
+        if (menuItems.selectedIndex != index)
+        {
+          menuItems.selectItem(index);
+          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        }
+
+        if (FlxG.mouse.justPressed) menuItems.accept();
+        break;
+      }
+    }
+    #end
 
     if (menuItems != null) menuItems.busy = !canInteract;
 
@@ -677,61 +692,3 @@ class MainMenuState extends MusicBeatState
  * It follows MenuListItem selection, flicker, keyboard/gamepad, and touch input,
  * while using the game's VCR font and a matching dark/pink menu palette.
  */
-class MainMenuModsItem extends MenuListItem
-{
-  var label:FlxText;
-  var shadow:FlxText;
-
-  public function new(x:Float, y:Float, callback:Void->Void)
-  {
-    super(x, y, 'mods', callback);
-
-    makeGraphic(320, 94, FlxColor.WHITE);
-    FlxSpriteUtil.drawRoundRect(this, 0, 0, 320, 94, 15, 15, 0xFF222C48);
-    FlxSpriteUtil.drawRoundRect(this, 8, 8, 6, 78, 3, 3, 0xFFFF5C9E);
-    FlxSpriteUtil.drawRoundRect(this, 22, 80, 276, 4, 2, 2, 0xFF53698F);
-
-    centerOrigin();
-    offset.copyFrom(origin);
-
-    shadow = new FlxText(0, 0, 280, 'MODS', 58);
-    shadow.setFormat(Paths.font('vcr.ttf'), 58, 0xFF080B16, FlxTextAlign.CENTER);
-    shadow.updateHitbox();
-
-    label = new FlxText(0, 0, 280, 'MODS', 58);
-    label.setFormat(Paths.font('vcr.ttf'), 58, 0xFFFFD5E8, FlxTextAlign.CENTER);
-    label.updateHitbox();
-  }
-
-  override public function draw():Void
-  {
-    if (!visible) return;
-
-    var selected:Bool = alpha >= 0.99;
-    color = selected ? 0xFF3A355B : 0xFF202B43;
-
-    super.draw();
-
-    shadow.x = x - shadow.width * 0.5 + 3;
-    shadow.y = y - shadow.height * 0.5 + 4;
-    shadow.alpha = alpha;
-    shadow.scrollFactor.copyFrom(scrollFactor);
-    shadow.cameras = cameras;
-    shadow.draw();
-
-    label.x = x - label.width * 0.5;
-    label.y = y - label.height * 0.5;
-    label.color = selected ? 0xFFFFFFFF : 0xFFD0D8EA;
-    label.alpha = alpha;
-    label.scrollFactor.copyFrom(scrollFactor);
-    label.cameras = cameras;
-    label.draw();
-  }
-
-  override function destroy():Void
-  {
-    label.destroy();
-    shadow.destroy();
-    super.destroy();
-  }
-}
