@@ -662,25 +662,19 @@ class StoryMenuState extends MusicBeatState
   {
     if (Preferences.menuStyle == "NovaBeat")
     {
-      // NovaBeat uses a dark blue story backdrop instead of the upstream
-      // yellow level band. Story registry, props, selection, and scores remain intact.
+      // Use the same artwork that Freeplay displays behind its song list.
+      // Keep it as a full-screen cover image so it remains consistent across aspect ratios.
       if (levelBackground == null)
       {
-        levelBackground = new FlxSprite(0, 56);
-        levelBackground.makeGraphic(FlxG.width, 400, 0xFF09142B);
+        levelBackground = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
+        var backgroundScale:Float = Math.max(FlxG.width / levelBackground.width, FlxG.height / levelBackground.height);
+        levelBackground.scale.set(backgroundScale, backgroundScale);
+        levelBackground.updateHitbox();
+        levelBackground.screenCenter();
+        levelBackground.scrollFactor.set();
         levelBackground.zIndex = 100;
         levelBackground.alpha = 1.0;
         add(levelBackground);
-
-        var topEdge:FlxSprite = new FlxSprite(0, 56);
-        topEdge.makeGraphic(FlxG.width, 3, 0xFF2879B5);
-        topEdge.zIndex = 101;
-        add(topEdge);
-
-        var bottomEdge:FlxSprite = new FlxSprite(0, 453);
-        bottomEdge.makeGraphic(FlxG.width, 3, 0xFF172B55);
-        bottomEdge.zIndex = 101;
-        add(bottomEdge);
       }
       return;
     }
