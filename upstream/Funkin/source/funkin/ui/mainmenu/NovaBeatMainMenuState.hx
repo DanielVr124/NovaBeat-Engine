@@ -454,7 +454,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       }
     }
 
-    playSfx('select', 0.30);
+    // MenuTypedList owns navigation sounds for keyboard, controller, and mouse.
   }
 
   override function update(elapsed:Float):Void
@@ -510,13 +510,13 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (FlxG.mouse.justPressed)
     {
-      if (homeAudioButton != null && FlxG.mouse.overlaps(homeAudioButton))
+      if (homeAudioButton != null && FlxG.mouse.overlaps(homeAudioButton, uiCamera))
       {
         playSfx('confirm', 0.7);
         openOptions();
         return;
       }
-      if (homeOptionsButton != null && FlxG.mouse.overlaps(homeOptionsButton))
+      if (homeOptionsButton != null && FlxG.mouse.overlaps(homeOptionsButton, uiCamera))
       {
         playSfx('confirm', 0.7);
         openOptions();
