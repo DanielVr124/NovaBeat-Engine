@@ -98,7 +98,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     statusText = addLabel(margin, height - 75, width - margin * 2, '', 11, 0xFF48E7FF);
     helpText = addLabel(margin, height - 48, width - margin * 2,
       portraitLayout ? 'TAP A MOD TO SELECT  •  TAP AGAIN OR ACCEPT TO TOGGLE  •  SWIPE TO SCROLL' :
-      'UP / DOWN SELECT   ENTER TOGGLE   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK', 9, 0xFF8DA8D8);
+      'UP / DOWN SELECT   ENTER TOGGLE   WHEEL SCROLL   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK', 9, 0xFF8DA8D8);
   }
 
   function refreshModList():Void
