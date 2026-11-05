@@ -145,7 +145,12 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     // outside this namespace, so this does not force a cursor during songs.
     if (Preferences.menuStyle == "NovaBeat")
     {
-      var className:Null<String> = Type.getClassName(Type.getClass(this));
+      var className:Null<String> = null;
+      var runtimeClass = Type.getClass(this);
+      if (runtimeClass != null)
+      {
+        className = Type.getClassName(runtimeClass);
+      }
       if (className != null && className.indexOf("funkin.ui.") == 0)
       {
         Cursor.show();
