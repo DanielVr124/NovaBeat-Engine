@@ -55,6 +55,24 @@ jobs:
         with:
           haxe-version: "4.3.7"
 
+      - name: Locate global Haxe library repository
+        id: haxelib-cache-path
+        shell: bash
+        run: |
+          set -euo pipefail
+          haxelib_repo="$(haxelib config)"
+          test -n "$haxelib_repo"
+          echo "path=$haxelib_repo" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Haxe libraries and Lime tool caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.haxelib-cache-path.outputs.path }}
+            upstream/Funkin/.haxelib
+            ~/.lime
+          key: ${{ runner.os }}-haxe-4.3.7-${{ hashFiles('upstream/Funkin/hmm.json') }}
+
       - name: Confirm upstream assets were checked out
         shell: bash
         run: |
@@ -234,6 +252,14 @@ jobs:
         run: |
           set -euo pipefail
           haxelib run lime rebuild cpp -64
+
+      - name: Restore Android Gradle dependency cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: android-gradle-ubuntu-24.04-jdk17-ndk29-${{ hashFiles('upstream/Funkin/hmm.json') }}
 
       - name: Configure Lime Android SDK paths
         shell: bash
