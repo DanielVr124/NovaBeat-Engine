@@ -43,6 +43,9 @@ class OptionsState extends MusicBeatState
    */
   public static var instance:OptionsState;
 
+  /** Open the Mods page immediately when the optional NovaBeat menu launches OptionsState. */
+  public static var openModsOnStart:Bool = false;
+
   var optionsCodex:Codex<OptionsMenuPageName>;
 
   public var drumsBG:FunkinSound;
@@ -76,6 +79,8 @@ class OptionsState extends MusicBeatState
     var offsets:OffsetMenu = optionsCodex.addPage(Offsets, new OffsetMenu());
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
+    var mods:ModMenu = optionsCodex.addPage(Mods, new ModMenu());
+    var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -89,6 +94,8 @@ class OptionsState extends MusicBeatState
       offsets.onExit.add(exitOffsets);
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
+      mods.onExit.add(optionsCodex.switchPage.bind(Options));
+      menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
     }
     else
     {
@@ -100,6 +107,12 @@ class OptionsState extends MusicBeatState
       controls.onExit.add(exitToMainMenu);
       optionsCodex.setPage(Controls);
       #end
+    }
+
+    if (openModsOnStart)
+    {
+      openModsOnStart = false;
+      optionsCodex.setPage(Mods);
     }
 
     super.create();
@@ -170,6 +183,8 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     add(items = new TextMenuList());
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
+    createItem('MOD MANAGER', function() codex.switchPage(Mods));
+    createItem('MENU CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
     #if mobile
     if (ControlsHandler.hasExternalInputDevice)
     #end
@@ -353,6 +368,7 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Controls = 'controls';
   public var Colors = 'colors';
   public var Mods = 'mods';
+  public var MenuCustomization = 'menuCustomization';
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';
   public var SaveData = 'saveData';

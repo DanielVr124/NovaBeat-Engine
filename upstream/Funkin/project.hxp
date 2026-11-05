@@ -1413,6 +1413,10 @@ class Project extends HXProject
     addAssetLibrary("default", shouldEmbed, shouldPreloadDefault);
     addAssetPath("assets/preload", "assets", "default", ["*"], exclude, shouldEmbed, "assets");
 
+    // NovaBeat's own title/menu assets live beside the upstream source tree,
+    // not inside the separately licensed upstream assets submodule.
+    addAssetPath("../../novabeat-assets", "assets", "default", ["*"], exclude, shouldEmbed, "assets");
+
     if (!HARDCODED_CREDITS.isEnabled(this))
     {
       addAsset("assets/exclude/data/credits.json", "assets/data/credits.json", "default", shouldEmbed);

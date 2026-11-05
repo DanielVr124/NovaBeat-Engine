@@ -108,6 +108,14 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItems():Void
   {
+    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. Original FNF stays selected unless you opt into NovaBeat. This setting is saved and applies when you return to the main menu.', [
+      "Original FNF" => "Original FNF",
+      "NovaBeat" => "NovaBeat"
+    ], function(key:String, value:String):Void
+    {
+      Preferences.menuStyle = value;
+    }, Preferences.menuStyle);
+
     #if FEATURE_NAUGHTYNESS
     createPrefItemCheckbox('Naughtyness', 'When enabled, raunchy content (such as swearing, etc.) is displayed.', function(value:Bool):Void
     {

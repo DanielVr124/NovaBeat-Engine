@@ -1,5 +1,7 @@
 package funkin.ui.mainmenu;
 
+import funkin.Preferences;
+
 import flixel.addons.transition.FlxTransitionableState;
 #if FEATURE_DEBUG_MENU
 import funkin.ui.debug.DebugMenuSubState;
@@ -49,7 +51,7 @@ import funkin.mobile.util.InAppPurchasesUtil;
 @:nullSafety
 class MainMenuState extends MusicBeatState
 {
-  var menuItems:Null<MenuTypedList<AtlasMenuItem>>;
+  var menuItems:Null<MenuTypedList<MenuListItem>>;
   var bg:Null<FlxSprite>;
   var magenta:FlxSprite;
   var camFollow:FlxObject;
@@ -90,6 +92,15 @@ class MainMenuState extends MusicBeatState
 
   override function create():Void
   {
+    // Keep the upstream FNF menu as the default. NovaBeat is an explicit
+    // preference and is routed here only after the player opts in.
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      super.create();
+      FlxG.switchState(() -> new NovaBeatMainMenuState());
+      return;
+    }
+
     #if FEATURE_DISCORD_RPC
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end
@@ -134,7 +145,7 @@ class MainMenuState extends MusicBeatState
 
     if (Preferences.flashingLights) add(magenta);
 
-    menuItems = new MenuTypedList<AtlasMenuItem>();
+    menuItems = new MenuTypedList<MenuListItem>();
     add(menuItems);
 
     menuItems.onChange.add(onMenuItemChange);
@@ -188,6 +199,10 @@ class MainMenuState extends MusicBeatState
       }));
     });
 
+    // Put Mods beside the two main game modes, matching the original menu's
+    // navigation flow while opening the existing manager directly.
+    createModsMenuItem();
+
     if (hasUpgraded)
     {
       #if FEATURE_OPEN_URL
@@ -225,7 +240,8 @@ class MainMenuState extends MusicBeatState
     });
 
     // Reset position of menu items.
-    final spacing:Float = 160;
+    // Keep the full menu on-screen when the new Mods entry is present.
+    final spacing:Float = Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
     final top:Float = (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)
@@ -244,15 +260,18 @@ class MainMenuState extends MusicBeatState
     if (!hasUpgraded)
     {
       // the upgrade item
-      var targetItem = menuItems.members[2];
-      for (_ in 0...8)
+      var targetItem = menuItems.getItem('upgrade');
+      if (targetItem != null)
       {
-        var sparkle:UpgradeSparkle = new UpgradeSparkle(targetItem.x - (targetItem.width / 2), targetItem.y - (targetItem.height / 2), targetItem.width,
-          targetItem.height, FlxG.random.bool(80));
-        upgradeSparkles.add(sparkle);
+        for (_ in 0...8)
+        {
+          var sparkle:UpgradeSparkle = new UpgradeSparkle(targetItem.x - (targetItem.width / 2), targetItem.y - (targetItem.height / 2), targetItem.width,
+            targetItem.height, FlxG.random.bool(80));
+          upgradeSparkles.add(sparkle);
 
-        sparkle.scrollFactor.x = 0.0;
-        sparkle.scrollFactor.y = 0.4;
+          sparkle.scrollFactor.x = 0.0;
+          sparkle.scrollFactor.y = 0.4;
+        }
       }
 
       subStateClosed.add(_ ->
@@ -358,6 +377,18 @@ class MainMenuState extends MusicBeatState
     item.centered = true;
     item.changeAnim('idle');
     menuItems.addItem(name, item);
+  }
+
+  function createModsMenuItem():Void
+  {
+    createMenuItem('mods', 'mainmenu/mods', function()
+    {
+      startExitState(() ->
+      {
+        funkin.ui.options.OptionsState.openModsOnStart = true;
+        return new funkin.ui.options.OptionsState();
+      });
+    });
   }
 
   var buttonGrp:Array<FlxSprite> = [];
@@ -482,6 +513,27 @@ class MainMenuState extends MusicBeatState
       FlxG.sound.music.volume += 0.5 * elapsed;
     }
     handleInputs();
+
+    // Give desktop mouse users the same hover and click behavior as the other menu controls.
+    #if !mobile
+    if (menuItems != null && canInteract && !menuItems.busy)
+    {
+      for (index in 0...menuItems.length)
+      {
+        final item = menuItems.members[index];
+        if (!item.available || !FlxG.mouse.overlaps(item)) continue;
+
+        if (menuItems.selectedIndex != index)
+        {
+          menuItems.selectItem(index);
+          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        }
+
+        if (FlxG.mouse.justPressed) menuItems.accept();
+        break;
+      }
+    }
+    #end
 
     if (menuItems != null) menuItems.busy = !canInteract;
 
@@ -630,3 +682,10 @@ class MainMenuState extends MusicBeatState
     FlxG.switchState(() -> new TitleState());
   }
 }
+
+
+/**
+ * Code-drawn Mods button for the original FNF menu.
+ * It follows MenuListItem selection, flicker, keyboard/gamepad, and touch input,
+ * while using the game's VCR font and a matching dark/pink menu palette.
+ */
