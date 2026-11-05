@@ -80,6 +80,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
     camera = menuCamera;
+    NovaBeatOptionsChrome.apply(this, 'CONTROLS', menuCamera);
 
     labels = new FlxTypedGroup<AtlasText>();
     var headers:FlxTypedGroup<AtlasText> = new FlxTypedGroup<AtlasText>();
@@ -111,7 +112,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     }
 
     // FlxG.debugger.drawDebug = true;
-    var y = deviceList == null ? 30 : 120;
+    var y = deviceList == null ? (Preferences.menuStyle == "NovaBeat" ? 110 : 30) : 120;
     var spacer = 70;
     var currentHeader:String = null;
     // list order is determined by enum order

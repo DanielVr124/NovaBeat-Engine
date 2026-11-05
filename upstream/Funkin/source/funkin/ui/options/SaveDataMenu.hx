@@ -14,6 +14,7 @@ class SaveDataMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
 
+    NovaBeatOptionsChrome.apply(this, 'SAVE DATA', FlxG.camera);
     add(items = new TextMenuList());
 
     createItem("CLEAR SAVE DATA", openSaveDataPrompt);

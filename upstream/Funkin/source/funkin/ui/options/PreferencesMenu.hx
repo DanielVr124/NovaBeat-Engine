@@ -53,6 +53,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.bgColor = 0x0;
 
     camera = menuCamera;
+    NovaBeatOptionsChrome.apply(this, 'PREFERENCES', menuCamera);
 
     add(items = new TextMenuList());
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
@@ -323,10 +324,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItemCheckbox(prefName:String, prefDesc:String, onChange:Bool->Void, defaultValue:Bool, available:Bool = true):Void
   {
-    var checkbox:CheckboxPreferenceItem = new CheckboxPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, 120 * (items.length - 1 + 1),
+    var itemY:Float = preferenceItemY(items.length);
+    var checkbox:CheckboxPreferenceItem = new CheckboxPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, itemY - 30,
       defaultValue, available);
 
-    items.createItem(0, (120 * items.length) + 30, prefName, AtlasFont.BOLD, function()
+    items.createItem(0, itemY, prefName, AtlasFont.BOLD, function()
     {
       var value = !checkbox.currentValue;
       onChange(value);
@@ -350,7 +352,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   function createPrefItemNumber(prefName:String, prefDesc:String, onChange:Float->Void, ?valueFormatter:Float->String, defaultValue:Float, min:Float,
       max:Float, step:Float = 0.1, precision:Int):Void
   {
-    var item = new NumberPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, (120 * items.length) + 30, prefName, defaultValue, min, max, step,
+    var item = new NumberPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, preferenceItemY(items.length), prefName, defaultValue, min, max, step,
       precision, onChange, valueFormatter);
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
@@ -374,7 +376,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       return '${value}%';
     };
-    var item = new NumberPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, (120 * items.length) + 30, prefName, defaultValue, min, max, 10, 0,
+    var item = new NumberPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, preferenceItemY(items.length), prefName, defaultValue, min, max, 10, 0,
       newCallback, formatter);
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
@@ -389,10 +391,15 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItemEnum<T>(prefName:String, prefDesc:String, values:Map<String, T>, onChange:String->T->Void, defaultKey:String):Void
   {
-    var item = new EnumPreferenceItem<T>(funkin.ui.FullScreenScaleMode.gameNotchSize.x, (120 * items.length) + 30, prefName, values, defaultKey, onChange);
+    var item = new EnumPreferenceItem<T>(funkin.ui.FullScreenScaleMode.gameNotchSize.x, preferenceItemY(items.length), prefName, values, defaultKey, onChange);
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
+  }
+
+  function preferenceItemY(index:Int):Float
+  {
+    return Preferences.menuStyle == "NovaBeat" ? 118 + index * 120 : 30 + index * 120;
   }
 
   override function exit():Void
