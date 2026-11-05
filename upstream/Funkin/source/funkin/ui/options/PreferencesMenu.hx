@@ -104,20 +104,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     itemDescBox.updateHitbox();
   }
 
-  /**
-   * Create the menu items for each of the preferences.
-   */
-  function createPrefItems():Void
-  {
-    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. The matching menu soundtrack switches immediately; the selected layout is used when you return to the main menu.', [
-      "Original FNF" => "Original FNF",
-      "NovaBeat" => "NovaBeat"
-    ], function(key:String, value:String):Void
-    {
-      Preferences.menuStyle = value;
-      switchMenuStyleMusic(value);
-    }, Preferences.menuStyle);
-
     /**
    * Switch to the soundtrack belonging to the selected menu presentation.
    * Start at zero and fade in so changing the preference is audible immediately
@@ -138,6 +124,20 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     if (FlxG.sound.music != null)
       FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
   }
+
+  /**
+   * Create the menu items for each of the preferences.
+   */
+  function createPrefItems():Void
+  {
+    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. The matching menu soundtrack switches immediately; the selected layout is used when you return to the main menu.', [
+      "Original FNF" => "Original FNF",
+      "NovaBeat" => "NovaBeat"
+    ], function(key:String, value:String):Void
+    {
+      Preferences.menuStyle = value;
+      switchMenuStyleMusic(value);
+    }, Preferences.menuStyle);
 
   #if FEATURE_NAUGHTYNESS
     createPrefItemCheckbox('Naughtyness', 'When enabled, raunchy content (such as swearing, etc.) is displayed.', function(value:Bool):Void
