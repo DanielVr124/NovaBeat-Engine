@@ -370,7 +370,7 @@ class MainMenuState extends MusicBeatState
   {
     if (menuItems == null) return;
 
-    var item:AtlasMenuItem = new AtlasMenuItem(name, Paths.getSparrowAtlas(atlas), callback);
+    var item:AtlasMenuItem = new AtlasMenuItem(0, 0, name, Paths.getSparrowAtlas(atlas), callback);
     item.fireInstantly = fireInstantly;
     item.ID = menuItems.length;
     item.scrollFactor.set();
