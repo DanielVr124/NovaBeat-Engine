@@ -254,6 +254,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
       if (novaBeatStyle) updateNovaBeatControlSelection();
     });
+    if (novaBeatStyle && deviceList == null) updateNovaBeatControlSelection();
 
     prompt = new Prompt("\nPress any key to rebind\n\n\nBackspace to unbind\n    Escape to cancel", None);
     prompt.create();
