@@ -226,15 +226,18 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     }
     #end
 
-    // NovaBeat menus support desktop mouse hover and click as well as keyboard,
-    // controller, and touch navigation.
+    // Shared desktop mouse handling for both NovaBeat and original FNF menus.
+    // Test against the camera that actually draws each item.
     #if !mobile
-    if (Preferences.menuStyle == "NovaBeat" && FlxG.mouse.visible && members.length > 0 && !busy)
+    if (FlxG.mouse.visible && members.length > 0 && !busy)
     {
       for (index in 0...members.length)
       {
         final item = members[index];
-        if (!item.available || !FlxG.mouse.overlaps(item)) continue;
+        if (!item.available) continue;
+        final itemCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : FlxG.camera;
+        if (!FlxG.mouse.overlaps(item, itemCamera)) continue;
+
         if (selectedIndex != index)
         {
           playNavigationSound();
