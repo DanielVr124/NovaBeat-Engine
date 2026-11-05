@@ -146,7 +146,7 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     if (Preferences.menuStyle == "NovaBeat")
     {
       var className:Null<String> = null;
-      var runtimeClass = Type.getClass(this);
+      var runtimeClass:Null<Class<Dynamic>> = Type.getClass(this);
       if (runtimeClass != null)
       {
         className = Type.getClassName(runtimeClass);
