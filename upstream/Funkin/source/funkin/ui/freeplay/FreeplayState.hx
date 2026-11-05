@@ -14,6 +14,7 @@ import flixel.util.FlxColor;
 import openfl.filters.ShaderFilter;
 import flixel.util.FlxTimer;
 import funkin.audio.FunkinSound;
+import funkin.Preferences;
 import funkin.data.freeplay.player.PlayerRegistry;
 import funkin.ui.freeplay.dj.BaseFreeplayDJ;
 import funkin.ui.freeplay.dj.AnimateAtlasFreeplayDJ;
@@ -47,6 +48,7 @@ import funkin.ui.freeplay.backcards.*;
 import funkin.ui.freeplay.components.DifficultySprite;
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 import funkin.ui.mainmenu.MainMenuState;
+import funkin.ui.mainmenu.NovaBeatMainMenuState;
 import funkin.ui.story.Level;
 import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.stickers.StickerSubState;
@@ -829,6 +831,8 @@ class FreeplayState extends MusicBeatSubState
     FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
     #end
 
+    if (Preferences.menuStyle == "NovaBeat") buildNovaBeatFreeplayHeader();
+
     if (prepForNewRank)
     {
       rankCamera.fade(0xFF000000, 0, false, null, true);
@@ -1488,7 +1492,7 @@ class FreeplayState extends MusicBeatSubState
     else
     {
       trace('Not enough characters unlocked to open character select!');
-      FunkinSound.playOnce(Paths.sound('cancelMenu'));
+      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == 'NovaBeat' ? 'novabeat/back' : 'cancelMenu'));
       return;
     }
 
@@ -1757,6 +1761,20 @@ class FreeplayState extends MusicBeatSubState
 
     handleDirectionalInput(elapsed);
 
+    #if !mobile
+    if (Preferences.menuStyle == "NovaBeat" && FlxG.mouse.justPressed)
+    {
+      for (index in 0...grpCapsules.members.length)
+      {
+        var capsule = grpCapsules.members[index];
+        if (capsule == null || !FlxG.mouse.overlaps(capsule.theActualHitbox, funnyCam)) continue;
+        if (index != curSelected) changeSelection(index - curSelected);
+        else currentCapsule.onConfirm();
+        break;
+      }
+    }
+    #end
+
     final wheelAmount:Int = Math.round(FlxMath.bound(FlxG.mouse.deltaWheel.y, -1, 1));
 
     if (wheelAmount != 0)
@@ -1993,7 +2011,7 @@ class FreeplayState extends MusicBeatSubState
         {
           curSelected = i;
           changeSelection(0);
-          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+          playNavigationSound();
           HapticUtil.vibrate(0, 0.01, 0.5);
         }
         break;
@@ -2278,7 +2296,8 @@ class FreeplayState extends MusicBeatSubState
       caps.doJumpOut = true;
     }
 
-    if (Type.getClass(_parentState) == MainMenuState)
+    var returnToNovaBeatMenu:Bool = Preferences.menuStyle == "NovaBeat" && Std.isOfType(_parentState, NovaBeatMainMenuState);
+    if (Type.getClass(_parentState) == MainMenuState || returnToNovaBeatMenu)
     {
       _parentState.persistentUpdate = false;
       _parentState.persistentDraw = true;
@@ -2288,15 +2307,15 @@ class FreeplayState extends MusicBeatSubState
     {
       FlxTransitionableState.skipNextTransIn = true;
       FlxTransitionableState.skipNextTransOut = true;
-      if (Type.getClass(_parentState) == MainMenuState)
+      if (Type.getClass(_parentState) == MainMenuState || returnToNovaBeatMenu)
       {
-        FunkinSound.playMusic('freakyMenu', {
+        FunkinSound.playMusic(returnToNovaBeatMenu ? 'novabeat-menu' : 'freakyMenu', {
           overrideExisting: true,
           restartTrack: false,
-          // Continue playing this music between states, until a different music track gets played.
-          persist: true
+          persist: true,
+          mapTimeChanges: false
         });
-        if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(4.0, 0.0, 1.0);
+        if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(4.0, 0.0, 0.82);
         dispatchEvent(new FreeplayScriptEvent(FREEPLAY_CLOSE));
         close();
       }
@@ -2385,7 +2404,7 @@ class FreeplayState extends MusicBeatSubState
     if (change != 0)
     {
       HapticUtil.vibrate(0, 0.01, 0.5, 0.1);
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playNavigationSound();
     }
 
     var previousVariation:String = currentVariation;
@@ -2879,11 +2898,44 @@ class FreeplayState extends MusicBeatSubState
 
     if (curSelected != prevSelected)
     {
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playNavigationSound();
       HapticUtil.vibrate(0, 0.01, 0.5);
       dj?.onPlayerAction(); // dj?.resetAFKTimer();
       _pressedOnSelected = false;
     }
+  }
+
+  function playNavigationSound():Void
+  {
+    var soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
+    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
+  }
+
+  function buildNovaBeatFreeplayHeader():Void
+  {
+    var panel:FlxSprite = new FlxSprite(24, 20);
+    panel.makeGraphic(318, 58, 0xC906142D);
+    panel.scrollFactor.set();
+    panel.cameras = [funnyCam];
+    add(panel);
+
+    var accent:FlxSprite = new FlxSprite(24, 20);
+    accent.makeGraphic(4, 58, 0xFF48E7FF);
+    accent.scrollFactor.set();
+    accent.cameras = [funnyCam];
+    add(accent);
+
+    var brand:FlxText = new FlxText(42, 26, 280, 'NOVABEAT ENGINE', 10);
+    brand.setFormat(Paths.font('vcr.ttf'), 10, 0xFF48E7FF);
+    brand.scrollFactor.set();
+    brand.cameras = [funnyCam];
+    add(brand);
+
+    var title:FlxText = new FlxText(42, 42, 280, 'FREEPLAY', 20);
+    title.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE);
+    title.scrollFactor.set();
+    title.cameras = [funnyCam];
+    add(title);
   }
 
   function changeSelection(change:Int = 0):Void
@@ -2915,7 +2967,7 @@ class FreeplayState extends MusicBeatSubState
     // Reset `prepForNewRank` flag on change to prevent song previews from not updating.
     if (change != 0 && prepForNewRank) prepForNewRank = false;
 
-    if (!prepForNewRank && curSelected != prevSelected) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+    if (!prepForNewRank && curSelected != prevSelected) playNavigationSound();
 
     var songScore:Null<SaveScoreData> = Save.instance.getSongScore(currentCapsule.freeplayData?.data.id ?? '', currentDifficulty, currentVariation);
     intendedScore = songScore?.score ?? 0;
@@ -2966,6 +3018,22 @@ class FreeplayState extends MusicBeatSubState
 
   public function playCurSongPreview(?daSongCapsule:SongMenuItem):Void
   {
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // Keep the NovaBeat soundtrack playing while browsing; selecting a song
+      // still uses the real capsule, difficulty, and DJ transition logic.
+      if (FlxG.sound.music == null || !FlxG.sound.music.playing)
+      {
+        FunkinSound.playMusic('novabeat-menu', {
+          overrideExisting: true,
+          restartTrack: false,
+          persist: true,
+          mapTimeChanges: false
+        });
+      }
+      return;
+    }
+
     if (daSongCapsule == null) daSongCapsule = currentCapsule;
 
     var previewVolume:Float = 0.7;

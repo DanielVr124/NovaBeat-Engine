@@ -6,6 +6,7 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.modding.PolymodHandler;
 import funkin.save.Save;
+import funkin.Preferences;
 import funkin.ui.Page;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
@@ -67,7 +68,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     portraitLayout = height > width;
 
     var margin:Float = portraitLayout ? 22 : 48;
-    heading = addLabel(margin, 35, width - margin * 2, 'MOD MANAGER', portraitLayout ? 25 : 34, 0xFFFFFFFF);
+    heading = addLabel(margin, 35, width - margin * 2, 'MODS', portraitLayout ? 25 : 34, 0xFFFFFFFF);
     countText = addLabel(margin, 78, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 12, 0xFF48E7FF);
 
     var listX:Float = margin;
@@ -287,9 +288,16 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       return;
     }
 
+    var changedSelection:Bool = selectedIndex != index;
     selectedIndex = index;
     renderRows();
     renderDetails();
+
+    if (changedSelection)
+    {
+      var soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
+      FunkinSound.playOnce(Paths.sound(soundName), 0.4);
+    }
   }
 
   override function update(elapsed:Float):Void
@@ -298,6 +306,18 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (!enabled) return;
 
     if (FlxG.keys.justPressed.R) refreshModList();
+
+    #if !mobile
+    for (row in rows)
+    {
+      if (!FlxG.mouse.overlaps(row)) continue;
+
+      var wasSelected:Bool = selectedIndex == row.modIndex;
+      if (!wasSelected) selectMod(row.modIndex, false);
+      if (FlxG.mouse.justPressed && wasSelected) toggleSelectedMod();
+      break;
+    }
+    #end
 
     if (detectedMods.length > 0)
     {

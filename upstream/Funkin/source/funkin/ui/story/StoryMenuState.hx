@@ -2,6 +2,7 @@ package funkin.ui.story;
 
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.FlxSprite;
+import flixel.FlxG;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
@@ -11,6 +12,7 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import flixel.util.FlxStringUtil;
 import funkin.audio.FunkinSound;
+import funkin.Preferences;
 import funkin.data.story.level.LevelRegistry;
 import funkin.data.song.SongRegistry;
 import funkin.graphics.FunkinSprite;
@@ -21,6 +23,7 @@ import funkin.play.song.Song;
 import funkin.save.Save;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.mainmenu.MainMenuState;
+import funkin.ui.mainmenu.NovaBeatMainMenuState;
 import funkin.ui.MusicBeatState;
 import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.stickers.StickerSubState;
@@ -213,6 +216,8 @@ class StoryMenuState extends MusicBeatState
     changeLevel();
     refresh();
 
+    if (Preferences.menuStyle == "NovaBeat") buildNovaBeatStoryHeader();
+
     #if FEATURE_DISCORD_RPC
     // Updating Discord Rich Presence
     DiscordClient.instance.setPresence({state: 'In the Menus', details: null});
@@ -241,12 +246,45 @@ class StoryMenuState extends MusicBeatState
 
   function playMenuMusic():Void
   {
-    FunkinSound.playMusic('freakyMenu', {
+    FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
       overrideExisting: true,
       restartTrack: false,
-      // Continue playing this music between states, until a different music track gets played.
-      persist: true
+      persist: true,
+      mapTimeChanges: false
     });
+  }
+
+  function playNavigationSound():Void
+  {
+    var soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
+    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
+  }
+
+  function buildNovaBeatStoryHeader():Void
+  {
+    tracklistText.color = 0xFF48E7FF;
+    scoreText.color = 0xFF48E7FF;
+    levelTitleText.color = FlxColor.WHITE;
+
+    var panel:FlxSprite = new FlxSprite(28, 68);
+    panel.makeGraphic(272, 48, 0xCC07152E);
+    panel.scrollFactor.set();
+    add(panel);
+
+    var accent:FlxSprite = new FlxSprite(28, 68);
+    accent.makeGraphic(4, 48, 0xFF48E7FF);
+    accent.scrollFactor.set();
+    add(accent);
+
+    var brand:FlxText = new FlxText(46, 76, 240, 'NOVABEAT ENGINE', 10);
+    brand.setFormat(Paths.font('vcr.ttf'), 10, 0xFF48E7FF);
+    brand.scrollFactor.set();
+    add(brand);
+
+    var title:FlxText = new FlxText(46, 91, 240, 'STORY MODE', 19);
+    title.setFormat(Paths.font('vcr.ttf'), 19, FlxColor.WHITE);
+    title.scrollFactor.set();
+    add(title);
   }
 
   function updateData():Void
@@ -437,6 +475,32 @@ class StoryMenuState extends MusicBeatState
         }
       }
       #end
+
+      #if !mobile
+      if (!selectedLevel && FlxG.mouse.justPressed)
+      {
+        if (FlxG.mouse.overlaps(leftDifficultyArrow))
+        {
+          changeDifficulty(-1);
+        }
+        else if (FlxG.mouse.overlaps(rightDifficultyArrow))
+        {
+          changeDifficulty(1);
+        }
+        else
+        {
+          for (index in 0...levelTitles.members.length)
+          {
+            var item:LevelTitle = levelTitles.members[index];
+            if (item.members.length == 0 || !FlxG.mouse.overlaps(item.members[0])) continue;
+            var currentIndex:Int = levelList.indexOf(currentLevelId);
+            if (index == currentIndex) selectLevel();
+            else changeLevel(index - currentIndex);
+            break;
+          }
+        }
+      }
+      #end
     }
 
     if (controls.BACK_P) goBack();
@@ -484,7 +548,7 @@ class StoryMenuState extends MusicBeatState
       }
     }
 
-    if (currentIndex != prevIndex) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+    if (currentIndex != prevIndex) playNavigationSound();
 
     repositionTitles();
     updateText();
@@ -530,7 +594,7 @@ class StoryMenuState extends MusicBeatState
     if (hasChanged)
     {
       buildDifficultySprite();
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playNavigationSound();
       // Disable the funny music thing for now.
       // funnyMusicThing();
     }
@@ -722,8 +786,11 @@ class StoryMenuState extends MusicBeatState
 
     exitingMenu = true;
     FlxG.keys.enabled = false;
-    FlxG.switchState(() -> new MainMenuState());
-    FunkinSound.playOnce(Paths.sound('cancelMenu'));
+    if (Preferences.menuStyle == "NovaBeat")
+      FlxG.switchState(() -> new NovaBeatMainMenuState());
+    else
+      FlxG.switchState(() -> new MainMenuState());
+    FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
   }
 
   /**

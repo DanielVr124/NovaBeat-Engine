@@ -8,11 +8,13 @@ import flixel.math.FlxPoint;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import flixel.FlxSprite;
+import flixel.text.FlxText;
 import flixel.FlxObject;
 import flixel.FlxSubState;
 import flixel.group.FlxGroup;
 import flixel.util.FlxSignal;
 import funkin.audio.FunkinSound;
+import funkin.Preferences;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatState;
 import funkin.graphics.shaders.HSVShader;
@@ -43,9 +45,6 @@ class OptionsState extends MusicBeatState
    */
   public static var instance:OptionsState;
 
-  /** Open the Mods page immediately when the optional NovaBeat menu launches OptionsState. */
-  public static var openModsOnStart:Bool = false;
-
   var optionsCodex:Codex<OptionsMenuPageName>;
 
   public var drumsBG:FunkinSound;
@@ -60,14 +59,30 @@ class OptionsState extends MusicBeatState
 
     drumsBG = FunkinSound.load(Paths.music('offsetsLoop/drumsLoop'), 0, true, false, false, false);
 
-    var menuBG = new FlxSprite().loadGraphic(Paths.image('menuBG'));
-    var hsv = new HSVShader(-0.6, 0.9, 3.6);
-    menuBG.shader = hsv;
-    menuBG.setGraphicSize(Std.int(FlxG.width * 1.1));
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    var menuBG = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
+    if (novaBeatStyle)
+    {
+      var bgScale:Float = Math.max(FlxG.width / menuBG.width, FlxG.height / menuBG.height);
+      menuBG.scale.set(bgScale, bgScale);
+    }
+    else
+    {
+      var hsv = new HSVShader(-0.6, 0.9, 3.6);
+      menuBG.shader = hsv;
+      menuBG.setGraphicSize(Std.int(FlxG.width * 1.1));
+    }
     menuBG.updateHitbox();
     menuBG.screenCenter();
     menuBG.scrollFactor.set(0, 0);
     add(menuBG);
+
+    if (novaBeatStyle)
+    {
+      var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0x99040A1A);
+      dimmer.scrollFactor.set();
+      add(dimmer);
+    }
 
     optionsCodex = new Codex<OptionsMenuPageName>(Options);
     add(optionsCodex);
@@ -79,7 +94,6 @@ class OptionsState extends MusicBeatState
     var offsets:OffsetMenu = optionsCodex.addPage(Offsets, new OffsetMenu());
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
-    var mods:ModMenu = optionsCodex.addPage(Mods, new ModMenu());
     var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
@@ -94,7 +108,6 @@ class OptionsState extends MusicBeatState
       offsets.onExit.add(exitOffsets);
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
-      mods.onExit.add(optionsCodex.switchPage.bind(Options));
       menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
     }
     else
@@ -109,13 +122,18 @@ class OptionsState extends MusicBeatState
       #end
     }
 
-    if (openModsOnStart)
+    super.create();
+
+    if (novaBeatStyle)
     {
-      openModsOnStart = false;
-      optionsCodex.setPage(Mods);
+      FunkinSound.playMusic('novabeat-menu', {
+        overrideExisting: true,
+        restartTrack: false,
+        persist: true,
+        mapTimeChanges: false
+      });
     }
 
-    super.create();
     #if mobile
     addHitbox();
     hitbox.visible = false;
@@ -130,11 +148,12 @@ class OptionsState extends MusicBeatState
     }
     FlxG.sound.music.fadeOut(0.5, 0, function(tw)
     {
-      FunkinSound.playMusic('freakyMenu', {
+      FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
         startingVolume: 0,
         overrideExisting: true,
-        restartTrack: true,
-        persist: true
+        restartTrack: Preferences.menuStyle != "NovaBeat",
+        persist: true,
+        mapTimeChanges: false
       });
       FlxG.sound.music.fadeIn(0.5, 1);
     });
@@ -180,11 +199,33 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   public function new()
   {
     super();
+
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      var margin:Float = FlxG.width * 0.055;
+      var infoPanel:FlxSprite = new FlxSprite(margin, 92);
+      infoPanel.makeGraphic(Std.int(FlxG.width * 0.37), Std.int(FlxG.height - 150), 0xC9091833);
+      add(infoPanel);
+
+      var brand:FlxText = new FlxText(margin + 28, 142, FlxG.width * 0.31, 'NOVABEAT ENGINE', 12);
+      brand.setFormat(Paths.font('vcr.ttf'), 12, 0xFF48E7FF);
+      add(brand);
+
+      var heading:FlxText = new FlxText(margin + 28, 178, FlxG.width * 0.31, 'OPTIONS', 36);
+      heading.setFormat(Paths.font('vcr.ttf'), 36, FlxColor.WHITE);
+      add(heading);
+
+      var helper:FlxText = new FlxText(margin + 28, 238, FlxG.width * 0.30,
+        'Fine-tune your game, controls, accessibility, and NovaBeat presentation.', 14);
+      helper.setFormat(Paths.font('vcr.ttf'), 14, 0xFFB7C9E8);
+      helper.wordWrap = true;
+      add(helper);
+    }
+
     add(items = new TextMenuList());
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
-    createItem('MOD MANAGER', function() codex.switchPage(Mods));
-    createItem('MENU CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
+    createItem('CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
     #if mobile
     if (ControlsHandler.hasExternalInputDevice)
     #end
@@ -272,15 +313,26 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     camFocusPoint = new FlxObject(0, 0, 140, 70);
     add(camFocusPoint);
 
-    // Follow the camera focus as we scroll.
-    FlxG.camera.follow(camFocusPoint, null, 0.085);
-    FlxG.camera.deadzone.set(0, CAMERA_MARGIN / 2, FlxG.camera.width, FlxG.camera.height - CAMERA_MARGIN + 40);
-    FlxG.camera.minScrollY = -CAMERA_MARGIN / 2;
-
-    // Move the camera when the menu is scrolled.
-    items.onChange.add(onMenuChange);
-
-    onMenuChange(items.members[0]);
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      var startY:Float = Math.max(110, (FlxG.height - items.length * 62) * 0.5);
+      for (index in 0...items.length)
+      {
+        var item:TextMenuItem = items.members[index];
+        item.x = FlxG.width * 0.52;
+        item.y = startY + index * 62;
+        item.atlasText.color = 0xFFE4ECFF;
+      }
+    }
+    else
+    {
+      // Follow the camera focus as we scroll for the original FNF options screen.
+      FlxG.camera.follow(camFocusPoint, null, 0.085);
+      FlxG.camera.deadzone.set(0, CAMERA_MARGIN / 2, FlxG.camera.width, FlxG.camera.height - CAMERA_MARGIN + 40);
+      FlxG.camera.minScrollY = -CAMERA_MARGIN / 2;
+      items.onChange.add(onMenuChange);
+      onMenuChange(items.members[0]);
+    }
 
     items.selectItem(OptionsState.rememberedSelectedIndex);
     #if FEATURE_TOUCH_CONTROLS
@@ -367,7 +419,6 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Options = 'options';
   public var Controls = 'controls';
   public var Colors = 'colors';
-  public var Mods = 'mods';
   public var MenuCustomization = 'menuCustomization';
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';

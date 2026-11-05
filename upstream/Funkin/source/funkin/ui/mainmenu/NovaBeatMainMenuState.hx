@@ -518,7 +518,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     return function()
     {
-      playSfx('confirm', 0.7);
       switch (index)
       {
         case 0:
@@ -528,8 +527,7 @@ class NovaBeatMainMenuState extends MusicBeatState
             character: FreeplayState.rememberedCharacterId
           }));
         case 2:
-          OptionsState.openModsOnStart = true;
-          openOptions(true);
+          FlxG.switchState(() -> new NovaBeatModsMenuState());
         case 3:
           openOptions(false);
         case 4:

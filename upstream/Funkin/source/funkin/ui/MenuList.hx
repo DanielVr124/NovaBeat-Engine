@@ -1,11 +1,13 @@
 package funkin.ui;
 
 import flixel.FlxSprite;
+import flixel.FlxG;
 import flixel.util.FlxColor;
 import flixel.effects.FlxFlicker;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.audio.FunkinSound;
+import funkin.Preferences;
 import funkin.util.TouchUtil;
 import funkin.util.SwipeUtil;
 import funkin.ui.Page.PageName;
@@ -150,7 +152,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     {
       if (newIndex != selectedIndex)
       {
-        FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        playNavigationSound();
         selectItem(newIndex);
       }
     }
@@ -177,7 +179,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           }
           else
           {
-            FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+            playNavigationSound();
             selectItem(i);
           }
 
@@ -213,14 +215,34 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     if (newIndex != selectedIndex && !_isMainMenuState)
     {
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playNavigationSound();
       selectItem(newIndex);
     }
     #else
     if (newIndex != selectedIndex)
     {
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playNavigationSound();
       selectItem(newIndex);
+    }
+    #end
+
+    // NovaBeat menus support desktop mouse hover and click as well as keyboard,
+    // controller, and touch navigation.
+    #if !mobile
+    if (Preferences.menuStyle == "NovaBeat" && FlxG.mouse.visible && members.length > 0 && !busy)
+    {
+      for (index in 0...members.length)
+      {
+        final item = members[index];
+        if (!item.available || !FlxG.mouse.overlaps(item)) continue;
+        if (selectedIndex != index)
+        {
+          playNavigationSound();
+          selectItem(index);
+        }
+        if (FlxG.mouse.justPressed) accept();
+        break;
+      }
     }
     #end
 
@@ -228,6 +250,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     if (controls.ACCEPT_P) accept();
 
     return;
+  }
+
+  function playNavigationSound():Void
+  {
+    var soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
+    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
   }
 
   function navAxis(index:Int, size:Int, prev:Bool, next:Bool, allowWrap:Bool):Int
@@ -295,7 +323,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     else
     {
       busy = true;
-      FunkinSound.playOnce(Paths.sound('confirmMenu'));
+      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == 'NovaBeat' ? 'novabeat/confirm' : 'confirmMenu'));
       FlxFlicker.flicker(menuItem, 1, 0.06, true, false, function(_)
       {
         busy = false;

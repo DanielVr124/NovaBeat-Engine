@@ -1,6 +1,7 @@
 package funkin.ui.options;
 
 import flixel.FlxG;
+import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.save.Save;
@@ -47,13 +48,15 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var rowHeight:Float = 48;
   var compactLayout:Bool = false;
   var twoColumnLayout:Bool = false;
+  var rightSideLayout:Bool = false;
 
   public function new()
   {
     super();
 
     compactLayout = FlxG.width < 950 || FlxG.height > FlxG.width * 1.12;
-    twoColumnLayout = FlxG.width > FlxG.height && FlxG.height < 560;
+    rightSideLayout = !compactLayout && FlxG.width > FlxG.height;
+    twoColumnLayout = !rightSideLayout && FlxG.width > FlxG.height && FlxG.height < 560;
 
     var margin:Float = compactLayout ? 20 : 46;
     var headerWidth:Float = FlxG.width - margin * 2;
@@ -61,20 +64,31 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     headerWidth = Math.max(100, headerWidth - 100);
     #end
 
-    add(makeLabel(margin, 22, headerWidth, 'NOVABEAT CUSTOMIZATION', compactLayout ? 23 : 30, 0xFFFFFFFF));
-    add(makeLabel(margin, 58, headerWidth,
-      'These settings only change the NovaBeat menu. Original FNF remains untouched.', 11, 0xFF48E7FF));
+    if (rightSideLayout)
+    {
+      var leftPanel:FlxSprite = new FlxSprite(margin, 92);
+      leftPanel.makeGraphic(Std.int(FlxG.width * 0.39), Std.int(FlxG.height - 150), 0xC9091833);
+      add(leftPanel);
 
-    var listX:Float = margin + 12;
-    var listY:Float = 96;
-    var listW:Float = FlxG.width - margin * 2 - 24;
+      var rightPanel:FlxSprite = new FlxSprite(FlxG.width * 0.49, 92);
+      rightPanel.makeGraphic(Std.int(FlxG.width * 0.46), Std.int(FlxG.height - 150), 0xC9091833);
+      add(rightPanel);
+    }
+
+    add(makeLabel(margin, 22, headerWidth, 'CUSTOMIZATION', compactLayout ? 23 : 30, 0xFFFFFFFF));
+    add(makeLabel(margin, 58, headerWidth,
+      'Personalize the NovaBeat menu. Original FNF remains untouched.', 11, 0xFF48E7FF));
+
+    var listX:Float = rightSideLayout ? FlxG.width * 0.515 : margin + 12;
+    var listY:Float = rightSideLayout ? 108 : 96;
+    var listW:Float = rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2 - 24;
     var columnGap:Float = twoColumnLayout ? 10 : 0;
     var columnCount:Int = twoColumnLayout ? 2 : 1;
     var rowCount:Int = twoColumnLayout ? Std.int(Math.ceil(LABELS.length / 2)) : LABELS.length;
     var cellWidth:Float = (listW - columnGap * (columnCount - 1)) / columnCount;
-    var footerReserve:Float = 106;
+    var footerReserve:Float = rightSideLayout ? 126 : 106;
     rowHeight = Math.max(twoColumnLayout ? 22 : 20,
-      Math.min(compactLayout ? 42 : 52, (FlxG.height - listY - footerReserve) / rowCount));
+      Math.min(rightSideLayout ? 46 : (compactLayout ? 42 : 52), (FlxG.height - listY - footerReserve) / rowCount));
 
     items = new TextMenuList(twoColumnLayout ? NavControls.Columns(2) : NavControls.Vertical);
 
@@ -124,14 +138,24 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     });
 
     add(items);
-    descriptionText = makeLabel(margin, FlxG.height - 82, FlxG.width - margin * 2, descriptions[0], 11, 0xFFB6C7E5);
+    if (rightSideLayout)
+    {
+      descriptionText = makeLabel(margin + 28, 305, FlxG.width * 0.33, descriptions[0], 15, 0xFFB6C7E5);
+      descriptionText.wordWrap = true;
+      descriptionText.autoSize = false;
+      add(makeLabel(margin + 28, 245, FlxG.width * 0.33, 'VISUAL SETTINGS', 12, 0xFF48E7FF));
+    }
+    else
+    {
+      descriptionText = makeLabel(margin, FlxG.height - 82, FlxG.width - margin * 2, descriptions[0], 11, 0xFFB6C7E5);
+    }
     add(descriptionText);
 
     #if mobile
-    statusText = makeLabel(margin, FlxG.height - 42, FlxG.width - margin * 2,
+    statusText = makeLabel(rightSideLayout ? FlxG.width * 0.515 : margin, FlxG.height - 42, rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2,
       'TAP TO INCREASE   •   SWIPE LEFT / RIGHT TO ADJUST   •   BACK TO RETURN', 9, 0xFF8DA8D8);
     #else
-    statusText = makeLabel(margin, FlxG.height - 42, FlxG.width - margin * 2,
+    statusText = makeLabel(rightSideLayout ? FlxG.width * 0.515 : margin, FlxG.height - 42, rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2,
       'LEFT / RIGHT ADJUST   •   ENTER TO CHANGE   •   BACK TO RETURN', 9, 0xFF8DA8D8);
     #end
     add(statusText);
