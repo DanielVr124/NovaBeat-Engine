@@ -335,6 +335,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
       if (controls.UI_RIGHT_P) moveSelectedMod(1);
 
+      #if mobile
       for (row in rows)
       {
         if (TouchUtil.pressAction(row))
@@ -343,6 +344,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
           break;
         }
       }
+      #end
     }
   }
 
