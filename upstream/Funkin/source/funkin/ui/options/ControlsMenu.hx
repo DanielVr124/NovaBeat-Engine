@@ -114,7 +114,8 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         devicesBg.makeSolidColor(FlxG.width, 100, 0xFFFAFD6D);
       }
       devicesBg.cameras = [menuCamera];
-      novaBeatRows.add(devicesBg);
+      if (novaBeatStyle) novaBeatRows.add(devicesBg);
+      else add(devicesBg);
       deviceList = new TextMenuList(Horizontal, None);
       deviceList.cameras = [menuCamera];
       add(deviceList);
