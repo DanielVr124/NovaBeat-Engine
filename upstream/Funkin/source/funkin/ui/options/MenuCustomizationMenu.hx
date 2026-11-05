@@ -50,7 +50,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var novaBeatLayout:Bool = true;
   var descriptions:Array<String> = [];
   var descriptionText:FlxText;
-  var statusText:Null<FlxText>;
+  var statusText:FlxText;
   var menuCamera:FlxCamera;
   var hudCamera:FlxCamera;
   var camFollow:FlxObject;
@@ -303,7 +303,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       var valueWidth:Int = value.getWidth();
       var nameWidth:Int = item.atlasText.getWidth();
       var indent:Float = items.selectedIndex == index ? 150 : 120;
-      value.x = (FlxG.width / 2) - ((valueWidth + nameWidth + 20) / 2) + indent;
+      value.x = valueWidth - 75 + funkin.ui.FullScreenScaleMode.gameNotchSize.x + indent;
       value.y = item.y;
       item.x = value.x + valueWidth + 20;
     }
