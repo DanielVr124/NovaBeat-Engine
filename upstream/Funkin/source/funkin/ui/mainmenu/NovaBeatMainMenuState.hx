@@ -561,8 +561,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function backgroundDimmerAlpha():Float
   {
-    var normalized:Float = (Save.instance.options.menuBackgroundIntensity - 65) / 60;
-    return 0.78 - normalized * 0.56;
+    // Keep the original V4 look at the default value (100), then let
+    // lower values darken the artwork and higher values reveal more of it.
+    return 0.553 - ((Save.instance.options.menuBackgroundIntensity - 100) / 60) * 0.56;
   }
 
   function densityMultiplier():Float
@@ -590,7 +591,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   function addPanel(x:Float, y:Float, width:Float, height:Float, borderColor:FlxColor):Void
   {
     var border:FlxSprite = addRoundRect(x, y, width, height, 28, 28, borderColor);
-    border.alpha = 0.18 + (Save.instance.options.menuPanelGlow / 150) * 0.82;
+    border.alpha = Math.max(0, Math.min(1, Save.instance.options.menuPanelGlow / 100));
     addRoundRect(x + 2, y + 2, width - 4, height - 4, 26, 26, 0xF0061028);
   }
 
