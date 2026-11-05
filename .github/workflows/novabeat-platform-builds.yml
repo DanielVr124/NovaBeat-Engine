@@ -16,7 +16,7 @@ on:
           - android
         default: both
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
