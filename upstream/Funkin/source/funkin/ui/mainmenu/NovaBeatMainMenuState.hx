@@ -271,7 +271,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     else
     {
       buildMenuList(navX, listTop, navW, listBottom - listTop, true);
-      addLabel(navX, frameY + frameH - 26, navW, 'TAP A TILE TO SELECT   •   ENTER TO OPEN', 9, 0xFF8DA8D8, FlxTextAlign.LEFT, 'Arial');
+      var menuHint:String = DeviceUtil.isMobileBrowser
+        ? 'TAP A TILE TO SELECT   •   TAP AGAIN TO OPEN'
+        : 'TAP A TILE TO SELECT   •   ENTER TO OPEN';
+      addLabel(navX, frameY + frameH - 26, navW, menuHint, 9, 0xFF8DA8D8, FlxTextAlign.LEFT, 'Arial');
     }
   }
 
