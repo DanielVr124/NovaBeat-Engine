@@ -347,23 +347,37 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   public function selectItem(index:Int):Void
   {
-    members[selectedIndex].idle();
+    // Protect callers from stale indices after a menu is rebuilt or a
+    // conditionally available item is removed.
+    if (members.length == 0) return;
 
+    index = Std.int(Math.max(0, Math.min(index, members.length - 1)));
+
+    // Skip unavailable entries in the requested direction without ever
+    // stepping beyond the end of the array. The old comparison used '>'
+    // instead of '>=' and could recurse with members.length as an index.
     if (!members[index].available)
     {
-      if (index < selectedIndex)
+      final direction:Int = (index < selectedIndex) ? -1 : 1;
+      var candidate:Int = index;
+      var found:Bool = false;
+
+      while (candidate >= 0 && candidate < members.length)
       {
-        final newIndex:Int = (index - 1 < 0) ? index + 1 : index - 1;
-        selectItem(newIndex);
-        return;
+        if (members[candidate].available)
+        {
+          index = candidate;
+          found = true;
+          break;
+        }
+        candidate += direction;
       }
-      else if (index > selectedIndex)
-      {
-        final newIndex:Int = (index + 1 > members.length) ? index - 1 : index + 1;
-        selectItem(newIndex);
-        return;
-      }
+
+      if (!found) return;
     }
+
+    if (selectedIndex >= 0 && selectedIndex < members.length)
+      members[selectedIndex].idle();
 
     selectedIndex = index;
 
