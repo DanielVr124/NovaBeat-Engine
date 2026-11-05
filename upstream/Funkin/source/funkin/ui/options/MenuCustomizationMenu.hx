@@ -3,6 +3,7 @@ package funkin.ui.options;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
+import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.save.Save;
 import funkin.ui.Page;
@@ -16,8 +17,9 @@ import funkin.mobile.ui.FunkinBackButton;
 #end
 
 /**
- * Dedicated, persistent visual customization for the optional NovaBeat menu.
- * This is deliberately separate from the Menu Style preference.
+ * Dedicated NovaBeat visual customization page.
+ * Visible strings are rendered with the VCR font rather than the upstream
+ * bitmap-font atlas, while invisible list items preserve native menu input.
  */
 class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 {
@@ -43,124 +45,142 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var descriptionText:FlxText;
   var statusText:FlxText;
   var optionRows:Array<TextMenuItem> = [];
-  var rowWidths:Array<Float> = [];
-  var rowScales:Array<Float> = [];
-  var rowHeight:Float = 48;
-  var compactLayout:Bool = false;
-  var twoColumnLayout:Bool = false;
+  var rowLabels:Array<FlxText> = [];
+  var rowValues:Array<FlxText> = [];
+  var rowBackgrounds:Array<FlxSprite> = [];
+  var rowAccents:Array<FlxSprite> = [];
+  var rowHeight:Float = 42;
   var rightSideLayout:Bool = false;
+  var listX:Float = 0;
+  var listY:Float = 0;
+  var listW:Float = 0;
+  var valueColumnX:Float = 0;
 
   public function new()
   {
     super();
 
-    compactLayout = FlxG.width < 950 || FlxG.height > FlxG.width * 1.12;
-    rightSideLayout = !compactLayout && FlxG.width > FlxG.height;
-    twoColumnLayout = !rightSideLayout && FlxG.width > FlxG.height && FlxG.height < 560;
-
+    var width:Float = FlxG.width;
+    var height:Float = FlxG.height;
+    var compactLayout:Bool = width < 950 || height > width * 1.12;
+    rightSideLayout = !compactLayout && width > height;
     var margin:Float = compactLayout ? 20 : 46;
-    var headerWidth:Float = FlxG.width - margin * 2;
-    #if mobile
-    headerWidth = Math.max(100, headerWidth - 100);
-    #end
+    var panelTop:Float = 98;
+    var panelHeight:Float = Math.max(170, height - 150);
 
     if (rightSideLayout)
     {
-      var leftPanel:FlxSprite = new FlxSprite(margin, 92);
-      leftPanel.makeGraphic(Std.int(FlxG.width * 0.39), Std.int(FlxG.height - 150), 0xC9091833);
+      var leftPanel:FlxSprite = new FlxSprite(margin, panelTop);
+      leftPanel.makeGraphic(Std.int(width * 0.39), Std.int(panelHeight), 0xC9091833);
       add(leftPanel);
 
-      var rightPanel:FlxSprite = new FlxSprite(FlxG.width * 0.49, 92);
-      rightPanel.makeGraphic(Std.int(FlxG.width * 0.46), Std.int(FlxG.height - 150), 0xC9091833);
+      var rightPanel:FlxSprite = new FlxSprite(width * 0.49, panelTop);
+      rightPanel.makeGraphic(Std.int(width * 0.46), Std.int(panelHeight), 0xC9091833);
       add(rightPanel);
     }
+    else
+    {
+      var panel:FlxSprite = new FlxSprite(margin, panelTop);
+      panel.makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
+      add(panel);
+    }
 
-    add(makeLabel(margin, 22, headerWidth, 'CUSTOMIZATION', compactLayout ? 23 : 30, 0xFFFFFFFF));
-    add(makeLabel(margin, 58, headerWidth,
-      'Personalize the NovaBeat menu. Original FNF remains untouched.', 11, 0xFF48E7FF));
+    add(makeLabel(margin, 22, width - margin * 2, 'CUSTOMIZATION', compactLayout ? 23 : 30, FlxColor.WHITE));
+    add(makeLabel(margin, 58, width - margin * 2,
+      'PERSONALIZE THE NOVABEAT MENU', 11, 0xFF48E7FF));
 
-    var listX:Float = rightSideLayout ? FlxG.width * 0.515 : margin + 12;
-    var listY:Float = rightSideLayout ? 108 : 96;
-    var listW:Float = rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2 - 24;
-    var columnGap:Float = twoColumnLayout ? 10 : 0;
-    var columnCount:Int = twoColumnLayout ? 2 : 1;
-    var rowCount:Int = twoColumnLayout ? Std.int(Math.ceil(LABELS.length / 2)) : LABELS.length;
-    var cellWidth:Float = (listW - columnGap * (columnCount - 1)) / columnCount;
-    var footerReserve:Float = rightSideLayout ? 126 : 106;
-    rowHeight = Math.max(twoColumnLayout ? 22 : 20,
-      Math.min(rightSideLayout ? 46 : (compactLayout ? 42 : 52), (FlxG.height - listY - footerReserve) / rowCount));
+    listX = rightSideLayout ? width * 0.515 : margin + 12;
+    listY = rightSideLayout ? panelTop + 18 : panelTop + 12;
+    listW = rightSideLayout ? width * 0.405 : width - margin * 2 - 24;
+    var footerReserve:Float = rightSideLayout ? 62 : 74;
+    rowHeight = Math.max(22, Math.min(rightSideLayout ? 48 : 44,
+      (height - listY - footerReserve) / LABELS.length));
+    valueColumnX = listX + listW * 0.72;
 
-    items = new TextMenuList(twoColumnLayout ? NavControls.Columns(2) : NavControls.Vertical);
+    items = new TextMenuList(NavControls.Vertical);
 
     descriptions = [
-      'Choose the main NovaBeat highlight and selection colour.',
-      'Adjust the visual strength behind the menu panels. Use LEFT / RIGHT to change it.',
-      'Control the intensity of the panel edge and highlight glow.',
-      'Show or hide the decorative equalizer strip.',
-      'Scale the NovaBeat menu interface from 85% to 115%.',
+      'Choose the primary NovaBeat highlight and selection colour.',
+      'Adjust how visible the background artwork is behind the interface.',
+      'Change the intensity of panel borders and accent lighting.',
+      'Show or hide the decorative equalizer strip on the main menu.',
+      'Scale the NovaBeat interface without changing the game resolution.',
       'Choose compact, comfortable, or spacious menu entry spacing.',
-      'Reduce menu movement and animated accents.',
-      'Allow ambient background movement and particles.',
-      'Enable menu entry and selection animations.',
-      'Show the animated equalizer visualizer.',
-      'Reduce strong flashes and high-contrast pulses.',
-      'Increase the size of navigation labels and headings.'
+      'Reduce movement and animated accents throughout NovaBeat menus.',
+      'Allow subtle ambient background animation.',
+      'Enable the menu entrance and selection animations.',
+      'Show the animated equalizer while menu music is playing.',
+      'Reduce bright flashes and high-contrast pulses.',
+      'Increase navigation label and heading sizes.'
     ];
 
     for (index in 0...LABELS.length)
     {
       var itemIndex:Int = index;
-      var column:Int = twoColumnLayout ? index % 2 : 0;
-      var rowIndex:Int = twoColumnLayout ? Std.int(index / 2) : index;
-      var itemX:Float = listX + column * (cellWidth + columnGap);
-      var y:Float = listY + rowIndex * rowHeight;
+      var y:Float = listY + index * rowHeight;
 
-      var item:TextMenuItem = items.createItem(itemX + 10, y + 2, LABELS[index], AtlasFont.BOLD, function()
+      var rowBg:FlxSprite = new FlxSprite(listX, y);
+      rowBg.makeGraphic(Std.int(listW), Std.int(rowHeight - 4), 0xFF0D1935);
+      add(rowBg);
+      rowBackgrounds.push(rowBg);
+
+      var accent:FlxSprite = new FlxSprite(listX, y + 5);
+      accent.makeGraphic(3, Std.int(Math.max(8, rowHeight - 14)), 0xFF48E7FF);
+      add(accent);
+      rowAccents.push(accent);
+
+      var item:TextMenuItem = items.createItem(listX + 5, y + 2, LABELS[index], AtlasFont.BOLD, function()
       {
         activate(itemIndex);
       });
-      item.makeGraphic(Std.int(cellWidth - 20), Std.int(Math.max(1, rowHeight - 4)), FlxColor.TRANSPARENT);
+      item.makeGraphic(Std.int(listW - 10), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
       item.updateHitbox();
-      var textScale:Float = Math.max(0.35, Math.min(compactLayout ? 0.46 : 0.64, (rowHeight - 4) / 32));
-      item.atlasText.scale.set(textScale, textScale);
-      item.atlasText.updateHitbox();
-      item.atlasText.x = itemX + 15;
-      item.atlasText.y = y + (rowHeight - item.atlasText.height) * 0.5;
+      item.atlasText.visible = false;
       optionRows.push(item);
-      rowWidths.push(cellWidth - 20);
-      rowScales.push(textScale);
+
+      var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
+      var label:FlxText = makeLabel(listX + 13, y + 5, listW * 0.69, LABELS[index], fontSize, 0xFFB9C8E3);
+      rowLabels.push(label);
+
+      var value:FlxText = makeLabel(valueColumnX, y + 5, listW * 0.25, '', fontSize, 0xFF48E7FF);
+      value.alignment = FlxTextAlign.RIGHT;
+      rowValues.push(value);
     }
 
     items.onChange.add(function(selected:TextMenuItem)
     {
-      if (items.selectedIndex >= 0 && items.selectedIndex < descriptions.length && descriptionText != null)
+      if (items.selectedIndex >= 0 && items.selectedIndex < descriptions.length)
         descriptionText.text = descriptions[items.selectedIndex];
+      updateRowHighlights();
     });
-
     add(items);
+
     if (rightSideLayout)
     {
-      descriptionText = makeLabel(margin + 28, 305, FlxG.width * 0.33, descriptions[0], 15, 0xFFB6C7E5);
+      add(makeLabel(margin + 28, panelTop + 28, width * 0.32, 'VISUAL SETTINGS', 12, 0xFF48E7FF));
+      descriptionText = makeLabel(margin + 28, panelTop + 86, width * 0.32,
+        descriptions[0], 16, 0xFFB6C7E5);
       descriptionText.wordWrap = true;
       descriptionText.autoSize = false;
-      add(makeLabel(margin + 28, 245, FlxG.width * 0.33, 'VISUAL SETTINGS', 12, 0xFF48E7FF));
+      add(descriptionText);
+      add(makeLabel(margin + 28, panelTop + panelHeight - 60, width * 0.32,
+        'CHANGES SAVE AUTOMATICALLY', 10, 0xFF8297C2));
     }
     else
     {
-      descriptionText = makeLabel(margin, FlxG.height - 82, FlxG.width - margin * 2, descriptions[0], 11, 0xFFB6C7E5);
+      descriptionText = makeLabel(margin + 8, height - 68, width - margin * 2 - 16,
+        descriptions[0], 11, 0xFFB6C7E5);
+      descriptionText.wordWrap = true;
+      descriptionText.autoSize = false;
+      add(descriptionText);
     }
-    add(descriptionText);
 
-    #if mobile
-    statusText = makeLabel(rightSideLayout ? FlxG.width * 0.515 : margin, FlxG.height - 42, rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2,
-      'TAP TO INCREASE   •   SWIPE LEFT / RIGHT TO ADJUST   •   BACK TO RETURN', 9, 0xFF8DA8D8);
-    #else
-    statusText = makeLabel(rightSideLayout ? FlxG.width * 0.515 : margin, FlxG.height - 42, rightSideLayout ? FlxG.width * 0.405 : FlxG.width - margin * 2,
-      'LEFT / RIGHT ADJUST   •   ENTER TO CHANGE   •   BACK TO RETURN', 9, 0xFF8DA8D8);
-    #end
+    statusText = makeLabel(listX, height - 38, listW,
+      'LEFT / RIGHT ADJUST   •   ENTER TO CHANGE   •   ESC BACK', 9, 0xFF8DA8D8);
     add(statusText);
 
     refreshLabels();
+    updateRowHighlights();
 
     #if mobile
     var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
@@ -194,7 +214,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     Save.system.flush();
     refreshLabels();
-    statusText.text = 'SAVED  •  CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
+    statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
   }
 
   function adjustValue(index:Int, direction:Int):Void
@@ -233,23 +253,22 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       options.menuLargeText ? 'ON' : 'OFF'
     ];
 
-    for (index in 0...optionRows.length)
+    for (index in 0...rowValues.length)
     {
-      var itemIndex:Int = index;
-      var displayLabel:String = LABELS[index] + '   < ' + values[index] + ' >';
-      optionRows[index].setItem(displayLabel, function()
-      {
-        activate(itemIndex);
-      });
-      optionRows[index].atlasText.text = displayLabel;
-      // TextMenuItem.setItem() resets the bitmap font scaling; reapply after refresh.
-      optionRows[index].atlasText.scale.set(rowScales[index], rowScales[index]);
-      optionRows[index].atlasText.updateHitbox();
+      rowValues[index].text = values[index];
+    }
+  }
 
-      // TextMenuItem.setItem() resets the transparent sprite hitbox to the
-      // text's size. Restore the full row so tapping anywhere on the row works.
-      optionRows[index].width = rowWidths[index];
-      optionRows[index].height = rowHeight - 4;
+  function updateRowHighlights():Void
+  {
+    for (index in 0...rowLabels.length)
+    {
+      var selected:Bool = index == items.selectedIndex;
+      rowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
+      rowBackgrounds[index].alpha = selected ? 1.0 : 0.78;
+      rowAccents[index].alpha = selected ? 1.0 : 0.36;
+      rowLabels[index].color = selected ? FlxColor.WHITE : 0xFFB9C8E3;
+      rowValues[index].color = selected ? 0xFF6FE8FF : 0xFF48BBD4;
     }
   }
 
@@ -272,7 +291,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   function makeLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(Paths.font('vcr.ttf'), size, color);
+    label.setFormat(Paths.font('vcr.ttf'), size, color, FlxTextAlign.LEFT);
     label.scrollFactor.set();
     return label;
   }
@@ -298,6 +317,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     Save.system.flush();
     refreshLabels();
-    statusText.text = 'SAVED  •  CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
+    statusText.text = 'SAVED   •   CHANGES APPLY THE NEXT TIME THE NOVABEAT MENU OPENS';
   }
 }
