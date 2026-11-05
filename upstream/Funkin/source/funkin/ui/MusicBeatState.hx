@@ -150,15 +150,12 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     super.create();
 
     #if !mobile
-    // All menu and submenu states are under funkin.ui.*. Gameplay states live
-    // outside this namespace, so this does not force a cursor during songs.
-    if (Preferences.menuStyle == "NovaBeat")
+    // Make the mouse usable in both menu styles. Gameplay states live outside
+    // funkin.ui.*, so the pointer is not forced on during songs.
+    var className = getRuntimeClassName();
+    if (className != null && className.indexOf("funkin.ui.") == 0)
     {
-      var className = getRuntimeClassName();
-      if (className != null && className.indexOf("funkin.ui.") == 0)
-      {
-        Cursor.show();
-      }
+      Cursor.show();
     }
     #end
 
