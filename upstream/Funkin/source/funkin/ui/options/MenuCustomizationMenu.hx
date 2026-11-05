@@ -140,10 +140,12 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
       var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
       var label:FlxText = makeLabel(listX + 13, y + 5, listW * 0.69, LABELS[index], fontSize, 0xFFB9C8E3);
+      add(label);
       rowLabels.push(label);
 
       var value:FlxText = makeLabel(valueColumnX, y + 5, listW * 0.25, '', fontSize, 0xFF48E7FF);
       value.alignment = FlxTextAlign.RIGHT;
+      add(value);
       rowValues.push(value);
     }
 
