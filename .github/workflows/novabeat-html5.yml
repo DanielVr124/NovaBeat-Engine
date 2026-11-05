@@ -186,7 +186,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload browser files for GitHub Pages
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-pages-artifact@v4
         with:
           path: upstream/Funkin/${{ steps.package-web.outputs.web_root }}
@@ -204,7 +204,7 @@ jobs:
   deploy:
     name: Publish HTML5 test site
     needs: html5
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
