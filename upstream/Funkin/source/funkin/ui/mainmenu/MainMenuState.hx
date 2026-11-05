@@ -13,6 +13,9 @@ import flixel.effects.FlxFlicker;
 import flixel.math.FlxPoint;
 import flixel.util.typeLimit.NextState;
 import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
+import flixel.text.FlxText;
+import flixel.text.FlxTextAlign;
 import flixel.tweens.FlxEase;
 import funkin.graphics.FunkinCamera;
 import funkin.audio.FunkinSound;
@@ -51,7 +54,7 @@ import funkin.mobile.util.InAppPurchasesUtil;
 @:nullSafety
 class MainMenuState extends MusicBeatState
 {
-  var menuItems:Null<MenuTypedList<AtlasMenuItem>>;
+  var menuItems:Null<MenuTypedList<MenuListItem>>;
   var bg:Null<FlxSprite>;
   var magenta:FlxSprite;
   var camFollow:FlxObject;
@@ -145,7 +148,7 @@ class MainMenuState extends MusicBeatState
 
     if (Preferences.flashingLights) add(magenta);
 
-    menuItems = new MenuTypedList<AtlasMenuItem>();
+    menuItems = new MenuTypedList<MenuListItem>();
     add(menuItems);
 
     menuItems.onChange.add(onMenuItemChange);
@@ -199,6 +202,10 @@ class MainMenuState extends MusicBeatState
       }));
     });
 
+    // Put Mods beside the two main game modes, matching the original menu's
+    // navigation flow while opening the existing manager directly.
+    createModsMenuItem();
+
     if (hasUpgraded)
     {
       #if FEATURE_OPEN_URL
@@ -236,7 +243,8 @@ class MainMenuState extends MusicBeatState
     });
 
     // Reset position of menu items.
-    final spacing:Float = 160;
+    // Keep the full menu on-screen when the new Mods entry is present.
+    final spacing:Float = Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
     final top:Float = (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)
@@ -255,15 +263,18 @@ class MainMenuState extends MusicBeatState
     if (!hasUpgraded)
     {
       // the upgrade item
-      var targetItem = menuItems.members[2];
-      for (_ in 0...8)
+      var targetItem = menuItems.getItem('upgrade');
+      if (targetItem != null)
       {
-        var sparkle:UpgradeSparkle = new UpgradeSparkle(targetItem.x - (targetItem.width / 2), targetItem.y - (targetItem.height / 2), targetItem.width,
-          targetItem.height, FlxG.random.bool(80));
-        upgradeSparkles.add(sparkle);
+        for (_ in 0...8)
+        {
+          var sparkle:UpgradeSparkle = new UpgradeSparkle(targetItem.x - (targetItem.width / 2), targetItem.y - (targetItem.height / 2), targetItem.width,
+            targetItem.height, FlxG.random.bool(80));
+          upgradeSparkles.add(sparkle);
 
-        sparkle.scrollFactor.x = 0.0;
-        sparkle.scrollFactor.y = 0.4;
+          sparkle.scrollFactor.x = 0.0;
+          sparkle.scrollFactor.y = 0.4;
+        }
       }
 
       subStateClosed.add(_ ->
@@ -369,6 +380,24 @@ class MainMenuState extends MusicBeatState
     item.centered = true;
     item.changeAnim('idle');
     menuItems.addItem(name, item);
+  }
+
+  function createModsMenuItem():Void
+  {
+    if (menuItems == null) return;
+
+    var item:MainMenuModsItem = new MainMenuModsItem(0, 0, function()
+    {
+      startExitState(() ->
+      {
+        funkin.ui.options.OptionsState.openModsOnStart = true;
+        return new funkin.ui.options.OptionsState();
+      });
+    });
+
+    item.ID = menuItems.length;
+    item.scrollFactor.set();
+    menuItems.addItem('mods', item);
   }
 
   var buttonGrp:Array<FlxSprite> = [];
@@ -639,5 +668,70 @@ class MainMenuState extends MusicBeatState
     FunkinSound.playOnce(Paths.sound('cancelMenu'));
 
     FlxG.switchState(() -> new TitleState());
+  }
+}
+
+
+/**
+ * Code-drawn Mods button for the original FNF menu.
+ * It follows MenuListItem selection, flicker, keyboard/gamepad, and touch input,
+ * while using the game's VCR font and a matching dark/pink menu palette.
+ */
+class MainMenuModsItem extends MenuListItem
+{
+  var label:FlxText;
+  var shadow:FlxText;
+
+  public function new(x:Float, y:Float, callback:Void->Void)
+  {
+    super(x, y, 'mods', callback);
+
+    makeGraphic(320, 94, FlxColor.WHITE);
+    FlxSpriteUtil.drawRoundRect(this, 0, 0, 320, 94, 15, 15, 0xFF222C48);
+    FlxSpriteUtil.drawRoundRect(this, 8, 8, 6, 78, 3, 3, 0xFFFF5C9E);
+    FlxSpriteUtil.drawRoundRect(this, 22, 80, 276, 4, 2, 2, 0xFF53698F);
+
+    centerOrigin();
+    offset.copyFrom(origin);
+
+    shadow = new FlxText(0, 0, 280, 'MODS', 58);
+    shadow.setFormat(Paths.font('vcr.ttf'), 58, 0xFF080B16, FlxTextAlign.CENTER);
+    shadow.updateHitbox();
+
+    label = new FlxText(0, 0, 280, 'MODS', 58);
+    label.setFormat(Paths.font('vcr.ttf'), 58, 0xFFFFD5E8, FlxTextAlign.CENTER);
+    label.updateHitbox();
+  }
+
+  override public function draw():Void
+  {
+    if (!visible) return;
+
+    var selected:Bool = alpha >= 0.99;
+    color = selected ? 0xFF3A355B : 0xFF202B43;
+
+    super.draw();
+
+    shadow.x = x - shadow.width * 0.5 + 3;
+    shadow.y = y - shadow.height * 0.5 + 4;
+    shadow.alpha = alpha;
+    shadow.scrollFactor.copyFrom(scrollFactor);
+    shadow.cameras = cameras;
+    shadow.draw();
+
+    label.x = x - label.width * 0.5;
+    label.y = y - label.height * 0.5;
+    label.color = selected ? 0xFFFFFFFF : 0xFFD0D8EA;
+    label.alpha = alpha;
+    label.scrollFactor.copyFrom(scrollFactor);
+    label.cameras = cameras;
+    label.draw();
+  }
+
+  override function destroy():Void
+  {
+    super.destroy();
+    label = null;
+    shadow = null;
   }
 }
