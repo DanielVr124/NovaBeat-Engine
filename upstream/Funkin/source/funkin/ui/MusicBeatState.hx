@@ -136,6 +136,15 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
   }
   #end
 
+  // Haxe's standard Type.getClass API is not fully annotated for null safety.
+  // Keep this single reflection boundary isolated; create() still checks the
+  // nullable class name before using it.
+  @:nullSafety(Off)
+  function getRuntimeClassName():Null<String>
+  {
+    return Type.getClassName(Type.getClass(this));
+  }
+
   override function create()
   {
     super.create();
@@ -145,12 +154,7 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     // outside this namespace, so this does not force a cursor during songs.
     if (Preferences.menuStyle == "NovaBeat")
     {
-      var className:Null<String> = null;
-      var runtimeClass:Null<Class<Dynamic>> = Type.getClass(this);
-      if (runtimeClass != null)
-      {
-        className = Type.getClassName(runtimeClass);
-      }
+      var className = getRuntimeClassName();
       if (className != null && className.indexOf("funkin.ui.") == 0)
       {
         Cursor.show();
