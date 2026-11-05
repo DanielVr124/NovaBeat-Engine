@@ -9,6 +9,7 @@ import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.audio.FunkinSound;
 import funkin.Preferences;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
 import funkin.ui.Page.PageName;
 import flixel.tweens.FlxEase;
@@ -240,6 +241,32 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     // Todo: bypass popup blocker on firefox
     if (controls.ACCEPT_P) accept();
+
+    #if web
+    // Quest Browser uses a desktop HTML5 build even when it is a touch-first
+    // headset. Route pointer taps through the normal menu selection logic only
+    // on recognized mobile browsers; leave desktop browser mouse behavior alone.
+    if (DeviceUtil.isMobileBrowser && TouchUtil.justPressed && !busy)
+    {
+      for (i in 0...members.length)
+      {
+        final item = members[i];
+        if (item.available && TouchUtil.overlaps(item))
+        {
+          if (selectedIndex != i)
+          {
+            playNavigationSound();
+            selectItem(i);
+          }
+          else
+          {
+            accept();
+          }
+          break;
+        }
+      }
+    }
+    #end
 
     return;
   }
