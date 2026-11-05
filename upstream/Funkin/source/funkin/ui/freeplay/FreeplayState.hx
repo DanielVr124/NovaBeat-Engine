@@ -339,7 +339,10 @@ class FreeplayState extends MusicBeatSubState
     ostName = new FlxText(8 - FullScreenScaleMode.gameNotchSize.x, 8, FlxG.width - 8 - 8, Constants.DEFAULT_OST_NAME, 48);
     charSelectHint = new FlxText(-40, 18, FlxG.width - 8 - 8, 'Press [ LOL ] to change characters', 32);
 
-    backingImage = FunkinSprite.create(backingCard.pinkBack.width * 0.74, 0, styleData == null ? 'freeplay/freeplayBGweek1-bf' : styleData.getBgAssetKey());
+    var freeplayBackgroundKey:String = Preferences.menuStyle == "NovaBeat"
+      ? 'novabeat/menu-background'
+      : (styleData == null ? 'freeplay/freeplayBGweek1-bf' : styleData.getBgAssetKey());
+    backingImage = FunkinSprite.create(backingCard.pinkBack.width * 0.74, 0, freeplayBackgroundKey);
 
     // TODO: refactor DifficultySelector to *not* use `this` as input? Handle it's animations and style data in different manner
     diffSelLeft = new DifficultySelector((CUTOUT_WIDTH * DJ_POS_MULTI) + 20, grpDifficulties.y - 10, false, controls, styleData, uiStateMachine);
@@ -3018,22 +3021,8 @@ class FreeplayState extends MusicBeatSubState
 
   public function playCurSongPreview(?daSongCapsule:SongMenuItem):Void
   {
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      // Keep the NovaBeat soundtrack playing while browsing; selecting a song
-      // still uses the real capsule, difficulty, and DJ transition logic.
-      if (FlxG.sound.music == null || !FlxG.sound.music.playing)
-      {
-        FunkinSound.playMusic('novabeat-menu', {
-          overrideExisting: true,
-          restartTrack: false,
-          persist: true,
-          mapTimeChanges: false
-        });
-      }
-      return;
-    }
-
+    // Keep the real Freeplay preview pipeline in both menu styles.
+    // Selecting a song must play that song's actual preview audio.
     if (daSongCapsule == null) daSongCapsule = currentCapsule;
 
     var previewVolume:Float = 0.7;
