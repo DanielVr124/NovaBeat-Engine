@@ -476,7 +476,7 @@ class StoryMenuState extends MusicBeatState
       }
       #end
 
-ACK_P) goBack();
+if (controls.BACK_P) goBack();
   }
 
   /**
