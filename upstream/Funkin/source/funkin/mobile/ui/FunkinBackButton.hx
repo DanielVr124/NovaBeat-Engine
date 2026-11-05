@@ -6,6 +6,7 @@ import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxSignal;
 import funkin.audio.FunkinSound;
+import funkin.Preferences;
 import funkin.util.HapticUtil;
 
 class FunkinBackButton extends FunkinButton
@@ -13,6 +14,7 @@ class FunkinBackButton extends FunkinButton
   public var onConfirmStart(default, null):FlxSignal = new FlxSignal();
   public var onConfirmEnd(default, null):FlxSignal = new FlxSignal();
   public var enabled:Bool = true;
+  public var playConfirmSound:Bool = true;
   public var confirming(get, never):Bool;
 
   function get_confirming():Bool
@@ -115,7 +117,11 @@ class FunkinBackButton extends FunkinButton
     HapticUtil.vibrate(0, 0.05, 0.5);
     animation.play('confirm');
 
-    FunkinSound.playOnce(Paths.sound('cancelMenu'));
+    if (playConfirmSound)
+    {
+      var backSound:String = Preferences.menuStyle == 'NovaBeat' ? 'novabeat/back' : 'cancelMenu';
+      FunkinSound.playOnce(Paths.sound(backSound));
+    }
 
     onConfirmStart.dispatch();
 

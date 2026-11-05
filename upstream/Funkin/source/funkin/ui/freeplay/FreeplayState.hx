@@ -1495,7 +1495,7 @@ class FreeplayState extends MusicBeatSubState
     else
     {
       trace('Not enough characters unlocked to open character select!');
-      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == 'NovaBeat' ? 'novabeat/back' : 'cancelMenu'));
+      playBackSound();
       return;
     }
 
@@ -1887,7 +1887,7 @@ class FreeplayState extends MusicBeatSubState
         {
           trace('No songs available!');
           uiStateMachine.transition(Idle);
-          FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
+          playBackSound();
           return;
         }
 
@@ -1938,7 +1938,7 @@ class FreeplayState extends MusicBeatSubState
         {
           trace('No songs available!');
           uiStateMachine.transition(Idle);
-          FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
+          playBackSound();
           return;
         }
 
@@ -2227,6 +2227,13 @@ class FreeplayState extends MusicBeatSubState
     clearPreviews();
   }
 
+  function playBackSound():Void
+  {
+    // The parent menu is the source of truth if a style switch is in flight.
+    var useNovaBeatSound:Bool = Preferences.menuStyle == "NovaBeat" || Std.isOfType(_parentState, NovaBeatMainMenuState);
+    FunkinSound.playOnce(Paths.sound(useNovaBeatSound ? 'novabeat/back' : 'cancelMenu'));
+  }
+
   function goBack():Void
   {
     @:privateAccess
@@ -2246,7 +2253,7 @@ class FreeplayState extends MusicBeatSubState
 
     dispatchEvent(new FreeplayScriptEvent(FREEPLAY_OUTRO));
 
-    FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
+    playBackSound();
 
     var longestTimer:Float = 0;
 
@@ -2581,7 +2588,7 @@ class FreeplayState extends MusicBeatSubState
       trace('No songs available!');
       uiStateMachine.transition(Idle);
 
-      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
+      playBackSound();
       return;
     }
 
