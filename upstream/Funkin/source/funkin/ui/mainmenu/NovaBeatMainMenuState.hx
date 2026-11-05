@@ -118,6 +118,8 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   override function create():Void
   {
+    // Story/Options can disable raw keyboard input before switching states.
+    FlxG.keys.enabled = true;
     FlxG.cameras.reset(new FunkinCamera('novaBeatMainMenu'));
     uiCamera = new FunkinCamera('novaBeatMenuUI');
     FlxG.cameras.add(uiCamera, false);
@@ -471,6 +473,21 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (pressed || FlxG.mouse.justPressed) beginMenuTransition();
       return;
     }
+
+    #if !mobile
+    // Fallback to raw desktop keys when a custom binding is absent.
+    // Avoid double movement if the standard control binding fired too.
+    if (menuItems != null && !menuItems.busy)
+    {
+      if (FlxG.keys.justPressed.UP && !controls.UI_UP_P)
+        menuItems.selectItem(menuItems.selectedIndex - 1 < 0 ? menuItems.length - 1 : menuItems.selectedIndex - 1);
+      else if (FlxG.keys.justPressed.DOWN && !controls.UI_DOWN_P)
+        menuItems.selectItem(menuItems.selectedIndex + 1 >= menuItems.length ? 0 : menuItems.selectedIndex + 1);
+
+      if ((FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE) && !controls.ACCEPT_P)
+        menuItems.accept();
+    }
+    #end
 
     animationClock += elapsed;
     var options = Save.instance.options;
