@@ -4,6 +4,7 @@ import flixel.FlxCamera;
 import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
+import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
@@ -39,11 +40,18 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   var menuCamera:FlxCamera;
   var hudCamera:FlxCamera;
   var camFollow:FlxObject;
+  var novaBeatStyle:Bool = false;
+  var novaBeatRowLayer:FlxTypedSpriteGroup<FlxSprite>;
+  var novaBeatLabelLayer:FlxTypedSpriteGroup<FlxSprite>;
+  var novaBeatRowBackgrounds:Array<FlxSprite> = [];
+  var novaBeatRowAccents:Array<FlxSprite> = [];
+  var novaBeatRowLabels:Array<FlxText> = [];
 
   public function new()
   {
     super();
 
+    novaBeatStyle = Preferences.menuStyle == "NovaBeat";
     menuCamera = new FunkinCamera('prefMenu');
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
@@ -55,8 +63,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     camera = menuCamera;
     NovaBeatOptionsChrome.apply(this, 'PREFERENCES', menuCamera);
 
+    // Draw the NovaBeat row panels before the interactive menu items.
+    add(novaBeatRowLayer = new FlxTypedSpriteGroup<FlxSprite>());
     add(items = new TextMenuList());
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
+    add(novaBeatLabelLayer = new FlxTypedSpriteGroup<FlxSprite>());
 
     add(itemDescBox = new FunkinSprite());
     itemDescBox.cameras = [hudCamera];
@@ -66,6 +77,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     createPrefItems();
     createPrefDescription();
+    updateNovaBeatRows();
 
     camFollow = new FlxObject(FlxG.width / 2, 0, 140, 70);
 
@@ -77,6 +89,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.onChange.add(function(selected)
     {
       itemDesc.text = preferenceDesc[items.selectedIndex];
+      updateNovaBeatRows();
     });
 
     #if FEATURE_TOUCH_CONTROLS
@@ -90,19 +103,34 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefDescription():Void
   {
-    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
-    itemDescBox.makeSolidColor(1, 1, novaBeatStyle ? 0xFF0D1935 : FlxColor.BLACK);
-    itemDescBox.alpha = novaBeatStyle ? 0.9 : 0.6;
-    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, novaBeatStyle ? 0xFF48E7FF : FlxColor.WHITE,
+    itemDesc.text = preferenceDesc[items.selectedIndex];
+    itemDesc.scrollFactor.set();
+
+    if (novaBeatStyle)
+    {
+      var margin:Float = Math.max(20, FlxG.width * 0.035);
+      itemDescBox.makeSolidColor(1, 1, 0xFF0D1935);
+      itemDescBox.alpha = 0.96;
+      itemDesc.setFormat(Paths.font('vcr.ttf'), 13, 0xFFB7C9E8, FlxTextAlign.LEFT);
+      itemDesc.x = margin + 18;
+      itemDesc.y = FlxG.height - 82;
+      itemDesc.width = FlxG.width - margin * 2 - 36;
+      itemDesc.height = 42;
+      itemDesc.wordWrap = true;
+      itemDesc.autoSize = false;
+      itemDescBox.setPosition(margin + 10, FlxG.height - 94);
+      itemDescBox.setGraphicSize(Std.int(FlxG.width - margin * 2 - 20), 64);
+      itemDescBox.updateHitbox();
+      return;
+    }
+
+    itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
+    itemDescBox.alpha = 0.6;
+    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE,
       FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
     itemDesc.borderSize = 3;
-
-    // Update the text.
-    itemDesc.text = preferenceDesc[items.selectedIndex];
     itemDesc.screenCenter();
     itemDesc.y += 270;
-
-    // Create the box around the text.
     itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
     itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 25));
     itemDescBox.updateHitbox();
@@ -278,7 +306,13 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
 
     // Positions the camera to the selected item.
-    if (items != null) camFollow.y = items.selectedItem.y;
+    if (items != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
+
+    if (novaBeatStyle)
+    {
+      updateNovaBeatRows();
+      return;
+    }
 
     // Indent the selected item.
     items.forEach(function(daItem:TextMenuItem)
@@ -328,7 +362,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     var checkbox:CheckboxPreferenceItem = new CheckboxPreferenceItem(funkin.ui.FullScreenScaleMode.gameNotchSize.x, itemY - 30,
       defaultValue, available);
 
-    items.createItem(0, itemY, prefName, AtlasFont.BOLD, function()
+    var item:TextMenuItem = items.createItem(0, itemY, prefName, AtlasFont.BOLD, function()
     {
       var value = !checkbox.currentValue;
       onChange(value);
@@ -337,6 +371,18 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     preferenceItems.add(checkbox);
     preferenceDesc.push(prefDesc);
+
+    if (novaBeatStyle)
+    {
+      var index:Int = items.length - 1;
+      styleNovaBeatPreferenceItem(item, prefName, index);
+      var rowX:Float = novaBeatRowX();
+      var rowW:Float = novaBeatRowWidth();
+      var rowY:Float = novaBeatRowY(index);
+      checkbox.x = rowX + rowW - checkbox.width - 22;
+      checkbox.y = rowY + (54 - checkbox.height) * 0.5;
+      checkbox.color = 0xFF48E7FF;
+    }
   }
 
   /**
@@ -357,6 +403,14 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
+    if (novaBeatStyle)
+    {
+      var index:Int = items.length - 1;
+      styleNovaBeatPreferenceItem(item, prefName, index);
+      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
+      item.lefthandText.y = novaBeatRowY(index) + 15;
+      item.lefthandText.color = 0xFF48E7FF;
+    }
   }
 
   /**
@@ -381,6 +435,14 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
+    if (novaBeatStyle)
+    {
+      var index:Int = items.length - 1;
+      styleNovaBeatPreferenceItem(item, prefName, index);
+      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
+      item.lefthandText.y = novaBeatRowY(index) + 15;
+      item.lefthandText.color = 0xFF48E7FF;
+    }
   }
 
   /**
@@ -395,11 +457,77 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
+    if (novaBeatStyle)
+    {
+      var index:Int = items.length - 1;
+      styleNovaBeatPreferenceItem(item, prefName, index);
+      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
+      item.lefthandText.y = novaBeatRowY(index) + 15;
+      item.lefthandText.color = 0xFF48E7FF;
+    }
+  }
+
+  function novaBeatRowX():Float
+  {
+    return Math.max(20, FlxG.width * 0.035) + 18;
+  }
+
+  function novaBeatRowWidth():Float
+  {
+    return FlxG.width - Math.max(20, FlxG.width * 0.035) * 2 - 36;
+  }
+
+  function novaBeatRowY(index:Int):Float
+  {
+    return 84 + index * 62;
+  }
+
+  function styleNovaBeatPreferenceItem(item:TextMenuItem, prefName:String, index:Int):Void
+  {
+    var rowX:Float = novaBeatRowX();
+    var rowY:Float = novaBeatRowY(index);
+    var rowW:Float = novaBeatRowWidth();
+
+    var background:FunkinSprite = new FunkinSprite(rowX, rowY);
+    background.makeSolidColor(Std.int(rowW), 54, 0xFF0D1935);
+    background.cameras = [menuCamera];
+    novaBeatRowLayer.add(background);
+    novaBeatRowBackgrounds.push(background);
+
+    var accent:FunkinSprite = new FunkinSprite(rowX, rowY + 7);
+    accent.makeSolidColor(4, 40, 0xFF48E7FF);
+    accent.cameras = [menuCamera];
+    novaBeatRowLayer.add(accent);
+    novaBeatRowAccents.push(accent);
+
+    var label:FlxText = new FlxText(rowX + 18, rowY + 17, rowW - 230, prefName, 15);
+    label.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB9C8E3, FlxTextAlign.LEFT);
+    label.cameras = [menuCamera];
+    novaBeatLabelLayer.add(label);
+    novaBeatRowLabels.push(label);
+
+    item.x = rowX + 8;
+    item.y = rowY + 5;
+    item.makeGraphic(Std.int(rowW - 16), 44, FlxColor.TRANSPARENT);
+    item.updateHitbox();
+    item.atlasText.visible = false;
+  }
+
+  function updateNovaBeatRows():Void
+  {
+    for (index in 0...novaBeatRowBackgrounds.length)
+    {
+      var selected:Bool = index == items.selectedIndex;
+      novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
+      novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.82;
+      novaBeatRowAccents[index].alpha = selected ? 1.0 : 0.42;
+      novaBeatRowLabels[index].color = selected ? FlxColor.WHITE : 0xFFB9C8E3;
+    }
   }
 
   function preferenceItemY(index:Int):Float
   {
-    return Preferences.menuStyle == "NovaBeat" ? 118 + index * 120 : 30 + index * 120;
+    return novaBeatStyle ? novaBeatRowY(index) + 5 : 30 + index * 120;
   }
 
   override function exit():Void

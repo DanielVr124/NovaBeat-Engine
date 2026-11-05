@@ -67,6 +67,9 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   var currentDevice:Device = Keys;
   var deviceListSelected:Bool = false;
   var actionPrevented:Bool = false;
+  var novaBeatStyle:Bool = false;
+  var novaBeatRows:FlxTypedGroup<FunkinSprite>;
+  var novaBeatRowBackgrounds:Array<FunkinSprite> = [];
 
   static final CONTROL_BASE_X = 50;
   static final CONTROL_MARGIN_X = 700;
@@ -76,12 +79,15 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
 
+    novaBeatStyle = Preferences.menuStyle == "NovaBeat";
     menuCamera = new FunkinCamera('controlsMenu');
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
     camera = menuCamera;
     NovaBeatOptionsChrome.apply(this, 'CONTROLS', menuCamera);
 
+    novaBeatRows = new FlxTypedGroup<FunkinSprite>();
+    add(novaBeatRows);
     labels = new FlxTypedGroup<AtlasText>();
     var headers:FlxTypedGroup<AtlasText> = new FlxTypedGroup<AtlasText>();
     controlGrid = new MenuTypedList(Columns(COLUMNS), Vertical);
@@ -93,9 +99,17 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     if (FlxG.gamepads.numActiveGamepads > 0)
     {
       var devicesBg:FunkinSprite = new FunkinSprite();
-      devicesBg.makeSolidColor(FlxG.width, 100,
-        Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : 0xFFFAFD6D);
-      add(devicesBg);
+      if (novaBeatStyle)
+      {
+        var margin:Float = Math.max(20, FlxG.width * 0.035) + 18;
+        devicesBg.setPosition(margin, 84);
+        devicesBg.makeSolidColor(Std.int(FlxG.width - margin * 2), 54, 0xFF0D1935);
+      }
+      else
+      {
+        devicesBg.makeSolidColor(FlxG.width, 100, 0xFFFAFD6D);
+      }
+      novaBeatRows.add(devicesBg);
       deviceList = new TextMenuList(Horizontal, None);
       add(deviceList);
       deviceListSelected = true;
@@ -103,17 +117,19 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       var item:TextMenuItem;
 
       item = deviceList.createItem('Keyboard', AtlasFont.BOLD, selectDevice.bind(Keys));
-      item.x = FlxG.width / 2 - item.width - 30;
-      item.y = (devicesBg.height - item.height) / 2;
+      item.x = novaBeatStyle ? FlxG.width * 0.38 : FlxG.width / 2 - item.width - 30;
+      item.y = novaBeatStyle ? 99 : (devicesBg.height - item.height) / 2;
+      if (novaBeatStyle) item.atlasText.color = 0xFF48E7FF;
 
       item = deviceList.createItem('Gamepad', AtlasFont.BOLD, selectDevice.bind(Gamepad(FlxG.gamepads.firstActive.id)));
-      item.x = FlxG.width / 2 + 30;
-      item.y = (devicesBg.height - item.height) / 2;
+      item.x = novaBeatStyle ? FlxG.width * 0.58 : FlxG.width / 2 + 30;
+      item.y = novaBeatStyle ? 99 : (devicesBg.height - item.height) / 2;
+      if (novaBeatStyle) item.atlasText.color = 0xFF48E7FF;
     }
 
     // FlxG.debugger.drawDebug = true;
-    var y = deviceList == null ? (Preferences.menuStyle == "NovaBeat" ? 110 : 30) : 120;
-    var spacer = 70;
+    var y:Float = deviceList == null ? (novaBeatStyle ? 102 : 30) : (novaBeatStyle ? 166 : 120);
+    var spacer:Float = novaBeatStyle ? 68 : 70;
     var currentHeader:String = null;
     // list order is determined by enum order
     for (i in 0...controlList.length)
@@ -129,52 +145,76 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       if (currentHeader != "UI_" && name.indexOf("UI_") == 0)
       {
         currentHeader = "UI_";
-        headers.add(new AtlasText(0, y, "UI", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "UI", y);
         y += spacer;
       }
       else if (currentHeader != "NOTE_" && name.indexOf("NOTE_") == 0)
       {
         currentHeader = "NOTE_";
-        headers.add(new AtlasText(0, y, "NOTES", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "NOTES", y);
         y += spacer;
       }
       else if (currentHeader != "CUTSCENE_" && name.indexOf("CUTSCENE_") == 0)
       {
         currentHeader = "CUTSCENE_";
-        headers.add(new AtlasText(0, y, "CUTSCENE", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "CUTSCENE", y);
         y += spacer;
       }
       else if (currentHeader != "FREEPLAY_" && name.indexOf("FREEPLAY_") == 0)
       {
         currentHeader = "FREEPLAY_";
-        headers.add(new AtlasText(0, y, "FREEPLAY", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "FREEPLAY", y);
         y += spacer;
       }
       else if (currentHeader != "WINDOW_" && name.indexOf("WINDOW_") == 0)
       {
         currentHeader = "WINDOW_";
-        headers.add(new AtlasText(0, y, "WINDOW", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "WINDOW", y);
         y += spacer;
       }
       else if (currentHeader != "VOLUME_" && name.indexOf("VOLUME_") == 0)
       {
         currentHeader = "VOLUME_";
-        headers.add(new AtlasText(0, y, "VOLUME", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "VOLUME", y);
         y += spacer;
       }
       else if (currentHeader != "DEBUG_" && name.indexOf("DEBUG_") == 0)
       {
         currentHeader = "DEBUG_";
-        headers.add(new AtlasText(0, y, "DEBUG", AtlasFont.BOLD)).screenCenter(X);
+        addControlHeader(headers, "DEBUG", y);
         y += spacer;
       }
 
       if (currentHeader != null && name.indexOf(currentHeader) == 0) name = name.substr(currentHeader.length);
 
       var formatName = name.replace('_', ' ');
-      var label = labels.add(new AtlasText(Math.max(FullScreenScaleMode.gameNotchSize.x, CONTROL_BASE_X), y, formatName, AtlasFont.BOLD));
-      label.alpha = 0.6;
-      for (i in 0...COLUMNS) createItem(label.x + CONTROL_MARGIN_X + i * CONTROL_SPACING_X, y, control, i);
+      var labelX:Float = novaBeatStyle ? Math.max(20, FlxG.width * 0.035) + 30 : Math.max(FullScreenScaleMode.gameNotchSize.x, CONTROL_BASE_X);
+      if (novaBeatStyle)
+      {
+        var rowX:Float = Math.max(20, FlxG.width * 0.035) + 18;
+        var rowW:Float = FlxG.width - rowX * 2;
+        var rowBackground:FunkinSprite = new FunkinSprite(rowX, y - 7);
+        rowBackground.makeSolidColor(Std.int(rowW), 54, 0xFF0D1935);
+        novaBeatRows.add(rowBackground);
+        novaBeatRowBackgrounds.push(rowBackground);
+
+        var firstBindX:Float = FlxG.width * 0.57;
+        var secondBindX:Float = FlxG.width * 0.78;
+        addBindingPlate(firstBindX, y - 2);
+        addBindingPlate(secondBindX, y - 2);
+      }
+
+      var label = labels.add(new AtlasText(labelX, y, formatName, AtlasFont.BOLD));
+      label.alpha = novaBeatStyle ? 1.0 : 0.6;
+      if (novaBeatStyle) label.color = 0xFFB9C8E3;
+
+      for (i in 0...COLUMNS)
+      {
+        var bindX:Float = novaBeatStyle
+          ? (i == 0 ? FlxG.width * 0.57 + 12 : FlxG.width * 0.78 + 12)
+          : label.x + CONTROL_MARGIN_X + i * CONTROL_SPACING_X;
+        createItem(bindX, y, control, i);
+      }
 
       y += spacer;
     }
@@ -197,10 +237,14 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       camFollow.y = selected.y;
 
-      labels.forEach((label) -> label.alpha = 0.6);
-      labels.members[
-        Std.int(controlGrid.selectedIndex / COLUMNS)
-      ].alpha = 1.0;
+      labels.forEach((label) -> label.alpha = novaBeatStyle ? 0.95 : 0.6);
+      var labelIndex:Int = Std.int(controlGrid.selectedIndex / COLUMNS);
+      if (labelIndex >= 0 && labelIndex < labels.members.length)
+      {
+        labels.members[labelIndex].alpha = 1.0;
+      }
+
+      if (novaBeatStyle) updateNovaBeatControlSelection();
     });
 
     prompt = new Prompt("\nPress any key to rebind\n\n\nBackspace to unbind\n    Escape to cancel", None);
@@ -233,12 +277,55 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
   }
 
+  function addControlHeader(headers:FlxTypedGroup<AtlasText>, title:String, y:Float):Void
+  {
+    var header:AtlasText = new AtlasText(0, y, title, AtlasFont.BOLD);
+    if (novaBeatStyle)
+    {
+      header.x = Math.max(20, FlxG.width * 0.035) + 30;
+      header.color = 0xFF48E7FF;
+    }
+    else
+    {
+      header.screenCenter(X);
+    }
+    headers.add(header);
+  }
+
+  function addBindingPlate(x:Float, y:Float):Void
+  {
+    var plate:FunkinSprite = new FunkinSprite(x - 8, y);
+    plate.makeSolidColor(150, 42, 0xFF142747);
+    novaBeatRows.add(plate);
+  }
+
+  function updateNovaBeatControlSelection():Void
+  {
+    if (!novaBeatStyle) return;
+    var selectedRow:Int = Std.int(controlGrid.selectedIndex / COLUMNS);
+    for (index in 0...novaBeatRowBackgrounds.length)
+    {
+      var selected:Bool = index == selectedRow;
+      novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
+      novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.82;
+    }
+    for (index in 0...controlGrid.members.length)
+    {
+      controlGrid.members[index].atlasText.color = index == controlGrid.selectedIndex ? 0xFFFFFFFF : 0xFF6FD8EB;
+    }
+  }
+
   function createItem(x = 0.0, y = 0.0, control:Control, index:Int)
   {
     var item = new InputItem(x, y, currentDevice, control, index, onSelect);
     for (i in 0...controlGroups.length)
     {
       if (controlGroups[i].contains(control)) itemGroups[i].push(item);
+    }
+
+    if (novaBeatStyle)
+    {
+      item.atlasText.color = 0xFF6FD8EB;
     }
 
     return controlGrid.addItem(item.name, item);
