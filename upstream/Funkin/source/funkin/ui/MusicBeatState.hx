@@ -150,8 +150,8 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     super.create();
 
     #if !mobile
-    // Make the mouse usable in both menu styles. Gameplay states live outside
-    // funkin.ui.*, so the pointer is not forced on during songs.
+    // Keep the native mouse cursor hidden throughout menus. Mouse-wheel
+    // navigation remains active; menu items do not respond to pointer clicks.
     var className = getRuntimeClassName();
     if (className != null && className.indexOf("funkin.ui.") == 0)
     {
