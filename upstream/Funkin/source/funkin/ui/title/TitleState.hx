@@ -251,6 +251,15 @@ class TitleState extends MusicBeatState
 
   override function update(elapsed:Float):Void
   {
+    // NovaBeat redirects away from this upstream FNF title state during create().
+    // Its title/menu flow does not initialize swagShader or the FNF title widgets,
+    // so skip the remainder of this state's update while NovaBeat is selected.
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      super.update(elapsed);
+      return;
+    }
+
     FlxG.bitmapLog.add(FlxG.camera.buffer);
 
     #if (desktop || android)
