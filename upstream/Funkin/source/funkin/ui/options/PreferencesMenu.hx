@@ -11,6 +11,7 @@ import flixel.math.FlxPoint;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.audio.FunkinSound;
+import funkin.ui.title.TitleState;
 import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
 import funkin.ui.TextMenuList.TextMenuItem;
@@ -88,9 +89,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefDescription():Void
   {
-    itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
-    itemDescBox.alpha = 0.6;
-    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    itemDescBox.makeSolidColor(1, 1, novaBeatStyle ? 0xFF0D1935 : FlxColor.BLACK);
+    itemDescBox.alpha = novaBeatStyle ? 0.9 : 0.6;
+    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, novaBeatStyle ? 0xFF48E7FF : FlxColor.WHITE,
+      FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
     itemDesc.borderSize = 3;
 
     // Update the text.
@@ -105,27 +108,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   }
 
   /**
-   * Switch to the soundtrack belonging to the selected menu presentation.
-   * Start at zero and fade in so changing the preference is audible immediately
-   * without requiring a state restart.
-   */
-  function switchMenuStyleMusic(value:String):Void
-  {
-    var track:String = value == "NovaBeat" ? "novabeat-menu" : "freakyMenu";
-
-    var startedTrack:Bool = FunkinSound.playMusic(track, {
-      startingVolume: 0.0,
-      overrideExisting: true,
-      restartTrack: false,
-      persist: true,
-      mapTimeChanges: false
-    });
-
-    if (startedTrack && FlxG.sound.music != null)
-      FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
-  }
-
-  /**
    * Create the menu items for each of the preferences.
    */
   function createPrefItems():Void
@@ -135,8 +117,28 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       "NovaBeat" => "NovaBeat"
     ], function(key:String, value:String):Void
     {
+      var previousStyle:String = Preferences.menuStyle;
       Preferences.menuStyle = value;
-      switchMenuStyleMusic(value);
+
+      // Re-enter the title flow with the selected presentation. This refreshes
+      // the complete menu immediately without restarting the game.
+      if (previousStyle != value)
+      {
+        if (value == "Original FNF")
+        {
+          var startedTrack:Bool = FunkinSound.playMusic('freakyMenu', {
+            startingVolume: 0.0,
+            overrideExisting: true,
+            restartTrack: false,
+            persist: true,
+            mapTimeChanges: false
+          });
+          if (startedTrack && FlxG.sound.music != null)
+            FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
+        }
+
+        FlxG.switchState(() -> new TitleState());
+      }
     }, Preferences.menuStyle);
 
   #if FEATURE_NAUGHTYNESS

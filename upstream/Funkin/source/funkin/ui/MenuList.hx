@@ -238,24 +238,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     }
     #end
 
-    // Mouse-wheel scrolling is the only desktop mouse interaction. The
-    // cursor remains hidden and pointer hover/click selection is intentionally disabled.
-    #if !mobile
-    final wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
-    if (wheelAmount != 0 && members.length > 0 && !busy)
-    {
-      var wheelTarget:Int = selectedIndex - wheelAmount;
-      if (wheelTarget < 0) wheelTarget = wrapY ? members.length - 1 : 0;
-      if (wheelTarget >= members.length) wheelTarget = wrapY ? 0 : members.length - 1;
-
-      if (wheelTarget != selectedIndex)
-      {
-        playNavigationSound();
-        selectItem(wheelTarget);
-      }
-    }
-    #end
-
     // Todo: bypass popup blocker on firefox
     if (controls.ACCEPT_P) accept();
 

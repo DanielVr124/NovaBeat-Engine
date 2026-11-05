@@ -319,14 +319,6 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (FlxG.keys.justPressed.R) refreshModList();
 
-    #if !mobile
-    // Mods is a custom list rather than MenuTypedList, so it handles its own
-    // mouse-wheel navigation. The cursor stays hidden and clicks are ignored.
-    final wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
-    if (wheelAmount != 0 && detectedMods.length > 0)
-      selectMod(selectedIndex - wheelAmount, false);
-    #end
-
     if (detectedMods.length > 0)
     {
       if (controls.UI_UP_P || SwipeUtil.swipeUp) selectMod(selectedIndex - 1, false);

@@ -95,7 +95,8 @@ class OptionsState extends MusicBeatState
     var offsets:OffsetMenu = optionsCodex.addPage(Offsets, new OffsetMenu());
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
-    var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
+    var menuCustomization:Null<MenuCustomizationMenu> = null;
+    if (novaBeatStyle) menuCustomization = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -109,7 +110,7 @@ class OptionsState extends MusicBeatState
       offsets.onExit.add(exitOffsets);
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
-      menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
+      if (menuCustomization != null) menuCustomization.onExit.add(optionsCodex.switchPage.bind(Options));
     }
     else
     {
@@ -213,7 +214,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     add(items = new TextMenuList());
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
-    createItem('CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
+    if (novaBeatLayout) createItem('CUSTOMIZATION', function() codex.switchPage(MenuCustomization));
     #if mobile
     if (ControlsHandler.hasExternalInputDevice)
     #end

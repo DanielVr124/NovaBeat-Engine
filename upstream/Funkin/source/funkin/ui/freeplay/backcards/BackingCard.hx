@@ -17,6 +17,7 @@ import funkin.modding.IScriptedClass.IFreeplayScriptedClass;
 import funkin.modding.events.ScriptEvent;
 import funkin.ui.FullScreenScaleMode;
 import funkin.util.BitmapUtil;
+import funkin.Preferences;
 
 /**
  * A class for the backing cards so they dont have to be part of freeplayState......
@@ -54,12 +55,15 @@ class BackingCard extends FlxSpriteGroup implements IBPMSyncedScriptedClass impl
     pinkBack = new FunkinSprite();
     pinkBack.loadGraphic(bitmap);
 
-    orangeBackShit = new FunkinSprite(84, 440).makeSolidColor(Std.int(pinkBack.width), 75, 0xFFFEDA00);
-    alsoOrangeLOL = new FunkinSprite(0, orangeBackShit.y).makeSolidColor(100, Std.int(orangeBackShit.height), 0xFFFFD400);
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    orangeBackShit = new FunkinSprite(84, 440).makeSolidColor(Std.int(pinkBack.width), 75,
+      novaBeatStyle ? 0xFF123B5C : 0xFFFEDA00);
+    alsoOrangeLOL = new FunkinSprite(0, orangeBackShit.y).makeSolidColor(100, Std.int(orangeBackShit.height),
+      novaBeatStyle ? 0xFF2879B5 : 0xFFFFD400);
     confirmGlow2 = new FlxSprite(confirmGlow.x, confirmGlow.y).loadGraphic(Paths.image('freeplay/confirmGlow2'));
     backingTextYeah = FunkinSprite.createTextureAtlas((FreeplayState.CUTOUT_WIDTH * FreeplayState.DJ_POS_MULTI) + -320, 120, "freeplay/backing-text-yeah",);
 
-    pinkBack.color = 0xFFFFD4E9; // sets it to pink!
+    pinkBack.color = novaBeatStyle ? 0xFF0B1730 : 0xFFFFD4E9; // Deep blue in NovaBeat mode.
     pinkBack.x -= pinkBack.width;
   }
 
@@ -126,7 +130,7 @@ class BackingCard extends FlxSpriteGroup implements IBPMSyncedScriptedClass impl
    */
   public function introDone():Void
   {
-    pinkBack.color = 0xFFFFD863;
+    pinkBack.color = Preferences.menuStyle == "NovaBeat" ? 0xFF0D2341 : 0xFFFFD863;
     orangeBackShit.visible = true;
     alsoOrangeLOL.visible = true;
     cardGlow.visible = true;
@@ -138,7 +142,8 @@ class BackingCard extends FlxSpriteGroup implements IBPMSyncedScriptedClass impl
    */
   public function confirm():Void
   {
-    FlxTween.color(pinkBack, 0.33, 0xFFFFD0D5, 0xFF171831, {ease: FlxEase.quadOut});
+    FlxTween.color(pinkBack, 0.33, pinkBack.color,
+      Preferences.menuStyle == "NovaBeat" ? 0xFF050A18 : 0xFF171831, {ease: FlxEase.quadOut});
     orangeBackShit.visible = false;
     alsoOrangeLOL.visible = false;
 
@@ -195,7 +200,8 @@ class BackingCard extends FlxSpriteGroup implements IBPMSyncedScriptedClass impl
    */
   public function disappear():Void
   {
-    FlxTween.color(pinkBack, 0.25, 0xFFFFD863, 0xFFFFD0D5, {ease: FlxEase.quadOut});
+    FlxTween.color(pinkBack, 0.25, pinkBack.color,
+      Preferences.menuStyle == "NovaBeat" ? 0xFF0B1730 : 0xFFFFD0D5, {ease: FlxEase.quadOut});
 
     cardGlow.visible = true;
     cardGlow.alpha = 1;

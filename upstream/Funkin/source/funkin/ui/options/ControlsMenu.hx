@@ -1,6 +1,7 @@
 package funkin.ui.options;
 
 import funkin.util.InputUtil;
+import funkin.Preferences;
 import flixel.FlxCamera;
 import flixel.FlxObject;
 import funkin.graphics.FunkinCamera;
@@ -91,7 +92,8 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     if (FlxG.gamepads.numActiveGamepads > 0)
     {
       var devicesBg:FunkinSprite = new FunkinSprite();
-      devicesBg.makeSolidColor(FlxG.width, 100, 0xFFFAFD6D);
+      devicesBg.makeSolidColor(FlxG.width, 100,
+        Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : 0xFFFAFD6D);
       add(devicesBg);
       deviceList = new TextMenuList(Horizontal, None);
       add(deviceList);
@@ -202,14 +204,14 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
     prompt = new Prompt("\nPress any key to rebind\n\n\nBackspace to unbind\n    Escape to cancel", None);
     prompt.create();
-    prompt.createBgFromMargin(100, 0xFFfafd6d);
+    prompt.createBgFromMargin(100, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : 0xFFfafd6d);
     prompt.back.scrollFactor.set(0, 0);
     prompt.exists = false;
     add(prompt);
 
     popup = new Prompt("\nYou cannot unbind\nthat key!\n\n\nEscape to exit", None);
     popup.create();
-    popup.createBgFromMargin(100, 0xFFfafd6d);
+    popup.createBgFromMargin(100, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : 0xFFfafd6d);
     popup.back.scrollFactor.set(0, 0);
     popup.exists = false;
     add(popup);

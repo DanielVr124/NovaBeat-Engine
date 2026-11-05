@@ -1887,7 +1887,7 @@ class FreeplayState extends MusicBeatSubState
         {
           trace('No songs available!');
           uiStateMachine.transition(Idle);
-          FunkinSound.playOnce(Paths.sound('cancelMenu'));
+          FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
           return;
         }
 
@@ -1938,7 +1938,7 @@ class FreeplayState extends MusicBeatSubState
         {
           trace('No songs available!');
           uiStateMachine.transition(Idle);
-          FunkinSound.playOnce(Paths.sound('cancelMenu'));
+          FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
           return;
         }
 
@@ -2246,7 +2246,7 @@ class FreeplayState extends MusicBeatSubState
 
     dispatchEvent(new FreeplayScriptEvent(FREEPLAY_OUTRO));
 
-    FunkinSound.playOnce(Paths.sound('cancelMenu'));
+    FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
 
     var longestTimer:Float = 0;
 
@@ -2581,7 +2581,7 @@ class FreeplayState extends MusicBeatSubState
       trace('No songs available!');
       uiStateMachine.transition(Idle);
 
-      FunkinSound.playOnce(Paths.sound('cancelMenu'));
+      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
       return;
     }
 

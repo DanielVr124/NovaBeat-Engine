@@ -403,13 +403,6 @@ class StoryMenuState extends MusicBeatState
           changeDifficulty(0);
         }
 
-        final wheelAmount:Int = Math.round(FlxMath.bound(FlxG.mouse.deltaWheel.y, -1, 1));
-
-        if (wheelAmount != 0)
-        {
-          changeLevel(-wheelAmount);
-        }
-
         // TODO: Querying UI_RIGHT_P (justPressed) after UI_RIGHT always returns false. Fix it!
         if (controls.UI_RIGHT_P #if FEATURE_TOUCH_CONTROLS
           || (SwipeUtil.swipeRight && TouchUtil.touch != null && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)

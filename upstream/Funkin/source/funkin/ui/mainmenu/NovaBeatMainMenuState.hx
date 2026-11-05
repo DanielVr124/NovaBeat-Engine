@@ -151,7 +151,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-    var backgroundScale:Float = Math.max(width / background.width, height / background.height);
+    var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 0.96;
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
     background.screenCenter();
@@ -180,8 +180,11 @@ class NovaBeatMainMenuState extends MusicBeatState
     titleLogo = logo;
     add(logo);
 
+    #if mobile
+    titleTapHint = addLabel(0, height * 0.865, width, 'TAP ANYWHERE TO BEGIN', 20, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
+    #else
     titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
-    titleTapHint = addLabel(0, height * 0.915, width, 'OR TAP ANYWHERE TO START', 12, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
+    #end
 
   }
 
@@ -299,7 +302,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   function buildMenuList(x:Float, y:Float, width:Float, height:Float, tileLayout:Bool):Void
   {
     var gap:Float = (tileLayout ? Math.max(8, FlxG.width * 0.018) : Math.max(9, FlxG.height * 0.018));
-    gap *= densityMultiplier();
+    gap *= densityMultiplier() * 1.06;
 
     var buttonW:Float = tileLayout ? (width - gap * 3) / 2 : width - 20;
     var buttonH:Float;
