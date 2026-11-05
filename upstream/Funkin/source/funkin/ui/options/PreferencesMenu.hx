@@ -10,6 +10,7 @@ import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import flixel.math.FlxPoint;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
+import funkin.audio.FunkinSound;
 import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
 import funkin.ui.TextMenuList.TextMenuItem;
@@ -108,15 +109,37 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItems():Void
   {
-    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. Original FNF stays selected unless you opt into NovaBeat. This setting is saved and applies when you return to the main menu.', [
+    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. The matching menu soundtrack switches immediately; the selected layout is used when you return to the main menu.', [
       "Original FNF" => "Original FNF",
       "NovaBeat" => "NovaBeat"
     ], function(key:String, value:String):Void
     {
       Preferences.menuStyle = value;
+      switchMenuStyleMusic(value);
     }, Preferences.menuStyle);
 
-    #if FEATURE_NAUGHTYNESS
+    /**
+   * Switch to the soundtrack belonging to the selected menu presentation.
+   * Start at zero and fade in so changing the preference is audible immediately
+   * without requiring a state restart.
+   */
+  function switchMenuStyleMusic(value:String):Void
+  {
+    var track:String = value == "NovaBeat" ? "novabeat-menu" : "freakyMenu";
+
+    FunkinSound.playMusic(track, {
+      startingVolume: 0.0,
+      overrideExisting: true,
+      restartTrack: false,
+      persist: true,
+      mapTimeChanges: false
+    });
+
+    if (FlxG.sound.music != null)
+      FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
+  }
+
+  #if FEATURE_NAUGHTYNESS
     createPrefItemCheckbox('Naughtyness', 'When enabled, raunchy content (such as swearing, etc.) is displayed.', function(value:Bool):Void
     {
       Preferences.naughtyness = value;
