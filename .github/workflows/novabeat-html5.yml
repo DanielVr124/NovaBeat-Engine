@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   html5:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[web-build]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[web-build]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
     name: HTML5 browser test build
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -123,6 +123,7 @@ jobs:
           haxelib run lime build html5 -v -release -DGITHUB_BUILD
 
       - name: Verify and package browser build
+        id: package-web
         shell: bash
         working-directory: upstream/Funkin
         run: |
@@ -137,6 +138,8 @@ jobs:
 
           web_root="$(dirname "$index_file")"
           test -s "$index_file"
+          touch "$web_root/.nojekyll"
+          echo "web_root=$web_root" >> "$GITHUB_OUTPUT"
 
           js_file="$(find "$web_root" -maxdepth 2 -type f -name '*.js' -print -quit)"
           if [[ -z "$js_file" ]]; then
@@ -182,6 +185,14 @@ jobs:
             echo "- Includes a local HTTP server quick-start guide."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload browser files for GitHub Pages
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: upstream/Funkin/${{ steps.package-web.outputs.web_root }}
+          include-hidden-files: true
+          retention-days: 1
+
       - name: Upload HTML5 package for automatic release publishing
         uses: actions/upload-artifact@v4
         with:
@@ -189,3 +200,23 @@ jobs:
           path: upstream/Funkin/export/NovaBeat-HTML5.zip
           if-no-files-found: error
           retention-days: 14
+
+  deploy:
+    name: Publish HTML5 test site
+    needs: html5
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy browser build
+        id: deployment
+        uses: actions/deploy-pages@v4
