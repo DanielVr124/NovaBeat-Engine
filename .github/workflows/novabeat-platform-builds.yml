@@ -267,7 +267,6 @@ jobs:
           for header in \
             /usr/include/X11/extensions/scrnsaver.h \
             /usr/include/libudev.h \
-            /usr/include/pipewire/pipewire.h \
             /usr/include/wayland-client.h \
             /usr/include/alsa/asoundlib.h \
             /usr/include/pulse/pulseaudio.h; do
@@ -277,6 +276,9 @@ jobs:
             fi
           done
           pkg-config --exists libpipewire-0.3 libudev wayland-client alsa libpulse
+          # Ubuntu stores PipeWire headers in a versioned include directory.
+          # Use pkg-config's flags, exactly as the native compiler should.
+          printf '#include <pipewire/pipewire.h>\\n' | cc $(pkg-config --cflags libpipewire-0.3) -x c -fsyntax-only -
           command -v wayland-scanner
           wayland-scanner --version
       - name: Compile HXCPP support tools
