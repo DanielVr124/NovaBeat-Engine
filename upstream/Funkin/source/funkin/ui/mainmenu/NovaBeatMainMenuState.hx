@@ -107,8 +107,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var featureMeta:Array<FlxText> = [];
 
   var equalizerBars:Array<FlxSprite> = [];
-  var equalizerBaseY:Array<Float> = [];
-  var equalizerBaseHeight:Array<Float> = [];
 
   public function new(showTitle:Bool = false)
   {
@@ -387,6 +385,12 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     addPanel(x, y, width, height, 0xFF6982C4);
 
+    // Draw the animated bars first so every panel label, pill, and accent sits above them.
+    if (Save.instance.options.menuShowEqualizer)
+    {
+      buildEqualizer(x + 34, y + height - 136, width - 68);
+    }
+
     // Soft orbital accents and the inset feature card echo the original V4 layout.
     var orbit:FlxSprite = addSolid(x + width * 0.50, y + 24, width * 0.40, 2, 0x265D72FF);
     orbit.alpha = 0.5;
@@ -406,11 +410,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       var pillText:FlxText = addLabel(pillX + 5, metaY + 7, 98, ITEM_META[0][index], 9, 0xFFB9C9EC, FlxTextAlign.CENTER, 'Arial');
       pill.alpha = 1;
       featureMeta.push(pillText);
-    }
-
-    if (Save.instance.options.menuShowEqualizer)
-    {
-      buildEqualizer(x + 34, y + height - 136, width - 68);
     }
 
     addLabel(x + 34, y + height - 28, width - 68, 'SELECT AN OPTION TO EXPLORE', 9, 0xFF7186B7, FlxTextAlign.LEFT, 'Arial');
@@ -507,8 +506,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       for (index in 0...equalizerBars.length)
       {
         var scale:Float = 0.60 + (Math.sin(animationClock * 2.15 + index * 0.62) + 1) * 0.20;
+        // Each bar scales from its bottom edge, keeping the baseline in place.
         equalizerBars[index].scale.y = scale;
-        equalizerBars[index].y = equalizerBaseY[index] + equalizerBaseHeight[index] * (1 - scale);
       }
     }
 
@@ -642,10 +641,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       var height:Float = 14 + (index * 17 % 74);
       var color:FlxColor = index % 7 == 0 ? 0xFF8C48FF : 0xFF43DFFF;
       var bar:FlxSprite = addSolid(x + index * (barWidth + gap), y + 76 - height, barWidth, height, color);
+      bar.origin.set(bar.width * 0.5, bar.height);
       bar.alpha = 0.78;
       equalizerBars.push(bar);
-      equalizerBaseY.push(bar.y);
-      equalizerBaseHeight.push(height);
     }
   }
 
