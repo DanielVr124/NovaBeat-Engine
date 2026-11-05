@@ -519,30 +519,6 @@ class MainMenuState extends MusicBeatState
     }
     handleInputs();
 
-    // Give desktop mouse users the same hover and click behavior as the other menu controls.
-    #if !mobile
-    if (menuItems != null && canInteract && !menuItems.busy)
-    {
-      // Hit-test in reverse draw order so an overlapping item cannot steal a click
-      // from the button that is visibly rendered above it.
-      for (reverseIndex in 0...menuItems.length)
-      {
-        final index:Int = menuItems.length - 1 - reverseIndex;
-        final item = menuItems.members[index];
-        if (!item.available || !FlxG.mouse.overlaps(item)) continue;
-
-        if (menuItems.selectedIndex != index)
-        {
-          menuItems.selectItem(index);
-          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
-        }
-
-        if (FlxG.mouse.justPressed) menuItems.accept();
-        break;
-      }
-    }
-    #end
-
     if (menuItems != null) menuItems.busy = !canInteract;
 
     #if mobile
