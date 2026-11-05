@@ -599,7 +599,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   function addRoundRect(x:Float, y:Float, width:Float, height:Float, radiusX:Float, radiusY:Float, color:FlxColor):FlxSprite
   {
     var sprite:FlxSprite = new FlxSprite(x, y);
-    // FlxSpriteUtil draws into sprite.pixels, so initialize the bitmap first.
+    // FlxSpriteUtil draws into sprite.pixels; a fresh FlxSprite has no bitmap yet.
+    // Allocate a transparent buffer before drawing, preserving the rounded-corner shape.
     sprite.makeGraphic(Std.int(Math.max(1, Math.ceil(width))), Std.int(Math.max(1, Math.ceil(height))), FlxColor.TRANSPARENT);
     FlxSpriteUtil.drawRoundRect(sprite, 0, 0, width, height, radiusX, radiusY, color);
     sprite.scrollFactor.set();
