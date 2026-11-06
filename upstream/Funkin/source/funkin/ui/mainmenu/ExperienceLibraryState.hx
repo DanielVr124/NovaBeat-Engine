@@ -7,6 +7,8 @@ import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import flixel.util.FlxSpriteUtil;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
 import funkin.audio.FunkinSound;
 import funkin.graphics.FunkinCamera;
 import funkin.modding.ExperienceManager;
@@ -34,6 +36,7 @@ class ExperienceLibraryState extends MusicBeatState
   var listWidth:Float = 0;
   var listHeight:Float = 0;
   var firstVisibleIndex:Int = 0;
+  var scrollDirection:Int = 0;
 
   var layoutObjects:Array<FlxBasic> = [];
   var rowObjects:Array<FlxBasic> = [];
@@ -103,8 +106,11 @@ class ExperienceLibraryState extends MusicBeatState
     firstVisibleIndex = 0;
 
     statusText = addLabel(panelX + 16, panelY + panelHeight - 32, panelWidth - 32, "", 9, 0xFF86DFFF, false);
+    var footer:String = portrait
+      ? "UP/DOWN SELECT   ENTER LAUNCH   E ENABLE   TAB TYPE   T TARGET   ESC FNF"
+      : "UP / DOWN SELECT     ENTER LAUNCH     E ENABLE/DISABLE     TAB PACKAGE TYPE     T EXTENSION TARGET     R RESCAN     ESC FNF";
     addLabel(margin + 8, height - (portrait ? 16 : 18), width - margin * 2 - 16,
-      "UP / DOWN  SELECT     ENTER  LAUNCH     E  ENABLE/DISABLE     TAB  PACKAGE TYPE     T  EXTENSION TARGET     R  RESCAN     ESC  FNF", 8, 0xFF929BAE, false);
+      footer, 8, 0xFF929BAE, false);
 
     renderRows();
     updateStatus();
@@ -115,7 +121,7 @@ class ExperienceLibraryState extends MusicBeatState
     clearObjects(rowObjects);
     if (experiences.length == 0) return;
 
-    firstVisibleIndex = Std.int(Math.max(0, Math.min(selectedIndex, experiences.length - visibleRows)));
+    adjustScrollWindow();
     var rowGap:Float = 9;
 
     for (visibleIndex in 0...visibleRows)
@@ -213,9 +219,16 @@ class ExperienceLibraryState extends MusicBeatState
       statusText.text = "No installed experience was found.";
       return;
     }
-    statusText.text = info.launchable
-      ? "SELECTED: " + info.title + "    •    ENTER TO LAUNCH"
-      : info.explanation;
+    if (!info.isOfficial && !info.enabled)
+      statusText.text = "DISABLED: PRESS E TO ENABLE THIS PACKAGE.";
+    else if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
+      statusText.text = "CONTENT EXTENSION: LAUNCH ITS ASSIGNED EXPERIENCE.";
+    else if (info.packageType == ExperienceManager.PACKAGE_UNCLASSIFIED)
+      statusText.text = "UNCLASSIFIED: PRESS TAB TO CHOOSE A PACKAGE TYPE.";
+    else if (info.launchable)
+      statusText.text = "SELECTED: " + info.title + "    •    ENTER TO LAUNCH";
+    else
+      statusText.text = info.explanation;
   }
 
   function selectExperience(index:Int):Void
@@ -223,10 +236,25 @@ class ExperienceLibraryState extends MusicBeatState
     if (experiences.length == 0) return;
     var next:Int = Std.int(Math.max(0, Math.min(experiences.length - 1, index)));
     if (next == selectedIndex) return;
+    var previousFirst:Int = firstVisibleIndex;
     selectedIndex = next;
+    adjustScrollWindow();
+    scrollDirection = firstVisibleIndex > previousFirst ? 1 : (firstVisibleIndex < previousFirst ? -1 : 0);
     renderRows();
+    scrollDirection = 0;
     updateStatus();
     FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.4);
+  }
+
+  function adjustScrollWindow():Void
+  {
+    if (selectedIndex < firstVisibleIndex)
+      firstVisibleIndex = selectedIndex;
+    else if (selectedIndex >= firstVisibleIndex + visibleRows)
+      firstVisibleIndex = selectedIndex - visibleRows + 1;
+
+    var maxFirst:Int = Std.int(Math.max(0, experiences.length - visibleRows));
+    firstVisibleIndex = Std.int(Math.max(0, Math.min(firstVisibleIndex, maxFirst)));
   }
 
   function launchExperience(info:ExperienceInfo):Void
@@ -370,13 +398,25 @@ class ExperienceLibraryState extends MusicBeatState
 
   function addTracked(object:FlxBasic, row:Bool):Void
   {
+    if (row && scrollDirection != 0 && Std.isOfType(object, FlxSprite))
+    {
+      var sprite:FlxSprite = cast object;
+      var targetY:Float = sprite.y;
+      sprite.y += scrollDirection * 22;
+      sprite.alpha = 0;
+      FlxTween.tween(sprite, {y: targetY, alpha: 1}, 0.16, {ease: FlxEase.quadOut});
+    }
     add(object);
     if (row) rowObjects.push(object) else layoutObjects.push(object);
   }
 
   function clearObjects(objects:Array<FlxBasic>):Void
   {
-    for (object in objects) remove(object, true);
+    for (object in objects)
+    {
+      if (Std.isOfType(object, FlxSprite)) FlxTween.cancelTweensOf(cast object);
+      remove(object, true);
+    }
     objects.resize(0);
   }
 }
