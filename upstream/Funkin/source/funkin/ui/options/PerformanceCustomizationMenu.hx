@@ -441,10 +441,11 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
         var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
         rowLabels[index].setPosition(listX + 13, y + 5);
         rowLabels[index].fieldWidth = listW * 0.67;
-        rowLabels[index].setFormat(Paths.font('vcr.ttf'), fontSize, 0xFFB9C8E3, FlxTextAlign.LEFT);
+        rowLabels[index].setFormat(novaBeatLayout ? "Arial" : Paths.font('vcr.ttf'), fontSize,
+          novaBeatLayout ? 0xFFDCEBFF : 0xFFB9C8E3, FlxTextAlign.LEFT);
         rowValues[index].setPosition(valueColumnX, y + 5);
         rowValues[index].fieldWidth = listW * 0.25;
-        rowValues[index].setFormat(Paths.font('vcr.ttf'), fontSize, 0xFF48E7FF, FlxTextAlign.RIGHT);
+        rowValues[index].setFormat(novaBeatLayout ? "Arial" : Paths.font('vcr.ttf'), fontSize, 0xFF48E7FF, FlxTextAlign.RIGHT);
       }
       if (descriptionText != null)
       {
@@ -494,7 +495,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
   function makeLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(Paths.font('vcr.ttf'), size, color, FlxTextAlign.LEFT);
+    label.setFormat(novaBeatLayout ? "Arial" : Paths.font('vcr.ttf'), size, color, FlxTextAlign.LEFT);
     label.scrollFactor.set();
     return label;
   }
