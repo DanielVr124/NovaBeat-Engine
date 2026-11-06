@@ -2082,7 +2082,7 @@ class FreeplayState extends MusicBeatSubState
         {
           var dpiScale = FlxG.stage.window.display.dpi / 160;
           dpiScale = dpiScale.clamp(0.5, 2);
-          var moveLength = delta / FlxG.updateFramerate / dpiScale;
+          var moveLength = delta / dpiScale;
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
@@ -2108,7 +2108,7 @@ class FreeplayState extends MusicBeatSubState
 
           dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
 
-          var moveLength = delta / FlxG.updateFramerate / dpiScale;
+          var moveLength = delta / dpiScale;
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
