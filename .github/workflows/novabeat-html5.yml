@@ -4,6 +4,7 @@ name: NovaBeat HTML5 browser test build
 # [web-build] Rebuild the browser test site from the latest compiler-fixed source.
 # [web-build] User-requested HTML5 verification build for the current feature branch.
 # Quest mobile-controls validation build requested for the current feature branch.
+# Feature-branch push builds require [web-build] in the commit message; normal commits intentionally skip compilation.
 on:
   workflow_dispatch:
   push:
