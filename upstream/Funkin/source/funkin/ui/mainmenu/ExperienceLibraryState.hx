@@ -284,7 +284,7 @@ class ExperienceLibraryState extends MusicBeatState
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
-    if (!enabled || experiences.length == 0) return;
+    if (experiences.length == 0) return;
 
     if (FlxG.keys.justPressed.UP) selectExperience(selectedIndex - 1);
     if (FlxG.keys.justPressed.DOWN) selectExperience(selectedIndex + 1);
