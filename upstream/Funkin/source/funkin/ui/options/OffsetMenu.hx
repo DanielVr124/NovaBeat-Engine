@@ -4,7 +4,7 @@ import funkin.ui.MenuList.MenuTypedList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.util.GRhythmUtil;
 import funkin.mobile.ui.FunkinBackButton;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
 import funkin.mobile.input.ControlsHandler;
@@ -258,7 +258,7 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
       if (OptionsState.instance.optionsCodex.currentPage != this) return;
 
       jumpInText.text = 'Press any key to the beat!';
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       jumpInText.text = 'Tap to the beat!';
       #end
 
@@ -317,7 +317,7 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
       trace('Testing strumline at beat: ' + arrowBeat + ' diff: ' + diffBeats);
 
       jumpInText.text = 'Hit the notes as they come in!';
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       if (OptionsState.instance.hitbox != null) OptionsState.instance.hitbox.visible = true;
       if (!ControlsHandler.hasExternalInputDevice)
       {
@@ -358,7 +358,7 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
 
       jumpInText.y = 350;
 
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       if (ControlsHandler.hasExternalInputDevice)
       {
       #end
@@ -366,7 +366,7 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
         testStrumline.y = Preferences.downscroll ? FlxG.height - (height + 45) - Constants.STRUMLINE_Y_OFFSET : (height / 2) - Constants.STRUMLINE_Y_OFFSET;
         if (Preferences.downscroll) jumpInText.y = FlxG.height - 425;
         testStrumline.isDownscroll = Preferences.downscroll;
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       }
       else
       {
@@ -407,14 +407,14 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     backButton.enabled = false;
     shouldOffset = -1;
-    #if mobile
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (OptionsState.instance.hitbox != null) OptionsState.instance.hitbox.visible = false;
     #end
     tempOffset = 0;
     if (cancel)
     {
       if (calibrating) Preferences.globalOffset = savedOffset;
-      #if !mobile
+      #if !(mobile || FEATURE_TOUCH_CONTROLS)
       // mobile would play this twice
       FunkinSound.playOnce(Paths.sound('cancelMenu'));
       #end
