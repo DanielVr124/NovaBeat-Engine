@@ -909,6 +909,14 @@ class PlayState extends MusicBeatSubState
       initMinimalMode();
     }
     initStrumlines();
+
+    // Apply the current viewport layout immediately. onViewportResize() is not
+    // guaranteed to run after PlayState is created (especially when a phone
+    // opens the game directly in portrait), so otherwise the HUD can retain
+    // its default landscape positions until the next resize.
+    layoutGameplayHealthBar(FlxG.width, FlxG.height);
+    layoutGameplayStrumlines(FlxG.width, FlxG.height);
+
     initPopups();
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -2403,6 +2411,10 @@ class PlayState extends MusicBeatSubState
 
     opponentStrumline.zIndex = 1000;
     opponentStrumline.cameras = [camHUD];
+
+    // Mobile gameplay only needs the player's receptors. Keep the opponent
+    // strumline active for note logic, but hide its receptors and notes.
+    if (DeviceUtil.isMobileBrowser) opponentStrumline.visible = false;
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
