@@ -15,6 +15,12 @@ class LevelTitle extends FlxSpriteGroup
   var title:FlxSprite;
   var lock:FlxSprite;
 
+  // Keep the lock's intended state separate from the carousel visibility.
+  // FlxSpriteGroup.visible propagates to all children, so the carousel uses
+  // setDisplayVisible() to hide only the week title and preserve lock state.
+  var displayVisible:Bool = true;
+  var lockRequested:Bool = false;
+
   public function new(x:Int, y:Int, level:Level)
   {
     super(x, y);
@@ -61,14 +67,32 @@ class LevelTitle extends FlxSpriteGroup
     }
   }
 
+  /**
+   * Show or hide the week title without changing the FlxSpriteGroup's own
+   * visibility. Changing the group's visibility propagates to every child
+   * and would turn the lock sprite on again when a hidden week returns.
+   */
+  public function setDisplayVisible(value:Bool):Void
+  {
+    displayVisible = value;
+    title.visible = value;
+    lock.visible = value && lockRequested;
+  }
+
   public function showLock():Void
   {
-    lock.visible = true;
+    if (lockRequested) return;
+
+    lockRequested = true;
+    lock.visible = displayVisible;
     this.x -= (lock.width + LOCK_PAD) / 2;
   }
 
   public function hideLock():Void
   {
+    if (!lockRequested) return;
+
+    lockRequested = false;
     lock.visible = false;
     this.x += (lock.width + LOCK_PAD) / 2;
   }
