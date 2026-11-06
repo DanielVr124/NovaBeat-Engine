@@ -201,9 +201,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       descriptionText = makeLabel(margin + 8, height - 68, width - margin * 2 - 16,
         descriptions[0], 11, 0xFFB6C7E5);
-      descriptionText.wordWrap = true;
-      descriptionText.autoSize = false;
-      add(descriptionText);
+      descriptionText.visible = false;
     }
 
     statusText = makeLabel(listX, height - 38, listW,
