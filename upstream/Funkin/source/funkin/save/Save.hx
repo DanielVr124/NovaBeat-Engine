@@ -166,6 +166,9 @@ class Save implements ConsoleClass
       mods: {
         // No mods enabled.
         enabledMods: [],
+        activeExperienceId: "friday-night-funkin",
+        modPackageKinds: [],
+        modExtensionOwners: [],
         modOptions: [],
       },
       unlocks: {
@@ -264,6 +267,12 @@ class Save implements ConsoleClass
   ///
   @:saveProperty(data.mods.enabledMods)
   public var enabledModDirs:SaveProperty<Array<String>>;
+  @:saveProperty(data.mods.activeExperienceId, "friday-night-funkin")
+  public var activeExperienceId:SaveProperty<String>;
+  @:saveProperty(data.mods.modPackageKinds, [])
+  public var modPackageKinds:SaveProperty<Map<String, String>>;
+  @:saveProperty(data.mods.modExtensionOwners, [])
+  public var modExtensionOwners:SaveProperty<Map<String, String>>;
   ///
   /// CHART EDITOR OPTIONS
   ///
@@ -1067,6 +1076,9 @@ typedef SaveHighScoresData =
 typedef SaveDataMods =
 {
   var enabledMods:Array<String>;
+  var activeExperienceId:String;
+  var modPackageKinds:Map<String, String>;
+  var modExtensionOwners:Map<String, String>;
   // TODO: Make this not trip up the serializer when debugging.
   @:jignored
   var modOptions:Map<String, Dynamic>;

@@ -35,6 +35,7 @@ import funkin.graphics.shaders.StrokeShader;
 import funkin.input.Controls;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEventDispatcher;
+import funkin.modding.ExperienceManager;
 import funkin.play.PlayStatePlaylist;
 import funkin.play.scoring.Scoring;
 import funkin.play.scoring.Scoring.ScoringRank;
@@ -277,7 +278,10 @@ class FreeplayState extends MusicBeatSubState
   {
     var fetchPlayableCharacter = function():PlayableCharacter
     {
-      var targetCharId = params?.character ?? rememberedCharacterId;
+      var targetCharId:String = params?.character ?? rememberedCharacterId;
+      var availablePlayerIds:Array<String> = PlayerRegistry.instance.getAvailablePlayerIds();
+      if (availablePlayerIds.length > 0 && !availablePlayerIds.contains(targetCharId))
+        targetCharId = availablePlayerIds[0];
       var result = PlayerRegistry.instance.fetchEntry(targetCharId);
       if (result == null)
       {
@@ -415,6 +419,7 @@ class FreeplayState extends MusicBeatSubState
 
       for (songId in level.getSongs())
       {
+        if (!ExperienceManager.isSongAvailable(songId)) continue;
         var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: currentVariation});
 
         if (song == null)

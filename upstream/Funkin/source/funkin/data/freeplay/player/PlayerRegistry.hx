@@ -2,6 +2,7 @@ package funkin.data.freeplay.player;
 
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 import funkin.save.Save;
+import funkin.modding.ExperienceManager;
 import funkin.util.tools.ISingleton;
 import funkin.data.DefaultRegistryImpl;
 
@@ -46,11 +47,27 @@ class PlayerRegistry extends BaseRegistry<PlayableCharacter, PlayerData, PlayerE
     log('Loaded ${countEntries()} playable characters with ${ownedCharacterIds.size()} associations.');
   }
 
+  /**
+   * Character categories are available only when a song in the selected
+   * standalone experience references one of their owned character IDs.
+   */
+  public function getAvailablePlayerIds():Array<String>
+  {
+    var result:Array<String> = [];
+    for (playerId in listEntryIds())
+    {
+      var player = fetchEntry(playerId);
+      if (player == null) continue;
+      if (ExperienceManager.shouldShowPlayer(player)) result.push(playerId);
+    }
+    return result;
+  }
+
   public function countUnlockedCharacters():Int
   {
     var count = 0;
 
-    for (charId in listEntryIds())
+    for (charId in getAvailablePlayerIds())
     {
       var player = fetchEntry(charId);
       if (player == null) continue;
@@ -70,7 +87,7 @@ class PlayerRegistry extends BaseRegistry<PlayableCharacter, PlayerData, PlayerE
     #if (!UNLOCK_EVERYTHING)
     var charactersSeen = Save.instance.charactersSeen.value.clone();
 
-    for (charId in listEntryIds())
+    for (charId in getAvailablePlayerIds())
     {
       var player = fetchEntry(charId);
       if (player == null) continue;
@@ -93,7 +110,7 @@ class PlayerRegistry extends BaseRegistry<PlayableCharacter, PlayerData, PlayerE
 
     #if (!UNLOCK_EVERYTHING)
     var charactersSeen = Save.instance.charactersSeen.value.clone();
-    for (charId in listEntryIds())
+    for (charId in getAvailablePlayerIds())
     {
       var player = fetchEntry(charId);
       if (player == null) continue;
