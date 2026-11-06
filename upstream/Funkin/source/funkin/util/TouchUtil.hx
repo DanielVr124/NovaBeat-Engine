@@ -163,7 +163,23 @@ class TouchUtil
   static inline function get_justPressed():Bool return touch != null && touch.justPressed;
 
   @:noCompletion
-  static inline function get_justReleased():Bool return touch != null && touch.justReleased;
+  static inline function get_justReleased():Bool
+  {
+    #if web
+    // A mobile browser can emit a real touch release, a synthesized mouse
+    // release, or both. Check every touch before falling back to the mouse so
+    // one input stream cannot hide the release from the other.
+    #if FLX_TOUCH
+    for (touch in FlxG.touches.list)
+    {
+      if (touch != null && touch.justReleased) return true;
+    }
+    #end
+    return FlxG.mouse.justReleased;
+    #else
+    return touch != null && touch.justReleased;
+    #end
+  }
 
   @:noCompletion
   static function get_released():Bool return touch != null && touch.released;
