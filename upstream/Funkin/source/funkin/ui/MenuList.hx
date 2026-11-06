@@ -283,11 +283,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       final item:T = members[i];
       if (!item.available) continue;
 
-      // Main-menu entries use their artwork's visible pixels. Other menus use
-      // each item's own camera, never a hard-coded global camera-list index.
-      final overlaps:Bool = _isMainMenuState
-        ? FlxG.pixelPerfectOverlap(touchBuddy, item, 0)
-        : TouchUtil.overlaps(item);
+      // Use the item's own camera for pointer hit-testing everywhere. Pixel-
+      // perfect overlap with camera index 0 breaks when menus use an extra HUD
+      // camera or scale their atlas sprites for a touch viewport.
+      final overlaps:Bool = TouchUtil.overlaps(item);
 
       if (overlaps) return i;
     }
