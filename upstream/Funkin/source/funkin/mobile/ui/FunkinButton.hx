@@ -4,6 +4,9 @@ import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.util.FlxColor;
 import funkin.graphics.FunkinSprite;
+#if web
+import funkin.util.DeviceUtil;
+#end
 import flixel.input.FlxInput;
 import flixel.input.IFlxInput;
 import flixel.input.touch.FlxTouch;
@@ -35,6 +38,9 @@ class FunkinButton extends FunkinSprite implements IFlxInput
    * A map that's storing every active touch's ID that's pressing a button.
    */
   public static var buttonsTouchID:Map<Int, FunkinButton> = new Map();
+
+  /** Reserved ID for the single Quest Browser pointer when it is emulated as a mouse. */
+  static inline final QUEST_MOUSE_POINTER_ID:Int = -2147483647;
 
   /**
    * The current state of the button, either `FunkinButtonStatus.NORMAL` or `FunkinButtonStatus.PRESSED`.
@@ -120,6 +126,8 @@ class FunkinButton extends FunkinSprite implements IFlxInput
    */
   var touchID:Int = -1;
 
+  var questMousePressed:Bool = false;
+
   /**
    * Whether the button should skip calling onDownHandler() on touch.pressed.
    */
@@ -157,6 +165,7 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     buttonsTouchID.remove(touchID);
 
     touchID = -1;
+    questMousePressed = false;
 
     super.destroy();
   }
@@ -169,20 +178,35 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     super.update(elapsed);
 
     #if FLX_POINTER_INPUT
-    // Update the button, but only if touches are enabled
+    // Use real multi-touch points whenever the browser supplies them. Quest
+    // Browser may instead translate controller/hand-ray clicks into mouse
+    // events, so fall back to its mouse pointer only when no touch is active.
     if (visible)
     {
-      final overlapFound:Bool = checkTouchOverlap();
-      final touchReleased:Bool = (currentTouch != null && currentTouch.justReleased);
+      #if web
+      final useQuestMousePointer:Bool = DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0;
+      #else
+      final useQuestMousePointer:Bool = false;
+      #end
 
-      if ((currentInput != null && currentInput.justReleased || (!limitToBounds && touchReleased)) && overlapFound)
+      if (useQuestMousePointer)
       {
-        onUpHandler();
+        updateQuestMousePointer();
       }
-
-      if (status != FunkinButtonStatus.NORMAL && (!overlapFound || (currentInput != null && currentInput.justReleased)))
+      else
       {
-        if (limitToBounds || (!limitToBounds && touchReleased)) onOutHandler();
+        final overlapFound:Bool = checkTouchOverlap();
+        final touchReleased:Bool = (currentTouch != null && currentTouch.justReleased);
+
+        if ((currentInput != null && currentInput.justReleased || (!limitToBounds && touchReleased)) && overlapFound)
+        {
+          onUpHandler();
+        }
+
+        if (status != FunkinButtonStatus.NORMAL && (!overlapFound || (currentInput != null && currentInput.justReleased)))
+        {
+          if (limitToBounds || (!limitToBounds && touchReleased)) onOutHandler();
+        }
       }
     }
     #end
@@ -248,6 +272,70 @@ class FunkinButton extends FunkinSprite implements IFlxInput
 
     return false;
   }
+
+  #if (web && FLX_POINTER_INPUT)
+  /**
+   * Handles Quest controller/hand-ray clicks when Quest Browser exposes them
+   * as mouse input rather than DOM touch points.
+   */
+  function updateQuestMousePointer():Void
+  {
+    final overlapFound:Bool = checkQuestMouseOverlap();
+
+    if (!questMousePressed && FlxG.mouse.justPressed && overlapFound)
+    {
+      final previousButton:Null<FunkinButton> = buttonsTouchID.get(QUEST_MOUSE_POINTER_ID);
+      if (previousButton != null && previousButton != this) return;
+
+      questMousePressed = true;
+      touchID = QUEST_MOUSE_POINTER_ID;
+      buttonsTouchID.set(QUEST_MOUSE_POINTER_ID, this);
+      @:privateAccess
+      updateStatus(FlxG.mouse._leftButton);
+    }
+    else if (questMousePressed)
+    {
+      if (FlxG.mouse.justReleased)
+      {
+        questMousePressed = false;
+        if (overlapFound) onUpHandler(); else onOutHandler();
+      }
+      else if (limitToBounds && !overlapFound)
+      {
+        questMousePressed = false;
+        onOutHandler();
+      }
+    }
+  }
+
+  function checkQuestMouseOverlap():Bool
+  {
+    for (camera in cameras)
+    {
+      final worldPos:FlxPoint = FlxG.mouse.getWorldPosition(camera, _point);
+
+      for (zone in deadZones)
+      {
+        if (zone != null && zone.overlapsPoint(worldPos, true, camera)) return false;
+      }
+
+      if (polygon != null && polygon.length >= 6 && polygon.length % 2 == 0)
+      {
+        if (polygonOverlapsPoint(worldPos, false, camera)) return true;
+      }
+      else if (radius > 0)
+      {
+        if (circleOverlapsPoint(worldPos, camera)) return true;
+      }
+      else if (overlapsPoint(worldPos, true, camera))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+  #end
 
   function circleOverlapsPoint(point:FlxPoint, ?camera:FlxCamera):Bool
   {
