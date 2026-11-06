@@ -2,6 +2,7 @@ package funkin.ui.options;
 
 import flixel.FlxCamera;
 import flixel.FlxG;
+import flixel.FlxObject;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -28,6 +29,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var items:TextMenuList;
   var menuCamera:FlxCamera;
   var hudCamera:FlxCamera;
+  var camFollow:FlxObject;
   var itemDesc:FlxText;
   var itemDescBox:FunkinSprite;
   var categoryItems:Array<TextMenuItem> = [];
@@ -85,7 +87,17 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
     #end
 
-    if (!novaBeatStyle) layoutFNFCategoryItems(FlxG.width, FlxG.height);
+    if (novaBeatStyle)
+    {
+      camFollow = new FlxObject(FlxG.width / 2, itemY, 140, 70);
+      menuCamera.follow(camFollow, null, 0.085);
+      menuCamera.deadzone.set(0, 160, menuCamera.width, menuCamera.height - 320);
+      menuCamera.minScrollY = 0;
+    }
+    else
+    {
+      layoutFNFCategoryItems(FlxG.width, FlxG.height);
+    }
 
     itemDescBox = new FunkinSprite();
     itemDescBox.makeSolidColor(1, 1, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : FlxColor.BLACK);
@@ -226,7 +238,16 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         item.screenCenter(X);
       }
     }
-    if (!novaBeatStyle) layoutFNFCategoryItems(width, height);
+    if (novaBeatStyle)
+    {
+      if (camFollow != null)
+        camFollow.setPosition(width * 0.5, items.selectedItem == null ? startY : items.selectedItem.y);
+      menuCamera.deadzone.set(0, height * 0.14, width, height * 0.68);
+    }
+    else
+    {
+      layoutFNFCategoryItems(width, height);
+    }
     if (!novaBeatStyle)
     {
       itemDesc.visible = true;
@@ -249,6 +270,8 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+    if (novaBeatStyle && camFollow != null && items != null && items.selectedItem != null)
+      camFollow.y = items.selectedItem.y;
     if (novaBeatStyle)
     {
       for (index in 0...categoryLabels.length)
