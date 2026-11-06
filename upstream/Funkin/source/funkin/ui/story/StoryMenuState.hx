@@ -83,6 +83,8 @@ class StoryMenuState extends MusicBeatState
    * The background behind the props.
    */
   var levelBackground:FlxSprite;
+  var baseLevelBackgroundWidth:Float = 0;
+  var baseLevelBackgroundHeight:Float = 0;
 
   /**
    * The left arrow of the difficulty selector.
@@ -161,6 +163,8 @@ class StoryMenuState extends MusicBeatState
     add(levelTitles);
 
     updateBackground();
+    baseLevelBackgroundWidth = levelBackground.width;
+    baseLevelBackgroundHeight = levelBackground.height;
 
     var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
     black.zIndex = levelBackground.zIndex - 1;
@@ -240,7 +244,9 @@ class StoryMenuState extends MusicBeatState
 
     var portrait:Bool = height > width * 1.12;
     var margin:Float = Math.max(18, width * 0.045);
-    var backgroundScale:Float = Math.max(width / levelBackground.width, height / levelBackground.height);
+    if (baseLevelBackgroundWidth <= 0) baseLevelBackgroundWidth = levelBackground.frameWidth;
+    if (baseLevelBackgroundHeight <= 0) baseLevelBackgroundHeight = levelBackground.frameHeight;
+    var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
     levelBackground.scale.set(backgroundScale, backgroundScale);
     levelBackground.updateHitbox();
     levelBackground.screenCenter();

@@ -310,12 +310,14 @@ class PauseSubState extends MusicBeatSubState
     if (width <= 0 || height <= 0) return;
 
     background?.makeSolidColor(width, height, FlxColor.BLACK);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (pauseButton != null)
     {
       pauseButton.setPosition(width - pauseButton.width - 22, 22);
       pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
         pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
     }
+    #end
 
     var portrait:Bool = height > width * 1.12;
     if (metadata != null)

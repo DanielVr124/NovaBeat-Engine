@@ -2007,11 +2007,13 @@ class PlayState extends MusicBeatSubState
       && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser);
     #end
 
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (touchArrowControls)
     {
       layoutTouchNoteHitbox(width, height);
       return;
     }
+    #end
 
     if (portrait)
     {
