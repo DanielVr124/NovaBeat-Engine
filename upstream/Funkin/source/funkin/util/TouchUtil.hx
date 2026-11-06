@@ -184,11 +184,17 @@ class TouchUtil
   static function get_touch():Dynamic
   {
     #if FLX_TOUCH
-    // Prefer actual touch contacts so hit testing uses the finger/hand position.
+    // Prefer an actively held contact. A just-released touch remains a fallback
+    // for the release frame, but it must not mask another finger still held.
+    var releasedTouch:Null<FlxTouch> = null;
     for (touch in FlxG.touches.list)
     {
-      if (touch != null && (touch.pressed || touch.justPressed || touch.justReleased)) return touch;
+      if (touch == null) continue;
+      if (touch.pressed || touch.justPressed) return touch;
+      if (releasedTouch == null && touch.justReleased) releasedTouch = touch;
     }
+
+    if (releasedTouch != null) return releasedTouch;
     #end
 
     // Quest Browser may expose controller/hand-ray input as a mouse click.
