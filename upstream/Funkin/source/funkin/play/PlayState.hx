@@ -1971,7 +1971,8 @@ class PlayState extends MusicBeatSubState
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (pauseButton != null)
     {
-      pauseButton.setPosition(width - pauseButton.width - 22, 22);
+      pauseButton.setPosition(width - FullScreenScaleMode.gameSafeAreaBottomRight.x - pauseButton.width - 22,
+        FullScreenScaleMode.gameSafeAreaTopLeft.y + 22);
       pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
         pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
     }
@@ -1979,8 +1980,10 @@ class PlayState extends MusicBeatSubState
 
     if (subtitles != null)
     {
-      subtitles.x = 0;
-      subtitles.y = Preferences.downscroll ? 110 : height - subtitles.height - 110;
+      subtitles.x = FullScreenScaleMode.gameSafeAreaTopLeft.x;
+      subtitles.y = Preferences.downscroll
+        ? FullScreenScaleMode.gameSafeAreaTopLeft.y + 110
+        : height - FullScreenScaleMode.gameSafeAreaBottomRight.y - subtitles.height - 110;
     }
   }
 
@@ -1991,15 +1994,21 @@ class PlayState extends MusicBeatSubState
     if (baseHealthBarHeight <= 0) baseHealthBarHeight = healthBarBG.frameHeight;
 
     var portrait:Bool = height > width * 1.12;
-    var scale:Float = portrait ? Math.min(1.0, (width - 32) / baseHealthBarWidth) : 1.0;
+    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
+    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
+    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
+    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
+    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
+    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
+    var scale:Float = portrait ? Math.min(1.0, Math.max(0.1, (safeWidth - 32) / baseHealthBarWidth)) : 1.0;
     healthBarBG.scale.set(scale, scale);
     healthBarBG.updateHitbox();
     healthBar.scale.set(scale, scale);
     healthBar.updateHitbox();
-    healthBarBG.x = (width - healthBarBG.width) * 0.5;
-    healthBarBG.y = portrait ? 24 : (Preferences.downscroll ? height * 0.1 : height * 0.9);
+    healthBarBG.x = safeLeft + (safeWidth - healthBarBG.width) * 0.5;
+    healthBarBG.y = portrait ? safeTop + 24 : safeTop + (Preferences.downscroll ? safeHeight * 0.1 : safeHeight * 0.9);
     healthBar.setPosition(healthBarBG.x + 4 * scale, healthBarBG.y + 4 * scale);
-    scoreText.scale.set(portrait ? Math.min(1, width / 720) : 1, portrait ? Math.min(1, width / 720) : 1);
+    scoreText.scale.set(portrait ? Math.min(1, safeWidth / 720) : 1, portrait ? Math.min(1, safeWidth / 720) : 1);
     scoreText.x = healthBarBG.x + healthBarBG.width - scoreText.width - (portrait ? 8 : 190);
     scoreText.y = healthBarBG.y + healthBarBG.height + (portrait ? 4 : 8);
     iconP1?.updatePosition();
@@ -2011,6 +2020,12 @@ class PlayState extends MusicBeatSubState
     if (playerStrumline == null || opponentStrumline == null) return;
 
     var portrait:Bool = height > width * 1.12;
+    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
+    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
+    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
+    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
+    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
+    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
     var touchArrowControls:Bool = false;
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     touchArrowControls = DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
@@ -2027,23 +2042,23 @@ class PlayState extends MusicBeatSubState
 
     if (portrait)
     {
-      var laneScale:Float = Math.max(0.38, Math.min(0.78, (width - 28) / 620));
+      var laneScale:Float = Math.max(0.38, Math.min(0.78, (safeWidth - 28) / 620));
       playerStrumline.strumlineScale.set(laneScale, laneScale);
       opponentStrumline.strumlineScale.set(laneScale * 0.48, laneScale * 0.48);
-      playerStrumline.x = (width - playerStrumline.width) * 0.5;
-      opponentStrumline.x = (width - opponentStrumline.width) * 0.5;
-      playerStrumline.y = Preferences.downscroll ? height * 0.27 : height * 0.64;
-      opponentStrumline.y = Preferences.downscroll ? height * 0.62 : height * 0.18;
+      playerStrumline.x = safeLeft + (safeWidth - playerStrumline.width) * 0.5;
+      opponentStrumline.x = safeLeft + (safeWidth - opponentStrumline.width) * 0.5;
+      playerStrumline.y = safeTop + (Preferences.downscroll ? safeHeight * 0.27 : safeHeight * 0.64);
+      opponentStrumline.y = safeTop + (Preferences.downscroll ? safeHeight * 0.62 : safeHeight * 0.18);
     }
     else
     {
       playerStrumline.strumlineScale.set(1, 1);
       opponentStrumline.strumlineScale.set(1, 1);
       var cutoutSize:Float = FullScreenScaleMode.gameCutoutSize.x / 2.5;
-      playerStrumline.x = (width / 2 + Constants.STRUMLINE_X_OFFSET) + cutoutSize / 2;
-      opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
-      playerStrumline.y = Preferences.downscroll ? height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
-      opponentStrumline.y = Preferences.downscroll ? height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
+      playerStrumline.x = safeLeft + safeWidth / 2 + Constants.STRUMLINE_X_OFFSET + cutoutSize / 2;
+      opponentStrumline.x = safeLeft + Constants.STRUMLINE_X_OFFSET + cutoutSize;
+      playerStrumline.y = Preferences.downscroll ? height - safeBottom - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : safeTop + Constants.STRUMLINE_Y_OFFSET;
+      opponentStrumline.y = Preferences.downscroll ? height - safeBottom - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : safeTop + Constants.STRUMLINE_Y_OFFSET;
     }
   }
 
@@ -2419,14 +2434,20 @@ class PlayState extends MusicBeatSubState
 
   function layoutTouchNoteHitbox(width:Int, height:Int):Void
   {
-    final amplification:Float = (width / height) / (FlxG.initialWidth / FlxG.initialHeight);
-    final playerStrumlineScale:Float = ((height / width) * 1.95) * amplification;
-    final playerNoteSpacing:Float = ((height / width) * 2.8) * amplification;
+    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
+    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
+    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
+    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
+    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
+    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
+    final amplification:Float = (safeWidth / safeHeight) / (FlxG.initialWidth / FlxG.initialHeight);
+    final playerStrumlineScale:Float = ((safeHeight / safeWidth) * 1.95) * amplification;
+    final playerNoteSpacing:Float = ((safeHeight / safeWidth) * 2.8) * amplification;
 
     playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
     playerStrumline.setNoteSpacing(playerNoteSpacing);
-    playerStrumline.x = (width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-    playerStrumline.y = (height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+    playerStrumline.x = safeLeft + (safeWidth - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
+    playerStrumline.y = safeTop + (safeHeight - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
     if (currentChart?.noteStyle != 'pixel')
     {
       #if android playerStrumline.y += 10; #end
@@ -2435,8 +2456,8 @@ class PlayState extends MusicBeatSubState
     {
       playerStrumline.y -= 10;
     }
-    opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
-    opponentStrumline.x = (width - opponentStrumline.width) * 0.5;
+    opponentStrumline.y = safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3;
+    opponentStrumline.x = safeLeft + (safeWidth - opponentStrumline.width) * 0.5;
   }
 
   function initPauseSprites()
@@ -2475,7 +2496,8 @@ class PlayState extends MusicBeatSubState
     pauseButton.scale.set(0.8, 0.8);
     pauseButton.updateHitbox();
     pauseButton.animation.play('idle');
-    pauseButton.setPosition((FlxG.width - pauseButton.width) - 35, 35);
+    pauseButton.setPosition(FlxG.width - pauseButton.width - FullScreenScaleMode.gameSafeAreaBottomRight.x - 35,
+      FullScreenScaleMode.gameSafeAreaTopLeft.y + 35);
     if (camControls != null) pauseButton.cameras = [camControls];
 
     pauseCircle.scale.set(0.84, 0.8);
