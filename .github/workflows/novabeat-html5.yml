@@ -4,11 +4,14 @@ name: NovaBeat HTML5 browser test build
 # [web-build] Rebuild the browser test site from the latest compiler-fixed source.
 # [web-build] User-requested HTML5 verification build for the current feature branch.
 # Quest mobile-controls validation build requested for the current feature branch.
+# Single long-lived integration branch: feature/optional-novabeat-menu-mod-manager.
+# Keep NovaBeat feature work on that branch; main remains the release/production branch.
+# Only main and the integration branch publish to GitHub Pages; PR-only builds never deploy.
 # Feature-branch push builds require [web-build] in the commit message; normal commits intentionally skip compilation.
 on:
   workflow_dispatch:
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/optional-novabeat-menu-mod-manager"]
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
@@ -274,7 +277,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload browser files for GitHub Pages
-        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/')) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-pages-artifact@v4
         with:
           path: upstream/Funkin/${{ steps.package-web.outputs.web_root }}
@@ -292,7 +295,7 @@ jobs:
   deploy:
     name: Publish HTML5 test site
     needs: html5
-    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/')) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
