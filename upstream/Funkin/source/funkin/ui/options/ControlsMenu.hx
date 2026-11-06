@@ -262,9 +262,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         novaBeatTextLayer.add(modernLabel);
         novaBeatRowText.push(modernLabel);
       }
-      else
-      {
-        if (novaBeatStyle) label.color = 0xFFB9C8E3;
       }
 
       for (i in 0...COLUMNS)
@@ -305,7 +302,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       camFollow.y = selected.y;
 
-      labels.forEach((label) -> label.alpha = novaBeatStyle ? 0.95 : 0.6);
+      labels.forEach((label) -> label.alpha = novaBeatStyle ? 0.0 : 0.6);
       var labelIndex:Int = Std.int(controlGrid.selectedIndex / COLUMNS);
       if (labelIndex >= 0 && labelIndex < labels.members.length)
       {
@@ -392,12 +389,15 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
       novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.82;
     }
+    for (index in 0...novaBeatRowText.length)
+      novaBeatRowText[index].color = index == selectedRow ? 0xFFFFFFFF : 0xFFDCEBFF;
+
     for (index in 0...controlGrid.members.length)
     {
       if (index < novaBeatBindingText.length)
       {
         var label:FlxText = novaBeatBindingText[index];
-        label.color = index == controlGrid.selectedIndex ? FlxColor.WHITE : 0xFF63E8FF;
+        label.color = index == controlGrid.selectedIndex ? 0xFFFFFFFF : 0xFF63E8FF;
         var binding:InputItem = controlGrid.members[index];
         label.text = binding.getLabel(binding.input);
       }
@@ -498,6 +498,17 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
 
     var controls = PlayerSettings.player1.controls;
+    if (novaBeatStyle)
+    {
+      for (index in 0...controlGrid.members.length)
+      {
+        if (index < novaBeatBindingText.length)
+        {
+          var binding:InputItem = controlGrid.members[index];
+          novaBeatBindingText[index].text = binding.getLabel(binding.input);
+        }
+      }
+    }
     if (controlGrid.enabled && deviceList != null && deviceListSelected == false && controls.BACK) goToDeviceList();
 
     if (prompt.exists)
