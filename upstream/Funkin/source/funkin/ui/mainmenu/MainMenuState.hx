@@ -398,7 +398,7 @@ class MainMenuState extends MusicBeatState
   {
     if (leftWatermarkText == null) return;
 
-    leftWatermarkText.text = '${Constants.VERSION} | NovaBeat Engine';
+    leftWatermarkText.text = '0.8.6 NovaBeat Engine';
   }
 
   function playMenuMusic():Void
