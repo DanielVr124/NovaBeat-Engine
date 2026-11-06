@@ -93,6 +93,10 @@ class ResultState extends MusicBeatSubState
   var resultsMusic:Null<FunkinSound> = null;
 
   var rankBg:FunkinSprite;
+  var resultsBackground:Null<FlxSprite> = null;
+  var ratingGroup:Null<FlxTypedGroup<TallyCounter>> = null;
+  var rankTextVertical:Null<FlxBackdrop> = null;
+  var rankTextBackdrops:Array<FlxBackdrop> = [];
   final cameraBG:FunkinCamera;
   final cameraScroll:FunkinCamera;
   final cameraEverything:FunkinCamera;
@@ -175,6 +179,7 @@ class ResultState extends MusicBeatSubState
     FlxG.camera.zoom = 1.0;
 
     var bg:FlxSprite = FlxGradient.createGradientFlxSprite(FlxG.width, FlxG.height, [0xFFFECC5C, 0xFFFDC05C], 90);
+    resultsBackground = bg;
     bg.scrollFactor.set();
     bg.zIndex = 10;
     bg.cameras = [cameraBG];
@@ -430,6 +435,7 @@ class ResultState extends MusicBeatSubState
     var hStuf:Int = 50;
 
     var ratingGrp:FlxTypedGroup<TallyCounter> = new FlxTypedGroup<TallyCounter>();
+    ratingGroup = ratingGrp;
     ratingGrp.zIndex = 1200;
     add(ratingGrp);
 
@@ -549,6 +555,130 @@ class ResultState extends MusicBeatSubState
     refresh();
 
     super.create();
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(16, width * 0.045);
+    var fit:Float = portrait ? Math.min(0.58, (width - margin * 2) / 1280) : 1.0;
+
+    cameraBG.setSize(width, height);
+    cameraEverything.setSize(width, height);
+    cameraScroll.setSize(width, Math.round(height * 1.2));
+    cameraScroll.canvas.rotation = portrait ? -1.8 : -3.8;
+
+    if (resultsBackground != null)
+    {
+      resultsBackground.setGraphicSize(width, height);
+      resultsBackground.updateHitbox();
+      resultsBackground.setPosition(0, 0);
+    }
+    bgFlash.setGraphicSize(width, height);
+    bgFlash.updateHitbox();
+    rankBg.makeSolidColor(width, height, 0xFF000000);
+    blackTopBar.setGraphicSize(width, blackTopBar.height);
+    blackTopBar.updateHitbox();
+
+    if (portrait)
+    {
+      difficulty.scale.set(fit, fit);
+      difficulty.updateHitbox();
+      difficulty.setPosition(margin, height * 0.10);
+
+      clearPercentSmall.scale.set(fit, fit);
+      clearPercentSmall.updateHitbox();
+      clearPercentSmall.setPosition(width - clearPercentSmall.width - margin, height * 0.10);
+
+      songName.scale.set(fit, fit);
+      songName.angle = 0;
+      songName.setPosition(margin, height * 0.10 + Math.max(difficulty.height, clearPercentSmall.height) + 16);
+
+      resultsAnim.scale.set(fit, fit);
+      resultsAnim.updateHitbox();
+      resultsAnim.setPosition((width - resultsAnim.width) * 0.5, height * 0.34);
+
+      ratingsPopin.scale.set(fit, fit);
+      ratingsPopin.updateHitbox();
+      ratingsPopin.setPosition(margin, height * 0.48);
+      scorePopin.scale.set(fit, fit);
+      scorePopin.updateHitbox();
+      scorePopin.setPosition(margin, height * 0.68);
+      score.scale.set(fit, fit);
+      score.x = margin;
+      score.y = height * 0.72;
+
+      if (ratingGroup != null)
+      {
+        var columns:Int = 2;
+        var cellWidth:Float = (width - margin * 2) / columns;
+        for (index in 0...ratingGroup.members.length)
+        {
+          var tally:Null<TallyCounter> = ratingGroup.members[index];
+          if (tally == null) continue;
+          tally.scale.set(fit, fit);
+          tally.x = margin + (index % columns) * cellWidth;
+          tally.y = height * 0.58 + Std.int(index / columns) * 38 * fit;
+        }
+      }
+
+      highscoreNew.scale.set(fit, fit);
+      highscoreNew.updateHitbox();
+      highscoreNew.setPosition(width - highscoreNew.width - margin, height - highscoreNew.height - 22);
+      if (rankTextVertical != null) rankTextVertical.x = width - 18;
+      for (index in 0...rankTextBackdrops.length)
+      {
+        rankTextBackdrops[index].x = margin;
+        rankTextBackdrops[index].y = height * 0.27 + index * 42;
+      }
+    }
+    else
+    {
+      difficulty.scale.set(1, 1);
+      difficulty.updateHitbox();
+      difficulty.setPosition(555 + FullScreenScaleMode.gameNotchSize.x, 122 + (blackTopBar.height - 148));
+      clearPercentSmall.scale.set(1, 1);
+      clearPercentSmall.updateHitbox();
+      clearPercentSmall.setPosition(difficulty.x + difficulty.width + 60, difficulty.y);
+      songName.scale.set(1, 1);
+      songName.angle = -4.4;
+      songName.setPosition(clearPercentSmall.x + 94, difficulty.y - 25);
+      resultsAnim.scale.set(1, 1);
+      resultsAnim.updateHitbox();
+      resultsAnim.setPosition(width - (1480 + FullScreenScaleMode.gameCutoutSize.x / 2), -10);
+      ratingsPopin.scale.set(1, 1);
+      ratingsPopin.setPosition(-135 + FullScreenScaleMode.gameNotchSize.x, 135);
+      scorePopin.scale.set(1, 1);
+      scorePopin.setPosition(-180 + FullScreenScaleMode.gameNotchSize.x, 515);
+      score.scale.set(1, 1);
+      score.x = 35 + FullScreenScaleMode.gameNotchSize.x;
+      score.y = 305;
+      if (ratingGroup != null)
+      {
+        for (tally in ratingGroup.members)
+        {
+          if (tally == null) continue;
+          tally.scale.set(1, 1);
+        }
+      }
+      highscoreNew.scale.set(1, 1);
+      highscoreNew.setPosition(44 + FullScreenScaleMode.gameNotchSize.x, 557);
+      if (rankTextVertical != null) rankTextVertical.x = width - 44;
+      for (index in 0...rankTextBackdrops.length)
+      {
+        rankTextBackdrops[index].x = width / 2 - 320;
+        rankTextBackdrops[index].y = 50 + (135 * index / 2) + 10;
+      }
+    }
+
+    maskShaderDifficulty.swagMaskX = difficulty.x - 30;
+    maskShaderDifficulty.swagSprX = difficulty.x;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
   }
 
   override public function destroy():Void
@@ -671,6 +801,7 @@ class ResultState extends MusicBeatSubState
     FlxTween.tween(bgFlash, {alpha: 0}, 14 / 24);
 
     var rankTextVert:FlxBackdrop = new FlxBackdrop(Paths.image(rank.getVerTextAsset()), Y, 0, 30);
+    rankTextVertical = rankTextVert;
     rankTextVert.x = FlxG.width - 44;
     rankTextVert.y = 100;
     rankTextVert.zIndex = 990;
@@ -687,6 +818,7 @@ class ResultState extends MusicBeatSubState
     for (i in 0...12)
     {
       var rankTextBack:FlxBackdrop = new FlxBackdrop(Paths.image(rank.getHorTextAsset()), X, 10, 0);
+      rankTextBackdrops.push(rankTextBack);
       rankTextBack.x = FlxG.width / 2 - 320;
       rankTextBack.y = 50 + (135 * i / 2) + 10;
       // rankTextBack.angle = -3.8;
