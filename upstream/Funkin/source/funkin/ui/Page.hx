@@ -23,6 +23,7 @@ class Page<T:PageName> extends FlxGroup
   public var codex:Codex<T>;
   var lastViewportWidth:Int = -1;
   var lastViewportHeight:Int = -1;
+  var hasAppliedViewportLayout:Bool = false;
 
   var controls(get, never):Controls;
 
@@ -65,10 +66,13 @@ class Page<T:PageName> extends FlxGroup
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
-    if (width <= 0 || height <= 0 || (width == lastViewportWidth && height == lastViewportHeight)) return;
+    if (width <= 0 || height <= 0) return;
+    var dimensionsChanged:Bool = width != lastViewportWidth || height != lastViewportHeight;
+    if (!dimensionsChanged && hasAppliedViewportLayout) return;
 
     lastViewportWidth = width;
     lastViewportHeight = height;
+    hasAppliedViewportLayout = true;
     onViewportResize(width, height);
   }
 

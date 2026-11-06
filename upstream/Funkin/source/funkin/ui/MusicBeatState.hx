@@ -41,6 +41,7 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
   public var rightWatermarkText:Null<FlxText> = null;
   var lastViewportWidth:Int = -1;
   var lastViewportHeight:Int = -1;
+  var hasAppliedViewportLayout:Bool = false;
   public var conductorInUse(get, set):Conductor;
 
   var _conductorInUse:Null<Conductor>;
@@ -212,10 +213,13 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
-    if (width <= 0 || height <= 0 || (width == lastViewportWidth && height == lastViewportHeight)) return;
+    if (width <= 0 || height <= 0) return;
+    var dimensionsChanged:Bool = width != lastViewportWidth || height != lastViewportHeight;
+    if (!dimensionsChanged && hasAppliedViewportLayout) return;
 
     lastViewportWidth = width;
     lastViewportHeight = height;
+    hasAppliedViewportLayout = true;
 
     if (leftWatermarkText != null)
     {
