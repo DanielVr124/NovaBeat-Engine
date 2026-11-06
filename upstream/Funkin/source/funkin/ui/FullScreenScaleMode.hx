@@ -541,7 +541,12 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
   @:noCompletion
   static function set_enabled(Value:Bool):Bool
   {
-    if (ratioAxis == FlxAxes.X #if android
+    // On HTML5 mobile browsers, allow the portrait axis too. The scale mode
+    // expands FlxG.height to the full device viewport instead of letterboxing
+    // a small 16:9 landscape game inside the phone screen.
+    final isMobileWebBrowser:Bool = #if web funkin.util.DeviceUtil.isMobileBrowser #else false #end;
+
+    if ((ratioAxis == FlxAxes.X || isMobileWebBrowser) #if android
       && (extension.androidtools.os.Build.VERSION.SDK_INT >= extension.androidtools.os.Build.VERSION_CODES.P
         || extension.androidtools.Tools.isTablet()) #end)
     {
