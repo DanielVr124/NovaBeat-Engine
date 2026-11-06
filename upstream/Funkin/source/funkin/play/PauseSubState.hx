@@ -865,17 +865,10 @@ class PauseSubState extends MusicBeatSubState
     var prevEntry:Int = currentEntry;
     currentEntry += change;
 
-    if (#if FEATURE_TOUCH_CONTROLS (!funkin.mobile.input.ControlsHandler.usingExternalInputDevice
-      || (DeviceUtil.isQuestBrowser && TouchUtil.pressed)) #else false #end)
-    {
-      if (currentEntry < 0) currentEntry = 0;
-      if (currentEntry >= currentMenuEntries.length) currentEntry = currentMenuEntries.length - 1;
-    }
-    else
-    {
-      if (currentEntry < 0) currentEntry = currentMenuEntries.length - 1;
-      if (currentEntry >= currentMenuEntries.length) currentEntry = 0;
-    }
+    // Pause-menu navigation wraps on every input source, including touch and
+    // Quest pointers, just like the original keyboard/controller behavior.
+    if (currentEntry < 0) currentEntry = currentMenuEntries.length - 1;
+    if (currentEntry >= currentMenuEntries.length) currentEntry = 0;
 
     if (currentEntry != prevEntry) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
 
