@@ -1,5 +1,7 @@
 package funkin.play.stage;
 
+import funkin.Preferences;
+
 import flixel.FlxCamera;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
@@ -178,6 +180,8 @@ class Bopper extends StageProp implements IPlayStateScriptedClass
    */
   public function dance(forceRestart:Bool = false):Void
   {
+    if (!Preferences.performanceStageAnimations) return;
+
     if (this.animation == null)
     {
       return;
