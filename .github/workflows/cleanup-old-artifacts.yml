@@ -1,0 +1,91 @@
+name: Clean up old NovaBeat Actions artifacts
+
+on:
+  push:
+    branches:
+      - "feature/**"
+    paths:
+      - ".github/workflows/cleanup-old-artifacts.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Remove superseded build artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep newest artifact of each build type and remove older copies
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+
+            const active = artifacts
+              .filter((artifact) => !artifact.expired)
+              .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+
+            const newestByName = new Map();
+            for (const artifact of active) {
+              if (!newestByName.has(artifact.name)) {
+                newestByName.set(artifact.name, artifact.id);
+              }
+            }
+
+            const toDelete = artifacts.filter((artifact) =>
+              artifact.expired || newestByName.get(artifact.name) !== artifact.id
+            );
+
+            let deletedCount = 0;
+            let deletedBytes = 0;
+            const failures = [];
+
+            for (const artifact of toDelete) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner,
+                  repo,
+                  artifact_id: artifact.id
+                });
+                deletedCount += 1;
+                deletedBytes += artifact.size_in_bytes || 0;
+                core.info(
+                  `Deleted ${artifact.name} (ID ${artifact.id}, ${artifact.size_in_bytes || 0} bytes)`
+                );
+              } catch (error) {
+                failures.push(`${artifact.name} (ID ${artifact.id}): ${error.message}`);
+                core.warning(`Could not delete artifact ${artifact.id}: ${error.message}`);
+              }
+            }
+
+            const kept = active.filter((artifact) =>
+              newestByName.get(artifact.name) === artifact.id
+            );
+
+            core.summary
+              .addHeading("NovaBeat Actions artifact cleanup")
+              .addTable([
+                [{ data: "Result", header: true }, { data: "Count / size", header: true }],
+                ["Artifacts found", String(artifacts.length)],
+                ["Newest artifacts retained", String(kept.length)],
+                ["Old artifacts deleted", String(deletedCount)],
+                ["Storage removed", `${(deletedBytes / (1024 ** 3)).toFixed(2)} GiB`],
+                ["Delete failures", String(failures.length)]
+              ]);
+
+            if (failures.length) {
+              core.summary.addHeading("Artifacts that could not be deleted");
+              for (const failure of failures) core.summary.addList([failure]);
+            }
+
+            await core.summary.write();
+
+            if (failures.length) {
+              core.setFailed(`${failures.length} artifact(s) could not be deleted.`);
+            }
