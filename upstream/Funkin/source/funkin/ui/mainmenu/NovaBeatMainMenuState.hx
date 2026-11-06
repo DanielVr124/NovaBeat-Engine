@@ -49,7 +49,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     'CREDITS'
   ];
 
-  static final ITEM_ICONS:Array<String> = ['▤', '⌘', '✣', '⚙', '▣'];
+  static final ITEM_ICONS:Array<String> = ['▤', '♫', '✣', '⚙', '★'];
 
   static final ITEM_TITLES:Array<String> = [
     'STORY\nMODE',
@@ -73,6 +73,14 @@ class NovaBeatMainMenuState extends MusicBeatState
     'Browse local mods, inspect their information, enable or disable them, and arrange load priority.',
     'Adjust your game preferences, controls, accessibility, and the menu presentation.',
     "View the people and projects behind Friday Night Funkin' and NovaBeat Engine."
+  ];
+
+  static final ITEM_SHORT_DESCRIPTIONS:Array<String> = [
+    'Choose a week and continue the campaign.',
+    'Pick a song and difficulty.',
+    'Manage installed mods and load order.',
+    'Change settings and customize the menus.',
+    'Meet the people behind the engine.'
   ];
 
   static final ITEM_META:Array<Array<String>> = [
@@ -100,11 +108,17 @@ class NovaBeatMainMenuState extends MusicBeatState
   var titleTapHint:Null<FlxText>;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
+  var featureKicker:Null<FlxText> = null;
+  var featureTitle:Null<FlxText> = null;
+  var featureDescription:Null<FlxText> = null;
 
   var rowBackgrounds:Array<FlxSprite> = [];
+  var rowIconPlates:Array<FlxSprite> = [];
   var rowAccents:Array<FlxSprite> = [];
   var rowLabels:Array<FlxText> = [];
   var rowIcons:Array<FlxText> = [];
+  var rowKickers:Array<FlxText> = [];
+  var rowDescriptions:Array<FlxText> = [];
 
   var equalizerBars:Array<FlxSprite> = [];
 
@@ -185,10 +199,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     homeOptionsButton = null;
     menuItems = null;
     rowBackgrounds = [];
+    rowIconPlates = [];
     rowAccents = [];
     rowLabels = [];
     rowIcons = [];
+    rowKickers = [];
+    rowDescriptions = [];
     equalizerBars = [];
+    featureKicker = null;
+    featureTitle = null;
+    featureDescription = null;
 
     buildBackdrop();
     if (showingTitle)
@@ -428,19 +448,52 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.alpha = 0;
       item.atlasText.visible = false;
 
-      var iconSize:Int = tileLayout ? 22 : 26;
-      var iconX:Float = itemX + (tileLayout ? 12 : 20);
-      var iconY:Float = itemY + (buttonH - iconSize) * 0.5 - 2;
-      var icon:FlxText = addLabel(iconX, iconY, 36, ITEM_ICONS[index], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
+      // Use a shared badge so the menu symbols remain legible and aligned.
+      var iconPlateSize:Float = tileLayout ? (portraitLayout ? 42 : 36) : 46;
+      var iconX:Float = itemX + (tileLayout ? 10 : 14);
+      var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
+      var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize, 12, 12, 0xFF142B49);
+      iconPlate.alpha = 0.96;
+      rowIconPlates.push(iconPlate);
+
+      var iconSize:Int = tileLayout ? 21 : 25;
+      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[index], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
       icon.scrollFactor.set();
+      icon.autoSize = false;
+      icon.fieldWidth = iconPlateSize;
+      icon.height = iconPlateSize - 2;
       rowIcons.push(icon);
 
-      var labelX:Float = itemX + (tileLayout ? 47 : 68);
-      var labelWidth:Float = buttonW - (tileLayout ? 58 : 90);
-      var label:FlxText = addLabel(labelX, itemY + 4, labelWidth, ITEM_NAMES[index], tileLayout ? 13 : 20, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
-      label.y = itemY + (buttonH - label.height) * 0.5;
+      var labelX:Float = iconX + iconPlateSize + (tileLayout ? 10 : 14);
+      var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
+      var title:String = ITEM_TITLES[index].split('\\n').join(' ');
+      var titleY:Float = itemY + 7;
+      var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? 13 : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
+      label.autoSize = false;
+      label.wordWrap = false;
+      label.fieldWidth = labelWidth;
+      label.height = tileLayout ? 19 : 23;
       label.scrollFactor.set();
       rowLabels.push(label);
+
+      var kickerY:Float = itemY + (tileLayout ? 27 : 31);
+      var kicker:FlxText = addLabel(labelX, kickerY, labelWidth, ITEM_KICKERS[index], tileLayout ? 8 : 9, 0xFF48CDEB, FlxTextAlign.LEFT, 'Arial');
+      kicker.autoSize = false;
+      kicker.wordWrap = false;
+      kicker.fieldWidth = labelWidth;
+      kicker.height = 12;
+      kicker.scrollFactor.set();
+      rowKickers.push(kicker);
+
+      var descriptionY:Float = itemY + (tileLayout ? 42 : 47);
+      var description:String = tileLayout ? ITEM_SHORT_DESCRIPTIONS[index] : ITEM_DESCRIPTIONS[index];
+      var descriptionText:FlxText = addLabel(labelX, descriptionY, labelWidth, description, tileLayout ? 8 : 9, 0xFFAABBDD, FlxTextAlign.LEFT, 'Arial');
+      descriptionText.autoSize = false;
+      descriptionText.wordWrap = true;
+      descriptionText.fieldWidth = labelWidth;
+      descriptionText.height = Math.max(12, buttonH - (tileLayout ? 46 : 48));
+      descriptionText.scrollFactor.set();
+      rowDescriptions.push(descriptionText);
 
       if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
       {
@@ -474,8 +527,15 @@ class NovaBeatMainMenuState extends MusicBeatState
       buildEqualizer(x + 34, y + height - 136, width - 68);
     }
 
-    // Keep this panel purely visual: menu selection is communicated by
-    // the highlighted row, not a second block of descriptive hover text.
+    // Present useful details for the selected section on desktop layouts.
+    featureKicker = addLabel(x + 34, y + 104, width - 68, ITEM_KICKERS[0], 10, 0xFF48E7FF, FlxTextAlign.LEFT, 'Arial');
+    featureTitle = addLabel(x + 34, y + 126, width - 68, ITEM_NAMES[0], 28, 0xFFF4F7FF, FlxTextAlign.LEFT, 'Arial Black');
+    featureDescription = addLabel(x + 34, y + 174, width - 68, ITEM_DESCRIPTIONS[0], 15, 0xFFD0DCF3, FlxTextAlign.LEFT, 'Arial');
+    featureDescription.autoSize = false;
+    featureDescription.wordWrap = true;
+    featureDescription.fieldWidth = width - 68;
+    featureDescription.height = Math.min(112, Math.max(72, height * 0.28));
+
     var orbit:FlxSprite = addSolid(x + width * 0.50, y + 24, width * 0.40, 2, 0x265D72FF);
     orbit.alpha = 0.5;
     addSolid(x + width * 0.77, y + 24, 2, height * 0.34, 0x265D72FF).alpha = 0.5;
@@ -499,6 +559,11 @@ class NovaBeatMainMenuState extends MusicBeatState
           : 0xFF0D1935;
         rowBackgrounds[i].alpha = selected ? 1 : 0.84;
       }
+      if (i < rowIconPlates.length)
+      {
+        rowIconPlates[i].color = selected ? 0xFF1A4261 : 0xFF142B49;
+        rowIconPlates[i].alpha = selected ? 1.0 : 0.88;
+      }
       if (i < rowAccents.length)
       {
         rowAccents[i].color = selected ? accentColor() : 0xFF267CFF;
@@ -512,7 +577,19 @@ class NovaBeatMainMenuState extends MusicBeatState
       {
         rowIcons[i].color = selected ? accentColor() : 0xFF8297C2;
       }
+      if (i < rowKickers.length)
+      {
+        rowKickers[i].color = selected ? 0xFF65E8FF : 0xFF48A9C4;
+      }
+      if (i < rowDescriptions.length)
+      {
+        rowDescriptions[i].color = selected ? 0xFFDCEBFF : 0xFF9AAAC7;
+      }
     }
+
+    if (featureKicker != null) featureKicker.text = ITEM_KICKERS[index];
+    if (featureTitle != null) featureTitle.text = ITEM_NAMES[index];
+    if (featureDescription != null) featureDescription.text = ITEM_DESCRIPTIONS[index];
 
     // MenuTypedList owns navigation sounds for keyboard, controller, and mouse.
   }
