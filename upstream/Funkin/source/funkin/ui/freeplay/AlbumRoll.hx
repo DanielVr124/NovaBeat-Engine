@@ -100,6 +100,51 @@ class AlbumRoll extends FlxSpriteGroup
     refresh();
   }
 
+  public function layoutViewport(width:Int, height:Int, portrait:Bool):Void
+  {
+    if (newAlbumArt != null)
+    {
+      if (portrait)
+      {
+        var scale:Float = Math.min(0.62, (width * 0.42) / Math.max(1, newAlbumArt.frameWidth));
+        newAlbumArt.scale.set(scale, scale);
+        newAlbumArt.setPosition(width - newAlbumArt.width - 14, height * 0.16);
+      }
+      else
+      {
+        newAlbumArt.scale.set(1, 1);
+        newAlbumArt.setPosition((width - 360) - FullScreenScaleMode.gameNotchSize.x, 220);
+      }
+    }
+    if (difficultyStars != null)
+    {
+      if (portrait)
+      {
+        var scale:Float = Math.min(0.7, (width * 0.42) / Math.max(1, difficultyStars.width));
+        difficultyStars.scale.set(scale, scale);
+        difficultyStars.setPosition(width - difficultyStars.width - 18, height * 0.16 + newAlbumArt.height + 8);
+      }
+      else
+      {
+        difficultyStars.scale.set(1, 1);
+        difficultyStars.setPosition((width - 330) - FullScreenScaleMode.gameNotchSize.x, 209);
+      }
+    }
+    if (albumTitle != null)
+    {
+      if (portrait)
+      {
+        albumTitle.scale.set(0.55, 0.55);
+        albumTitle.setPosition(width - albumTitle.width - 14, height * 0.16 + newAlbumArt.height + 46);
+      }
+      else
+      {
+        albumTitle.scale.set(1, 1);
+        albumTitle.setPosition((width - 355) - FullScreenScaleMode.gameNotchSize.x, 500);
+      }
+    }
+  }
+
   public function refresh():Void
   {
     sort(SortUtil.byZIndex, FlxSort.ASCENDING);

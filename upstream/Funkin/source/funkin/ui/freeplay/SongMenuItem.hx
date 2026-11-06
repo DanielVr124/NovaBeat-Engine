@@ -617,6 +617,8 @@ class SongMenuItem extends FlxSpriteGroup
   ]; // NUMBERS ARE JANK CUZ THE SCALING OR WHATEVER
 
   public var realScaled:Float = 0.8;
+  var lastLayoutWidth:Int = -1;
+  var lastLayoutHeight:Int = -1;
 
   public function initJumpIn(maxTimer:Float, ?force:Bool):Void
   {
@@ -672,8 +674,22 @@ class SongMenuItem extends FlxSpriteGroup
     setVisibleGrp(true);
   }
 
+  public function updateResponsiveScale():Void
+  {
+    var width:Int = FlxG.width;
+    var height:Int = FlxG.height;
+    if (width <= 0 || height <= 0 || (width == lastLayoutWidth && height == lastLayoutHeight)) return;
+    lastLayoutWidth = width;
+    lastLayoutHeight = height;
+
+    var portrait:Bool = height > width * 1.12;
+    var layoutScale:Float = portrait ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled)) : 1.0;
+    scale.set(layoutScale, layoutScale);
+  }
+
   override function update(elapsed:Float):Void
   {
+    updateResponsiveScale();
     if (impactThing != null) impactThing.angle = capsule.angle;
 
     if (doJumpIn)
@@ -760,11 +776,24 @@ class SongMenuItem extends FlxSpriteGroup
 
   public function intendedX(index:Float):Float
   {
+    updateResponsiveScale();
+    if (FlxG.height > FlxG.width * 1.12)
+    {
+      var displayedWidth:Float = capsule.frameWidth * realScaled * scale.x;
+      return Math.max(12, (FlxG.width - displayedWidth) * 0.5);
+    }
     return 270 + (60 * (FlxMath.fastSin(index)));
   }
 
   public function intendedY(index:Float):Float
   {
+    updateResponsiveScale();
+    if (FlxG.height > FlxG.width * 1.12)
+    {
+      var displayedHeight:Float = capsule.frameHeight * realScaled * scale.y;
+      var gap:Float = Math.max(12, Math.min(28, FlxG.height * 0.025));
+      return FlxG.height * 0.30 - displayedHeight * 0.5 + index * (displayedHeight + gap);
+    }
     return (index * ((capsule.height * realScaled) + 10)) + 120;
   }
 

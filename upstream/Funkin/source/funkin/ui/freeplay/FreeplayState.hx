@@ -262,6 +262,13 @@ class FreeplayState extends MusicBeatSubState
   var forceSkipIntro:Bool = false;
 
   public var freeplayArrow:Null<FlxText>;
+  var freeplayTitleText:Null<FlxText> = null;
+  var freeplayTitleBackground:Null<FlxSprite> = null;
+  var highscoreSprite:Null<FlxSprite> = null;
+  var clearBoxDisplay:Null<FlxSprite> = null;
+  var novaBeatHeaderObjects:Array<FlxSprite> = [];
+  var djBaseScaleX:Float = 1;
+  var djBaseScaleY:Float = 1;
 
   public function new(?params:FreeplayStateParams, ?stickers:StickerSubState)
   {
@@ -430,6 +437,8 @@ class FreeplayState extends MusicBeatSubState
 
       if (dj != null)
       {
+        djBaseScaleX = dj.scale.x;
+        djBaseScaleY = dj.scale.y;
         exitMovers.set([dj], {
           x: -dj.width * 1.6,
           speed: 0.5
@@ -536,12 +545,14 @@ class FreeplayState extends MusicBeatSubState
     }
 
     var topLeftCornerText:FlxText = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8, 0, 'FREEPLAY', 48);
+    freeplayTitleText = topLeftCornerText;
     topLeftCornerText.font = 'VCR OSD Mono';
     topLeftCornerText.visible = false;
 
     var freeplayTxtBg:FlxSprite = new FlxSprite().makeGraphic(Math.round(topLeftCornerText.width + 16), Math.round(topLeftCornerText.height + 16),
       FlxColor.BLACK);
     freeplayTxtBg.x = topLeftCornerText.x - 8;
+    freeplayTitleBackground = freeplayTxtBg;
     freeplayTxtBg.visible = false;
 
     freeplayArrow = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8, 0, '<---', 48);
@@ -596,6 +607,7 @@ class FreeplayState extends MusicBeatSubState
     freeplayArrow.shader = sillyStroke;
 
     var fnfHighscoreSpr:FlxSprite = new FlxSprite(FlxG.width - (FullScreenScaleMode.gameNotchSize.x + 420), 70);
+    highscoreSprite = fnfHighscoreSpr;
     fnfHighscoreSpr.frames = Paths.getSparrowAtlas('freeplay/highscore');
     fnfHighscoreSpr.animation.addByPrefix('highscore', 'highscore small instance 1', 24, false);
     fnfHighscoreSpr.visible = false;
@@ -613,6 +625,7 @@ class FreeplayState extends MusicBeatSubState
     add(fpScoreDisplay);
 
     var clearBoxSprite:FlxSprite = new FlxSprite(FlxG.width - (FullScreenScaleMode.gameNotchSize.x + 115), 65).loadGraphic(Paths.image('freeplay/clearBox'));
+    clearBoxDisplay = clearBoxSprite;
     clearBoxSprite.visible = false;
     add(clearBoxSprite);
 
@@ -2953,24 +2966,166 @@ class FreeplayState extends MusicBeatSubState
     panel.scrollFactor.set();
     panel.cameras = [funnyCam];
     add(panel);
+    novaBeatHeaderObjects.push(panel);
 
     var accent:FlxSprite = new FlxSprite(24, 20);
     accent.makeGraphic(4, 58, 0xFF48E7FF);
     accent.scrollFactor.set();
     accent.cameras = [funnyCam];
     add(accent);
+    novaBeatHeaderObjects.push(accent);
 
     var brand:FlxText = new FlxText(42, 26, 280, 'NOVABEAT ENGINE', 10);
     brand.setFormat(Paths.font('vcr.ttf'), 10, 0xFF48E7FF);
     brand.scrollFactor.set();
     brand.cameras = [funnyCam];
     add(brand);
+    novaBeatHeaderObjects.push(brand);
 
     var title:FlxText = new FlxText(42, 42, 280, 'FREEPLAY', 20);
     title.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE);
     title.scrollFactor.set();
     title.cameras = [funnyCam];
     add(title);
+    novaBeatHeaderObjects.push(title);
+  }
+
+  function layoutFreeplayCapsules():Void
+  {
+    if (grpCapsules == null) return;
+    for (index => capsule in grpCapsules.members)
+    {
+      if (capsule == null) continue;
+      capsule.updateResponsiveScale();
+      var capsuleIndex:Float = (index + 1) - curSelected;
+      var yOffset:Float = 0;
+      if (capsuleIndex < 0) yOffset += 50;
+      else if (capsuleIndex > 4) yOffset -= 10;
+
+      capsule.targetPos.y = capsule.intendedY(capsuleIndex) - yOffset;
+      capsule.targetPos.x = capsule.intendedX(capsuleIndex) + (CUTOUT_WIDTH * SONGS_POS_MULTI);
+      if (index < curSelected) capsule.targetPos.y -= 100;
+      if (!capsule.doJumpIn && !capsule.doJumpOut) capsule.doLerp = true;
+    }
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+
+    funnyCam.setSize(width, height);
+    rankCamera.setSize(width, height);
+    var portrait:Bool = height > width * 1.12;
+
+    if (backingImage != null)
+    {
+      var fit:Float = Math.max(width / Math.max(1, backingImage.frameWidth), height / Math.max(1, backingImage.frameHeight));
+      backingImage.scale.set(fit, fit);
+      backingImage.updateHitbox();
+      backingImage.setPosition((width - backingImage.width) * 0.5, (height - backingImage.height) * 0.5);
+    }
+    if (rankBg != null) rankBg.makeSolidColor(width, height, 0xD3000000);
+    if (rankVignette != null)
+    {
+      rankVignette.setGraphicSize(width, height);
+      rankVignette.updateHitbox();
+    }
+
+    if (portrait)
+    {
+      if (dj != null)
+      {
+        var djFit:Float = Math.min(djBaseScaleX, (width * 0.68) / Math.max(1, dj.frameWidth));
+        dj.scale.set(djFit, djFit * (djBaseScaleY / Math.max(0.001, djBaseScaleX)));
+        dj.updateHitbox();
+        dj.setPosition((width - dj.width) * 0.5, height * 0.08);
+      }
+
+      grpDifficulties.x = Math.max(12, width * 0.08);
+      grpDifficulties.y = height * 0.19;
+      diffSelLeft.setPosition(width * 0.08, height * 0.79);
+      diffSelRight.setPosition(width - diffSelRight.width - width * 0.08, height * 0.79);
+      difficultyDots.x = (width - difficultyDots.width) * 0.5;
+      difficultyDots.y = height * 0.75;
+
+      if (letterSort != null) letterSort.setPosition(width - letterSort.width - 12, height - letterSort.height - 16);
+      if (albumRoll != null) albumRoll.layoutViewport(width, height, true);
+
+      if (freeplayTitleText != null)
+      {
+        freeplayTitleText.setFormat('VCR OSD Mono', 27);
+        freeplayTitleText.setPosition(18, 16);
+      }
+      if (freeplayTitleBackground != null)
+      {
+        freeplayTitleBackground.setGraphicSize(Std.int((freeplayTitleText?.width ?? 110) + 16),
+          Std.int((freeplayTitleText?.height ?? 30) + 12));
+        freeplayTitleBackground.updateHitbox();
+        freeplayTitleBackground.setPosition((freeplayTitleText?.x ?? 18) - 8, (freeplayTitleText?.y ?? 16) - 6);
+      }
+      if (ostName != null)
+      {
+        ostName.setFormat('VCR OSD Mono', 16);
+        ostName.setPosition(18, height - 42);
+        ostName.alignment = LEFT;
+        ostName.fieldWidth = width - 36;
+      }
+      if (charSelectHint != null)
+      {
+        charSelectHint.setFormat('5by7', 16);
+        charSelectHint.setPosition(16, height - 68);
+        charSelectHint.fieldWidth = width - 32;
+      }
+      if (highscoreSprite != null) highscoreSprite.setPosition(width - highscoreSprite.width - 16, 18);
+      if (clearBoxDisplay != null) clearBoxDisplay.setPosition(width - clearBoxDisplay.width - 16, 58);
+      if (fpScoreDisplay != null) fpScoreDisplay.setPosition(width - fpScoreDisplay.width - 22, 64);
+      if (txtCompletion != null) txtCompletion.x = width - txtCompletion.width - 22;
+
+      for (obj in novaBeatHeaderObjects)
+      {
+        if (obj == null) continue;
+        obj.x = 16 + (obj.x - 24);
+        obj.y = 16 + (obj.y - 20);
+      }
+    }
+    else
+    {
+      if (dj != null)
+      {
+        dj.scale.set(djBaseScaleX, djBaseScaleY);
+        dj.updateHitbox();
+        dj.resetPosition();
+      }
+      grpDifficulties.x = (CUTOUT_WIDTH * DJ_POS_MULTI) + 90;
+      grpDifficulties.y = 80;
+      diffSelLeft.setPosition((CUTOUT_WIDTH * DJ_POS_MULTI) + 20, grpDifficulties.y - 10);
+      diffSelRight.setPosition((CUTOUT_WIDTH * DJ_POS_MULTI) + 325, grpDifficulties.y - 10);
+      if (letterSort != null) letterSort.setPosition((CUTOUT_WIDTH * SONGS_POS_MULTI) + 400, 75);
+      if (albumRoll != null) albumRoll.layoutViewport(width, height, false);
+      if (freeplayTitleText != null)
+      {
+        freeplayTitleText.setFormat('VCR OSD Mono', 48);
+        freeplayTitleText.setPosition(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8);
+      }
+      if (ostName != null)
+      {
+        ostName.setFormat('VCR OSD Mono', 48);
+        ostName.setPosition(8 - FullScreenScaleMode.gameNotchSize.x, 8);
+        ostName.alignment = RIGHT;
+        ostName.fieldWidth = width - 16;
+      }
+      if (charSelectHint != null) charSelectHint.setFormat('5by7', 32);
+      if (highscoreSprite != null) highscoreSprite.setPosition(width - (FullScreenScaleMode.gameNotchSize.x + 420), 70);
+      if (clearBoxDisplay != null) clearBoxDisplay.setPosition(width - (FullScreenScaleMode.gameNotchSize.x + 115), 65);
+      if (fpScoreDisplay != null) fpScoreDisplay.setPosition(width - (FullScreenScaleMode.gameNotchSize.x + 353), 60);
+      if (txtCompletion != null) txtCompletion.x = width - (FullScreenScaleMode.gameNotchSize.x + 95);
+    }
+
+    layoutFreeplayCapsules();
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - (portrait ? 18 : 230), height - backButton.height - 18);
+    #end
   }
 
   function changeSelection(change:Int = 0):Void
@@ -3017,24 +3172,12 @@ class FreeplayState extends MusicBeatSubState
 
     for (index => capsule in grpCapsules.members)
     {
-      index += 1;
-
+      var selectedIndex:Int = index + 1;
       capsule.forceHighlight = false;
-      capsule.selected = index == curSelected + 1;
-
+      capsule.selected = selectedIndex == curSelected + 1;
       capsule.curSelected = curSelected;
-
-      var capsuleIndex = index - curSelected;
-      var yOffset:Float = 0;
-
-      // Small offset so edge capsules actually go offscreen enough to not require to be rendered.
-      if (capsuleIndex < 0) yOffset += 50;
-      else if (capsuleIndex > 4) yOffset -= 10;
-
-      capsule.targetPos.y = capsule.intendedY(capsuleIndex) - yOffset;
-      capsule.targetPos.x = capsule.intendedX(capsuleIndex) + (CUTOUT_WIDTH * SONGS_POS_MULTI);
-      if (index < curSelected) capsule.targetPos.y -= 100; // another 100 for good measure
     }
+    layoutFreeplayCapsules();
 
     if (grpCapsules.countLiving() > 0 && !prepForNewRank && uiStateMachine.canInteract())
     {
