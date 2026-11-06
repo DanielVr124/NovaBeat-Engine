@@ -18,6 +18,7 @@ import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MenuList.NavControls;
 import funkin.util.SwipeUtil;
+import funkin.util.DeviceUtil;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -183,8 +184,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     items.onChange.add(function(selected:TextMenuItem)
     {
-      if (items.selectedIndex >= 0 && items.selectedIndex < descriptions.length)
-        descriptionText.text = descriptions[items.selectedIndex];
       updateRowHighlights();
     });
     add(items);
@@ -194,9 +193,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       add(makeLabel(margin + 28, panelTop + 28, width * 0.32, 'VISUAL SETTINGS', 12, 0xFF48E7FF));
       descriptionText = makeLabel(margin + 28, panelTop + 86, width * 0.32,
         descriptions[0], 16, 0xFFB6C7E5);
-      descriptionText.wordWrap = true;
-      descriptionText.autoSize = false;
-      add(descriptionText);
+      descriptionText.visible = false;
       add(makeLabel(margin + 28, panelTop + panelHeight - 60, width * 0.32,
         'CHANGES SAVE AUTOMATICALLY', 10, 0xFF8297C2));
     }
@@ -217,8 +214,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     updateRowHighlights();
 
     #if FEATURE_TOUCH_CONTROLS
-    responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
-    add(responsiveBackButton);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
+      add(responsiveBackButton);
+    }
     #end
   }
 
@@ -299,8 +299,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     layoutFNFItems();
 
     #if FEATURE_TOUCH_CONTROLS
-    responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    add(responsiveBackButton);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+      add(responsiveBackButton);
+    }
     #end
   }
 
