@@ -1547,8 +1547,11 @@ class FreeplayState extends MusicBeatSubState
     fadeDots(false);
 
     #if FEATURE_TOUCH_CONTROLS
-    backTransitioning = true;
-    FlxTween.tween(backButton, {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
+    if (DeviceUtil.isMobileBrowser && backButton != null)
+    {
+      backTransitioning = true;
+      FlxTween.tween(backButton, {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
+    }
     #end
 
     funnyCam.filtersEnabled = true;
@@ -1687,7 +1690,7 @@ class FreeplayState extends MusicBeatSubState
     if (uiStateMachine.canInteract())
     {
       if ((controls.FREEPLAY_CHAR_SELECT && !fromCharSelect #if FEATURE_TOUCH_CONTROLS
-        || (TouchUtil.pressAction(djHitbox, funnyCam, false) && !SwipeUtil.swipeAny) #end)
+        || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(djHitbox, funnyCam, false) && !SwipeUtil.swipeAny) #end)
         && !FlxG.debugger.visible)
       {
         tryOpenCharSelect();
@@ -1758,9 +1761,12 @@ class FreeplayState extends MusicBeatSubState
     if (!uiStateMachine.canInteract() || (stickerSubState?.switchingState ?? false)) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    handleTouchCapsuleClick();
-    handleTouchFavoritesAndDifficulties();
-    handleTouchSelectionScroll(elapsed);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      handleTouchCapsuleClick();
+      handleTouchFavoritesAndDifficulties();
+      handleTouchSelectionScroll(elapsed);
+    }
     #end
 
     updateFreeplayHintText();
@@ -1781,13 +1787,13 @@ class FreeplayState extends MusicBeatSubState
     handleDebugKeys();
 
     #if FEATURE_TOUCH_CONTROLS
-    if (TouchUtil.justReleased)
+    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased)
     {
       _pressedOnSelected = false;
       _pressedOnCapsule = false;
     }
 
-    if (!TouchUtil.pressed && !SwipeUtil.flickManager.initialized)
+    if (DeviceUtil.isMobileBrowser && !TouchUtil.pressed && !SwipeUtil.flickManager.initialized)
     {
       _flickEnded = true;
       draggingDifficulty = false;
@@ -1844,8 +1850,8 @@ class FreeplayState extends MusicBeatSubState
     if (!uiStateMachine.canInteract()) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    final leftPressed:Bool = controls.UI_LEFT_P || TouchUtil.pressAction(diffSelLeft, funnyCam, false);
-    final rightPressed:Bool = controls.UI_RIGHT_P || TouchUtil.pressAction(diffSelRight, funnyCam, false);
+    final leftPressed:Bool = controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(diffSelLeft, funnyCam, false));
+    final rightPressed:Bool = controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(diffSelRight, funnyCam, false));
     #else
     final leftPressed:Bool = controls.UI_LEFT_P;
     final rightPressed:Bool = controls.UI_RIGHT_P;
@@ -2021,6 +2027,7 @@ class FreeplayState extends MusicBeatSubState
 
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
+    if (!DeviceUtil.isMobileBrowser) return;
     if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && TouchUtil.pressed))) return;
     if (TouchUtil.pressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
@@ -2131,6 +2138,8 @@ class FreeplayState extends MusicBeatSubState
 
   function handleTouchFavoritesAndDifficulties()
   {
+    if (!DeviceUtil.isMobileBrowser) return;
+
     // Note: I was a bit evil, and used `draggingDifficulty` for the DifficultySprite dragging as well!
 
     if ((TouchUtil.pressed || TouchUtil.justReleased))
