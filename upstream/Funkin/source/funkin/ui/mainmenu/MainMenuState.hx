@@ -364,8 +364,8 @@ class MainMenuState extends MusicBeatState
     }
 
     var selectedItem:MenuListItem = menuItems.members[menuItems.selectedIndex];
-    // Keep the camera centered on the currently outlined item on touch devices too.
-    camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+      camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -478,8 +478,8 @@ class MainMenuState extends MusicBeatState
   function onMenuItemChange(selected:MenuListItem)
   {
     layoutMenuItems();
-    // Selection changes must move the camera on mobile as well as desktop.
-    camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+      camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
   }
 
   #if FEATURE_OPEN_URL
