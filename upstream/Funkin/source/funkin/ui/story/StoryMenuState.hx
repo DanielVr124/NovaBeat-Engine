@@ -15,7 +15,6 @@ import funkin.audio.FunkinSound;
 import funkin.Preferences;
 import funkin.data.story.level.LevelRegistry;
 import funkin.data.song.SongRegistry;
-import funkin.graphics.FunkinSprite;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.play.PlayStatePlaylist;
@@ -83,8 +82,6 @@ class StoryMenuState extends MusicBeatState
    * The background behind the props.
    */
   var levelBackground:FlxSprite;
-  var levelBackgroundCover:Null<FunkinSprite> = null;
-  var weekListPanel:Null<FunkinSprite> = null;
   var baseLevelBackgroundWidth:Float = 0;
   var baseLevelBackgroundHeight:Float = 0;
 
@@ -168,23 +165,6 @@ class StoryMenuState extends MusicBeatState
     baseLevelBackgroundWidth = levelBackground.frameWidth;
     baseLevelBackgroundHeight = levelBackground.frameHeight;
 
-    var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
-    levelBackgroundCover = black;
-    black.zIndex = levelBackground.zIndex - 1;
-    add(black);
-
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      // Preserve the custom full-screen backdrop while restoring a dark panel
-      // behind the scrolling week titles.
-      weekListPanel = new FunkinSprite();
-      weekListPanel.makeSolidColor(1, 1, 0xD9000000);
-      weekListPanel.scrollFactor.set();
-      weekListPanel.zIndex = levelTitles.zIndex - 1;
-      add(weekListPanel);
-      layoutNovaBeatWeekPanel(FlxG.width, FlxG.height);
-    }
-
     levelProps = new FlxTypedGroup<LevelProp>();
     levelProps.zIndex = 1000;
     add(levelProps);
@@ -256,45 +236,16 @@ class StoryMenuState extends MusicBeatState
     if (width <= 0 || height <= 0 || levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
 
     var portrait:Bool = height > width * 1.12;
-    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
     var margin:Float = Math.max(18, width * 0.045);
 
-    // Store source-frame dimensions, not the already-scaled display dimensions.
+    // Story Mode keeps the stock FNF layout in both styles. Only the artwork
+    // behind it changes; always cover-fit the selected custom background.
     if (baseLevelBackgroundWidth <= 0) baseLevelBackgroundWidth = levelBackground.frameWidth;
     if (baseLevelBackgroundHeight <= 0) baseLevelBackgroundHeight = levelBackground.frameHeight;
-
-    if (novaBeatStyle || portrait)
-    {
-      // NovaBeat uses a full-screen backdrop. Portrait FNF uses a cover-fit
-      // backdrop too, but normal landscape FNF must retain its original 400px
-      // week strip instead of being enlarged to the entire viewport.
-      var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
-      levelBackground.scale.set(backgroundScale, backgroundScale);
-      levelBackground.updateHitbox();
-      levelBackground.screenCenter();
-    }
-    else
-    {
-      levelBackground.scale.set(1, 1);
-      levelBackground.updateHitbox();
-      levelBackground.setPosition(0, 56);
-    }
-
-    if (levelBackgroundCover != null)
-    {
-      if (novaBeatStyle || portrait)
-      {
-        levelBackgroundCover.makeSolidColor(width, height, FlxColor.BLACK);
-        levelBackgroundCover.setPosition(0, 0);
-      }
-      else
-      {
-        levelBackgroundCover.makeSolidColor(width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
-        levelBackgroundCover.setPosition(levelBackground.x, 0);
-      }
-    }
-
-    layoutNovaBeatWeekPanel(width, height);
+    var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
+    levelBackground.scale.set(backgroundScale, backgroundScale);
+    levelBackground.updateHitbox();
+    levelBackground.screenCenter();
 
     if (portrait)
     {
@@ -341,7 +292,7 @@ class StoryMenuState extends MusicBeatState
       tracklistText.setFormat('VCR OSD Mono', 32);
       tracklistText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
       tracklistText.alignment = CENTER;
-      tracklistText.y = novaBeatStyle ? height * 0.76 : levelBackground.y + levelBackground.height + 100;
+      tracklistText.y = height * 0.77;
       tracklistText.screenCenter(X);
       tracklistText.x -= width * 0.33;
 
@@ -644,21 +595,6 @@ class StoryMenuState extends MusicBeatState
 
     updateData();
 
-    for (index in 0...levelTitles.members.length)
-    {
-      var item:LevelTitle = levelTitles.members[index];
-
-      if (index == currentIndex)
-      {
-        currentLevelTitle = item;
-        item.alpha = 1.0;
-      }
-      else
-      {
-        item.alpha = 0.6;
-      }
-    }
-
     if (currentIndex != prevIndex) playNavigationSound();
 
     repositionTitles();
@@ -802,101 +738,23 @@ class StoryMenuState extends MusicBeatState
     });
   }
 
-  function layoutNovaBeatWeekPanel(width:Int, height:Int):Void
-  {
-    if (weekListPanel == null || width <= 0 || height <= 0) return;
-
-    var portrait:Bool = height > width * 1.12;
-    var panelWidth:Float = portrait ? width * 0.86 : Math.min(width * 0.68, 820);
-    var panelHeight:Float = portrait ? height * 0.30 : height * 0.56;
-    var panelY:Float = portrait ? height * 0.24 : height * 0.29;
-
-    weekListPanel.makeSolidColor(Std.int(panelWidth), Std.int(panelHeight), 0xD9000000);
-    weekListPanel.setPosition((width - panelWidth) * 0.5, panelY);
-  }
-
   function updateBackground(?previousLevelId:String = ''):Void
   {
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      // Use the same artwork that Freeplay displays behind its song list.
-      // Keep it as a full-screen cover image so it remains consistent across aspect ratios.
-      if (levelBackground == null)
-      {
-        levelBackground = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-        var backgroundScale:Float = Math.max(FlxG.width / levelBackground.width, FlxG.height / levelBackground.height);
-        levelBackground.scale.set(backgroundScale, backgroundScale);
-        levelBackground.updateHitbox();
-        levelBackground.screenCenter();
-        levelBackground.scrollFactor.set();
-        // Keep the artwork behind the original Story Mode level titles,
-        // track list, difficulty selector, and character props.
-        levelBackground.zIndex = -100;
-        levelBackground.alpha = 1.0;
-        add(levelBackground);
-      }
-      return;
-    }
+    // The Story Mode request is the original FNF screen with its yellow
+    // week background replaced by the current NovaBeat menu artwork. Do not
+    // swap back to per-week solid colours or images when the selected week
+    // changes; the week titles, song list, difficulty and props remain stock.
+    if (levelBackground != null) return;
 
-    if (levelBackground == null || previousLevelId == '')
-    {
-      // Build a new background and display it immediately.
-      levelBackground = currentLevel.buildBackground();
-      levelBackground.x = 0;
-      levelBackground.y = 56;
-      levelBackground.zIndex = 100;
-      levelBackground.alpha = 1.0; // Not hidden.
-      add(levelBackground);
-    }
-    else
-    {
-      var previousLevel = LevelRegistry.instance.fetchEntry(previousLevelId);
-
-      if (currentLevel.isBackgroundSimple() && previousLevel.isBackgroundSimple())
-      {
-        var previousColor:FlxColor = previousLevel.getBackgroundColor();
-        var currentColor:FlxColor = currentLevel.getBackgroundColor();
-        if (previousColor != currentColor)
-        {
-          // Both the previous and current level were simple backgrounds.
-          // Fade between colors directly, rather than fading one background out and another in.
-          // cancels potential tween in progress, and tweens from there
-          FlxTween.cancelTweensOf(levelBackground);
-          FlxTween.color(levelBackground, 0.9, levelBackground.color, currentColor, {ease: FlxEase.quartOut});
-        }
-        else
-        {
-          // Do no fade at all if the colors aren't different.
-        }
-      }
-      else
-      {
-        // Either the previous or current level has a complex background.
-        // We need to fade the old background out and the new one in.
-
-        // Reference the old background and fade it out.
-        var oldBackground:FlxSprite = levelBackground;
-        FlxTween.tween(oldBackground, {alpha: 0.0}, 0.6, {
-          ease: FlxEase.linear,
-          onComplete: function(_)
-          {
-            remove(oldBackground);
-          }
-        });
-
-        // Build a new background and fade it in.
-        levelBackground = currentLevel.buildBackground();
-        levelBackground.x = 0;
-        levelBackground.y = 56;
-        levelBackground.alpha = 0.0; // Hidden to start.
-        levelBackground.zIndex = 100;
-        add(levelBackground);
-
-        FlxTween.tween(levelBackground, {alpha: 1.0}, 0.6, {
-          ease: FlxEase.linear
-        });
-      }
-    }
+    levelBackground = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
+    var backgroundScale:Float = Math.max(FlxG.width / levelBackground.width, FlxG.height / levelBackground.height);
+    levelBackground.scale.set(backgroundScale, backgroundScale);
+    levelBackground.updateHitbox();
+    levelBackground.screenCenter();
+    levelBackground.scrollFactor.set();
+    levelBackground.zIndex = -100;
+    levelBackground.alpha = 1.0;
+    add(levelBackground);
   }
 
   function updateProps():Void
@@ -931,9 +789,7 @@ class StoryMenuState extends MusicBeatState
       tracklistText.x -= (FlxG.width * 0.33);
       // NovaBeat uses full-screen art, so its tracks need a fixed on-screen
       // anchor instead of being placed below the bottom of that artwork.
-      tracklistText.y = Preferences.menuStyle == "NovaBeat"
-        ? FlxG.height * 0.76
-        : levelBackground.y + levelBackground.height + 100;
+      tracklistText.y = FlxG.height * 0.77;
     }
 
     var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
@@ -964,6 +820,16 @@ class StoryMenuState extends MusicBeatState
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : 480;
+
+    // The week title immediately above the selected week is intentionally
+    // hidden; all other week titles keep the stock FNF carousel treatment.
+    for (index in 0...levelTitles.members.length)
+    {
+      var item:LevelTitle = levelTitles.members[index];
+      item.visible = index != currentIndex - 1;
+      item.alpha = index == currentIndex ? 1.0 : 0.6;
+      if (index == currentIndex) currentLevelTitle = item;
+    }
 
     // Every item above it should be positioned in relation to the next item.
     if (currentIndex > 0)
