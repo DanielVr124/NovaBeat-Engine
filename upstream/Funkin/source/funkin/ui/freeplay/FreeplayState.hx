@@ -868,7 +868,8 @@ class FreeplayState extends MusicBeatSubState
     }
     #end
 
-    if (Preferences.menuStyle == "NovaBeat") buildNovaBeatFreeplayHeader();
+    // Keep the stock FREEPLAY label in both styles. The old NovaBeat-only
+    // header duplicated it at the top-left of this screen.
 
     if (prepForNewRank)
     {
@@ -1637,7 +1638,9 @@ class FreeplayState extends MusicBeatSubState
 
       for (spr in grpSpr)
       {
-        if (spr == null) continue;
+        // onDJIntroDone owns the difficulty group's final position. Restoring
+        // it here as well creates two competing tweens after character select.
+        if (spr == null || spr == grpDifficulties) continue;
 
         var moveDataY = exitMoversCharSel.get(grpSpr)?.y ?? spr.y;
         var moveDataSpeed = exitMoversCharSel.get(grpSpr)?.speed ?? 0.2;
@@ -2575,15 +2578,12 @@ class FreeplayState extends MusicBeatSubState
         }
       });
 
-      diffSprite.offset.y += 5;
+      // Keep the sprite's original size and offset. Multiplying its height and
+      // adding to its offset on every difficulty change made the artwork drift
+      // and grow differently depending on how often each difficulty was used.
       diffSprite.alpha = 0.5;
-      new FlxTimer().start(1 / 24, function(swag)
-      {
-        diffSprite.alpha = 1;
-        diffSprite.updateHitbox();
-        diffSprite.visible = true;
-        diffSprite.height *= 2.5;
-      });
+      diffSprite.visible = true;
+      FlxTween.tween(diffSprite, {alpha: 1}, 0.2, {ease: FlxEase.quartOut});
     }
 
     // refreshDots(songDifficulties.length, currentDifficultyIndex, prevDifficultyIndex);
