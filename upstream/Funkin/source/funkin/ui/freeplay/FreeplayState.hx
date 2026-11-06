@@ -1787,7 +1787,7 @@ class FreeplayState extends MusicBeatSubState
       _pressedOnCapsule = false;
     }
 
-    if (!TouchUtil.pressed && !FlxG.touches.flickManager.initialized)
+    if (!TouchUtil.pressed && !SwipeUtil.flickManager.initialized)
     {
       _flickEnded = true;
       draggingDifficulty = false;
@@ -2030,6 +2030,31 @@ class FreeplayState extends MusicBeatSubState
     }
 
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
+    #if web
+    if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)
+    {
+      final pointer = TouchUtil.touch;
+      if (pointer != null && pointer.pressed && _pressedOnCapsule)
+      {
+        final delta = pointer.deltaViewY * framerateMultiplier;
+        if (Math.isFinite(delta) && Math.abs(delta) >= 2)
+        {
+          var dpiScale = FlxG.stage.window.display.dpi / 160;
+          dpiScale = dpiScale.clamp(0.5, 2);
+          var moveLength = delta / FlxG.updateFramerate / dpiScale;
+          _moveLength += Math.abs(moveLength);
+          curSelectedFloat -= moveLength;
+          updateSongsScroll();
+        }
+      }
+      else if (pointer != null && pointer.justReleased && _moveLength > 0)
+      {
+        _moveLength = 0.0;
+        changeSelection(0);
+      }
+    }
+    #end
+
     for (touch in FlxG.touches.list)
     {
       if (touch.pressed && _pressedOnCapsule)
@@ -2056,12 +2081,12 @@ class FreeplayState extends MusicBeatSubState
     }
     if (!TouchUtil.overlaps(capsuleHitbox, funnyCam) && TouchUtil.justReleased)
     {
-      FlxG.touches.flickManager.destroy();
+      SwipeUtil.flickManager.destroy();
     }
 
-    if (FlxG.touches.flickManager.initialized)
+    if (SwipeUtil.flickManager.initialized)
     {
-      var flickVelocity = FlxG.touches.flickManager.velocity.y * framerateMultiplier;
+      var flickVelocity = SwipeUtil.flickManager.velocity.y * framerateMultiplier;
       if (Math.isFinite(flickVelocity))
       {
         _flickEnded = false;
@@ -2092,9 +2117,9 @@ class FreeplayState extends MusicBeatSubState
       grpCapsules.members[i].selected = (i == curSelected);
     }
 
-    if (!TouchUtil.pressed && (curSelected == 0 || curSelected == grpCapsules.countLiving() - 1) && FlxG.touches.flickManager.initialized)
+    if (!TouchUtil.pressed && (curSelected == 0 || curSelected == grpCapsules.countLiving() - 1) && SwipeUtil.flickManager.initialized)
     {
-      FlxG.touches.flickManager.destroy();
+      SwipeUtil.flickManager.destroy();
       _flickEnded = true;
       if (_moveLength > 0)
       {
@@ -2118,14 +2143,14 @@ class FreeplayState extends MusicBeatSubState
           dj?.onPlayerAction(); // dj?.resetAFKTimer();
           changeDiff(-1, false, true);
           _pressedOnSelected = false;
-          FlxG.touches.flickManager.destroy();
+          SwipeUtil.flickManager.destroy();
           _flickEnded = true;
 
           new FlxTimer().start(0.21, (afteranim) ->
           {
             currentCapsule.doLerp = true;
             generateSongList(currentFilter, true, false, true);
-            FlxG.touches.flickManager.destroy();
+            SwipeUtil.flickManager.destroy();
           });
           new FlxTimer().start(0.3, (afteranim) ->
           {
@@ -2139,14 +2164,14 @@ class FreeplayState extends MusicBeatSubState
           dj?.onPlayerAction(); // dj?.resetAFKTimer();
           changeDiff(1, false, true);
           _pressedOnSelected = false;
-          FlxG.touches.flickManager.destroy();
+          SwipeUtil.flickManager.destroy();
           _flickEnded = true;
 
           new FlxTimer().start(0.21, (afteranim) ->
           {
             currentCapsule.doLerp = true;
             generateSongList(currentFilter, true, false, true);
-            FlxG.touches.flickManager.destroy();
+            SwipeUtil.flickManager.destroy();
           });
           new FlxTimer().start(0.3, (afteranim) ->
           {
@@ -2192,7 +2217,7 @@ class FreeplayState extends MusicBeatSubState
 
       if (TouchUtil.justReleased)
       {
-        FlxG.touches.flickManager.destroy();
+        SwipeUtil.flickManager.destroy();
         handleDiffDragRelease(currentDifficultySprite);
         return;
       }
@@ -2499,7 +2524,7 @@ class FreeplayState extends MusicBeatSubState
         onComplete: function(_)
         {
           #if FEATURE_TOUCH_CONTROLS
-          FlxG.touches.flickManager.destroy();
+          SwipeUtil.flickManager.destroy();
           _flickEnded = true;
           #end
         }
@@ -2568,7 +2593,7 @@ class FreeplayState extends MusicBeatSubState
     dj?.onPlayerAction(); // dj?.resetAFKTimer();
     changeDiff(change);
     generateSongList(currentFilter, true, false);
-    FlxG.touches.flickManager.destroy();
+    SwipeUtil.flickManager.destroy();
     _flickEnded = true;
     _dragOffset = 0;
     draggingDifficulty = false;

@@ -104,6 +104,27 @@ class SwipeUtil
   static final MIN_SWIPE_DISTANCE:Float = 20;
 
   /**
+   * Flick manager for the active input source. Browser touch contacts use the
+   * touch manager; Quest controller/hand-ray clicks and desktop pointers use
+   * the mouse manager.
+   */
+  public static var flickManager(get, never):Dynamic;
+
+  static function get_flickManager():Dynamic
+  {
+    #if mobile
+    return FlxG.touches.flickManager;
+    #elseif web
+    #if FLX_TOUCH
+    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager;
+    #end
+    return FlxG.mouse.flickManager;
+    #else
+    return FlxG.mouse.flickManager;
+    #end
+  }
+
+  /**
    * Updates the swipe threshold based on the provided group.
    *
    * @param items The array whose items' positions are used to calculate the swipe threshold.
