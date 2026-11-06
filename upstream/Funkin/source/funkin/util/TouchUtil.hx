@@ -183,15 +183,19 @@ class TouchUtil
   @:noCompletion
   static function get_touch():Dynamic
   {
-    // Some mobile browsers (including Quest Browser) expose taps through the
-    // mouse pointer path instead of FlxTouch. Prefer an active browser pointer
-    // gesture so stale or synthesized touch records cannot mask the real click.
-    if (DeviceUtil.isMobileBrowser && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
-      return FlxG.mouse;
+    // On phones and Quest, the mouse is a browser pointer transport rather
+    // than a desktop cursor. Keep the native mouse cursor hidden regardless
+    // of which input source is active.
+    if (DeviceUtil.isMobileBrowser) FlxG.mouse.visible = false;
 
     #if FLX_TOUCH
-    // Prefer an actively held contact. A just-released touch remains a fallback
-    // for the release frame, but it must not mask another finger still held.
+    // Prefer the actual touch contact when the browser supplies both touch
+    // and synthesized mouse events for the same tap. Choosing the mouse first
+    // can make the title/menu listen to a different release than the visible
+    // touch pointer, so the tap appears to do nothing.
+    //
+    // A released contact is retained for its release frame, but an actively
+    // held finger always takes priority for multi-touch correctness.
     var releasedTouch:Null<FlxTouch> = null;
     for (touch in FlxG.touches.list)
     {
@@ -203,9 +207,8 @@ class TouchUtil
     if (releasedTouch != null) return releasedTouch;
     #end
 
-    // On phones and Quest, mouse input is only the browser's pointer/ray
-    // transport. Never draw a desktop cursor over the game view.
-    if (DeviceUtil.isMobileBrowser) FlxG.mouse.visible = false;
+    // Quest controller/ray clicks and browsers that only expose mouse events
+    // still work through the mouse fallback when no touch contact is active.
     return FlxG.mouse;
   }
   #else
