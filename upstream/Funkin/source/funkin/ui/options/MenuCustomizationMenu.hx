@@ -89,7 +89,9 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
     var compactLayout:Bool = width < 950 || height > width * 1.12;
-    rightSideLayout = !compactLayout && width > height;
+    // This page reflows to the single-column settings list on viewport sync.
+    // Build that layout immediately so no stale sidebar labels remain behind.
+    rightSideLayout = false;
     var margin:Float = compactLayout ? 20 : 46;
     var panelTop:Float = 98;
     var panelHeight:Float = Math.max(170, height - 150);
