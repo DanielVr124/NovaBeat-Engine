@@ -449,7 +449,11 @@ class SongMenuItem extends FlxSpriteGroup
     else
     {
       songText.text = freeplayData.fullSongName;
-      if (freeplayData.songCharacter != null) pixelIcon.setCharacter(freeplayData.songCharacter);
+      if (freeplayData.songCharacter != null)
+      {
+        pixelIcon.setCharacter(freeplayData.songCharacter);
+        updateResponsiveScale();
+      }
       if (pixelIcon.char != freeplayData.songCharacter) pixelIcon.visible = false;
       updateBPM(Std.int(freeplayData.songStartingBpm) ?? 0);
       updateDifficultyRating(freeplayData.difficultyRating ?? 0);
@@ -685,6 +689,14 @@ class SongMenuItem extends FlxSpriteGroup
     var portrait:Bool = height > width * 1.12;
     var layoutScale:Float = portrait ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled)) : 1.0;
     scale.set(layoutScale, layoutScale);
+
+    // Keep the original Freeplay character icon at its intended on-screen size
+    // while the song capsule itself is reduced to fit a portrait viewport.
+    if (pixelIcon != null)
+    {
+      pixelIcon.setPosition(160 / layoutScale, 35 / layoutScale);
+      pixelIcon.scale.set(2 / layoutScale, 2 / layoutScale);
+    }
   }
 
   override function update(elapsed:Float):Void
