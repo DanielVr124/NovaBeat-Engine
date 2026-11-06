@@ -10,7 +10,6 @@ import funkin.graphics.FunkinSprite;
 class PixelatedIcon extends FunkinSprite
 {
   public var char:String;
-  var hasAnimationFinishHandler:Bool = false;
 
   public function new(x:Float, y:Float)
   {
@@ -25,17 +24,7 @@ class PixelatedIcon extends FunkinSprite
 
   public function setCharacter(char:String):Void
   {
-    if (this.char == char)
-    {
-      // A previous song without an icon can hide this recycled sprite.
-      // Reusing the same valid character must make it visible again.
-      this.visible = true;
-      return;
-    }
-
-    // A recycled icon may still be running the previous character's animation.
-    this.active = false;
-    this.animation.stop();
+    if (this.char == char) return;
 
     var charPath:String = "freeplay/icons/";
 
@@ -97,22 +86,12 @@ class PixelatedIcon extends FunkinSprite
       this.animation.addByPrefix('confirm', 'confirm0', 10, false);
       this.animation.addByPrefix('confirm-hold', 'confirm-hold0', 10, true);
 
-      if (!hasAnimationFinishHandler)
+      this.animation.onFinish.add(function(name:String):Void
       {
-        this.animation.onFinish.add(function(name:String):Void
-        {
-          if (name == 'confirm') this.animation.play('confirm-hold');
-        });
-        hasAnimationFinishHandler = true;
-      }
+        if (name == 'confirm') this.animation.play('confirm-hold');
+      });
 
-      this.animation.play('idle', true);
-    }
-    else
-    {
-      // Static icons must not keep updating an animation from a previous icon.
-      this.active = false;
-      this.animation.stop();
+      this.animation.play('idle');
     }
   }
 }
