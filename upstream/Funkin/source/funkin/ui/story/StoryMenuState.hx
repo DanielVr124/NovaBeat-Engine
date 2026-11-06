@@ -223,8 +223,6 @@ class StoryMenuState extends MusicBeatState
     changeLevel();
     refresh();
 
-    if (Preferences.menuStyle == "NovaBeat") buildNovaBeatStoryHeader();
-
     #if FEATURE_DISCORD_RPC
     // Updating Discord Rich Presence
     DiscordClient.instance.setPresence({state: 'In the Menus', details: null});
@@ -758,7 +756,9 @@ class StoryMenuState extends MusicBeatState
         levelBackground.updateHitbox();
         levelBackground.screenCenter();
         levelBackground.scrollFactor.set();
-        levelBackground.zIndex = 100;
+        // Keep the artwork behind the original Story Mode level titles,
+        // track list, difficulty selector, and character props.
+        levelBackground.zIndex = -100;
         levelBackground.alpha = 1.0;
         add(levelBackground);
       }
