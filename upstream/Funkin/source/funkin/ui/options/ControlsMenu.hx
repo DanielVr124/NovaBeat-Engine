@@ -4,6 +4,8 @@ import funkin.util.InputUtil;
 import funkin.Preferences;
 import flixel.FlxCamera;
 import flixel.FlxSprite;
+import flixel.text.FlxText;
+import flixel.text.FlxText.FlxTextAlign;
 import flixel.FlxObject;
 import funkin.graphics.FunkinCamera;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -72,6 +74,11 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   var novaBeatStyle:Bool = false;
   var novaBeatRows:FlxTypedGroup<FunkinSprite>;
   var headersLayer:FlxTypedGroup<AtlasText>;
+  var novaBeatTextLayer:FlxTypedGroup<FlxText>;
+  var novaBeatRowText:Array<FlxText> = [];
+  var novaBeatHeaderText:Array<FlxText> = [];
+  var novaBeatDeviceText:Array<FlxText> = [];
+  var novaBeatBindingText:Array<FlxText> = [];
   var novaBeatRowBackgrounds:Array<FunkinSprite> = [];
   var bindingPlates:Array<FunkinSprite> = [];
   var controlRowBaseY:Array<Float> = [];
@@ -106,6 +113,8 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     var headers:FlxTypedGroup<AtlasText> = headersLayer;
     controlGrid = new MenuTypedList(Columns(COLUMNS), Vertical);
     controlGrid.cameras = [menuCamera];
+    novaBeatTextLayer = new FlxTypedGroup<FlxText>();
+    novaBeatTextLayer.cameras = [menuCamera];
 
     add(labels);
     add(headers);
@@ -138,12 +147,28 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       item = deviceList.createItem('Keyboard', AtlasFont.BOLD, selectDevice.bind(Keys));
       item.x = novaBeatStyle ? FlxG.width * 0.38 : FlxG.width / 2 - item.width - 30;
       item.y = novaBeatStyle ? 99 : (devicesBg.height - item.height) / 2;
-      if (novaBeatStyle) item.atlasText.color = 0xFF48E7FF;
+      if (novaBeatStyle)
+      {
+        item.atlasText.visible = false;
+        var deviceLabel:FlxText = new FlxText(0, item.y + 2, 160, 'KEYBOARD', 14);
+        deviceLabel.setFormat("Arial Black", 14, 0xFF63E8FF, FlxTextAlign.CENTER);
+        deviceLabel.cameras = [menuCamera];
+        novaBeatTextLayer.add(deviceLabel);
+        novaBeatDeviceText.push(deviceLabel);
+      }
 
       item = deviceList.createItem('Gamepad', AtlasFont.BOLD, selectDevice.bind(Gamepad(FlxG.gamepads.firstActive.id)));
       item.x = novaBeatStyle ? FlxG.width * 0.58 : FlxG.width / 2 + 30;
       item.y = novaBeatStyle ? 99 : (devicesBg.height - item.height) / 2;
-      if (novaBeatStyle) item.atlasText.color = 0xFF48E7FF;
+      if (novaBeatStyle)
+      {
+        item.atlasText.visible = false;
+        var deviceLabel:FlxText = new FlxText(0, item.y + 2, 160, 'GAMEPAD', 14);
+        deviceLabel.setFormat("Arial Black", 14, 0xFF63E8FF, FlxTextAlign.CENTER);
+        deviceLabel.cameras = [menuCamera];
+        novaBeatTextLayer.add(deviceLabel);
+        novaBeatDeviceText.push(deviceLabel);
+      }
     }
 
     // FlxG.debugger.drawDebug = true;
@@ -228,14 +253,35 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       controlRowBaseY.push(y);
       label.cameras = [menuCamera];
       label.alpha = novaBeatStyle ? 1.0 : 0.6;
-      if (novaBeatStyle) label.color = 0xFFB9C8E3;
+      if (novaBeatStyle)
+      {
+        label.visible = false;
+        var modernLabel:FlxText = new FlxText(labelX, y + 5, FlxG.width * 0.43, formatName, 15);
+        modernLabel.setFormat("Arial Black", 15, 0xFFDCEBFF, FlxTextAlign.LEFT);
+        modernLabel.cameras = [menuCamera];
+        novaBeatTextLayer.add(modernLabel);
+        novaBeatRowText.push(modernLabel);
+      }
+      else
+      {
+        if (novaBeatStyle) label.color = 0xFFB9C8E3;
+      }
 
       for (i in 0...COLUMNS)
       {
         var bindX:Float = novaBeatStyle
           ? (i == 0 ? FlxG.width * 0.57 + 12 : FlxG.width * 0.78 + 12)
           : label.x + CONTROL_MARGIN_X + i * CONTROL_SPACING_X;
-        createItem(bindX, y, control, i);
+        var binding:InputItem = createItem(bindX, y, control, i);
+        if (novaBeatStyle)
+        {
+          binding.atlasText.visible = false;
+          var bindingLabel:FlxText = new FlxText(bindX, y + 5, 132, binding.getLabel(binding.input), 14);
+          bindingLabel.setFormat("Arial", 14, 0xFF63E8FF, FlxTextAlign.CENTER);
+          bindingLabel.cameras = [menuCamera];
+          novaBeatTextLayer.add(bindingLabel);
+          novaBeatBindingText.push(bindingLabel);
+        }
       }
 
       y += spacer;
@@ -269,6 +315,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       if (novaBeatStyle) updateNovaBeatControlSelection();
     });
     if (novaBeatStyle && deviceList == null) updateNovaBeatControlSelection();
+    if (novaBeatStyle) add(novaBeatTextLayer);
 
     prompt = new Prompt("\nPress any key to rebind\n\n\nBackspace to unbind\n    Escape to cancel", None);
     prompt.create();
@@ -311,6 +358,12 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       header.x = Math.max(20, FlxG.width * 0.035) + 30;
       header.color = 0xFF48E7FF;
+      header.visible = false;
+      var modernHeader:FlxText = new FlxText(header.x, y + 3, 260, title, 14);
+      modernHeader.setFormat("Arial Black", 14, 0xFF48E7FF, FlxTextAlign.LEFT);
+      modernHeader.cameras = [menuCamera];
+      novaBeatTextLayer.add(modernHeader);
+      novaBeatHeaderText.push(modernHeader);
     }
     else
     {
@@ -341,7 +394,13 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     }
     for (index in 0...controlGrid.members.length)
     {
-      controlGrid.members[index].atlasText.color = index == controlGrid.selectedIndex ? 0xFFFFFFFF : 0xFF6FD8EB;
+      if (index < novaBeatBindingText.length)
+      {
+        var label:FlxText = novaBeatBindingText[index];
+        label.color = index == controlGrid.selectedIndex ? FlxColor.WHITE : 0xFF63E8FF;
+        var binding:InputItem = controlGrid.members[index];
+        label.text = binding.getLabel(binding.input);
+      }
     }
   }
 
@@ -355,7 +414,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (novaBeatStyle)
     {
-      item.atlasText.color = 0xFF6FD8EB;
+      item.atlasText.visible = false;
       item.cameras = [menuCamera];
     }
 
@@ -679,6 +738,13 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         deviceItem.y = novaBeatStyle ? 99 : 35;
         deviceItem.x = index == 0 ? width * (portrait ? 0.27 : 0.38) - deviceItem.width * 0.5
           : width * (portrait ? 0.73 : 0.62) - deviceItem.width * 0.5;
+        if (novaBeatStyle && index < novaBeatDeviceText.length)
+        {
+          var deviceLabel:FlxText = novaBeatDeviceText[index];
+          deviceLabel.setPosition(deviceItem.x + deviceItem.width * 0.5 - 80, deviceItem.y + 2);
+          deviceLabel.fieldWidth = 160;
+          deviceLabel.size = portrait ? 12 : 14;
+        }
       }
     }
 
@@ -690,6 +756,13 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       label.x = margin + (novaBeatStyle ? 18 : 8);
       label.y = y;
       label.scale.set(portrait ? 0.82 : 1.0, portrait ? 0.82 : 1.0);
+      if (novaBeatStyle && index < novaBeatRowText.length)
+      {
+        var modernLabel:FlxText = novaBeatRowText[index];
+        modernLabel.setPosition(margin + 18, y + 5);
+        modernLabel.fieldWidth = width * 0.43;
+        modernLabel.size = portrait ? 12 : 15;
+      }
       if (novaBeatStyle && index < novaBeatRowBackgrounds.length)
       {
         var rowW:Float = width - margin * 2 - 24;
@@ -726,6 +799,14 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
             var plateX:Float = width * (portrait ? (column == 0 ? 0.55 : 0.80) : (column == 0 ? 0.57 : 0.78));
             plate.setPosition(plateX - (portrait ? 36 : 8), y - 2);
             plate.makeSolidColor(portrait ? 74 : 150, portrait ? 38 : 42, 0xFF142747);
+            var bindingIndex:Int = firstPlate + column;
+            if (bindingIndex < novaBeatBindingText.length)
+            {
+              var bindingLabel:FlxText = novaBeatBindingText[bindingIndex];
+              bindingLabel.setPosition(plate.x + 4, plate.y + (plate.height - bindingLabel.height) * 0.5);
+              bindingLabel.fieldWidth = plate.width - 8;
+              bindingLabel.size = portrait ? 10 : 14;
+            }
           }
         }
       }
@@ -739,6 +820,12 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       header.x = margin + 18;
       header.y = rowTop + (baseY - firstBaseY) * yScale;
       header.scale.set(portrait ? 0.85 : 1.0, portrait ? 0.85 : 1.0);
+      if (novaBeatStyle && index < novaBeatHeaderText.length)
+      {
+        var modernHeader:FlxText = novaBeatHeaderText[index];
+        modernHeader.setPosition(header.x, header.y + 3);
+        modernHeader.size = portrait ? 12 : 14;
+      }
     }
 
     if (camFollow != null)
