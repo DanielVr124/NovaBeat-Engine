@@ -68,6 +68,9 @@ import funkin.ui.transition.LoadingState;
 import funkin.util.SerializerUtil;
 import funkin.util.HapticUtil;
 import funkin.util.DeviceUtil;
+#if web
+import funkin.mobile.util.MobileWakeLockUtil;
+#end
 import funkin.util.GRhythmUtil;
 import haxe.Int64;
 #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -846,6 +849,12 @@ class PlayState extends MusicBeatSubState
     #end
 
     if (!assertChartExists()) return;
+
+    #if web
+    // Match Android gameplay behavior using the browser Screen Wake Lock API
+    // when the current HTML5 client is running on a phone.
+    if (DeviceUtil.isMobileBrowser) MobileWakeLockUtil.setGameplayActive(true);
+    #end
 
     #if mobile
     // Force allowScreenTimeout to be disabled
@@ -2040,6 +2049,10 @@ class PlayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
+    #if web
+    MobileWakeLockUtil.setGameplayActive(false);
+    #end
+
     performCleanup();
 
     #if mobile
