@@ -1,10 +1,10 @@
 name: NovaBeat platform build checks
 
+# Android-only build trigger; no build configuration changes.
 # User-requested parallel Windows + Android native verification run.
 # Reuse dependency and tool caches without clearing the restored local Haxe repository.
 # Android-only validation run requested after the NovaBeat menu compiler fixes.
 
-on:
   workflow_dispatch:
     inputs:
       build_target:
