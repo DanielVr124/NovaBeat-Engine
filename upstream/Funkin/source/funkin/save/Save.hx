@@ -425,6 +425,7 @@ class Save implements ConsoleClass
    */
   public function getLevelScore(levelId:String, difficultyId:String = 'normal'):Null<SaveScoreData>
   {
+    levelId = getExperienceScopedScoreId(levelId);
     if (data.scores?.levels == null)
     {
       if (data.scores == null)
@@ -453,6 +454,7 @@ class Save implements ConsoleClass
    */
   public function setLevelScore(levelId:String, difficultyId:String, score:SaveScoreData):Void
   {
+    levelId = getExperienceScopedScoreId(levelId);
     var level = data.scores.levels.get(levelId);
     if (level == null)
     {
@@ -465,6 +467,7 @@ class Save implements ConsoleClass
 
   public function isLevelHighScore(levelId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    levelId = getExperienceScopedScoreId(levelId);
     var level = data.scores.levels.get(levelId);
     if (level == null)
     {
@@ -518,6 +521,7 @@ class Save implements ConsoleClass
    */
   public function getSongScore(songId:String, difficultyId:String = 'normal', ?variation:String):Null<SaveScoreData>
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -545,6 +549,7 @@ class Save implements ConsoleClass
    */
   public function setSongScore(songId:String, difficultyId:String, score:SaveScoreData):Void
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -562,11 +567,12 @@ class Save implements ConsoleClass
   {
     var newRank = Scoring.calculateRank(newScoreData);
     if (newScoreData == null || newRank == null) return;
-    var song = data.scores.songs.get(songId);
+    var scoreKey:String = getExperienceScopedScoreId(songId);
+    var song = data.scores.songs.get(scoreKey);
     if (song == null)
     {
       song = [];
-      data.scores.songs.set(songId, song);
+      data.scores.songs.set(scoreKey, song);
     }
     var previousScoreData = song.get(difficultyId);
     var previousRank = Scoring.calculateRank(previousScoreData);
@@ -595,6 +601,7 @@ class Save implements ConsoleClass
    */
   public function isSongHighScore(songId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -618,6 +625,7 @@ class Save implements ConsoleClass
    */
   public function isSongHighRank(songId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    songId = getExperienceScopedScoreId(songId);
     var newScoreRank = Scoring.calculateRank(score);
     if (newScoreRank == null)
     {
@@ -638,6 +646,18 @@ class Save implements ConsoleClass
       return true;
     }
     return newScoreRank > currentScoreRank;
+  }
+
+  /**
+   * Add an experience prefix to score keys outside the official FNF experience.
+   * Existing official score keys remain unchanged for backwards compatibility.
+   */
+  function getExperienceScopedScoreId(id:String):String
+  {
+    var experienceId:Null<String> = activeExperienceId == null ? null : activeExperienceId.value;
+    if (experienceId == null || experienceId.length == 0 || experienceId == "friday-night-funkin")
+      return id;
+    return experienceId + "::" + id;
   }
 
   /**
