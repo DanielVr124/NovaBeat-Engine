@@ -804,8 +804,13 @@ class StoryMenuState extends MusicBeatState
     {
       var item:LevelTitle = levelTitles.members[index];
       var isAboveSelectedWeek:Bool = index < currentIndex;
-      item.visible = !isAboveSelectedWeek;
-      item.alpha = isAboveSelectedWeek ? 0.0 : (index == currentIndex ? 1.0 : 0.6);
+      // Do not toggle FlxSpriteGroup.visible here. That propagates visibility
+      // to every child sprite and can accidentally reveal the hidden lock art
+      // when the week is shown again.
+      item.setDisplayVisible(!isAboveSelectedWeek);
+      // Keep the group alpha above zero so its child alpha values are not
+      // reset when a hidden week returns to the carousel.
+      item.alpha = index == currentIndex ? 1.0 : 0.6;
       if (index == currentIndex) currentLevelTitle = item;
     }
 
