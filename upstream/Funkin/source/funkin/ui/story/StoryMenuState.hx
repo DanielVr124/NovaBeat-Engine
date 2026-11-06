@@ -345,33 +345,6 @@ class StoryMenuState extends MusicBeatState
     FunkinSound.playOnce(Paths.sound(soundName), 0.4);
   }
 
-  function buildNovaBeatStoryHeader():Void
-  {
-    tracklistText.color = 0xFF48E7FF;
-    scoreText.color = 0xFF48E7FF;
-    levelTitleText.color = FlxColor.WHITE;
-
-    var panel:FlxSprite = new FlxSprite(28, 68);
-    panel.makeGraphic(272, 48, 0xCC07152E);
-    panel.scrollFactor.set();
-    add(panel);
-
-    var accent:FlxSprite = new FlxSprite(28, 68);
-    accent.makeGraphic(4, 48, 0xFF48E7FF);
-    accent.scrollFactor.set();
-    add(accent);
-
-    var brand:FlxText = new FlxText(46, 76, 240, 'NOVABEAT ENGINE', 10);
-    brand.setFormat(Paths.font('vcr.ttf'), 10, 0xFF48E7FF);
-    brand.scrollFactor.set();
-    add(brand);
-
-    var title:FlxText = new FlxText(46, 91, 240, 'STORY MODE', 19);
-    title.setFormat(Paths.font('vcr.ttf'), 19, FlxColor.WHITE);
-    title.scrollFactor.set();
-    add(title);
-  }
-
   function updateData():Void
   {
     currentLevel = LevelRegistry.instance.fetchEntry(currentLevelId);
@@ -816,18 +789,23 @@ class StoryMenuState extends MusicBeatState
    */
   function repositionTitles()
   {
+    if (levelTitles == null || levelTitles.members.length == 0) return;
+
     var currentIndex:Int = levelList.indexOf(currentLevelId);
+    if (currentIndex < 0 || currentIndex >= levelTitles.members.length) return;
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : 480;
 
-    // The week title immediately above the selected week is intentionally
-    // hidden; all other week titles keep the stock FNF carousel treatment.
+    // Keep the stock FNF week carousel. The single week image immediately
+    // above the selected week is hidden, and the hidden slot follows selection.
+    var hiddenWeekIndex:Int = currentIndex - 1;
     for (index in 0...levelTitles.members.length)
     {
       var item:LevelTitle = levelTitles.members[index];
-      item.visible = index != currentIndex - 1;
-      item.alpha = index == currentIndex ? 1.0 : 0.6;
+      var isHiddenWeek:Bool = index == hiddenWeekIndex;
+      item.visible = !isHiddenWeek;
+      item.alpha = isHiddenWeek ? 0.0 : (index == currentIndex ? 1.0 : 0.6);
       if (index == currentIndex) currentLevelTitle = item;
     }
 
