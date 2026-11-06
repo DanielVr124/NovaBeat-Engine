@@ -24,7 +24,7 @@ import funkin.api.newgrounds.Medals;
 #end
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.SwipeUtil;
 #end
 
@@ -293,7 +293,7 @@ class TitleState extends MusicBeatState
     #if mobile
     if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressedEnter = true;
     #elseif web
-    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased) pressedEnter = true;
+    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressedEnter = true;
     #end
 
     var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
@@ -340,8 +340,8 @@ class TitleState extends MusicBeatState
     }
 
     // TODO: Maybe use the dxdy method for swiping instead.
-    if (controls.UI_LEFT #if mobile || SwipeUtil.justSwipedLeft #end) swagShader.update(-elapsed * 0.1);
-    if (controls.UI_RIGHT #if mobile || SwipeUtil.justSwipedRight #end) swagShader.update(elapsed * 0.1);
+    if (controls.UI_LEFT || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedLeft)) swagShader.update(-elapsed * 0.1);
+    if (controls.UI_RIGHT || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedRight)) swagShader.update(elapsed * 0.1);
     if (!cheatActive && skippedIntro) cheatCodeShit();
     super.update(elapsed);
   }
@@ -380,10 +380,10 @@ class TitleState extends MusicBeatState
 
   function cheatCodeShit():Void
   {
-    if (controls.NOTE_DOWN_P || controls.UI_DOWN_P #if mobile || SwipeUtil.justSwipedUp #end) codePress(FlxDirectionFlags.DOWN.toInt());
-    if (controls.NOTE_UP_P || controls.UI_UP_P #if mobile || SwipeUtil.justSwipedDown #end) codePress(FlxDirectionFlags.UP.toInt());
-    if (controls.NOTE_LEFT_P || controls.UI_LEFT_P #if mobile || SwipeUtil.justSwipedLeft #end) codePress(FlxDirectionFlags.LEFT.toInt());
-    if (controls.NOTE_RIGHT_P || controls.UI_RIGHT_P #if mobile || SwipeUtil.justSwipedRight #end) codePress(FlxDirectionFlags.RIGHT.toInt());
+    if (controls.NOTE_DOWN_P || controls.UI_DOWN_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedUp)) codePress(FlxDirectionFlags.DOWN.toInt());
+    if (controls.NOTE_UP_P || controls.UI_UP_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedDown)) codePress(FlxDirectionFlags.UP.toInt());
+    if (controls.NOTE_LEFT_P || controls.UI_LEFT_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedLeft)) codePress(FlxDirectionFlags.LEFT.toInt());
+    if (controls.NOTE_RIGHT_P || controls.UI_RIGHT_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedRight)) codePress(FlxDirectionFlags.RIGHT.toInt());
   }
 
   function codePress(input:Int):Void

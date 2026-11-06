@@ -25,6 +25,9 @@ import funkin.ui.credits.CreditsState;
 import funkin.ui.options.OptionsState;
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
+#if (mobile || FEATURE_TOUCH_CONTROLS)
+import funkin.util.SwipeUtil;
+#end
 
 /**
  * Native implementation of the original NovaBeat V4 menu presentation.
@@ -477,7 +480,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
       // In HTML5, TouchUtil resolves to FlxMouse; Quest controller clicks and
       // browser touch taps are therefore recognized without a native mobile build.
-      if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased) pressed = true;
+      if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
 
       if (pressed) beginMenuTransition();
       return;
