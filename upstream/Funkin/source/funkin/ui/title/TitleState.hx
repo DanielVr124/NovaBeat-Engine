@@ -340,8 +340,8 @@ class TitleState extends MusicBeatState
     }
 
     // TODO: Maybe use the dxdy method for swiping instead.
-    if (controls.UI_LEFT || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedLeft)) swagShader.update(-elapsed * 0.1);
-    if (controls.UI_RIGHT || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedRight)) swagShader.update(elapsed * 0.1);
+    if (controls.UI_LEFT #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedLeft) #end) swagShader.update(-elapsed * 0.1);
+    if (controls.UI_RIGHT #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedRight) #end) swagShader.update(elapsed * 0.1);
     if (!cheatActive && skippedIntro) cheatCodeShit();
     super.update(elapsed);
   }
@@ -380,10 +380,10 @@ class TitleState extends MusicBeatState
 
   function cheatCodeShit():Void
   {
-    if (controls.NOTE_DOWN_P || controls.UI_DOWN_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedUp)) codePress(FlxDirectionFlags.DOWN.toInt());
-    if (controls.NOTE_UP_P || controls.UI_UP_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedDown)) codePress(FlxDirectionFlags.UP.toInt());
-    if (controls.NOTE_LEFT_P || controls.UI_LEFT_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedLeft)) codePress(FlxDirectionFlags.LEFT.toInt());
-    if (controls.NOTE_RIGHT_P || controls.UI_RIGHT_P || (#if mobile true #elseif web DeviceUtil.isMobileBrowser #else false #end && SwipeUtil.justSwipedRight)) codePress(FlxDirectionFlags.RIGHT.toInt());
+    if (controls.NOTE_DOWN_P || controls.UI_DOWN_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedUp) #end) codePress(FlxDirectionFlags.DOWN.toInt());
+    if (controls.NOTE_UP_P || controls.UI_UP_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedDown) #end) codePress(FlxDirectionFlags.UP.toInt());
+    if (controls.NOTE_LEFT_P || controls.UI_LEFT_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedLeft) #end) codePress(FlxDirectionFlags.LEFT.toInt());
+    if (controls.NOTE_RIGHT_P || controls.UI_RIGHT_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedRight) #end) codePress(FlxDirectionFlags.RIGHT.toInt());
   }
 
   function codePress(input:Int):Void
