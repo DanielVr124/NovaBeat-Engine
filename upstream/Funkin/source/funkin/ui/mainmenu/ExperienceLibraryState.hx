@@ -347,16 +347,15 @@ class ExperienceLibraryState extends MusicBeatState
   {
     if (sprite == null) return false;
 
-    // Prefer the browser pointer coordinates when that is the event stream
-    // which actually fired. Otherwise use the native FlxTouch / Quest pointer.
-    #if web
-    if (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased)
-    {
-      if (FlxG.mouse.overlaps(sprite, sprite.camera)) return true;
-    }
-    #end
-    return TouchUtil.overlaps(sprite, sprite.camera)
+    // Prefer a real FlxTouch / Quest pointer when one is present. Browsers
+    // that expose only a synthesized mouse event still use the mouse fallback.
+    var touchOver:Bool = TouchUtil.overlaps(sprite, sprite.camera)
       || TouchUtil.overlapsComplex(sprite, sprite.camera);
+    #if web
+    return touchOver || FlxG.mouse.overlaps(sprite, sprite.camera);
+    #else
+    return touchOver;
+    #end
   }
 
   function handleTouchInput():Void
