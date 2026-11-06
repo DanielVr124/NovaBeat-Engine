@@ -68,7 +68,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   var pointerTapStartY:Float = 0;
   var pointerTapItem:Int = -1;
 
-  static inline final POINTER_TAP_MAX_DISTANCE:Float = 32;
+  static inline final POINTER_TAP_MAX_DISTANCE:Float = 72;
 
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {

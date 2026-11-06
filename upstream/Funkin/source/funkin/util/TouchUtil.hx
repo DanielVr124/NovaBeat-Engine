@@ -202,8 +202,9 @@ class TouchUtil
     if (releasedTouch != null) return releasedTouch;
     #end
 
-    // Quest Browser may expose controller/hand-ray input as a mouse click.
-    FlxG.mouse.visible = true;
+    // On phones and Quest, mouse input is only the browser's pointer/ray
+    // transport. Never draw a desktop cursor over the game view.
+    if (DeviceUtil.isMobileBrowser) FlxG.mouse.visible = false;
     return FlxG.mouse;
   }
   #else

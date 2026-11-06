@@ -102,7 +102,7 @@ class SwipeUtil
   public static var flickAny(get, never):Bool;
 
   static final DEFAULT_SWIPE_THRESHOLD:Float = 100;
-  static final MIN_SWIPE_DISTANCE:Float = 20;
+  static final MIN_SWIPE_DISTANCE:Float = 72;
 
   /**
    * Flick manager for the active input source. Browser touch contacts use the
