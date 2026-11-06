@@ -262,7 +262,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         novaBeatTextLayer.add(modernLabel);
         novaBeatRowText.push(modernLabel);
       }
-      }
 
       for (i in 0...COLUMNS)
       {
