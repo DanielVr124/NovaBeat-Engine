@@ -71,6 +71,7 @@ import funkin.api.discord.DiscordClient;
 import funkin.util.TouchUtil;
 import funkin.util.SwipeUtil;
 import funkin.mobile.input.ControlsHandler;
+import funkin.util.DeviceUtil;
 #end
 
 /**
@@ -829,9 +830,11 @@ class FreeplayState extends MusicBeatSubState
     rankBg.alpha = 0;
 
     #if FEATURE_TOUCH_CONTROLS
-    addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
-
-    FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
+    if (DeviceUtil.isMobileBrowser)
+    {
+      addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
+      FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
+    }
     #end
 
     if (Preferences.menuStyle == "NovaBeat") buildNovaBeatFreeplayHeader();

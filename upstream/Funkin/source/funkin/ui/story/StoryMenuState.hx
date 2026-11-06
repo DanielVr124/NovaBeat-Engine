@@ -30,6 +30,7 @@ import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.MathUtil;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 import funkin.ui.FullScreenScaleMode;
 #if FEATURE_DISCORD_RPC
 import funkin.api.discord.DiscordClient;
@@ -223,8 +224,8 @@ class StoryMenuState extends MusicBeatState
     DiscordClient.instance.setPresence({state: 'In the Menus', details: null});
     #end
 
-    #if mobile
-    addBackButton(FlxG.width - 230, FlxG.height - 170, FlxColor.WHITE, goBack, 0.7);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser) addBackButton(FlxG.width - 230, FlxG.height - 170, FlxColor.WHITE, goBack, 0.7);
     #end
 
     #if FEATURE_TOUCH_CONTROLS
@@ -638,8 +639,8 @@ class StoryMenuState extends MusicBeatState
 
     new FlxTimer().start(1, function(tmr:FlxTimer)
     {
-      #if mobile
-      FlxTween.tween(backButton, {alpha: 0}, 0.2, {ease: FlxEase.quadOut});
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      if (DeviceUtil.isMobileBrowser && backButton != null) FlxTween.tween(backButton, {alpha: 0}, 0.2, {ease: FlxEase.quadOut});
       #end
 
       FlxTransitionableState.skipNextTransIn = false;

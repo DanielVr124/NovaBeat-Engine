@@ -20,13 +20,14 @@ import funkin.ui.options.items.CheckboxPreferenceItem;
 import funkin.ui.options.items.NumberPreferenceItem;
 import funkin.ui.options.items.EnumPreferenceItem;
 import funkin.ui.debug.FunkinDebugDisplay.DebugDisplayMode;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinBackButton;
 import funkin.mobile.input.ControlsHandler;
 import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
 import funkin.util.TouchUtil;
 import funkin.util.SwipeUtil;
 #end
+import funkin.util.DeviceUtil;
 import funkin.util.HapticUtil;
 import lime.ui.WindowVSyncMode;
 
@@ -97,8 +98,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     });
 
     #if FEATURE_TOUCH_CONTROLS
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    add(backButton);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+      add(backButton);
+    }
     #end
   }
 
@@ -184,8 +188,25 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       Preferences.downscroll = value;
     },
-      Preferences.downscroll, #if mobile ControlsHandler.hasExternalInputDevice
-      || Preferences.controlsScheme != FunkinHitboxControlSchemes.Arrows #end);
+      Preferences.downscroll, #if (mobile || FEATURE_TOUCH_CONTROLS)
+      (!DeviceUtil.isMobileBrowser || ControlsHandler.hasExternalInputDevice
+      || Preferences.controlsScheme != FunkinHitboxControlSchemes.Arrows) #end);
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      createPrefItemEnum('Mobile Controls Layout', 'Choose how the on-screen rhythm controls are arranged. Changes apply the next time a song starts.', [
+        "Arrows" => FunkinHitboxControlSchemes.Arrows,
+        "Four Lanes" => FunkinHitboxControlSchemes.FourLanes,
+        "Double Thumb Triangle" => FunkinHitboxControlSchemes.DoubleThumbTriangle,
+        "Double Thumb Square" => FunkinHitboxControlSchemes.DoubleThumbSquare,
+        "Double Thumb DPad" => FunkinHitboxControlSchemes.DoubleThumbDPad
+      ], function(key:String, value:String):Void
+      {
+        Preferences.controlsScheme = value;
+      }, Preferences.controlsScheme);
+    }
+    #end
     createPrefItemPercentage('Strumline Background', 'Show a semi-transparent background behind the strumline.', function(value:Int):Void
     {
       Preferences.strumlineBackgroundOpacity = value;

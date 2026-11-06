@@ -23,12 +23,13 @@ import funkin.input.Controls;
 #if FEATURE_NEWGROUNDS
 import funkin.api.newgrounds.NewgroundsClient;
 #end
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.TouchUtil;
 import funkin.mobile.ui.FunkinBackButton;
 import funkin.mobile.input.ControlsHandler;
 import funkin.mobile.ui.options.ControlsSchemeMenu;
 #end
+import funkin.util.DeviceUtil;
 #if FEATURE_MOBILE_IAP
 import funkin.mobile.util.InAppPurchasesUtil;
 #end
@@ -116,9 +117,17 @@ class OptionsState extends MusicBeatState
     else
     {
       // No need to show Options page
-      #if mobile
-      preferences.onExit.add(exitToMainMenu);
-      optionsCodex.setPage(Preferences);
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      if (DeviceUtil.isMobileBrowser)
+      {
+        preferences.onExit.add(exitToMainMenu);
+        optionsCodex.setPage(Preferences);
+      }
+      else
+      {
+        controls.onExit.add(exitToMainMenu);
+        optionsCodex.setPage(Controls);
+      }
       #else
       controls.onExit.add(exitToMainMenu);
       optionsCodex.setPage(Controls);
@@ -137,9 +146,12 @@ class OptionsState extends MusicBeatState
       });
     }
 
-    #if mobile
-    addHitbox();
-    hitbox.visible = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      addHitbox();
+      hitbox.visible = false;
+    }
     #end
   }
 
@@ -216,8 +228,8 @@ class OptionsMenu extends Page<OptionsMenuPageName>
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
     createItem('CUSTOMIZATION', function() codex.switchPage(Customization));
-    #if mobile
-    if (ControlsHandler.hasExternalInputDevice)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (!DeviceUtil.isMobileBrowser || ControlsHandler.hasExternalInputDevice)
     #end
     createItem('CONTROLS', function() codex.switchPage(Controls));
     #if FEATURE_LAG_ADJUSTMENT
@@ -500,14 +512,21 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     #if NO_FEATURE_TOUCH_CONTROLS
     createItem('EXIT', exit);
     #else
-    backButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    backButton.onConfirmStart.add(function()
+    if (DeviceUtil.isMobileBrowser)
     {
-      items.busy = true;
-      goingBack = true;
-      backButton.active = true;
-    });
-    add(backButton);
+      backButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+      backButton.onConfirmStart.add(function()
+      {
+        items.busy = true;
+        goingBack = true;
+        backButton.active = true;
+      });
+      add(backButton);
+    }
+    else
+    {
+      createItem('EXIT', exit);
+    }
     #end
     layoutNovaBeatItems();
   }
@@ -563,7 +582,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     }
 
     #if FEATURE_TOUCH_CONTROLS
-    backButton.active = (!goingBack) ? !items.busy : true;
+    if (backButton != null) backButton.active = (!goingBack) ? !items.busy : true;
     #end
     super.update(elapsed);
   }
