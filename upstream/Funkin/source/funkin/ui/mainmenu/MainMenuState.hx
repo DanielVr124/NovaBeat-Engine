@@ -398,14 +398,7 @@ class MainMenuState extends MusicBeatState
   {
     if (leftWatermarkText == null) return;
 
-    leftWatermarkText.text = Constants.VERSION;
-
-    #if FEATURE_NEWGROUNDS
-    if (NewgroundsClient.instance.isLoggedIn())
-    {
-      leftWatermarkText.text += ' | Newgrounds: Logged in as ${NewgroundsClient.instance.user?.name}';
-    }
-    #end
+    leftWatermarkText.text = '${Constants.VERSION} | NovaBeat Engine';
   }
 
   function playMenuMusic():Void
