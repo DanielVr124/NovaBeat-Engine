@@ -205,6 +205,11 @@ class TitleState extends MusicBeatState
     ngSpr.updateHitbox();
     ngSpr.screenCenter(X);
 
+    // A menu-style switch creates a fresh TitleState without resizing the
+    // browser window. Apply the responsive layout after every title asset
+    // exists so the logo, GF, prompt, and Newgrounds graphic use one layout.
+    onViewportResize(FlxG.width, FlxG.height);
+
     FlxG.mouse.visible = false;
 
     if (initialized) skipIntro();
