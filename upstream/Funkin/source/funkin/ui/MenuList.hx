@@ -181,8 +181,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       }
       else
       {
-        if (TouchUtil.justPressed) beginPointerTap();
-        if (TouchUtil.justReleased) finishPointerTap();
+        if (TouchUtil.justPressed #if web || FlxG.mouse.justPressed #end) beginPointerTap();
+        if (TouchUtil.justReleased #if web || FlxG.mouse.justReleased #end) finishPointerTap();
       }
 
       // Swipes continue to navigate lists; they are not treated as clicks.
@@ -232,43 +232,56 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   function finishPointerTap():Void
   {
-    if (!pointerTapActive || TouchUtil.touch == null)
+    if (TouchUtil.touch == null)
     {
       clearPointerTap();
+      return;
+    }
+
+    final releasedItem:Int = findPointerItem();
+    if (!pointerTapActive)
+    {
+      // Some mobile browsers and Quest Browser deliver a release/click
+      // without a matching touch-press event. Do not silently drop that tap.
+      acceptPointerItem(releasedItem);
       return;
     }
 
     final deltaX:Float = TouchUtil.touch.x - pointerTapStartX;
     final deltaY:Float = TouchUtil.touch.y - pointerTapStartY;
     final movedDistance:Float = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    final releasedItem:Int = findPointerItem();
 
     if (movedDistance <= POINTER_TAP_MAX_DISTANCE
       && pointerTapItem >= 0
-      && releasedItem == pointerTapItem
-      && releasedItem < members.length
-      && members[releasedItem].available)
+      && releasedItem == pointerTapItem)
     {
-      final item:T = members[releasedItem];
-
-      if (selectedIndex != releasedItem)
-      {
-        playNavigationSound();
-        selectItem(releasedItem);
-      }
-
-      if (_isMainMenuState)
-      {
-        FlxTween.cancelTweensOf(item);
-        item.scale.set(1.1, 1.1);
-        FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-        HapticUtil.vibrate(0, 0.05, 1);
-      }
-
-      accept();
+      acceptPointerItem(releasedItem);
     }
 
     clearPointerTap();
+  }
+
+  /** Activates the item under a completed pointer tap. */
+  function acceptPointerItem(index:Int):Void
+  {
+    if (index < 0 || index >= members.length || !members[index].available) return;
+
+    final item:T = members[index];
+    if (selectedIndex != index)
+    {
+      playNavigationSound();
+      selectItem(index);
+    }
+
+    if (_isMainMenuState)
+    {
+      FlxTween.cancelTweensOf(item);
+      item.scale.set(1.1, 1.1);
+      FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+      HapticUtil.vibrate(0, 0.05, 1);
+    }
+
+    accept();
   }
 
   /** Returns the item directly under the current pointer, or -1. */
@@ -278,18 +291,28 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
 
+    // Prefer the active touch / pointer contact. The explicit camera matters
+    // for custom menus that render their hit targets on a separate UI camera.
     for (i in 0...members.length)
     {
       final item:T = members[i];
       if (!item.available) continue;
-
-      // Use the item's own camera for pointer hit-testing everywhere. Pixel-
-      // perfect overlap with camera index 0 breaks when menus use an extra HUD
-      // camera or scale their atlas sprites for a touch viewport.
-      final overlaps:Bool = TouchUtil.overlaps(item);
-
-      if (overlaps) return i;
+      if (TouchUtil.overlaps(item, item.camera)) return i;
     }
+
+    #if web
+    // Fallback for Android browsers that synthesize mouse events instead of
+    // exposing a FlxTouch release to HaxeFlixel.
+    if (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased)
+    {
+      for (i in 0...members.length)
+      {
+        final item:T = members[i];
+        if (!item.available) continue;
+        if (FlxG.mouse.overlaps(item, item.camera)) return i;
+      }
+    }
+    #end
 
     return -1;
   }
