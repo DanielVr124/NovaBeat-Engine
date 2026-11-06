@@ -38,6 +38,8 @@ concurrency:
 
 jobs:
   html5:
+    outputs:
+      pages_deployable: ${{ steps.pages-payload.outputs.deployable }}
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[web-build]'))) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
     name: HTML5 browser test build
     runs-on: ubuntu-24.04
@@ -276,8 +278,42 @@ jobs:
             echo "- Includes a local HTTP server quick-start guide."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Measure Pages payload and report largest files
+        id: pages-payload
+        shell: bash
+        working-directory: upstream/Funkin
+        env:
+          WEB_ROOT: ${{ steps.package-web.outputs.web_root }}
+        run: |
+          set -euo pipefail
+          payload_bytes="$(du -sb "$WEB_ROOT" | awk '{print $1}')"
+          payload_mib="$((payload_bytes / 1048576))"
+          echo "Expanded Pages payload: $payload_bytes bytes (${payload_mib} MiB)"
+
+          {
+            echo "## GitHub Pages payload inspection"
+            echo
+            echo "- Expanded site size: ${payload_mib} MiB ($payload_bytes bytes)"
+            echo "- GitHub Pages published-site limit: 1 GB"
+            echo
+            echo "### Largest 25 files"
+            find "$WEB_ROOT" -type f -printf '%s\\t%p\\n' | sort -nr | head -25 | awk -F '\\t' '{printf "- %.1f MiB — `%s`\\n", $1 / 1048576, $2}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if (( payload_bytes >= 1000000000 )); then
+            echo "deployable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping GitHub Pages upload because the expanded site exceeds the 1 GB published-site limit."
+            {
+              echo
+              echo "Pages deployment was skipped because the expanded output exceeds 1 GB."
+              echo "The downloadable HTML5 ZIP is still generated and uploaded."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "deployable=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload browser files for GitHub Pages
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: steps.pages-payload.outputs.deployable == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-pages-artifact@v4
         with:
           path: upstream/Funkin/${{ steps.package-web.outputs.web_root }}
@@ -295,7 +331,7 @@ jobs:
   deploy:
     name: Publish HTML5 test site
     needs: html5
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: needs.html5.outputs.pages_deployable == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
@@ -310,4 +346,27 @@ jobs:
 
       - name: Deploy browser build
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+
+      - name: Report Pages deployment result
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          if [[ "$DEPLOY_OUTCOME" == "success" ]]; then
+            {
+              echo "## GitHub Pages deployment succeeded"
+              echo
+              echo "Published site: $PAGE_URL"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The HTML5 build succeeded, but GitHub Pages did not finish publishing. The downloadable HTML5 artifact remains available."
+            {
+              echo "## GitHub Pages deployment did not complete"
+              echo
+              echo "This does not fail the HTML5 build. Download the `novabeat-html5` artifact from this workflow run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
