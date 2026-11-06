@@ -117,8 +117,11 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     menuCamera.minScrollY = 0;
 
     #if FEATURE_TOUCH_CONTROLS
-    responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    add(responsiveBackButton);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+      add(responsiveBackButton);
+    }
     #end
   }
 
