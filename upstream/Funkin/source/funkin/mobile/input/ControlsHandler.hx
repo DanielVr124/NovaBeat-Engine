@@ -8,6 +8,7 @@ import funkin.input.Controls;
 import funkin.mobile.ui.FunkinButton;
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.play.notes.NoteDirection;
+import funkin.util.DeviceUtil;
 #if android
 import funkin.external.android.KeyboardUtil;
 #elseif ios
@@ -145,9 +146,13 @@ class ControlsHandler
   static function get_hasExternalInputDevice():Bool
   {
     var gamepads:Bool = FlxG.gamepads.numActiveGamepads > 0;
-    var keyboards:Bool = #if android KeyboardUtil.keyboardConnected #elseif ios KeyboardUtil.isKeyboardConnected() #else false #end;
+    var keyboards:Bool = #if android KeyboardUtil.keyboardConnected #elseif ios KeyboardUtil.isKeyboardConnected() #elseif web DeviceUtil.isMobileBrowser && !lastInputTouch #else false #end;
     var chromebook:Bool = #if android extension.androidtools.Tools.isChromebook() #else false #end;
 
+    // Browsers cannot reliably enumerate a connected physical keyboard.
+    // On phones, use the most recent input source as the equivalent signal:
+    // keyboard input selects the external-input layout, while touch restores
+    // the original mobile hitbox layout.
     return gamepads || keyboards || chromebook;
   }
 
