@@ -347,11 +347,10 @@ class MainMenuState extends MusicBeatState
 
     for (index => menuItem in menuItems)
     {
-      // Idle and selected atlas frames can have different dimensions. Always
-      // recenter after choosing the right frame and applying responsive scale.
+      // Idle and selected atlas frames can have different dimensions. Keep
+      // the current animation chosen by MenuTypedList, then recenter its frame
+      // after applying responsive scale.
       var atlasItem:AtlasMenuItem = cast menuItem;
-      atlasItem.changeAnim(index == menuItems.selectedIndex ? 'selected' : 'idle');
-
       var targetScale:Float = portrait ? Math.min(1.0, (FlxG.width - 64) / Math.max(1, atlasItem.width)) : 1.0;
       atlasItem.scale.set(targetScale, targetScale);
       atlasItem.updateHitbox();
@@ -365,7 +364,8 @@ class MainMenuState extends MusicBeatState
     }
 
     var selectedItem:MenuListItem = menuItems.members[menuItems.selectedIndex];
-    camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+      camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
