@@ -709,8 +709,11 @@ class SongMenuItem extends FlxSpriteGroup
         capsule.scale.y *= realScaled;
 
         frameInTypeBeat += 1;
+        final portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
         final shiftx:Float = FullScreenScaleMode.wideScale.x * 320;
-        final widescreenMult:Float = (FullScreenScaleMode.gameCutoutSize.x / 1.5) * 0.75;
+        // Portrait intendedX already returns a screen-centered position. The
+        // desktop song-list offset must not be added again on narrow screens.
+        final widescreenMult:Float = portraitLayout ? 0 : (FullScreenScaleMode.gameCutoutSize.x / 1.5) * 0.75;
         // Move the targetPos set to the if statement below if you want them to shift to their target positions after jumping in instead
         // I have no idea why this if instead of frameInTypeBeat == xFrames.length works even though they're the same thing
         if (targetPos.x <= shiftx) targetPos.x = intendedX(index - curSelected) + widescreenMult;
