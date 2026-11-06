@@ -124,10 +124,14 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
     #end
 
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (Save.instance.mobileOptions.lockCurrentOrientation && !MobileOrientationUtil.isCurrentlyLocked)
       statusText.text = "SAVED LOCK • TAP THE ROW TO REAPPLY AFTER RELOAD";
     else if (!MobileOrientationUtil.isSupported())
       statusText.text = MobileOrientationUtil.getUnavailableMessage().toUpperCase();
+    #else
+    statusText.text = "MOBILE ORIENTATION SETTINGS ARE UNAVAILABLE IN THIS BUILD";
+    #end
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -188,6 +192,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function toggleOrientationLock():Void
   {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     var saved:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
     var targetValue:Bool = !(saved && MobileOrientationUtil.isCurrentlyLocked);
 
@@ -212,14 +217,23 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         statusText.text = MobileOrientationUtil.getUnavailableMessage().toUpperCase();
       }
     });
+    #else
+    statusText.text = "MOBILE ORIENTATION SETTINGS ARE UNAVAILABLE IN THIS BUILD";
+    #end
   }
 
   function updateValue():Void
   {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     var enabled:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
     valueLabel.text = enabled ? "ON" : "OFF";
     valueLabel.color = enabled ? 0xFF6FE8FF : (novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE);
     rowLabel.color = enabled ? FlxColor.WHITE : 0xFFB9C8E3;
+    #else
+    valueLabel.text = "N/A";
+    valueLabel.color = FlxColor.GRAY;
+    rowLabel.color = FlxColor.GRAY;
+    #end
   }
 
   function updateRowHighlight():Void
