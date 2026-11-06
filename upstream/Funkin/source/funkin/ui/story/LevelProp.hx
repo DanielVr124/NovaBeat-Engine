@@ -93,8 +93,10 @@ class LevelProp extends Bopper
     }
     else
     {
+      // Props without a configured starting animation should keep their
+      // normal Bopper dance cycle instead of freezing on the first frame.
       this.dance();
-      this.animation.paused = true;
+      this.animation.paused = false;
     }
   }
 
