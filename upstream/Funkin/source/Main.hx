@@ -194,6 +194,11 @@ class Main extends Sprite
 
     #if !html5
     FlxG.scaleMode = new FullScreenScaleMode();
+    #elseif web
+    // The HTML5 build normally keeps the fixed 1280x720 logical viewport.
+    // Apply the same responsive scale mode on mobile browsers so portrait
+    // devices expand the logical game height to match the available screen.
+    if (funkin.util.DeviceUtil.isMobileBrowser) FlxG.scaleMode = new FullScreenScaleMode();
     #end
 
     #if mobile
