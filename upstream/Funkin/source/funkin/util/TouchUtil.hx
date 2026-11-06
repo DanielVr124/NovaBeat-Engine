@@ -163,7 +163,7 @@ class TouchUtil
   static inline function get_justPressed():Bool return touch != null && touch.justPressed;
 
   @:noCompletion
-  static inline function get_justReleased():Bool
+  static function get_justReleased():Bool
   {
     #if web
     // A mobile browser can emit a real touch release, a synthesized mouse
