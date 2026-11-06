@@ -14,6 +14,7 @@ import funkin.ui.Page;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.util.SwipeUtil;
+import funkin.util.DeviceUtil;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -116,8 +117,11 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     updateRowHighlight();
 
     #if FEATURE_TOUCH_CONTROLS
-    responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
-    add(responsiveBackButton);
+    if (DeviceUtil.isMobileBrowser)
+    {
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
+      add(responsiveBackButton);
+    }
     #end
 
     if (Save.instance.mobileOptions.lockCurrentOrientation && !MobileOrientationUtil.isCurrentlyLocked)
@@ -234,7 +238,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   function makeLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(Paths.font("vcr.ttf"), size, color, FlxTextAlign.LEFT);
+    label.setFormat(novaBeatLayout ? "Arial" : Paths.font("vcr.ttf"), size, color, FlxTextAlign.LEFT);
     label.scrollFactor.set();
     return label;
   }
