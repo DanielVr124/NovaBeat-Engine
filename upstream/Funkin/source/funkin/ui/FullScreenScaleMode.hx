@@ -66,6 +66,13 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
   public static var gameNotchSize:FlxPoint = FlxPoint.get(0, 0);
 
   /**
+   * Safe-area inset values in game coordinates.
+   * gameSafeAreaTopLeft stores left/top; gameSafeAreaBottomRight stores right/bottom.
+   */
+  public static var gameSafeAreaTopLeft:FlxPoint = FlxPoint.get(0, 0);
+  public static var gameSafeAreaBottomRight:FlxPoint = FlxPoint.get(0, 0);
+
+  /**
    * The aspect ratio of the window.
    */
   public static var screenRatio:Float = -1;
@@ -155,7 +162,7 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
 
     updateGameSize(FlxG.width, FlxG.height);
     updateDeviceSize(Width, Height);
-    #if mobile
+    #if (mobile || web)
     updateDeviceNotch(funkin.mobile.util.ScreenUtil.getNotchRect());
     #end
     updateScaleOffset();
@@ -195,7 +202,7 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
     updateGameSize(Width, Height);
     updateDeviceSize(Width, Height);
     updateDeviceCutout(Width, Height);
-    #if mobile
+    #if (mobile || web)
     updateDeviceNotch(funkin.mobile.util.ScreenUtil.getNotchRect());
     #end
     updateScaleOffset();
@@ -386,7 +393,7 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
     }
   }
 
-  #if mobile
+  #if (mobile || web)
   private function updateDeviceNotch(notch:openfl.geom.Rectangle):Void
   {
     notchPosition.set(enabled ? notch.x : 0, enabled ? notch.y : 0);
@@ -395,17 +402,45 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
     gameNotchSize.copyFrom(notchSize);
 
     final scale:Float = logicalSize.x / FlxG.initialWidth;
-    if (Math.ceil(logicalSize.x) > FlxG.initialWidth)
+    if (scale > 0)
     {
-      gameNotchPosition /= scale;
-      gameNotchSize /= scale;
+      if (Math.ceil(logicalSize.x) > FlxG.initialWidth)
+      {
+        gameNotchPosition /= scale;
+        gameNotchSize /= scale;
+      }
+      else
+      {
+        gameNotchPosition *= scale;
+        gameNotchSize *= scale;
+      }
     }
-    else
-    {
-      gameNotchPosition *= scale;
-      gameNotchSize *= scale;
-    }
+
+    #if web
+    updateWebSafeAreaInsets();
+    #else
+    gameSafeAreaTopLeft.set(0, 0);
+    gameSafeAreaBottomRight.set(0, 0);
+    #end
   }
+
+  #if web
+  private function updateWebSafeAreaInsets():Void
+  {
+    final insets:Array<Float> = funkin.mobile.util.ScreenUtil.getSafeAreaInsets();
+    final scale:Float = logicalSize.x / FlxG.initialWidth;
+    if (scale <= 0)
+    {
+      gameSafeAreaTopLeft.set(0, 0);
+      gameSafeAreaBottomRight.set(0, 0);
+      return;
+    }
+
+    final conversion:Float = Math.ceil(logicalSize.x) > FlxG.initialWidth ? 1 / scale : scale;
+    gameSafeAreaTopLeft.set(insets[0] * conversion, insets[1] * conversion);
+    gameSafeAreaBottomRight.set(insets[2] * conversion, insets[3] * conversion);
+  }
+  #end
   #end
 
   public function reset():Void
