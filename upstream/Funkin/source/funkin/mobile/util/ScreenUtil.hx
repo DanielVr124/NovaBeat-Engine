@@ -19,6 +19,7 @@ import openfl.geom.Rectangle;
 class ScreenUtil
 {
   #if web
+  // Browser-safe-area support for the HTML5 phone test build.
   /**
    * Read the browser's CSS safe-area insets in CSS pixels.
    * The returned array is ordered [left, top, right, bottom].
