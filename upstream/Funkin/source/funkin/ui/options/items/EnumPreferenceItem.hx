@@ -60,6 +60,7 @@ class EnumPreferenceItem<T> extends TextMenuItem
     // var fancyTextFancyColor:Color;
     if (selected)
     {
+      // HTML5 mobile browsers enable FEATURE_TOUCH_CONTROLS without the native mobile define.
       var shouldDecrease:Bool = controls().UI_LEFT_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedLeft) #end;
       var shouldIncrease:Bool = controls().UI_RIGHT_P #if (mobile || FEATURE_TOUCH_CONTROLS) || (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedRight) #end;
 
