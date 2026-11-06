@@ -187,6 +187,11 @@ class Main extends Sprite
 
     addChild(game);
 
+    #if html5
+    // Add a browser-only fullscreen control; native Android builds are unaffected.
+    funkin.util.BrowserFullscreenButton.initialize();
+    #end
+
     #if FEATURE_DEBUG_FUNCTIONS
     #if !FLX_NO_DEBUG game.debugger.interaction.addTool(new funkin.util.TrackerToolButtonUtil()); #end
     funkin.util.macro.ConsoleMacro.init();
