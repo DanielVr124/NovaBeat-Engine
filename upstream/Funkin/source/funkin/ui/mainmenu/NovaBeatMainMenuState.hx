@@ -524,8 +524,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
-      // In HTML5, TouchUtil resolves to FlxMouse; Quest controller clicks and
-      // browser touch taps are therefore recognized without a native mobile build.
+      // TouchUtil prefers real browser touch contacts and falls back to
+      // synthesized mouse / Quest controller pointer events when needed.
       if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
 
       if (pressed) beginMenuTransition();
