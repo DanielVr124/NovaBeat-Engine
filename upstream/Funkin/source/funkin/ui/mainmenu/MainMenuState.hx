@@ -43,10 +43,13 @@ import funkin.api.discord.DiscordClient;
 #if FEATURE_NEWGROUNDS
 import funkin.api.newgrounds.NewgroundsClient;
 #end
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.input.ControlsHandler;
+#end
+#if mobile
 import funkin.mobile.util.InAppPurchasesUtil;
 #end
+import funkin.util.DeviceUtil;
 
 @:nullSafety
 class MainMenuState extends MusicBeatState
@@ -229,7 +232,7 @@ class MainMenuState extends MusicBeatState
       });
     }
 
-    if (#if mobile ControlsHandler.usingExternalInputDevice #else true #end)
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) ControlsHandler.usingExternalInputDevice #else true #end)
     {
       createMenuItem('options', 'mainmenu/options', function()
       {
@@ -305,28 +308,33 @@ class MainMenuState extends MusicBeatState
 
     #if mobile
     gyroPan = new FlxPoint();
+    #end
 
-    camFollow.y = bg.getGraphicMidpoint().y;
-
-    // TODO: This is absolutely disgusting but what the hell sure, fix it later -Zack
-    addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack, 1.0);
-
-    if (!ControlsHandler.usingExternalInputDevice)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
     {
-      addOptionsButton(35, FlxG.height - 210, goOptions);
+      camFollow.y = bg.getGraphicMidpoint().y;
+
+      // Use the same native mobile back/options buttons in Quest Browser.
+      addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack, 1.0);
+
+      if (!ControlsHandler.usingExternalInputDevice)
+      {
+        addOptionsButton(35, FlxG.height - 210, goOptions);
+      }
+
+      backButton?.onConfirmStart.add(() ->
+      {
+        uiStateMachine.transition(Interacting);
+        trace('BACK: Interact Start');
+      });
+
+      optionsButton?.onConfirmStart.add(() ->
+      {
+        uiStateMachine.transition(Interacting);
+        trace('OPTIONS: Interact Start');
+      });
     }
-
-    backButton?.onConfirmStart.add(() ->
-    {
-      uiStateMachine.transition(Interacting);
-      trace('BACK: Interact Start');
-    });
-
-    optionsButton?.onConfirmStart.add(() ->
-    {
-      uiStateMachine.transition(Interacting);
-      trace('OPTIONS: Interact Start');
-    });
     #end
 
     super.create();
@@ -418,7 +426,7 @@ class MainMenuState extends MusicBeatState
 
   function onMenuItemChange(selected:MenuListItem)
   {
-    if (#if mobile ControlsHandler.usingExternalInputDevice #else true #end) camFollow.setPosition(selected.getGraphicMidpoint().x,
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) ControlsHandler.usingExternalInputDevice #else true #end) camFollow.setPosition(selected.getGraphicMidpoint().x,
       selected.getGraphicMidpoint().y);
   }
 
@@ -465,9 +473,12 @@ class MainMenuState extends MusicBeatState
         item.visible = false;
     });
 
-    #if mobile
-    if (optionsButton != null) FlxTween.tween(optionsButton, {alpha: 0}, fadeOutDuration, {ease: FlxEase.quadOut});
-    if (backButton != null) FlxTween.tween(backButton, {alpha: 0}, fadeOutDuration, {ease: FlxEase.quadOut});
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      if (optionsButton != null) FlxTween.tween(optionsButton, {alpha: 0}, fadeOutDuration, {ease: FlxEase.quadOut});
+      if (backButton != null) FlxTween.tween(backButton, {alpha: 0}, fadeOutDuration, {ease: FlxEase.quadOut});
+    }
     #end
 
     FlxTimer.wait(fadeOutDuration, () ->
@@ -506,16 +517,19 @@ class MainMenuState extends MusicBeatState
 
     if (menuItems != null) menuItems.busy = !canInteract;
 
-    #if mobile
-    if (optionsButton != null)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
     {
-      optionsButton.active = canInteract || optionsButton.confirming;
-      optionsButton.enabled = optionsButton.active;
-    }
-    if (backButton != null)
-    {
-      backButton.active = canInteract || backButton.confirming;
-      backButton.enabled = backButton.active;
+      if (optionsButton != null)
+      {
+        optionsButton.active = canInteract || optionsButton.confirming;
+        optionsButton.enabled = optionsButton.active;
+      }
+      if (backButton != null)
+      {
+        backButton.active = canInteract || backButton.confirming;
+        backButton.enabled = backButton.active;
+      }
     }
     #end
   }

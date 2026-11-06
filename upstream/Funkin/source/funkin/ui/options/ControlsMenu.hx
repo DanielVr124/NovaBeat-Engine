@@ -18,6 +18,7 @@ import funkin.ui.Page;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
+import funkin.util.DeviceUtil;
 
 class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 {
@@ -272,18 +273,21 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     add(popup);
 
     #if FEATURE_TOUCH_CONTROLS
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, function():Void
+    if (DeviceUtil.isMobileBrowser)
     {
-      if (controlGrid.enabled && deviceList != null && deviceListSelected == false)
+      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, function():Void
       {
-        goToDeviceList();
-      }
-      else if (canExit)
-      {
-        exit();
-      }
-    }, 1.0);
-    add(backButton);
+        if (controlGrid.enabled && deviceList != null && deviceListSelected == false)
+        {
+          goToDeviceList();
+        }
+        else if (canExit)
+        {
+          exit();
+        }
+      }, 1.0);
+      add(backButton);
+    }
     #end
   }
 
