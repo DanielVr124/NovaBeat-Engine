@@ -117,12 +117,15 @@ class ExperienceLibraryState extends MusicBeatState
     listY = panelY + (portrait ? 12 : 16);
     listWidth = panelWidth - inset * 2;
     listHeight = panelHeight - (usesTouchControls ? 143 : (portrait ? 68 : 64));
-    rowHeight = portrait ? 88 : 82;
+    // Keep a compact row on short landscape phones so the row, status line,
+    // and touch buttons never overlap one another.
+    var compactTouchLayout:Bool = usesTouchControls && !portrait && height < 500;
+    rowHeight = portrait ? 88 : (compactTouchLayout ? 56 : 82);
     var rowGap:Float = 9;
     visibleRows = Std.int(Math.max(1, Math.floor((listHeight + rowGap) / (rowHeight + rowGap))));
     firstVisibleIndex = 0;
 
-    var statusY:Float = usesTouchControls ? panelY + panelHeight - 119 : panelY + panelHeight - 32;
+    var statusY:Float = usesTouchControls ? panelY + panelHeight - 98 : panelY + panelHeight - 32;
     statusText = addLabel(panelX + 16, statusY, panelWidth - 32, "", 9, 0xFF86DFFF, false);
     var footer:String = usesTouchControls
       ? "TAP TO SELECT  •  SWIPE TO SCROLL  •  LAUNCH SELECTED"
@@ -140,19 +143,22 @@ class ExperienceLibraryState extends MusicBeatState
 
   function buildTouchControls(panelX:Float, panelY:Float, panelWidth:Float, panelHeight:Float):Void
   {
-    var primaryY:Float = panelY + panelHeight - 78;
-    var secondaryY:Float = panelY + panelHeight - 39;
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var primaryHeight:Float = portrait ? 40 : 36;
+    var secondaryHeight:Float = portrait ? 36 : 30;
+    var primaryY:Float = panelY + panelHeight - (primaryHeight + secondaryHeight + 12);
+    var secondaryY:Float = panelY + panelHeight - secondaryHeight - 10;
     var gap:Float = 7;
     var launchWidth:Float = (listWidth - gap) * 0.62;
-    addTouchButton(listX, primaryY, launchWidth, 32, "LAUNCH SELECTED", "launch", true);
-    addTouchButton(listX + launchWidth + gap, primaryY, listWidth - launchWidth - gap, 32, "ORIGINAL FNF", "official", false);
+    addTouchButton(listX, primaryY, launchWidth, primaryHeight, "LAUNCH SELECTED", "launch", true);
+    addTouchButton(listX + launchWidth + gap, primaryY, listWidth - launchWidth - gap, primaryHeight, "ORIGINAL FNF", "official", false);
 
     var smallGap:Float = 5;
     var smallWidth:Float = (listWidth - smallGap * 3) / 4;
-    addTouchButton(listX, secondaryY, smallWidth, 26, "TOGGLE", "toggle", false);
-    addTouchButton(listX + smallWidth + smallGap, secondaryY, smallWidth, 26, "TYPE", "type", false);
-    addTouchButton(listX + (smallWidth + smallGap) * 2, secondaryY, smallWidth, 26, "TARGET", "target", false);
-    addTouchButton(listX + (smallWidth + smallGap) * 3, secondaryY, smallWidth, 26, "RESCAN", "rescan", false);
+    addTouchButton(listX, secondaryY, smallWidth, secondaryHeight, "TOGGLE", "toggle", false);
+    addTouchButton(listX + smallWidth + smallGap, secondaryY, smallWidth, secondaryHeight, "TYPE", "type", false);
+    addTouchButton(listX + (smallWidth + smallGap) * 2, secondaryY, smallWidth, secondaryHeight, "TARGET", "target", false);
+    addTouchButton(listX + (smallWidth + smallGap) * 3, secondaryY, smallWidth, secondaryHeight, "RESCAN", "rescan", false);
   }
 
   function addTouchButton(x:Float, y:Float, width:Float, height:Float, label:String, action:String, highlighted:Bool):Void
@@ -163,7 +169,7 @@ class ExperienceLibraryState extends MusicBeatState
     addTracked(hitbox, false);
     addTracked(addRoundRect(x + 1, y + 1, width - 2, height - 2, 8, 8, fillColor), false);
 
-    var textSize:Int = height <= 26 ? 7 : 8;
+    var textSize:Int = height <= 30 ? 8 : 10;
     var labelText:FlxText = new FlxText(x + 2, y + (height - textSize) / 2 - 1, width - 4, label, textSize);
     labelText.setFormat(Paths.font("vcr.ttf"), textSize, 0xFFF1F5FA, FlxTextAlign.CENTER);
     labelText.scrollFactor.set();
@@ -199,7 +205,8 @@ class ExperienceLibraryState extends MusicBeatState
       rowHitboxes.push(rowHitbox);
       addTracked(addRoundRect(listX + 2, y + 2, listWidth - 4, rowHeight - 4, 14, 14, selected ? 0xFF1A2731 : 0xFF191C21), true);
 
-      var iconSize:Float = portrait ? 58 : 56;
+      var compactTouchRow:Bool = usesTouchControls && !portrait && FlxG.height < 500;
+      var iconSize:Float = compactTouchRow ? 40 : (portrait ? 58 : 56);
       var iconX:Float = listX + 13;
       var iconY:Float = y + (rowHeight - iconSize) / 2;
       addTracked(addRoundRect(iconX, iconY, iconSize, iconSize, 11, 11, 0xFF303640), true);
@@ -207,15 +214,24 @@ class ExperienceLibraryState extends MusicBeatState
 
       var textX:Float = iconX + iconSize + 15;
       var textWidth:Float = listWidth - (textX - listX) - 18;
-      addRowLabel(textX, y + 9, textWidth, info.title, portrait ? 14 : 16, selected ? 0xFFFFFFFF : 0xFFE1E5EC);
-      addRowLabel(textX, y + 33, textWidth, shorten(info.description, 105), portrait ? 9 : 10, 0xFFB1B8C5);
-
       var detail:String = info.engineLabel + "  •  " + packageTypeLabel(info.packageType);
       if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
         detail += "  →  " + ExperienceManager.experienceTitle(info.ownerId, experiences);
       if (!info.isOfficial) detail += info.enabled ? "  •  ENABLED" : "  •  DISABLED";
       if (!info.launchable) detail += "  •  DETECTED, NOT YET SUPPORTED";
-      addRowLabel(textX, y + 58, textWidth, detail, 8, info.launchable ? 0xFF70D9F0 : 0xFFFFB86B);
+
+      if (compactTouchRow)
+      {
+        addRowLabel(textX, y + 6, textWidth, info.title, 12, selected ? 0xFFFFFFFF : 0xFFE1E5EC);
+        addRowLabel(textX, y + 24, textWidth, shorten(info.description, 68), 7, 0xFFB1B8C5);
+        addRowLabel(textX, y + 40, textWidth, detail, 7, info.launchable ? 0xFF70D9F0 : 0xFFFFB86B);
+      }
+      else
+      {
+        addRowLabel(textX, y + 9, textWidth, info.title, portrait ? 14 : 16, selected ? 0xFFFFFFFF : 0xFFE1E5EC);
+        addRowLabel(textX, y + 33, textWidth, shorten(info.description, 105), portrait ? 9 : 10, 0xFFB1B8C5);
+        addRowLabel(textX, y + 58, textWidth, detail, 8, info.launchable ? 0xFF70D9F0 : 0xFFFFB86B);
+      }
     }
   }
 
