@@ -143,11 +143,7 @@ class SwipeUtil
   static inline function get_swipeUp():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return TouchUtil.touch?.justMovedUp ?? false;
-    #else
-    return FlxG.mouse.justMovedUp && FlxG.mouse.pressed;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.justMovedUp && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -157,11 +153,7 @@ class SwipeUtil
   static inline function get_swipeRight():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return TouchUtil.touch?.justMovedRight ?? false;
-    #else
-    return FlxG.mouse.justMovedRight && FlxG.mouse.pressed;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.justMovedRight && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -171,11 +163,7 @@ class SwipeUtil
   static inline function get_swipeLeft():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return TouchUtil.touch?.justMovedLeft ?? false;
-    #else
-    return FlxG.mouse.justMovedLeft && FlxG.mouse.pressed;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.justMovedLeft && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -185,11 +173,7 @@ class SwipeUtil
   static inline function get_swipeDown():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return TouchUtil.touch?.justMovedDown ?? false;
-    #else
-    return FlxG.mouse.justMovedDown && FlxG.mouse.pressed;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.justMovedDown && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -252,11 +236,7 @@ class SwipeUtil
   static inline function get_flickUp():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return FlxG.touches.flickManager.flickUp;
-    #else
-    return FlxG.mouse.flickManager.flickUp;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickUp;
     #else
     return false;
     #end
@@ -266,11 +246,7 @@ class SwipeUtil
   static inline function get_flickRight():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return FlxG.touches.flickManager.flickRight;
-    #else
-    return FlxG.mouse.flickManager.flickRight;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickRight;
     #else
     return false;
     #end
@@ -280,11 +256,7 @@ class SwipeUtil
   static inline function get_flickLeft():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return FlxG.touches.flickManager.flickLeft;
-    #else
-    return FlxG.mouse.flickManager.flickLeft;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickLeft;
     #else
     return false;
     #end
@@ -294,11 +266,7 @@ class SwipeUtil
   static inline function get_flickDown():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    #if mobile
-    return FlxG.touches.flickManager.flickDown;
-    #else
-    return FlxG.mouse.flickManager.flickDown;
-    #end
+    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickDown;
     #else
     return false;
     #end

@@ -55,11 +55,10 @@ class TouchUtil
    * The first touch in the FlxG.touches list.
    */
   public static var touch(get, never):FlxTouch;
+  #elseif web
+  /** The active browser touch or the mouse pointer when no touch is active. */
+  public static var touch(get, never):Dynamic;
   #else
-
-  /**
-   * The first touch in the FlxG.touches list.
-   */
   public static var touch(get, never):FlxMouse;
   #end
 
@@ -179,6 +178,22 @@ class TouchUtil
     }
 
     return FlxG.touches.getFirst();
+  }
+  #elseif web
+  @:noCompletion
+  static function get_touch():Dynamic
+  {
+    #if FLX_TOUCH
+    // Prefer actual touch contacts so hit testing uses the finger/hand position.
+    for (touch in FlxG.touches.list)
+    {
+      if (touch != null && (touch.pressed || touch.justPressed || touch.justReleased)) return touch;
+    }
+    #end
+
+    // Quest Browser may expose controller/hand-ray input as a mouse click.
+    FlxG.mouse.visible = true;
+    return FlxG.mouse;
   }
   #else
   @:noCompletion
