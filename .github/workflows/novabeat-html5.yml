@@ -96,18 +96,56 @@ jobs:
           fi
           haxelib --global run hmm install -q
 
-      - name: Install complete SDL and Lime Linux development dependencies
+      - name: Restore Linux APT package cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/novabeat-apt-cache/archives
+            ${{ runner.temp }}/novabeat-apt-cache/lists
+          # Bump v1 when the Linux package set changes materially.
+          key: ${{ runner.os }}-ubuntu-24.04-novabeat-apt-v1
+          restore-keys: |
+            ${{ runner.os }}-ubuntu-24.04-novabeat-apt-
+
+      - name: Install missing SDL, Lime, and audio build dependencies
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential g++ gcc g++-multilib gcc-multilib git make pkg-config cmake ninja-build \
-            libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev \
-            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxinerama-dev \
-            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libglu1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libvulkan-dev \
-            libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev \
+          apt_cache_root="$RUNNER_TEMP/novabeat-apt-cache"
+          apt_archives="$apt_cache_root/archives"
+          apt_lists="$apt_cache_root/lists"
+          mkdir -p "$apt_archives/partial" "$apt_lists/partial"
+          chmod -R a+rwX "$apt_cache_root"
+
+          apt_options=(
+            -o "Dir::Cache::archives=$apt_archives"
+            -o "Dir::State::lists=$apt_lists"
+          )
+          packages=(
+            build-essential g++ gcc g++-multilib gcc-multilib git make pkg-config cmake ninja-build
+            libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxinerama-dev
+            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libglu1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libvulkan-dev
+            libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev
             libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libwayland-bin wayland-protocols libdecor-0-dev liburing-dev
+            ffmpeg
+          )
+          missing_packages=()
+          for package in "${packages[@]}"; do
+            installed_status="$(dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null || true)"
+            if [[ "$installed_status" != "installed" ]]; then
+              missing_packages+=("$package")
+            fi
+          done
+
+          if ((${#missing_packages[@]} > 0)); then
+            echo "Installing ${#missing_packages[@]} missing Linux packages: ${missing_packages[*]}"
+            sudo apt-get "${apt_options[@]}" update
+            sudo apt-get "${apt_options[@]}" install -y "${missing_packages[@]}"
+          else
+            echo "All SDL, Lime, and audio build packages are already installed; skipping APT."
+          fi
+
           for header in \
             /usr/include/X11/extensions/scrnsaver.h \
             /usr/include/libudev.h \
@@ -127,14 +165,19 @@ jobs:
           EOF
           command -v wayland-scanner
           wayland-scanner --version
+          command -v ffmpeg
+          # Keep restored APT files readable/writable by the cache action on the next run.
+          sudo chown -R "$(id -u):$(id -g)" "$apt_cache_root"
+          chmod -R u+rwX,go+rX "$apt_cache_root"
+
       - name: Prepare NovaBeat browser audio assets
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
+          command -v ffmpeg >/dev/null 2>&1 || {
+            echo "::error title=FFmpeg missing::FFmpeg should have been installed by the Linux dependency step."
+            exit 1
+          }
           while IFS= read -r -d '' input; do
             output="${input%.ogg}.mp3"
             ffmpeg -nostdin -hide_banner -loglevel error -y -i "$input" -vn -codec:a libmp3lame -q:a 3 "$output"
@@ -143,7 +186,6 @@ jobs:
           for sound in enter back confirm select; do
             test -s "novabeat-assets/sounds/novabeat/${sound}.mp3"
           done
-
       - name: Compile HXCPP support tools required by Lime
         shell: bash
         working-directory: upstream/Funkin
