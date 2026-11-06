@@ -180,7 +180,9 @@ class Bopper extends StageProp implements IPlayStateScriptedClass
    */
   public function dance(forceRestart:Bool = false):Void
   {
-    if (!Preferences.performanceStageAnimations) return;
+    // Characters set shouldBop=false and must keep their idle/dance cycles
+    // even on Low. This preference is intended to suppress stage-prop bops only.
+    if (!Preferences.performanceStageAnimations && shouldBop) return;
 
     if (this.animation == null)
     {
