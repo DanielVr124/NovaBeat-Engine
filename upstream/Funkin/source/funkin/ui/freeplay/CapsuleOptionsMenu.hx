@@ -104,7 +104,7 @@ class CapsuleOptionsMenu extends FlxSpriteGroup
       }
       if (parent.controls.ACCEPT_P || (DeviceUtil.isMobileBrowser
         && TouchUtil.pressAction(currentInstrumental)
-        && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow)))
+        && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow))))
       {
         setBusy(true);
         onConfirm(instrumentalIds[currentInstrumentalIndex] ?? '');
