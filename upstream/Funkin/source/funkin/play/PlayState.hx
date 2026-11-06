@@ -967,11 +967,12 @@ class PlayState extends MusicBeatSubState
     leftWatermarkText.cameras = [camHUD];
     rightWatermarkText.cameras = [camHUD];
 
+    // Keep the lower-right gameplay HUD clear of engine/version build text.
+    rightWatermarkText.text = '';
+    rightWatermarkText.visible = false;
+
     // Initialize some debug stuff.
     #if FEATURE_DEBUG_FUNCTIONS
-    // Display the version number (and git commit hash) in the bottom right corner.
-    this.rightWatermarkText.text = Constants.VERSION;
-
     FlxG.console.registerObject('playState', this);
     #end
 
