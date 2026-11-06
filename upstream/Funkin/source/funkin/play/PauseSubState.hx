@@ -658,7 +658,8 @@ class PauseSubState extends MusicBeatSubState
     var delay:Float = 0.1;
     for (child in metadata.members)
     {
-      FlxTween.tween(child, {alpha: 1, y: #if mobile child.y - 5 #else child.y + 5 #end}, 1.8, {ease: FlxEase.quartOut, startDelay: delay});
+      FlxTween.tween(child, {alpha: 1, y: DeviceUtil.isMobileBrowser ? child.y - 5 : child.y + 5}, 1.8,
+        {ease: FlxEase.quartOut, startDelay: delay});
       delay += 0.1;
     }
   }
@@ -716,7 +717,7 @@ class PauseSubState extends MusicBeatSubState
   function handleTouchInputs():Void
   {
     #if FEATURE_TOUCH_CONTROLS
-    if (!SwipeUtil.justSwipedAny && currentMenuEntries.length > 0)
+    if (DeviceUtil.isMobileBrowser && !SwipeUtil.justSwipedAny && currentMenuEntries.length > 0)
     {
       for (i in 0...menuEntryText.members.length)
       {
