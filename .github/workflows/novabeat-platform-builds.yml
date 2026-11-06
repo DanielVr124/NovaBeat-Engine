@@ -160,7 +160,7 @@ jobs:
           name: novabeat-windows
           path: upstream/Funkin/export/release/windows/NovaBeat-Windows.zip
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   android:
     if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-android]')))
@@ -362,5 +362,5 @@ jobs:
           name: novabeat-android
           path: upstream/Funkin/export/NovaBeat-Android.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
