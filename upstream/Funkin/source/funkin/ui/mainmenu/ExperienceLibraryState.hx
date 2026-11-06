@@ -350,7 +350,8 @@ class ExperienceLibraryState extends MusicBeatState
     // TouchUtil handles native touch and Quest pointer rays. The mouse check
     // is an additional HTML5 fallback because some mobile browsers deliver a
     // synthesized mouse release separately from the touch release.
-    var touchOver:Bool = TouchUtil.overlaps(sprite);
+    var touchOver:Bool = TouchUtil.overlaps(sprite, sprite.camera)
+      || TouchUtil.overlapsComplex(sprite, sprite.camera);
     #if web
     return touchOver || FlxG.mouse.overlaps(sprite, sprite.camera);
     #else
@@ -393,6 +394,36 @@ class ExperienceLibraryState extends MusicBeatState
       if (Math.abs(pointerX - touchGestureStartX) > 24 || Math.abs(pointerY - touchGestureStartY) > 24)
         touchGestureDragged = true;
       touchGestureLastY = pointerY;
+    }
+
+    if (justReleased && !touchGestureActive)
+    {
+      // Recover a browser tap whose touch-down event was swallowed by the
+      // address bar / pointer layer. A release directly over a visible action
+      // or row should still do something instead of appearing unresponsive.
+      var actionFound:Bool = false;
+      for (index in 0...touchButtonHitboxes.length)
+      {
+        if (pointerOver(touchButtonHitboxes[index]))
+        {
+          performTouchAction(touchButtonActions[index]);
+          actionFound = true;
+          break;
+        }
+      }
+
+      if (!actionFound)
+      {
+        for (index in 0...rowHitboxes.length)
+        {
+          if (pointerOver(rowHitboxes[index]))
+          {
+            selectExperience(firstVisibleIndex + index);
+            break;
+          }
+        }
+      }
+      return;
     }
 
     if (touchGestureActive && justReleased)
