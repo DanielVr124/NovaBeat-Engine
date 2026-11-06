@@ -682,7 +682,7 @@ class SongMenuItem extends FlxSpriteGroup
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
-    if (width <= 0 || height <= 0 || (width == lastLayoutWidth && height == lastLayoutHeight)) return;
+    if (width <= 0 || height <= 0) return;
     lastLayoutWidth = width;
     lastLayoutHeight = height;
 
