@@ -304,6 +304,55 @@ class PauseSubState extends MusicBeatSubState
    * Called every frame.
    * @param elapsed The time elapsed since the last frame, in seconds.
    */
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+
+    background?.makeSolidColor(width, height, FlxColor.BLACK);
+    if (pauseButton != null)
+    {
+      pauseButton.setPosition(width - pauseButton.width - 22, 22);
+      pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
+        pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
+    }
+
+    var portrait:Bool = height > width * 1.12;
+    if (metadata != null)
+    {
+      var margin:Float = Math.max(18, width * 0.05);
+      var lineHeight:Float = portrait ? 24 : 32;
+      var index:Int = 0;
+      for (line in metadata.members)
+      {
+        if (line == null) continue;
+        line.x = margin;
+        line.fieldWidth = width - margin * 2;
+        line.y = 22 + lineHeight * index;
+        line.size = portrait ? 18 : 32;
+        line.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
+        index++;
+      }
+    }
+
+    if (offsetText != null)
+    {
+      offsetText.x = 18;
+      offsetText.fieldWidth = width - 36;
+      offsetText.y = height - offsetText.height - (offsetTextInfo?.height ?? 0) - 28;
+      offsetText.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
+    }
+    if (offsetTextInfo != null)
+    {
+      offsetTextInfo.x = 18;
+      offsetTextInfo.fieldWidth = width - 36;
+      offsetTextInfo.y = offsetText.y + offsetText.height + 4;
+      offsetTextInfo.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
+    }
+
+    if (menuEntryText != null) changeSelection(0);
+  }
+
   override public function update(elapsed:Float):Void
   {
     super.update(elapsed);
@@ -838,14 +887,15 @@ class PauseSubState extends MusicBeatSubState
       // Set the transparency.
       text.alpha = isCurrent ? 1.0 : 0.6;
 
-      if (DeviceUtil.isMobileBrowser)
+      var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
+      if (DeviceUtil.isMobileBrowser || portraitLayout)
       {
-        if (isCurrent && currentEntry != prevEntry)
-        {
-          FlxTween.globalManager.cancelTweensOf(text);
-          text.x = 165;
-          FlxTween.tween(text, {x: 150}, 0.2, {ease: FlxEase.backInOut});
-        }
+        var portraitGap:Float = Math.min(84, (FlxG.height * 0.56) / Math.max(1, currentMenuEntries.length));
+        var portraitTop:Float = Math.max(96, (FlxG.height - portraitGap * currentMenuEntries.length) * 0.5);
+        var targetX:Float = portraitLayout ? Math.max(24, FlxG.width * 0.08) : 150;
+        var targetY:Float = portraitLayout ? portraitTop + entryIndex * portraitGap : text.y;
+        FlxTween.globalManager.cancelTweensOf(text);
+        FlxTween.tween(text, {x: targetX, y: targetY}, 0.24, {ease: FlxEase.quartOut});
       }
       else
       {

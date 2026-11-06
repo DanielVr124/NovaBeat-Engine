@@ -564,6 +564,8 @@ class PlayState extends MusicBeatSubState
    * Emma says the image is slightly skewed so I'm leaving it as an image instead of a `createGraphic`.
    */
   public var healthBarBG:FunkinSprite;
+  var baseHealthBarWidth:Float = 0;
+  var baseHealthBarHeight:Float = 0;
 
   /**
    * A sprite group for subtitle display.
@@ -809,6 +811,8 @@ class PlayState extends MusicBeatSubState
 
     // Healthbar
     healthBarBG = FunkinSprite.create(0, 0, 'healthBar');
+    baseHealthBarWidth = healthBarBG.width;
+    baseHealthBarHeight = healthBarBG.height;
     healthBar = new FlxBar(0, 0, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), null, 0, 2);
     scoreText = new FlxBitmapText(0, 0, '', FlxBitmapFont.fromAngelCode(Paths.font("vcr-bmp.png"), Paths.font("vcr-bmp.fnt")));
 
@@ -1938,6 +1942,99 @@ class PlayState extends MusicBeatSubState
     return true;
   }
 
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+
+    camGame.setSize(width, height);
+    camHUD.setSize(width, height);
+    camCutscene.setSize(width, height);
+    camSubtitles.setSize(width, height);
+    camPause.setSize(width, height);
+    camTransition.setSize(width, height);
+    camCutouts.setPosition((width - FlxG.initialWidth) / 2, (height - FlxG.initialHeight) / 2);
+
+    layoutGameplayHealthBar(width, height);
+    layoutGameplayStrumlines(width, height);
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (pauseButton != null)
+    {
+      pauseButton.setPosition(width - pauseButton.width - 22, 22);
+      pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
+        pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
+    }
+    #end
+
+    if (subtitles != null)
+    {
+      subtitles.x = 0;
+      subtitles.y = Preferences.downscroll ? 110 : height - subtitles.height - 110;
+    }
+  }
+
+  function layoutGameplayHealthBar(width:Int, height:Int):Void
+  {
+    if (healthBarBG == null || healthBar == null) return;
+    if (baseHealthBarWidth <= 0) baseHealthBarWidth = healthBarBG.frameWidth;
+    if (baseHealthBarHeight <= 0) baseHealthBarHeight = healthBarBG.frameHeight;
+
+    var portrait:Bool = height > width * 1.12;
+    var scale:Float = portrait ? Math.min(1.0, (width - 32) / baseHealthBarWidth) : 1.0;
+    healthBarBG.scale.set(scale, scale);
+    healthBarBG.updateHitbox();
+    healthBar.scale.set(scale, scale);
+    healthBar.updateHitbox();
+    healthBarBG.x = (width - healthBarBG.width) * 0.5;
+    healthBarBG.y = portrait ? 24 : (Preferences.downscroll ? height * 0.1 : height * 0.9);
+    healthBar.setPosition(healthBarBG.x + 4 * scale, healthBarBG.y + 4 * scale);
+    scoreText.scale.set(portrait ? Math.min(1, width / 720) : 1, portrait ? Math.min(1, width / 720) : 1);
+    scoreText.x = healthBarBG.x + healthBarBG.width - scoreText.width - (portrait ? 8 : 190);
+    scoreText.y = healthBarBG.y + healthBarBG.height + (portrait ? 4 : 8);
+    iconP1?.updatePosition();
+    iconP2?.updatePosition();
+  }
+
+  function layoutGameplayStrumlines(width:Int, height:Int):Void
+  {
+    if (playerStrumline == null || opponentStrumline == null) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var touchArrowControls:Bool = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    touchArrowControls = DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+      && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser);
+    #end
+
+    if (touchArrowControls)
+    {
+      layoutTouchNoteHitbox(width, height);
+      return;
+    }
+
+    if (portrait)
+    {
+      var laneScale:Float = Math.max(0.38, Math.min(0.78, (width - 28) / 620));
+      playerStrumline.strumlineScale.set(laneScale, laneScale);
+      opponentStrumline.strumlineScale.set(laneScale * 0.48, laneScale * 0.48);
+      playerStrumline.x = (width - playerStrumline.width) * 0.5;
+      opponentStrumline.x = (width - opponentStrumline.width) * 0.5;
+      playerStrumline.y = Preferences.downscroll ? height * 0.27 : height * 0.64;
+      opponentStrumline.y = Preferences.downscroll ? height * 0.62 : height * 0.18;
+    }
+    else
+    {
+      playerStrumline.strumlineScale.set(1, 1);
+      opponentStrumline.strumlineScale.set(1, 1);
+      var cutoutSize:Float = FullScreenScaleMode.gameCutoutSize.x / 2.5;
+      playerStrumline.x = (width / 2 + Constants.STRUMLINE_X_OFFSET) + cutoutSize / 2;
+      opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
+      playerStrumline.y = Preferences.downscroll ? height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
+      opponentStrumline.y = Preferences.downscroll ? height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
+    }
+  }
+
   override public function destroy():Void
   {
     performCleanup();
@@ -2294,21 +2391,26 @@ class PlayState extends MusicBeatSubState
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   function initNoteHitbox()
   {
-    final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 1.95) * amplification;
-    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 2.8) * amplification;
-
-    playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
-    playerStrumline.setNoteSpacing(playerNoteSpacing);
-    @:nullSafety(Off) // Who thought it'd be a good idea to make the iterator nullable?
+    // Strum widths are widened once when touch controls are constructed.
+    @:nullSafety(Off)
     for (strum in playerStrumline)
     {
       strum.width *= 2;
     }
-    opponentStrumline.enterMiniMode(0.4 * amplification);
+    opponentStrumline.enterMiniMode(0.4);
+    layoutTouchNoteHitbox(FlxG.width, FlxG.height);
+  }
 
-    playerStrumline.x = (FlxG.width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-    playerStrumline.y = (FlxG.height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+  function layoutTouchNoteHitbox(width:Int, height:Int):Void
+  {
+    final amplification:Float = (width / height) / (FlxG.initialWidth / FlxG.initialHeight);
+    final playerStrumlineScale:Float = ((height / width) * 1.95) * amplification;
+    final playerNoteSpacing:Float = ((height / width) * 2.8) * amplification;
+
+    playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
+    playerStrumline.setNoteSpacing(playerNoteSpacing);
+    playerStrumline.x = (width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
+    playerStrumline.y = (height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
     if (currentChart?.noteStyle != 'pixel')
     {
       #if android playerStrumline.y += 10; #end
@@ -2318,7 +2420,7 @@ class PlayState extends MusicBeatSubState
       playerStrumline.y -= 10;
     }
     opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
-    opponentStrumline.x -= 30;
+    opponentStrumline.x = (width - opponentStrumline.width) * 0.5;
   }
 
   function initPauseSprites()

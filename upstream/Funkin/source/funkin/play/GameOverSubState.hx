@@ -68,6 +68,7 @@ class GameOverSubState extends MusicBeatSubState
    * The boyfriend character.
    */
   var boyfriend:Null<BaseCharacter> = null;
+  var backgroundSprite:Null<FunkinSprite> = null;
 
   /**
    * The invisible object in the scene which the camera focuses on.
@@ -153,6 +154,7 @@ class GameOverSubState extends MusicBeatSubState
     bg.alpha = transparent ? 0.25 : 1.0;
     bg.scrollFactor.set();
     bg.screenCenter();
+    backgroundSprite = bg;
     add(bg);
 
     // Pluck Boyfriend from the PlayState and place him (in the same position) in the GameOverSubState.
@@ -192,6 +194,20 @@ class GameOverSubState extends MusicBeatSubState
     {
       canInput = true;
     });
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (backgroundSprite != null)
+    {
+      backgroundSprite.makeSolidColor(width * 2, height * 2, FlxColor.BLACK);
+      backgroundSprite.alpha = transparent ? 0.25 : 1.0;
+      backgroundSprite.screenCenter();
+    }
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - 20, height - backButton.height - 20);
+    #end
   }
 
   function setCameraTarget():Void
