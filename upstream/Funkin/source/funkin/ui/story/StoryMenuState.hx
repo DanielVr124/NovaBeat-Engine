@@ -164,8 +164,8 @@ class StoryMenuState extends MusicBeatState
     add(levelTitles);
 
     updateBackground();
-    baseLevelBackgroundWidth = levelBackground.width;
-    baseLevelBackgroundHeight = levelBackground.height;
+    baseLevelBackgroundWidth = levelBackground.frameWidth;
+    baseLevelBackgroundHeight = levelBackground.frameHeight;
 
     var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
     levelBackgroundCover = black;
@@ -240,40 +240,65 @@ class StoryMenuState extends MusicBeatState
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
-    if (levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
+    if (width <= 0 || height <= 0 || levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
 
     var portrait:Bool = height > width * 1.12;
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
     var margin:Float = Math.max(18, width * 0.045);
+
+    // Store source-frame dimensions, not the already-scaled display dimensions.
     if (baseLevelBackgroundWidth <= 0) baseLevelBackgroundWidth = levelBackground.frameWidth;
     if (baseLevelBackgroundHeight <= 0) baseLevelBackgroundHeight = levelBackground.frameHeight;
-    var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
-    levelBackground.scale.set(backgroundScale, backgroundScale);
-    levelBackground.updateHitbox();
-    levelBackground.screenCenter();
-    if (levelBackgroundCover != null)
+
+    if (novaBeatStyle || portrait)
     {
-      levelBackgroundCover.makeSolidColor(width, height, FlxColor.BLACK);
-      levelBackgroundCover.setPosition(levelBackground.x, 0);
+      // NovaBeat uses a full-screen backdrop. Portrait FNF uses a cover-fit
+      // backdrop too, but normal landscape FNF must retain its original 400px
+      // week strip instead of being enlarged to the entire viewport.
+      var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
+      levelBackground.scale.set(backgroundScale, backgroundScale);
+      levelBackground.updateHitbox();
+      levelBackground.screenCenter();
+    }
+    else
+    {
+      levelBackground.scale.set(1, 1);
+      levelBackground.updateHitbox();
+      levelBackground.setPosition(0, 56);
     }
 
-    scoreText.setFormat('VCR OSD Mono', portrait ? 19 : 32);
-    scoreText.x = margin;
-    scoreText.y = 14;
-    scoreText.fieldWidth = width * (portrait ? 0.48 : 0.42);
-
-    levelTitleText.setFormat('VCR OSD Mono', portrait ? 20 : 32, FlxColor.WHITE, portrait ? CENTER : RIGHT);
-    levelTitleText.fieldWidth = portrait ? width - margin * 2 : width * 0.55;
-    levelTitleText.x = portrait ? margin : width - (levelTitleText.fieldWidth + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
-    levelTitleText.y = portrait ? height * 0.13 : 10;
-
-    tracklistText.setFormat('VCR OSD Mono', portrait ? 19 : 32);
-    tracklistText.fieldWidth = portrait ? width - margin * 2 : width * 0.55;
-    tracklistText.alignment = CENTER;
-    tracklistText.x = portrait ? margin : (width - tracklistText.fieldWidth) * 0.5 - (width * 0.33);
-    tracklistText.y = portrait ? height * 0.76 : levelBackground.y + levelBackground.height + 100;
+    if (levelBackgroundCover != null)
+    {
+      if (novaBeatStyle || portrait)
+      {
+        levelBackgroundCover.makeSolidColor(width, height, FlxColor.BLACK);
+        levelBackgroundCover.setPosition(0, 0);
+      }
+      else
+      {
+        levelBackgroundCover.makeSolidColor(width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
+        levelBackgroundCover.setPosition(levelBackground.x, 0);
+      }
+    }
 
     if (portrait)
     {
+      scoreText.setFormat('VCR OSD Mono', 19);
+      scoreText.x = margin;
+      scoreText.y = 14;
+      scoreText.fieldWidth = width * 0.48;
+
+      levelTitleText.setFormat('VCR OSD Mono', 20, FlxColor.WHITE, CENTER);
+      levelTitleText.fieldWidth = width - margin * 2;
+      levelTitleText.x = margin;
+      levelTitleText.y = height * 0.13;
+
+      tracklistText.setFormat('VCR OSD Mono', 19);
+      tracklistText.fieldWidth = width - margin * 2;
+      tracklistText.alignment = CENTER;
+      tracklistText.x = margin;
+      tracklistText.y = height * 0.76;
+
       var centreX:Float = width * 0.5;
       var selectorY:Float = height * 0.62;
       leftDifficultyArrow.setPosition(centreX - leftDifficultyArrow.width - 48, selectorY);
@@ -286,6 +311,25 @@ class StoryMenuState extends MusicBeatState
     }
     else
     {
+      // Restore the stock landscape FNF composition. NovaBeat keeps its
+      // backdrop full-screen, but the text and selector stay on-screen.
+      scoreText.setFormat('VCR OSD Mono', 32);
+      scoreText.x = Math.max(FullScreenScaleMode.gameNotchSize.x, 10);
+      scoreText.y = 10;
+      scoreText.fieldWidth = 0;
+
+      levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
+      levelTitleText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
+      levelTitleText.y = 10;
+      levelTitleText.x = width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
+
+      tracklistText.setFormat('VCR OSD Mono', 32);
+      tracklistText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
+      tracklistText.alignment = CENTER;
+      tracklistText.y = novaBeatStyle ? height * 0.76 : levelBackground.y + levelBackground.height + 100;
+      tracklistText.screenCenter(X);
+      tracklistText.x -= width * 0.33;
+
       var useNotch:Bool = Math.max(35, FullScreenScaleMode.gameNotchSize.x) != 35;
       leftDifficultyArrow.x = width - (useNotch ? FullScreenScaleMode.gameNotchSize.x + 410 : 410);
       rightDifficultyArrow.x = width - (useNotch ? FullScreenScaleMode.gameNotchSize.x * 1.5 : 35);
@@ -300,6 +344,7 @@ class StoryMenuState extends MusicBeatState
     }
 
     repositionTitles();
+    updateText();
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (backButton != null) backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
     #end
