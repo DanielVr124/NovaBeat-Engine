@@ -168,8 +168,11 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     {
       // Keep controller navigation available, but let an actual tap/click take
       // priority even when a controller is connected (common on Quest).
-      final pointerEvent:Bool = TouchUtil.touch != null
-        && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased);
+      final pointerEvent:Bool = (TouchUtil.touch != null
+        && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased))
+        #if web
+        || FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased
+        #end;
 
       if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !pointerEvent)
       {
@@ -244,6 +247,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       // Some mobile browsers and Quest Browser deliver a release/click
       // without a matching touch-press event. Do not silently drop that tap.
       acceptPointerItem(releasedItem);
+      clearPointerTap();
       return;
     }
 
@@ -252,9 +256,11 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     final movedDistance:Float = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
     if (movedDistance <= POINTER_TAP_MAX_DISTANCE
-      && pointerTapItem >= 0
-      && releasedItem == pointerTapItem)
+      && releasedItem >= 0
+      && (pointerTapItem < 0 || releasedItem == pointerTapItem))
     {
+      // When a browser misses the initial press coordinate, still honor the
+      // short release on a visible row. A real swipe remains movement-gated.
       acceptPointerItem(releasedItem);
     }
 
