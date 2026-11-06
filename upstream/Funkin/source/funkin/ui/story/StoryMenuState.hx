@@ -406,30 +406,32 @@ class StoryMenuState extends MusicBeatState
 
         // TODO: Querying UI_RIGHT_P (justPressed) after UI_RIGHT always returns false. Fix it!
         if (controls.UI_RIGHT_P #if FEATURE_TOUCH_CONTROLS
-          || (SwipeUtil.swipeRight && TouchUtil.touch != null && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
-          || (TouchUtil.pressAction(rightDifficultyArrow, null, false)) #end)
+          || (DeviceUtil.isMobileBrowser && SwipeUtil.swipeRight && TouchUtil.touch != null
+            && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
+          || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(rightDifficultyArrow, null, false)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
             && !TouchUtil.pressAction(rightDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(1);
         }
 
         if (controls.UI_LEFT_P #if FEATURE_TOUCH_CONTROLS
-          || (SwipeUtil.swipeLeft && TouchUtil.touch != null && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
-          || (TouchUtil.pressAction(leftDifficultyArrow, null, false)) #end)
+          || (DeviceUtil.isMobileBrowser && SwipeUtil.swipeLeft && TouchUtil.touch != null
+            && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
+          || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(leftDifficultyArrow, null, false)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
             && !TouchUtil.pressAction(leftDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(-1);
         }
 
-        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || TouchUtil.overlaps(rightDifficultyArrow) #end)
+        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && TouchUtil.overlaps(rightDifficultyArrow)) #end)
         {
           rightDifficultyArrow.animation.play('press');
         }
@@ -438,7 +440,7 @@ class StoryMenuState extends MusicBeatState
           rightDifficultyArrow.animation.play('idle');
         }
 
-        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || TouchUtil.overlaps(leftDifficultyArrow) #end)
+        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && TouchUtil.overlaps(leftDifficultyArrow)) #end)
         {
           leftDifficultyArrow.animation.play('press');
         }
@@ -454,7 +456,8 @@ class StoryMenuState extends MusicBeatState
       }
 
       #if FEATURE_TOUCH_CONTROLS
-      if (!selectedLevel && TouchUtil.justReleased && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
+      if (DeviceUtil.isMobileBrowser && !selectedLevel && TouchUtil.justReleased
+        && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
       {
         for (i in 0...levelTitles.members.length)
         {
@@ -486,11 +489,18 @@ class StoryMenuState extends MusicBeatState
     currentIndex += change;
 
     #if FEATURE_TOUCH_CONTROLS
-    // Dont wrap around w/ touch.
-    if (currentIndex < 0) currentIndex = 0;
-    if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
+    if (DeviceUtil.isMobileBrowser)
+    {
+      // Don't wrap around when mobile touch navigation is active.
+      if (currentIndex < 0) currentIndex = 0;
+      if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
+    }
+    else
+    {
+      if (currentIndex < 0) currentIndex = levelList.length - 1;
+      if (currentIndex >= levelList.length) currentIndex = 0;
+    }
     #else
-    // Wrap around
     if (currentIndex < 0) currentIndex = levelList.length - 1;
     if (currentIndex >= levelList.length) currentIndex = 0;
     #end

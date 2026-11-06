@@ -9,6 +9,7 @@ import funkin.graphics.video.FunkinVideoSprite;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.util.TouchUtil;
 #end
+import funkin.util.DeviceUtil;
 import funkin.ui.MusicBeatState;
 import funkin.ui.FullScreenScaleMode;
 import flixel.FlxG;
@@ -159,7 +160,7 @@ class AttractState extends MusicBeatState
 
     // If the user presses any button or hold their screen for 1.5 seconds, skip the video.
     if ((FlxG.keys.pressed.ANY && !controls.VOLUME_MUTE && !controls.VOLUME_UP && !controls.VOLUME_DOWN) #if FEATURE_TOUCH_CONTROLS
-      || TouchUtil.touch != null && TouchUtil.touch.pressed #end)
+      || (DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.pressed) #end)
     {
       holdDelta += elapsed;
     }
