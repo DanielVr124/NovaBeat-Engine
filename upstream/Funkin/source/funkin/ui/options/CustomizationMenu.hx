@@ -56,6 +56,12 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     });
     item.screenCenter(X);
 
+    var performanceItem:TextMenuItem = items.createItem(0, itemY + 112, 'PERFORMANCE', AtlasFont.BOLD, function()
+    {
+      codex.switchPage(Performance);
+    });
+    performanceItem.screenCenter(X);
+
     itemDescBox = new FunkinSprite();
     itemDescBox.makeSolidColor(1, 1, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : FlxColor.BLACK);
     itemDescBox.alpha = Preferences.menuStyle == "NovaBeat" ? 0.9 : 0.6;
@@ -75,6 +81,13 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 25));
     itemDescBox.updateHitbox();
     add(itemDesc);
+
+    items.onChange.add(function(selected:TextMenuItem)
+    {
+      itemDesc.text = items.selectedIndex == 1
+        ? 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.'
+        : 'Customize the NovaBeat menu colours, background, equalizer, layout, and animations.';
+    });
 
     camFollow = new FlxObject(FlxG.width / 2, itemY, 140, 70);
     menuCamera.follow(camFollow, null, 0.085);

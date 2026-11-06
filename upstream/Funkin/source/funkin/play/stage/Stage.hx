@@ -8,6 +8,7 @@ import flixel.FlxSprite;
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxPoint;
 import flixel.system.FlxAssets.FlxShader;
+import funkin.Preferences;
 import flixel.util.FlxSort;
 import openfl.display.BitmapData;
 import funkin.modding.IScriptedClass.IPlayStateScriptedClass;
@@ -366,6 +367,9 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
    */
   public function setShader(shader:FlxShader):Void
   {
+    // Skip the full-stage shader pass when performance mode disables stage shaders.
+    if (!Preferences.performanceStageShaders) shader = null;
+
     forEachAlive(function(prop:FlxSprite)
     {
       prop.shader = shader;

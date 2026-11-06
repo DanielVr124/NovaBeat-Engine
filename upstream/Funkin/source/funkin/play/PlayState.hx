@@ -1858,7 +1858,7 @@ class PlayState extends MusicBeatSubState
     // This is an arbitrary number chosen so that the camera doesn't move insanely far in when the bop speed is fast.
     final MAX_RELATIVE_CAM_ZOOM:Float = 1.35;
 
-    if (Preferences.zoomCamera
+    if (Preferences.zoomCamera && Preferences.performanceCameraBops
       && camHUD.zoom < (MAX_RELATIVE_CAM_ZOOM * defaultHUDCameraZoom)
       && cameraZoomRate > 0
       && (Conductor.instance.currentStep + cameraZoomRateOffset * Constants.STEPS_PER_BEAT) % (cameraZoomRate * Constants.STEPS_PER_BEAT) == 0)
@@ -2087,6 +2087,10 @@ class PlayState extends MusicBeatSubState
       // Actually create and position the sprites.
       var event:ScriptEvent = new ScriptEvent(CREATE, false);
       ScriptEventDispatcher.callEvent(currentStage, event);
+
+      // Keep background stage props lightweight when the player chooses a lower preset.
+      if (Preferences.performanceStageAnimations) currentStage.resume();
+      else currentStage.pause();
 
       resetCameraZoom();
 
@@ -3157,7 +3161,7 @@ class PlayState extends MusicBeatSubState
     if (event.eventCanceled) return;
     // Display the hit on the strums
     playerStrumline.hitNote(note, !event.isComboBreak);
-    if (event.doesNotesplash) playerStrumline.playNoteSplash(note.noteData.getDirection());
+    if (event.doesNotesplash && Preferences.performanceNoteSplashes) playerStrumline.playNoteSplash(note.noteData.getDirection());
     if (note.isHoldNote && note.holdNoteSprite != null) playerStrumline.playNoteHoldCover(note.holdNoteSprite);
     if (vocals != null)
     {

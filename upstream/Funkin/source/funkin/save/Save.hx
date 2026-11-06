@@ -111,6 +111,11 @@ class Save implements ConsoleClass
         menuAudioVisualizer: true,
         menuReduceFlashing: false,
         menuLargeText: false,
+        performancePreset: "High",
+        performanceNoteSplashes: true,
+        performanceStageAnimations: true,
+        performanceStageShaders: true,
+        performanceCameraBops: true,
         naughtyness: true,
         downscroll: false,
         flashingLights: true,
@@ -1133,6 +1138,15 @@ typedef SaveDataOptions =
   var menuAudioVisualizer:Bool;
   var menuReduceFlashing:Bool;
   var menuLargeText:Bool;
+
+  /**
+   * Overall graphics preset and individual performance options.
+   */
+  var performancePreset:String;
+  var performanceNoteSplashes:Bool;
+  var performanceStageAnimations:Bool;
+  var performanceStageShaders:Bool;
+  var performanceCameraBops:Bool;
 
   /**
    * FPS

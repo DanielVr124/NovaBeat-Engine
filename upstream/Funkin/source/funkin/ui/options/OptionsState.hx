@@ -98,6 +98,7 @@ class OptionsState extends MusicBeatState
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
     var customization:CustomizationMenu = optionsCodex.addPage(Customization, new CustomizationMenu());
     var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
+    var performance:PerformanceCustomizationMenu = optionsCodex.addPage(Performance, new PerformanceCustomizationMenu());
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -113,6 +114,7 @@ class OptionsState extends MusicBeatState
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
       customization.onExit.add(optionsCodex.switchPage.bind(Options));
       menuCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
+      performance.onExit.add(optionsCodex.switchPage.bind(Customization));
     }
     else
     {
@@ -606,6 +608,7 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Colors = 'colors';
   public var Customization = 'customization';
   public var MenuCustomization = 'menuCustomization';
+  public var Performance = 'performance';
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';
   public var SaveData = 'saveData';

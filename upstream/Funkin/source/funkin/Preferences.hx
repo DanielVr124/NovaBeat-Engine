@@ -494,6 +494,69 @@ class Preferences
   }
 
   /**
+   * Performance options. These only affect visual extras; rhythm timing is unchanged.
+   */
+  public static var performanceNoteSplashes(get, set):Bool;
+
+  static function get_performanceNoteSplashes():Bool
+  {
+    return Save?.instance?.options?.performanceNoteSplashes ?? true;
+  }
+
+  static function set_performanceNoteSplashes(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.performanceNoteSplashes = value;
+    Save.system.flush();
+    return value;
+  }
+
+  public static var performanceStageAnimations(get, set):Bool;
+
+  static function get_performanceStageAnimations():Bool
+  {
+    return Save?.instance?.options?.performanceStageAnimations ?? true;
+  }
+
+  static function set_performanceStageAnimations(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.performanceStageAnimations = value;
+    Save.system.flush();
+    return value;
+  }
+
+  public static var performanceStageShaders(get, set):Bool;
+
+  static function get_performanceStageShaders():Bool
+  {
+    return Save?.instance?.options?.performanceStageShaders ?? true;
+  }
+
+  static function set_performanceStageShaders(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.performanceStageShaders = value;
+    Save.system.flush();
+    return value;
+  }
+
+  public static var performanceCameraBops(get, set):Bool;
+
+  static function get_performanceCameraBops():Bool
+  {
+    return Save?.instance?.options?.performanceCameraBops ?? true;
+  }
+
+  static function set_performanceCameraBops(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.performanceCameraBops = value;
+    Save.system.flush();
+    return value;
+  }
+
+  /**
    * If enabled, the game will hide the mouse when taking a screenshot.
    * @default `true`
    */
