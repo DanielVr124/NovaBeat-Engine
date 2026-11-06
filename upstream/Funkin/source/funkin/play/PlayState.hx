@@ -2456,7 +2456,19 @@ class PlayState extends MusicBeatSubState
     {
       playerStrumline.y -= 10;
     }
-    opponentStrumline.y = safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3;
+    final portrait:Bool = height > width * 1.12;
+    if (portrait)
+    {
+      // Keep the opponent receptors below the top HUD in portrait mode.
+      var hudBottom:Float = safeTop;
+      if (healthBarBG != null) hudBottom = Math.max(hudBottom, healthBarBG.y + healthBarBG.height);
+      if (scoreText != null) hudBottom = Math.max(hudBottom, scoreText.y + scoreText.height);
+      opponentStrumline.y = Math.max(safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3, hudBottom + 16);
+    }
+    else
+    {
+      opponentStrumline.y = safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3;
+    }
     opponentStrumline.x = safeLeft + (safeWidth - opponentStrumline.width) * 0.5;
   }
 
