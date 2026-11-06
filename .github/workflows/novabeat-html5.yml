@@ -1,4 +1,5 @@
 name: NovaBeat HTML5 browser test build
+# [web-build] User-requested rebuild of the latest mobile browser test build.
 
 # Separate experimental browser build. Native Windows/Android builds remain unchanged.
 # [web-build] Rebuild the browser test site from the latest compiler-fixed source.
