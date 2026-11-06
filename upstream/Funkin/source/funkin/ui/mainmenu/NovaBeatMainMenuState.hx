@@ -106,11 +106,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var rowLabels:Array<FlxText> = [];
   var rowIcons:Array<FlxText> = [];
 
-  var featureTitle:Null<FlxText>;
-  var featureDescription:Null<FlxText>;
-  var featureKicker:Null<FlxText>;
-  var featureMeta:Array<FlxText> = [];
-
   var equalizerBars:Array<FlxSprite> = [];
 
   public function new(showTitle:Bool = false)
@@ -191,11 +186,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     rowAccents = [];
     rowLabels = [];
     rowIcons = [];
-    featureMeta = [];
     equalizerBars = [];
-    featureTitle = null;
-    featureDescription = null;
-    featureKicker = null;
 
     buildBackdrop();
     if (showingTitle)
@@ -481,29 +472,15 @@ class NovaBeatMainMenuState extends MusicBeatState
       buildEqualizer(x + 34, y + height - 136, width - 68);
     }
 
-    // Soft orbital accents and the inset feature card echo the original V4 layout.
+    // Keep this panel purely visual: menu selection is communicated by
+    // the highlighted row, not a second block of descriptive hover text.
     var orbit:FlxSprite = addSolid(x + width * 0.50, y + 24, width * 0.40, 2, 0x265D72FF);
     orbit.alpha = 0.5;
     addSolid(x + width * 0.77, y + 24, 2, height * 0.34, 0x265D72FF).alpha = 0.5;
-
-    featureKicker = addLabel(x + 34, y + 38, width - 68, 'YOUR GAME. YOUR WAY.', 11, 0xFF8EA4DC, FlxTextAlign.LEFT, 'Arial');
-    featureTitle = addLabel(x + 34, y + 78, width - 68, ITEM_TITLES[0], 54, 0xFFF8FAFF, FlxTextAlign.LEFT, 'Arial Black');
-    featureDescription = addLabel(x + 34, y + 192, width - 68, ITEM_DESCRIPTIONS[0], 15, 0xFFB1BFDC, FlxTextAlign.LEFT, 'Arial');
-    featureDescription.wordWrap = true;
-    featureDescription.autoSize = false;
-
-    var metaY:Float = y + height * 0.60;
-    for (index in 0...ITEM_META[0].length)
-    {
-      var pillX:Float = x + 34 + index * 118;
-      var pill:FlxSprite = addRoundRect(pillX, metaY, 108, 27, 13, 13, 0x231A2C58);
-      var pillText:FlxText = addLabel(pillX + 5, metaY + 7, 98, ITEM_META[0][index], 9, 0xFFB9C9EC, FlxTextAlign.CENTER, 'Arial');
-      pill.alpha = 1;
-      featureMeta.push(pillText);
-    }
-
-    addLabel(x + 34, y + height - 28, width - 68, 'SELECT AN OPTION TO EXPLORE', 9, 0xFF7186B7, FlxTextAlign.LEFT, 'Arial');
-    addLabel(x + width - 230, y + height - 28, 205, '↑  ↓  NAVIGATE   •   ENTER  SELECT', 9, 0xFF8297C2, FlxTextAlign.RIGHT, 'Arial');
+    var visualAccent:FlxSprite = addRoundRect(x + 34, y + 38, width * 0.34, 5, 3, 3, accentColor());
+    visualAccent.alpha = 0.85;
+    addRoundRect(x + 34, y + 56, width * 0.21, 3, 2, 2, 0xFF8297C2).alpha = 0.5;
+    addRoundRect(x + 34, y + 68, width * 0.27, 3, 2, 2, 0xFF8297C2).alpha = 0.3;
   }
 
   function updateSelection(index:Int):Void
@@ -532,18 +509,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (i < rowIcons.length)
       {
         rowIcons[i].color = selected ? accentColor() : 0xFF8297C2;
-      }
-    }
-
-    if (featureTitle != null && featureDescription != null && featureKicker != null)
-    {
-      featureTitle.text = ITEM_TITLES[index];
-      featureDescription.text = ITEM_DESCRIPTIONS[index];
-      featureKicker.text = ITEM_KICKERS[index];
-
-      for (i in 0...featureMeta.length)
-      {
-        featureMeta[i].text = ITEM_META[index][i];
       }
     }
 
