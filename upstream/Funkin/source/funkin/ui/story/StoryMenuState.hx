@@ -38,6 +38,7 @@ import funkin.api.discord.DiscordClient;
 class StoryMenuState extends MusicBeatState
 {
   static final DEFAULT_BACKGROUND_COLOR:FlxColor = FlxColor.fromString('#F9CF51');
+  static final BACKGROUND_Y:Int = 56;
   static final BACKGROUND_HEIGHT:Int = 400;
 
   var currentDifficultyId:String = 'normal';
@@ -236,6 +237,7 @@ class StoryMenuState extends MusicBeatState
     if (width <= 0 || height <= 0 || levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
 
     var portrait:Bool = height > width * 1.12;
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
     var margin:Float = Math.max(18, width * 0.045);
 
     // Story Mode keeps the stock FNF layout in both styles. Only the artwork
@@ -285,14 +287,16 @@ class StoryMenuState extends MusicBeatState
       scoreText.fieldWidth = 0;
 
       levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
-      levelTitleText.fieldWidth = 0;
+      levelTitleText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
       levelTitleText.y = 10;
       levelTitleText.x = width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
 
       tracklistText.setFormat('VCR OSD Mono', 32);
-      tracklistText.fieldWidth = 0;
+      tracklistText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
       tracklistText.alignment = CENTER;
-      tracklistText.y = height * 0.77;
+      // Original FNF keeps the track list immediately below its stock 400px week area.
+      // NovaBeat uses its own full-screen composition and anchors tracks near the bottom.
+      tracklistText.y = novaBeatStyle ? height * 0.76 : Math.min(BACKGROUND_Y + BACKGROUND_HEIGHT + 100, Math.max(0, height - tracklistText.height));
       tracklistText.screenCenter(X);
       tracklistText.x -= width * 0.33;
 
@@ -398,7 +402,13 @@ class StoryMenuState extends MusicBeatState
 
       // TODO: Readd lock icon if unlocked is false.
 
-      var levelTitleItem:LevelTitle = new LevelTitle(0, Std.int(levelBackground.y + levelBackground.height + 10), level);
+      // The original FNF carousel starts just below its 400px week area even
+      // though the replacement artwork itself is full-screen. NovaBeat keeps
+      // its own full-screen carousel entrance.
+      var titleStartY:Float = Preferences.menuStyle == "NovaBeat"
+        ? levelBackground.y + levelBackground.height + 10
+        : BACKGROUND_Y + BACKGROUND_HEIGHT + 10;
+      var levelTitleItem:LevelTitle = new LevelTitle(0, Std.int(titleStartY), level);
       levelTitleItem.targetY = ((levelTitleItem.height + 20) * levelIndex);
       levelTitleItem.screenCenter(X);
       levelTitles.add(levelTitleItem);
@@ -758,11 +768,14 @@ class StoryMenuState extends MusicBeatState
     }
     else
     {
+      tracklistText.fieldWidth = Preferences.menuStyle == "NovaBeat" ? FlxG.width * 0.55 : 0;
       tracklistText.screenCenter(X);
       tracklistText.x -= (FlxG.width * 0.33);
-      // NovaBeat uses full-screen art, so its tracks need a fixed on-screen
-      // anchor instead of being placed below the bottom of that artwork.
-      tracklistText.y = FlxG.height * 0.77;
+      // Keep the FNF track list at its stock position; only NovaBeat uses
+      // the bottom-anchored full-screen composition.
+      tracklistText.y = Preferences.menuStyle == "NovaBeat"
+        ? FlxG.height * 0.76
+        : Math.min(BACKGROUND_Y + BACKGROUND_HEIGHT + 100, Math.max(0, FlxG.height - tracklistText.height));
     }
 
     var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
