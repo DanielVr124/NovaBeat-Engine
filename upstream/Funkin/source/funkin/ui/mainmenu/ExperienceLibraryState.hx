@@ -149,7 +149,7 @@ class ExperienceLibraryState extends MusicBeatState
 
     var smallGap:Float = 5;
     var smallWidth:Float = (listWidth - smallGap * 3) / 4;
-    addTouchButton(listX, secondaryY, smallWidth, 26, "ENABLE", "toggle", false);
+    addTouchButton(listX, secondaryY, smallWidth, 26, "TOGGLE", "toggle", false);
     addTouchButton(listX + smallWidth + smallGap, secondaryY, smallWidth, 26, "TYPE", "type", false);
     addTouchButton(listX + (smallWidth + smallGap) * 2, secondaryY, smallWidth, 26, "TARGET", "target", false);
     addTouchButton(listX + (smallWidth + smallGap) * 3, secondaryY, smallWidth, 26, "RESCAN", "rescan", false);
@@ -282,7 +282,7 @@ class ExperienceLibraryState extends MusicBeatState
       return;
     }
     if (!info.isOfficial && !info.enabled)
-      statusText.text = usesTouchControls ? "DISABLED: TAP ENABLE TO USE THIS PACKAGE." : "DISABLED: PRESS E TO ENABLE THIS PACKAGE.";
+      statusText.text = usesTouchControls ? "DISABLED: TAP TOGGLE TO ENABLE THIS PACKAGE." : "DISABLED: PRESS E TO ENABLE THIS PACKAGE.";
     else if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
       statusText.text = "CONTENT EXTENSION: LAUNCH ITS ASSIGNED EXPERIENCE.";
     else if (info.packageType == ExperienceManager.PACKAGE_UNCLASSIFIED)
