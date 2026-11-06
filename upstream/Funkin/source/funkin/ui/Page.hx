@@ -20,6 +20,8 @@ class Page<T:PageName> extends FlxGroup
   public var enabled(default, set) = true;
   public var canExit = true;
   public var codex:Codex<T>;
+  var lastViewportWidth:Int = -1;
+  var lastViewportHeight:Int = -1;
 
   var controls(get, never):Controls;
 
@@ -37,11 +39,40 @@ class Page<T:PageName> extends FlxGroup
     onExit.dispatch();
   }
 
+  public function new()
+  {
+    super();
+    lastViewportWidth = FlxG.width;
+    lastViewportHeight = FlxG.height;
+    FlxG.signals.gameResized.add(onGameResized);
+  }
+
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+    syncViewportLayout();
 
     if (enabled) updateEnabled(elapsed);
+  }
+
+  function onGameResized(width:Int, height:Int):Void
+  {
+    syncViewportLayout();
+  }
+
+  function syncViewportLayout():Void
+  {
+    var width:Int = FlxG.width;
+    var height:Int = FlxG.height;
+    if (width <= 0 || height <= 0 || (width == lastViewportWidth && height == lastViewportHeight)) return;
+
+    lastViewportWidth = width;
+    lastViewportHeight = height;
+    onViewportResize(width, height);
+  }
+
+  public function onViewportResize(width:Int, height:Int):Void
+  {
   }
 
   function updateEnabled(elapsed:Float)
@@ -72,6 +103,7 @@ class Page<T:PageName> extends FlxGroup
 
   override function destroy()
   {
+    FlxG.signals.gameResized.remove(onGameResized);
     super.destroy();
     onSwitch.removeAll();
   }

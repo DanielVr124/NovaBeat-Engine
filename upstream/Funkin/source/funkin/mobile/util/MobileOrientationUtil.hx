@@ -43,9 +43,7 @@ class MobileOrientationUtil
 
   public static function getUnavailableMessage():String
   {
-    #if ios
-    return "iOS controls rotation through system settings in this build.";
-    #elseif web
+    #if web
     if (DeviceUtil.isQuestBrowser) return "Orientation locking is not applicable to a VR headset.";
     return "This browser does not support orientation locking for this page.";
     #else

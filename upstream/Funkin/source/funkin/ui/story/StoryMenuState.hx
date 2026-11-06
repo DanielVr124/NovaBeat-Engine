@@ -233,6 +233,68 @@ class StoryMenuState extends MusicBeatState
     #end
   }
 
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(18, width * 0.045);
+    var backgroundScale:Float = Math.max(width / levelBackground.width, height / levelBackground.height);
+    levelBackground.scale.set(backgroundScale, backgroundScale);
+    levelBackground.updateHitbox();
+    levelBackground.screenCenter();
+
+    scoreText.setFormat('VCR OSD Mono', portrait ? 19 : 32);
+    scoreText.x = margin;
+    scoreText.y = 14;
+    scoreText.fieldWidth = width * (portrait ? 0.48 : 0.42);
+
+    levelTitleText.setFormat('VCR OSD Mono', portrait ? 20 : 32, FlxColor.WHITE, portrait ? CENTER : RIGHT);
+    levelTitleText.fieldWidth = portrait ? width - margin * 2 : width * 0.55;
+    levelTitleText.x = portrait ? margin : width - (levelTitleText.fieldWidth + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
+    levelTitleText.y = portrait ? height * 0.13 : 10;
+
+    tracklistText.setFormat('VCR OSD Mono', portrait ? 19 : 32);
+    tracklistText.fieldWidth = portrait ? width - margin * 2 : width * 0.55;
+    tracklistText.alignment = CENTER;
+    tracklistText.x = portrait ? margin : (width - tracklistText.fieldWidth) * 0.5 - (width * 0.33);
+    tracklistText.y = portrait ? height * 0.76 : levelBackground.y + levelBackground.height + 100;
+
+    if (portrait)
+    {
+      var centreX:Float = width * 0.5;
+      var selectorY:Float = height * 0.62;
+      leftDifficultyArrow.setPosition(centreX - leftDifficultyArrow.width - 48, selectorY);
+      rightDifficultyArrow.setPosition(centreX + 48, selectorY);
+      if (difficultySprite != null)
+      {
+        difficultySprite.x = centreX - difficultySprite.width * 0.5;
+        difficultySprite.y = selectorY - 15;
+      }
+    }
+    else
+    {
+      var useNotch:Bool = Math.max(35, FullScreenScaleMode.gameNotchSize.x) != 35;
+      leftDifficultyArrow.x = width - (useNotch ? FullScreenScaleMode.gameNotchSize.x + 410 : 410);
+      rightDifficultyArrow.x = width - (useNotch ? FullScreenScaleMode.gameNotchSize.x * 1.5 : 35);
+      leftDifficultyArrow.y = 480;
+      rightDifficultyArrow.y = 480;
+      if (difficultySprite != null)
+      {
+        difficultySprite.x = leftDifficultyArrow.x + leftDifficultyArrow.width + 10
+          + (difficultySprites.get(Constants.DEFAULT_DIFFICULTY).width - difficultySprite.width) / 2;
+        difficultySprite.y = leftDifficultyArrow.y - 5;
+      }
+    }
+
+    repositionTitles();
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
+    refresh();
+  }
+
   function rememberSelection():Void
   {
     if (rememberedLevelId != null)
@@ -797,8 +859,8 @@ class StoryMenuState extends MusicBeatState
   {
     var currentIndex:Int = levelList.indexOf(currentLevelId);
 
-    // The current item should be at y 480.
-    levelTitles.members[currentIndex].targetY = 480;
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : 480;
 
     // Every item above it should be positioned in relation to the next item.
     if (currentIndex > 0)

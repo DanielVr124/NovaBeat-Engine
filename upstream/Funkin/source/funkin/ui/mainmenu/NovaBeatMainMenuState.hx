@@ -1,8 +1,10 @@
 package funkin.ui.mainmenu;
 
+import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.tweens.FlxTween;
@@ -82,6 +84,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   ];
 
   var uiCamera:FlxCamera;
+  var interfaceLayer:FlxTypedGroup<FlxBasic>;
+  var routeInterfaceObjects:Bool = false;
   var menuItems:TextMenuList;
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
@@ -126,6 +130,10 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     super.create();
 
+    interfaceLayer = new FlxTypedGroup<FlxBasic>();
+    super.add(interfaceLayer);
+    routeInterfaceObjects = true;
+
     showingTitle = showTitleOnCreate;
     persistentUpdate = true;
     persistentDraw = true;
@@ -141,6 +149,67 @@ class NovaBeatMainMenuState extends MusicBeatState
     {
       playMenuTheme(false, 0.82);
       buildInterface();
+    }
+  }
+
+  override public function add(Object:FlxBasic):FlxBasic
+  {
+    if (routeInterfaceObjects && interfaceLayer != null && Object != interfaceLayer) return interfaceLayer.add(Object);
+    return super.add(Object);
+  }
+
+  override public function remove(Object:FlxBasic, Splice:Bool = false):FlxBasic
+  {
+    if (routeInterfaceObjects && interfaceLayer != null && Object != interfaceLayer && interfaceLayer.members.contains(Object))
+      return interfaceLayer.remove(Object, Splice);
+    return super.remove(Object, Splice);
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (interfaceLayer == null || transitioning) return;
+
+    var selectedIndex:Int = menuItems == null ? 0 : menuItems.selectedIndex;
+    for (child in interfaceLayer.members.copy())
+    {
+      if (child == null) continue;
+      FlxTween.cancelTweensOf(child);
+      child.destroy();
+    }
+    interfaceLayer.clear();
+
+    backgroundSprite = null;
+    backgroundDimmer = null;
+    titleLogo = null;
+    titlePrompt = null;
+    titleTapHint = null;
+    homeAudioButton = null;
+    homeOptionsButton = null;
+    menuItems = null;
+    rowBackgrounds = [];
+    rowAccents = [];
+    rowLabels = [];
+    rowIcons = [];
+    featureMeta = [];
+    equalizerBars = [];
+    featureTitle = null;
+    featureDescription = null;
+    featureKicker = null;
+
+    buildBackdrop();
+    if (showingTitle)
+    {
+      buildTitleScreen();
+    }
+    else
+    {
+      buildInterface();
+      if (menuItems != null && menuItems.length > 0)
+      {
+        menuItems.selectItem(Std.int(Math.max(0, Math.min(selectedIndex, menuItems.length - 1))));
+        updateSelection(menuItems.selectedIndex);
+      }
     }
   }
 
@@ -171,7 +240,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int(height * 0.50 * interfaceScale()));
+    var maxLogoWidth:Float = width * 0.82 * interfaceScale();
+    var maxLogoHeight:Float = height * (height > width * 1.12 ? 0.34 : 0.50) * interfaceScale();
+    var logoFit:Float = Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height);
+    logo.setGraphicSize(Std.int(logo.width * logoFit), Std.int(logo.height * logoFit));
     logo.updateHitbox();
     logo.x = (width - logo.width) * 0.5;
     logo.y = height * 0.43 - logo.height * 0.5;
@@ -283,19 +355,24 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function buildTopBar(margin:Float):Void
   {
+    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
     var logo:FlxSprite = new FlxSprite(margin, 12).loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int(78 * interfaceScale()));
+    logo.setGraphicSize(0, Std.int((portraitLayout ? 54 : 78) * interfaceScale()));
     logo.updateHitbox();
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
     add(logo);
 
-    var buttonY:Float = 25;
-    homeAudioButton = addLabel(FlxG.width - margin - 118, buttonY, 48, '♫', 25, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
-    homeOptionsButton = addLabel(FlxG.width - margin - 58, buttonY, 48, '⚙', 25, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
+    var buttonY:Float = 18;
+    var buttonSize:Float = portraitLayout ? 40 : 48;
+    var buttonGap:Float = 10;
+    var audioX:Float = FlxG.width - margin - buttonSize * 2 - buttonGap;
+    var optionsX:Float = FlxG.width - margin - buttonSize;
+    homeAudioButton = addLabel(audioX, buttonY, buttonSize, '♫', buttonSize > 44 ? 25 : 21, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
+    homeOptionsButton = addLabel(optionsX, buttonY, buttonSize, '⚙', buttonSize > 44 ? 25 : 21, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
 
-    addRoundRect(FlxG.width - margin - 118, buttonY - 3, 48, 48, 15, 15, 0xB806102D);
-    addRoundRect(FlxG.width - margin - 58, buttonY - 3, 48, 48, 15, 15, 0xB806102D);
+    addRoundRect(audioX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
+    addRoundRect(optionsX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
     // Draw the glyphs after their button plates so they stay on top.
     bringToFront(homeAudioButton);
     bringToFront(homeOptionsButton);
@@ -312,11 +389,14 @@ class NovaBeatMainMenuState extends MusicBeatState
     var gap:Float = (tileLayout ? Math.max(8, FlxG.width * 0.018) : Math.max(9, FlxG.height * 0.018));
     gap *= densityMultiplier() * 1.06;
 
-    var buttonW:Float = tileLayout ? (width - gap * 3) / 2 : width - 20;
+    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
+    var columns:Int = tileLayout ? (portraitLayout ? 1 : 2) : 1;
+    var rows:Int = Std.int(Math.ceil(ITEM_NAMES.length / columns));
+    var buttonW:Float = tileLayout ? (width - gap * (columns + 1)) / columns : width - 20;
     var buttonH:Float;
     if (tileLayout)
     {
-      buttonH = Math.max(48, Math.min(78, (height - gap * 2) / 3));
+      buttonH = Math.max(52, Math.min(portraitLayout ? 98 : 78, (height - gap * (rows - 1)) / rows));
     }
     else
     {
@@ -326,13 +406,13 @@ class NovaBeatMainMenuState extends MusicBeatState
     var firstX:Float = tileLayout ? x + gap : x + 6;
     var firstY:Float = y + (tileLayout ? 0 : 10);
 
-    menuItems = new TextMenuList(tileLayout ? NavControls.Columns(2) : NavControls.Vertical);
+    menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
     menuItems.cameras = [uiCamera];
 
     for (index in 0...ITEM_NAMES.length)
     {
-      var column:Int = tileLayout ? index % 2 : 0;
-      var row:Int = tileLayout ? Std.int(index / 2) : index;
+      var column:Int = tileLayout ? index % columns : 0;
+      var row:Int = tileLayout ? Std.int(index / columns) : index;
       var itemX:Float = tileLayout ? firstX + column * (buttonW + gap) : firstX;
       var itemY:Float = firstY + row * (buttonH + gap);
 

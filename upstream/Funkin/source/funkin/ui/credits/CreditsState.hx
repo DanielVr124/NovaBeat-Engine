@@ -31,7 +31,8 @@ class CreditsState extends MusicBeatState
    * The width of the screen the credits should maximally fill up.
    * Make this an instanced variable so it gets set by the constructor.
    */
-  final FULL_WIDTH = FlxG.width - (SCREEN_PAD * 2);
+  var fullWidth:Float = FlxG.width - (SCREEN_PAD * 2);
+  var lastLayoutHeight:Float = FlxG.height;
 
   /**
    * The font to use to display the text.
@@ -198,8 +199,8 @@ class CreditsState extends MusicBeatState
     // CreditsSide.Center: Full screen width
     // CreditsSide.Left: Left half of screen
     // CreditsSide.Right: Right half of screen
-    var xPos = (side == CreditsSide.Right) ? (FULL_WIDTH / 2) : 0;
-    var width = (side == CreditsSide.Center) ? FULL_WIDTH : (FULL_WIDTH / 2);
+    var xPos = (side == CreditsSide.Right) ? (fullWidth / 2) : 0;
+    var width = (side == CreditsSide.Center) ? fullWidth : (fullWidth / 2);
     var size = header ? CREDITS_HEADER_FONT_SIZE : CREDITS_FONT_SIZE;
 
     // using a cast since creditsGroup is FlxSpriteGroup
@@ -253,6 +254,29 @@ class CreditsState extends MusicBeatState
 
     // offset that each entry has
     creditsLineY += CREDITS_FONT_SIZE * 2.5;
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (creditsGroup == null) return;
+
+    creditsGroup.y += height - lastLayoutHeight;
+    lastLayoutHeight = height;
+    fullWidth = width - SCREEN_PAD * 2;
+    creditsGroup.x = Math.max(funkin.ui.FullScreenScaleMode.gameNotchSize.x, SCREEN_PAD);
+
+    for (line in creditsGroup.members)
+    {
+      if (line == null) continue;
+      line.x = creditsGroup.x;
+      var textLine:FlxText = cast line;
+      textLine.fieldWidth = fullWidth;
+    }
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
   }
 
   override public function update(elapsed:Float):Void

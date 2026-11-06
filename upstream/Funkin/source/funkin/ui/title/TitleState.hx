@@ -74,6 +74,11 @@ class TitleState extends MusicBeatState
   var gfDance:FunkinSprite;
   var danceLeft:Bool = false;
   var titleText:FunkinSprite;
+  var titleBackground:Null<FunkinSprite>;
+  var titleLogoBaseWidth:Float = 0;
+  var titleLogoBaseHeight:Float = 0;
+  var titleTextBaseWidth:Float = 0;
+  var titleTextBaseHeight:Float = 0;
   #if FEATURE_VIDEO_PLAYBACK
   var attractTimer:FlxTimer;
   #end
@@ -86,6 +91,7 @@ class TitleState extends MusicBeatState
 
     var bg:FunkinSprite = new FunkinSprite(-1).makeSolidColor(FlxG.width + 2, FlxG.height, FlxColor.BLACK);
     bg.screenCenter();
+    titleBackground = bg;
     add(bg);
 
     logoBl = new FunkinSprite(-150 + (FullScreenScaleMode.gameCutoutSize.x / 2.5), -100);
@@ -94,6 +100,8 @@ class TitleState extends MusicBeatState
     logoBl.animation.play('bump');
     logoBl.shader = swagShader.shader;
     logoBl.updateHitbox();
+    titleLogoBaseWidth = logoBl.width;
+    titleLogoBaseHeight = logoBl.height;
 
     gfDance = new FunkinSprite((FlxG.width * 0.4) + FullScreenScaleMode.gameCutoutSize.x / 2.5, FlxG.height * 0.07);
     gfDance.frames = Paths.getSparrowAtlas('gfDanceTitle');
@@ -150,6 +158,8 @@ class TitleState extends MusicBeatState
     titleText.anim.addByFrameLabel('press', "Confirm", 24);
     titleText.animation.play('idle');
     titleText.updateHitbox();
+    titleTextBaseWidth = titleText.width;
+    titleTextBaseHeight = titleText.height;
     titleText.shader = swagShader.shader;
 
     add(titleText);
@@ -204,6 +214,59 @@ class TitleState extends MusicBeatState
     #if FEATURE_VIDEO_PLAYBACK
     trace('Opening Attract state in ${Constants.TITLE_ATTRACT_DELAY} seconds...');
     attractTimer = new FlxTimer().start(Constants.TITLE_ATTRACT_DELAY, (_:FlxTimer) -> moveToAttract());
+    #end
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    var portrait:Bool = height > width * 1.12;
+
+    if (titleBackground != null)
+    {
+      titleBackground.makeSolidColor(width + 2, height, FlxColor.BLACK);
+      titleBackground.setPosition(-1, 0);
+    }
+
+    if (logoBl != null && titleLogoBaseWidth > 0 && titleLogoBaseHeight > 0)
+    {
+      var fit:Float = Math.min(1.0, Math.min((width - 36) / titleLogoBaseWidth,
+        (height * (portrait ? 0.34 : 0.58)) / titleLogoBaseHeight));
+      logoBl.setGraphicSize(Std.int(titleLogoBaseWidth * fit), Std.int(titleLogoBaseHeight * fit));
+      logoBl.updateHitbox();
+      logoBl.setPosition((width - logoBl.width) * 0.5, portrait ? height * 0.04 : -100);
+    }
+
+    if (gfDance != null)
+    {
+      gfDance.scale.set(portrait ? 0.70 : 1.0, portrait ? 0.70 : 1.0);
+      gfDance.updateHitbox();
+      gfDance.setPosition((width - gfDance.width) * 0.5, portrait ? height * 0.35 : height * 0.07);
+    }
+
+    if (titleText != null && titleTextBaseWidth > 0 && titleTextBaseHeight > 0)
+    {
+      var fit:Float = Math.min(1.0, Math.min((width - 28) / titleTextBaseWidth,
+        (height * (portrait ? 0.18 : 0.22)) / titleTextBaseHeight));
+      titleText.setGraphicSize(Std.int(titleTextBaseWidth * fit), Std.int(titleTextBaseHeight * fit));
+      titleText.updateHitbox();
+      titleText.setPosition((width - titleText.width) * 0.5, height * 0.81);
+    }
+
+    if (ngSpr != null)
+    {
+      ngSpr.x = (width - ngSpr.width) * 0.5;
+      ngSpr.y = height * (portrait ? 0.57 : 0.52);
+    }
+
+    if (blackScreen != null)
+    {
+      blackScreen.makeSolidColor(width + 2, height, FlxColor.BLACK);
+      blackScreen.setPosition(-1, 0);
+    }
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null) backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
     #end
   }
 

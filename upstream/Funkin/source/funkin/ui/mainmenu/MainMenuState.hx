@@ -245,20 +245,7 @@ class MainMenuState extends MusicBeatState
       startExitState(() -> new funkin.ui.credits.CreditsState());
     });
 
-    // Restore the original menu spacing. The Mods artwork is corrected independently.
-    final spacing:Float = Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
-    final top:Float = (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
-
-    for (index => menuItem in menuItems)
-    {
-      menuItem.x = FlxG.width / 2;
-      menuItem.y = top + spacing * index;
-      menuItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end; // we want a lil scroll on mobile, for the cute gyro effect
-      // This one affects how much the menu items move when you scroll between them.
-      menuItem.scrollFactor.y = 0.4;
-
-      if (index == 1) camFollow.setPosition(menuItem.getGraphicMidpoint().x, menuItem.getGraphicMidpoint().y);
-    }
+    layoutMenuItems();
 
     menuItems.selectItem(rememberedSelectedIndex);
 
@@ -341,6 +328,58 @@ class MainMenuState extends MusicBeatState
 
     // This has to come AFTER!
     initLeftWatermarkText();
+  }
+
+  function layoutMenuItems():Void
+  {
+    if (menuItems == null || menuItems.length == 0) return;
+
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var spacing:Float = portrait
+      ? Math.min(122, (FlxG.height * 0.54) / Math.max(1, menuItems.length - 1))
+      : Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
+    var top:Float = portrait
+      ? FlxG.height * 0.23
+      : (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
+
+    for (index => menuItem in menuItems)
+    {
+      var targetScale:Float = portrait ? Math.min(1.0, (FlxG.width - 64) / Math.max(1, menuItem.width)) : 1.0;
+      menuItem.scale.set(targetScale, targetScale);
+      menuItem.updateHitbox();
+      menuItem.x = FlxG.width / 2;
+      menuItem.y = top + spacing * index;
+      menuItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
+      menuItem.scrollFactor.y = 0.4;
+
+      if (index == 1) camFollow.setPosition(menuItem.getGraphicMidpoint().x, menuItem.getGraphicMidpoint().y);
+    }
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (bg != null)
+    {
+      bg.setGraphicSize(Std.int(width * 1.2));
+      bg.updateHitbox();
+      bg.screenCenter();
+      magenta.setGraphicSize(Std.int(bg.width));
+      magenta.updateHitbox();
+      magenta.setPosition(bg.x, bg.y);
+    }
+
+    layoutMenuItems();
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      if (backButton != null) backButton.setPosition(width - backButton.width - 24, height - backButton.height - 24);
+      if (optionsButton != null) optionsButton.setPosition(24, height - optionsButton.height - 24);
+    }
+    #end
+
+    resetCamStuff();
   }
 
   function initLeftWatermarkText():Void

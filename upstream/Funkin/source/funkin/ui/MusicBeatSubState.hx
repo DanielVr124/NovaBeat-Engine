@@ -29,6 +29,8 @@ class MusicBeatSubState extends FlxSubState implements IEventHandler
 {
   public var leftWatermarkText:Null<FlxText> = null;
   public var rightWatermarkText:Null<FlxText> = null;
+  var lastViewportWidth:Int = -1;
+  var lastViewportHeight:Int = -1;
   public var conductorInUse(get, set):Conductor;
 
   var _conductorInUse:Null<Conductor>;
@@ -116,6 +118,10 @@ class MusicBeatSubState extends FlxSubState implements IEventHandler
 
     createWatermarkText();
 
+    lastViewportWidth = FlxG.width;
+    lastViewportHeight = FlxG.height;
+    FlxG.signals.gameResized.add(onGameResized);
+
     Conductor.beatHit.add(this.beatHit);
     Conductor.stepHit.add(this.stepHit);
 
@@ -124,6 +130,7 @@ class MusicBeatSubState extends FlxSubState implements IEventHandler
 
   override public function destroy():Void
   {
+    FlxG.signals.gameResized.remove(onGameResized);
     super.destroy();
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -145,6 +152,8 @@ class MusicBeatSubState extends FlxSubState implements IEventHandler
       WindowUtil.setWindowTitle('Friday Night Funkin\'');
     }
 
+    syncViewportLayout();
+
     // Display Conductor info in the watch window.
     FlxG.watch.addQuick('musicTime', FlxG.sound.music?.time ?? 0.0);
     Conductor.watchQuick(conductorInUse);
@@ -164,6 +173,40 @@ class MusicBeatSubState extends FlxSubState implements IEventHandler
     super.onFocusLost();
 
     dispatchEvent(new FocusScriptEvent(FOCUS_LOST));
+  }
+
+  function onGameResized(width:Int, height:Int):Void
+  {
+    syncViewportLayout();
+  }
+
+  function syncViewportLayout():Void
+  {
+    var width:Int = FlxG.width;
+    var height:Int = FlxG.height;
+    if (width <= 0 || height <= 0 || (width == lastViewportWidth && height == lastViewportHeight)) return;
+
+    lastViewportWidth = width;
+    lastViewportHeight = height;
+
+    if (leftWatermarkText != null)
+    {
+      leftWatermarkText.x = Math.max(0, FullScreenScaleMode.gameNotchSize.x);
+      leftWatermarkText.y = height - 18;
+      leftWatermarkText.fieldWidth = width;
+    }
+    if (rightWatermarkText != null)
+    {
+      rightWatermarkText.x = -FullScreenScaleMode.gameNotchSize.x;
+      rightWatermarkText.y = height - 18;
+      rightWatermarkText.fieldWidth = width;
+    }
+
+    onViewportResize(width, height);
+  }
+
+  public function onViewportResize(width:Int, height:Int):Void
+  {
   }
 
   public function initConsoleHelpers():Void
