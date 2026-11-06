@@ -183,17 +183,18 @@ class StoryMenuState extends MusicBeatState
     tracklistText.setFormat('VCR OSD Mono', 32);
     tracklistText.alignment = CENTER;
     tracklistText.color = 0xFFE55777;
+    tracklistText.zIndex = 20;
     add(tracklistText);
 
     scoreText = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 10), 10, 0, 'HIGH SCORE: 42069420');
     scoreText.setFormat('VCR OSD Mono', 32);
-    scoreText.zIndex = 1000;
+    scoreText.zIndex = 30;
     add(scoreText);
 
     levelTitleText = new FlxText(Math.max((FlxG.width * 0.7), FlxG.width - FullScreenScaleMode.gameNotchSize.x), 10, 0, 'LEVEL 1');
     levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
     levelTitleText.alpha = 0.7;
-    levelTitleText.zIndex = 1000;
+    levelTitleText.zIndex = 30;
     add(levelTitleText);
 
     buildLevelTitles();
@@ -204,6 +205,7 @@ class StoryMenuState extends MusicBeatState
     leftDifficultyArrow.animation.addByPrefix('idle', 'leftIdle0');
     leftDifficultyArrow.animation.addByPrefix('press', 'leftConfirm0');
     leftDifficultyArrow.animation.play('idle');
+    leftDifficultyArrow.zIndex = 30;
     add(leftDifficultyArrow);
 
     buildDifficultySprite(Constants.DEFAULT_DIFFICULTY);
@@ -214,8 +216,10 @@ class StoryMenuState extends MusicBeatState
     rightDifficultyArrow.animation.addByPrefix('idle', 'rightIdle0');
     rightDifficultyArrow.animation.addByPrefix('press', 'rightConfirm0');
     rightDifficultyArrow.animation.play('idle');
+    rightDifficultyArrow.zIndex = 30;
     add(rightDifficultyArrow);
 
+    difficultySprite.zIndex = 31;
     add(difficultySprite);
 
     updateText();
@@ -376,7 +380,8 @@ class StoryMenuState extends MusicBeatState
       {
         difficultySprite.frames = Paths.getSparrowAtlas('storymenu/difficulties/${diff}');
         difficultySprite.animation.addByPrefix('idle', 'idle0', 24, true);
-        if (Preferences.flashingLights) difficultySprite.animation.play('idle');
+        // Difficulty artwork is animated independently of the flashing-lights preference.
+        difficultySprite.animation.play('idle');
       }
       else
       {
@@ -394,6 +399,7 @@ class StoryMenuState extends MusicBeatState
     targetY -= (difficultySprite.height - difficultySprites.get(Constants.DEFAULT_DIFFICULTY).height) / 2;
     FlxTween.tween(difficultySprite, {y: targetY, alpha: 1}, 0.07);
 
+    difficultySprite.zIndex = 31;
     add(difficultySprite);
   }
 
