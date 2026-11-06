@@ -895,11 +895,17 @@ class StoryMenuState extends MusicBeatState
       tracklistText.fieldWidth = FlxG.width - margin * 2;
       tracklistText.alignment = CENTER;
       tracklistText.x = margin;
+      tracklistText.y = FlxG.height * 0.76;
     }
     else
     {
       tracklistText.screenCenter(X);
       tracklistText.x -= (FlxG.width * 0.33);
+      // NovaBeat uses full-screen art, so its tracks need a fixed on-screen
+      // anchor instead of being placed below the bottom of that artwork.
+      tracklistText.y = Preferences.menuStyle == "NovaBeat"
+        ? FlxG.height * 0.76
+        : levelBackground.y + levelBackground.height + 100;
     }
 
     var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
