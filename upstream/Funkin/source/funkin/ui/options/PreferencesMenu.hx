@@ -45,8 +45,8 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   var novaBeatStyle:Bool = false;
   var novaBeatRowLayer:FlxTypedSpriteGroup<FlxSprite>;
   var novaBeatLabelLayer:FlxTypedSpriteGroup<FlxSprite>;
-  var novaBeatRowBackgrounds:Array<FlxSprite> = [];
-  var novaBeatRowAccents:Array<FlxSprite> = [];
+  var novaBeatRowBackgrounds:Array<FunkinSprite> = [];
+  var novaBeatRowAccents:Array<FunkinSprite> = [];
   var novaBeatRowLabels:Array<FlxText> = [];
   var novaBeatRowGap:Float = 62;
   #if (mobile || FEATURE_TOUCH_CONTROLS)

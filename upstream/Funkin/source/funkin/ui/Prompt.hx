@@ -21,7 +21,7 @@ class Prompt extends flixel.FlxSubState
 
   var style:ButtonStyle;
   var bgMargin:Null<Float> = null;
-  var bgColor:FlxColor = 0xFF808080;
+  var promptBgColor:FlxColor = 0xFF808080;
 
   public function new(text:String, style:ButtonStyle = Ok)
   {
@@ -51,7 +51,7 @@ class Prompt extends flixel.FlxSubState
   public function createBg(width:Int, height:Int, color = 0xFF808080)
   {
     bgMargin = null;
-    bgColor = color;
+    promptBgColor = color;
     back = new FlxSprite();
     back.makeGraphic(width, height, color, false, "prompt-bg");
     back.screenCenter(XY);
@@ -82,7 +82,7 @@ class Prompt extends flixel.FlxSubState
     {
       var margin:Float = bgMargin ?? MARGIN;
       back.makeGraphic(Std.int(Math.max(1, width - margin * 2)),
-        Std.int(Math.max(1, height - margin * 2)), bgColor, false, "prompt-bg");
+        Std.int(Math.max(1, height - margin * 2)), promptBgColor, false, "prompt-bg");
       back.setPosition(margin, margin);
     }
 
