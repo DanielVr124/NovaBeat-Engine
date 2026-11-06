@@ -269,6 +269,9 @@ class FreeplayState extends MusicBeatSubState
   var novaBeatHeaderObjects:Array<FlxSprite> = [];
   var djBaseScaleX:Float = 1;
   var djBaseScaleY:Float = 1;
+  var backingImageBaseX:Float = 0;
+  var backingImageBaseY:Float = 0;
+  var portraitLayoutActive:Bool = false;
 
   public function new(?params:FreeplayStateParams, ?stickers:StickerSubState)
   {
@@ -351,6 +354,8 @@ class FreeplayState extends MusicBeatSubState
       ? 'novabeat/menu-background'
       : (styleData == null ? 'freeplay/freeplayBGweek1-bf' : styleData.getBgAssetKey());
     backingImage = FunkinSprite.create(backingCard.pinkBack.width * 0.74, 0, freeplayBackgroundKey);
+    backingImageBaseX = backingImage.x;
+    backingImageBaseY = backingImage.y;
 
     // TODO: refactor DifficultySelector to *not* use `this` as input? Handle it's animations and style data in different manner
     diffSelLeft = new DifficultySelector((CUTOUT_WIDTH * DJ_POS_MULTI) + 20, grpDifficulties.y - 10, false, controls, styleData, uiStateMachine);
@@ -3017,8 +3022,10 @@ class FreeplayState extends MusicBeatSubState
 
       capsule.targetPos.y = capsule.intendedY(capsuleIndex) - yOffset;
       capsule.targetPos.x = capsule.intendedX(capsuleIndex) + (CUTOUT_WIDTH * SONGS_POS_MULTI);
-      if (index < curSelected) capsule.targetPos.y -= 100;
-      if (!capsule.doJumpIn && !capsule.doJumpOut) capsule.doLerp = true;
+      // The upstream Freeplay layout uses one-based capsule indices here.
+      // Keep the preceding capsule in its normal slot instead of shifting it
+      // off-screen one item too early.
+      if (index + 1 < curSelected) capsule.targetPos.y -= 100;
     }
   }
 
@@ -3029,15 +3036,28 @@ class FreeplayState extends MusicBeatSubState
 
     funnyCam.setSize(width, height);
     rankCamera.setSize(width, height);
+    CUTOUT_WIDTH = FullScreenScaleMode.gameCutoutSize.x / 1.5;
     var portrait:Bool = height > width * 1.12;
 
     if (backingImage != null)
     {
-      var fit:Float = Math.max(width / Math.max(1, backingImage.frameWidth), height / Math.max(1, backingImage.frameHeight));
-      backingImage.scale.set(fit, fit);
-      backingImage.updateHitbox();
-      backingImage.setPosition((width - backingImage.width) * 0.5, (height - backingImage.height) * 0.5);
+      if (portrait)
+      {
+        var fit:Float = Math.max(width / Math.max(1, backingImage.frameWidth), height / Math.max(1, backingImage.frameHeight));
+        backingImage.scale.set(fit, fit);
+        backingImage.updateHitbox();
+        backingImage.setPosition((width - backingImage.width) * 0.5, (height - backingImage.height) * 0.5);
+      }
+      else
+      {
+        // Keep the original FNF angled-background placement in landscape.
+        // The previous cover-fit-and-center path moved it over the capsule list.
+        backingImage.setGraphicSize(0, height + 1);
+        backingImage.updateHitbox();
+        if (portraitLayoutActive) backingImage.setPosition(backingImageBaseX, backingImageBaseY);
+      }
     }
+    portraitLayoutActive = portrait;
     if (rankBg != null) rankBg.makeSolidColor(width, height, 0xD3000000);
     if (rankVignette != null)
     {
@@ -3322,8 +3342,13 @@ class FreeplayState extends MusicBeatSubState
   {
     // Since CUTOUT_WIDTH is static it might retain some old inccrect values so we update it before loading freeplay
     CUTOUT_WIDTH = FullScreenScaleMode.gameCutoutSize.x / 1.5;
-    var result:MainMenuState;
-    result = new MainMenuState(true);
+    var result:MusicBeatState;
+    // Rebuild Freeplay over the active menu presentation, including after
+    // quitting a song or leaving the results screen.
+    if (Preferences.menuStyle == "NovaBeat")
+      result = new NovaBeatMainMenuState();
+    else
+      result = new MainMenuState(true);
     result.openSubState(new FreeplayState(params, stickers));
     result.persistentUpdate = false;
     result.persistentDraw = true;
