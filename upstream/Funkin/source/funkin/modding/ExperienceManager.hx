@@ -40,6 +40,7 @@ class ExperienceManager
       engineVersion: null,
       packageType: PACKAGE_STANDALONE,
       ownerId: OFFICIAL_EXPERIENCE_ID,
+      enabled: true,
       iconPath: null,
       isOfficial: true,
       launchable: true,
@@ -63,7 +64,8 @@ class ExperienceManager
       if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "pack.json"]));
 
       var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata);
-      var packageType:String = resolvePackageType(directory, novaBeatMetadata);
+      var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata);
+      var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
       if (title == null) title = metadataString(genericMetadata, "name");
       if (title == null) title = directory;
@@ -85,6 +87,7 @@ class ExperienceManager
         engineVersion: engine.version,
         packageType: packageType,
         ownerId: packageType == PACKAGE_EXTENSION ? getExtensionOwner(directory) : directory,
+        enabled: enabledDirs != null && enabledDirs.indexOf(directory) >= 0,
         iconPath: findIcon(modPath),
         isOfficial: false,
         launchable: engine.launchable,
@@ -105,6 +108,21 @@ class ExperienceManager
   public static function getActiveExperienceId():String return activeExperienceId;
 
   public static function getActiveSongIds():Array<String> return activeSongIds.copy();
+
+  public static function setPackageEnabled(info:ExperienceInfo):Bool
+  {
+    if (info == null || info.isOfficial || info.directory == null) return true;
+    var enabledDirs:Array<String> = Save.instance.enabledModDirs.value.copy();
+    var index:Int = enabledDirs.indexOf(info.directory);
+    var enabled:Bool = index < 0;
+    if (enabled)
+      enabledDirs.push(info.directory);
+    else
+      enabledDirs.splice(index, 1);
+    Save.instance.enabledModDirs.value = enabledDirs;
+    Save.system.flush();
+    return enabled;
+  }
 
   public static function cyclePackageType(info:ExperienceInfo):String
   {
@@ -174,6 +192,10 @@ class ExperienceManager
     {
       return "This is a content extension. Launch the experience it is assigned to instead.";
     }
+    if (!info.isOfficial && !info.enabled)
+    {
+      return "This package is disabled. Press E to enable it before launching.";
+    }
     if (!info.isOfficial && info.packageType == PACKAGE_UNCLASSIFIED)
     {
       return "This mod is not classified yet. Press TAB to choose Standalone or Content Extension.";
@@ -232,7 +254,7 @@ class ExperienceManager
     {
       if (candidate.isOfficial || candidate.packageType != PACKAGE_EXTENSION || candidate.directory == null) continue;
       if (!candidate.launchable) continue;
-      if (getExtensionOwner(candidate.directory) == ownerId && result.indexOf(candidate.directory) == -1)
+      if (candidate.enabled && getExtensionOwner(candidate.directory) == ownerId && result.indexOf(candidate.directory) == -1)
         result.push(candidate.directory);
     }
 
@@ -260,7 +282,7 @@ class ExperienceManager
     return result;
   }
 
-  static function resolvePackageType(directory:String, metadata:Dynamic):String
+  static function resolvePackageType(directory:String, engine:EngineDetection, metadata:Dynamic):String
   {
     var stored:Map<String, String> = Save.instance.modPackageKinds.value;
     if (stored != null)
@@ -274,9 +296,9 @@ class ExperienceManager
     if (declared == null) declared = metadataString(metadata, "packageType");
     if (declared != null) return normalizePackageType(declared);
 
-    // Existing V-Slice/Polymod packages default to an extension unless the
-    // player explicitly promotes them to a standalone experience.
-    return PACKAGE_EXTENSION;
+    // V-Slice packages are treated as extensions by default. External engines
+    // remain unclassified until the player or a recognized manifest decides.
+    return engine.id == EngineBridge.ENGINE_VSLICE ? PACKAGE_EXTENSION : PACKAGE_UNCLASSIFIED;
   }
 
   static function normalizePackageType(value:String):String
@@ -353,6 +375,7 @@ typedef ExperienceInfo =
   var engineVersion:Null<String>;
   var packageType:String;
   var ownerId:String;
+  var enabled:Bool;
   var iconPath:Null<String>;
   var isOfficial:Bool;
   var launchable:Bool;

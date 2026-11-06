@@ -4,7 +4,9 @@
 
 NovaBeat is based on FNF 0.8.6 / V-Slice. V-Slice packages use the native runtime directly; there is no separate V-Slice adapter.
 
-The Game Library is an in-game startup state, not a separate executable or launcher. The original Friday Night Funkin' experience is always listed. Selecting an experience activates its package set, reloads Polymod and the data registries, then proceeds through the existing title/menu flow.
+The Game Library is an in-game startup state, not a separate executable or launcher. The original Friday Night Funkin' experience is always listed. NovaBeat initializes Polymod without loading user packages, then the selected experience activates only its enabled package set and reloads Polymod and the data registries before proceeding through the existing title/menu flow.
+
+Packages disabled in the existing Mod Manager remain visible in the Game Library but cannot be launched until enabled. The E key toggles the selected package's existing enabled state; this setting is shared with the Mod Manager.
 
 ## Package classifications
 
@@ -30,7 +32,7 @@ Choices are stored in NovaBeat save data and do not modify installed mod folders
 }
 ```
 
-An extension can be assigned to an experience in the Game Library. New extensions default to Friday Night Funkin'.
+An extension can be assigned to an experience in the Game Library. New native V-Slice extensions default to Friday Night Funkin'. Unknown external-engine packages remain unclassified until the player decides. Disabled extensions are not loaded.
 
 ## Active content ownership
 

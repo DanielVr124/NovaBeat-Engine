@@ -30,6 +30,7 @@ class PlayerRegistry extends BaseRegistry<PlayableCharacter, PlayerData, PlayerE
 
   override public function loadEntries():Void
   {
+    ownedCharacterIds.clear();
     super.loadEntries();
 
     for (playerId in listEntryIds())

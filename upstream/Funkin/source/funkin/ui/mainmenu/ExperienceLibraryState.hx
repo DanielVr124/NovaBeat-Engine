@@ -104,7 +104,7 @@ class ExperienceLibraryState extends MusicBeatState
 
     statusText = addLabel(panelX + 16, panelY + panelHeight - 32, panelWidth - 32, "", 9, 0xFF86DFFF, false);
     addLabel(margin + 8, height - (portrait ? 16 : 18), width - margin * 2 - 16,
-      "UP / DOWN  SELECT     ENTER  LAUNCH     TAB  PACKAGE TYPE     T  EXTENSION TARGET     R  RESCAN     ESC  FNF", 8, 0xFF929BAE, false);
+      "UP / DOWN  SELECT     ENTER  LAUNCH     E  ENABLE/DISABLE     TAB  PACKAGE TYPE     T  EXTENSION TARGET     R  RESCAN     ESC  FNF", 8, 0xFF929BAE, false);
 
     renderRows();
     updateStatus();
@@ -145,6 +145,7 @@ class ExperienceLibraryState extends MusicBeatState
       var detail:String = info.engineLabel + "  •  " + packageTypeLabel(info.packageType);
       if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
         detail += "  →  " + ExperienceManager.experienceTitle(info.ownerId, experiences);
+      if (!info.isOfficial) detail += info.enabled ? "  •  ENABLED" : "  •  DISABLED";
       if (!info.launchable) detail += "  •  DETECTED, NOT YET SUPPORTED";
       addRowLabel(textX, y + 58, textWidth, detail, 8, info.launchable ? 0xFF70D9F0 : 0xFFFFB86B);
     }
@@ -259,6 +260,19 @@ class ExperienceLibraryState extends MusicBeatState
 
     if (FlxG.keys.justPressed.UP) selectExperience(selectedIndex - 1);
     if (FlxG.keys.justPressed.DOWN) selectExperience(selectedIndex + 1);
+
+    if (FlxG.keys.justPressed.E)
+    {
+      var info:ExperienceInfo = experiences[selectedIndex];
+      if (!info.isOfficial)
+      {
+        var enabled:Bool = ExperienceManager.setPackageEnabled(info);
+        experiences = ExperienceManager.scanInstalled();
+        selectById(info.id);
+        renderRows();
+        updateStatus(enabled ? "PACKAGE ENABLED." : "PACKAGE DISABLED.");
+      }
+    }
 
     if (FlxG.keys.justPressed.TAB)
     {

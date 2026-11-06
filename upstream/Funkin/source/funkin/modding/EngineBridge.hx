@@ -8,7 +8,7 @@ import sys.FileSystem;
 /**
  * Identifies the engine a package was authored for.
  *
- * NovaBeat is V-Slice-based, so V-Slice content uses the native game runtime.
+ * NovaBeat is V-Slice-based, so V-Slice content uses the native runtime.
  * There is deliberately no second V-Slice adapter.
  */
 class EngineBridge
@@ -20,6 +20,8 @@ class EngineBridge
   public static function detectEngine(modPath:String, polymodMetadata:Dynamic, novaBeatMetadata:Dynamic):EngineDetection
   {
     var engineValue:Dynamic = novaBeatMetadata == null ? null : Reflect.field(novaBeatMetadata, "engine");
+    if (engineValue == null && polymodMetadata != null) engineValue = Reflect.field(polymodMetadata, "engine");
+
     var declaredId:Null<String> = asString(engineValue);
     if (declaredId == null && engineValue != null && !Std.isOfType(engineValue, String))
       declaredId = asString(Reflect.field(engineValue, "id"));
@@ -36,7 +38,8 @@ class EngineBridge
 
     var normalized:String = declaredId == null ? "" : declaredId.toLowerCase();
     var psychVersion:Null<String> = polymodMetadata == null ? null : asString(Reflect.field(polymodMetadata, "psychEngineVersion"));
-    if (normalized.indexOf("psych") >= 0 || psychVersion != null || hasPsychMarkers(modPath))
+
+    if (normalized.indexOf("psych") >= 0 || psychVersion != null)
     {
       if (version == null) version = psychVersion;
       return {
@@ -60,8 +63,17 @@ class EngineBridge
       };
     }
 
-    // Polymod packages without an external-engine declaration are native
-    // V-Slice packages in this V-Slice-based game.
+    if (hasPsychMarkers(modPath))
+    {
+      return {
+        id: ENGINE_PSYCH,
+        label: version == null ? "Psych Engine" : "Psych Engine " + version,
+        version: version,
+        launchable: false,
+        explanation: "Psych-specific files were detected. A compatible Psych runtime is not available in this NovaBeat build yet."
+      };
+    }
+
     if (polymodMetadata != null)
     {
       return {
