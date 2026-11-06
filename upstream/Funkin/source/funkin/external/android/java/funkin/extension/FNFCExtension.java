@@ -2,6 +2,7 @@ package funkin.extensions;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.content.pm.ActivityInfo;
 import android.os.ParcelFileDescriptor;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,6 +25,27 @@ public class FNFCExtension extends Extension
   public static final String LOG_TAG = "FNFCExtension";
 
   public static String lastFNFC = null;
+
+  /**
+   * Lock the Android activity to its current display orientation, or release
+   * the lock so Android can follow the user's system rotation preference.
+   */
+  public static void setOrientationLocked(final boolean locked)
+  {
+    if (mainActivity == null) return;
+
+    mainActivity.runOnUiThread(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        if (mainActivity == null) return;
+        mainActivity.setRequestedOrientation(locked
+          ? ActivityInfo.SCREEN_ORIENTATION_LOCKED
+          : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+      }
+    });
+  }
 
   @Override
   public void onCreate(Bundle savedInstanceState) {

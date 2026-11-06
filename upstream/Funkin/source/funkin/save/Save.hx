@@ -158,6 +158,7 @@ class Save implements ConsoleClass
       mobileOptions: {
         // Reasonable defaults.
         screenTimeout: false,
+        lockCurrentOrientation: false,
         controlsScheme: FunkinHitboxControlSchemes.Arrows,
         noAds: false
       },
@@ -1292,6 +1293,12 @@ typedef SaveDataMobileOptions =
    * @default `false`
    */
   var screenTimeout:Bool;
+
+  /**
+   * If enabled, hold the device in the orientation it currently has.
+   * @default `false`
+   */
+  var lockCurrentOrientation:Bool;
 
   /**
    * Controls scheme for the hitbox.

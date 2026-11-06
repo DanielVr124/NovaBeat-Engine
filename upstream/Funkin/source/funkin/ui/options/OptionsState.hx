@@ -99,6 +99,10 @@ class OptionsState extends MusicBeatState
     var customization:CustomizationMenu = optionsCodex.addPage(Customization, new CustomizationMenu());
     var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
     var performance:PerformanceCustomizationMenu = optionsCodex.addPage(Performance, new PerformanceCustomizationMenu());
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    var mobileCustomization:MobileCustomizationMenu = optionsCodex.addPage(Mobile, new MobileCustomizationMenu());
+    #end
+
 
     options.addSaveDataOptionsItem(saveData);
     options.addExitItem();
@@ -115,6 +119,10 @@ class OptionsState extends MusicBeatState
       customization.onExit.add(optionsCodex.switchPage.bind(Options));
       menuCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
       performance.onExit.add(optionsCodex.switchPage.bind(Customization));
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      mobileCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
+      #end
+
     }
     else
     {
@@ -609,6 +617,10 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Customization = 'customization';
   public var MenuCustomization = 'menuCustomization';
   public var Performance = 'performance';
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  public var Mobile = 'mobileCustomization';
+  #end
+
   public var Preferences = 'preferences';
   public var Offsets = 'offsets';
   public var SaveData = 'saveData';

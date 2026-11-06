@@ -9,6 +9,7 @@ import flixel.util.FlxColor;
 import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
 import funkin.Preferences;
+import funkin.util.DeviceUtil;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.ui.TextMenuList;
@@ -62,6 +63,17 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     });
     performanceItem.screenCenter(X);
 
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      var mobileItem:TextMenuItem = items.createItem(0, itemY + 224, 'MOBILE', AtlasFont.BOLD, function()
+      {
+        codex.switchPage(Mobile);
+      });
+      mobileItem.screenCenter(X);
+    }
+    #end
+
     itemDescBox = new FunkinSprite();
     itemDescBox.makeSolidColor(1, 1, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : FlxColor.BLACK);
     itemDescBox.alpha = Preferences.menuStyle == "NovaBeat" ? 0.9 : 0.6;
@@ -84,9 +96,12 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     items.onChange.add(function(selected:TextMenuItem)
     {
-      itemDesc.text = items.selectedIndex == 1
-        ? 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.'
-        : 'Customize the NovaBeat menu colours, background, equalizer, layout, and animations.';
+      itemDesc.text = switch (items.selectedIndex)
+      {
+        case 1: 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.';
+        case 2: 'Configure device orientation and other mobile-specific behavior.';
+        default: 'Customize the NovaBeat menu colours, background, equalizer, layout, and animations.';
+      };
     });
 
     camFollow = new FlxObject(FlxG.width / 2, itemY, 140, 70);

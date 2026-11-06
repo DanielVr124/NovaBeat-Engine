@@ -75,6 +75,10 @@ class InitState extends FlxState
     // Flixel has already loaded the save data, so we can just use it.
     Preferences.init();
 
+    #if android
+    funkin.mobile.util.MobileOrientationUtil.restoreSavedPreference();
+    #end
+
     // Load controls from save data.
     PlayerSettings.init();
 

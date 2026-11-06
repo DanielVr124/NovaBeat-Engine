@@ -680,7 +680,7 @@ class Project extends HXProject
 
     if (isMobile())
     {
-      this.window.orientation = Orientation.LANDSCAPE;
+      this.window.orientation = Orientation.AUTO;
       this.window.fullscreen = true;
       this.window.resizable = false;
       this.window.borderless = true;
