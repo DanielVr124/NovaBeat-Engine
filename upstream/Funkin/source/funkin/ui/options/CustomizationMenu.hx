@@ -164,34 +164,20 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     if (categoryItems.length == 0 || width <= 0 || height <= 0) return;
 
     var portrait:Bool = height > width * 1.12;
-    var gap:Float = portrait ? Math.min(112, height * 0.145) : 112;
-    if (height < 480) gap = Math.min(gap, Math.max(54, height * 0.24));
-
-    var itemHeight:Float = 0;
-    var itemScale:Float = portrait ? 0.86 : 1.0;
-    for (item in categoryItems)
-    {
-      item.scale.set(itemScale, itemScale);
-      item.updateHitbox();
-      itemHeight = Math.max(itemHeight, item.height);
-    }
-
-    // The description panel occupies the bottom of the page. Center the
-    // category group in the usable area above it rather than underneath it.
-    var availableHeight:Float = height * 0.72;
-    if (categoryItems.length > 1)
-    {
-      var maxGap:Float = (availableHeight - itemHeight) / (categoryItems.length - 1);
-      gap = Math.min(gap, Math.max(40, maxGap));
-    }
-
-    var groupHeight:Float = itemHeight + gap * (categoryItems.length - 1);
-    var startY:Float = Math.max(12, (availableHeight - groupHeight) * 0.5);
+    // Match Preferences: a fixed left column, consistent 120px row spacing,
+    // and a small horizontal indent on the currently selected entry.
+    var notch:Float = FullScreenScaleMode.gameNotchSize.x;
+    var baseX:Float = portrait ? Math.max(18, notch + 18) : Math.max(24, notch + 120);
+    var top:Float = portrait ? 76 : 30;
+    var gap:Float = portrait ? Math.min(112, (height * 0.60) / Math.max(1, categoryItems.length)) : 120;
 
     for (index in 0...categoryItems.length)
     {
       var item:TextMenuItem = categoryItems[index];
-      item.setPosition((width - item.width) * 0.5, startY + index * gap);
+      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
+      item.updateHitbox();
+      var selectedIndent:Float = index == items.selectedIndex ? (portrait ? 18 : 30) : 0;
+      item.setPosition(baseX + selectedIndent, top + index * gap);
     }
   }
 
@@ -279,6 +265,8 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (novaBeatStyle && camFollow != null && items != null && items.selectedItem != null)
       camFollow.y = items.selectedItem.y;
+    else if (!novaBeatStyle)
+      layoutFNFCategoryItems(FlxG.width, FlxG.height);
     if (novaBeatStyle)
     {
       for (index in 0...categoryLabels.length)
