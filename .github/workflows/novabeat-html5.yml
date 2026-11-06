@@ -5,6 +5,7 @@ name: NovaBeat HTML5 browser test build
 # [web-build] User-requested HTML5 verification build for the current feature branch.
 # [web-build] Fresh HTML5 rebuild requested after the Pages retry failed.
 # Quest mobile-controls validation build requested for the current feature branch.
+# [web-build] Verify Story Mode, NovaBeat menu, FNF settings, and mobile tap fixes.
 # Single long-lived integration branch: feature/optional-novabeat-menu-mod-manager.
 # Keep NovaBeat feature work on that branch; main remains the release/production branch.
 # Only main and the integration branch publish to GitHub Pages; PR-only builds never deploy.
