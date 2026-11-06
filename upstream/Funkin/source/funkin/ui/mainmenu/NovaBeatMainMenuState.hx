@@ -466,7 +466,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       var labelX:Float = iconX + iconPlateSize + (tileLayout ? 10 : 14);
       var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
-      var title:String = ITEM_TITLES[index].split('\\n').join(' ');
+      var title:String = ITEM_TITLES[index].split('\n').join(' ');
       var titleY:Float = itemY + 7;
       var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? 13 : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
       label.autoSize = false;
@@ -499,12 +499,18 @@ class NovaBeatMainMenuState extends MusicBeatState
       {
         panel.alpha = 0;
         accent.alpha = 0;
+        iconPlate.alpha = 0;
         icon.alpha = 0;
         label.alpha = 0;
+        kicker.alpha = 0;
+        descriptionText.alpha = 0;
         FlxTween.tween(panel, {alpha: 0.93}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
         FlxTween.tween(accent, {alpha: 0.38}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(iconPlate, {alpha: 0.96}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
         FlxTween.tween(icon, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
         FlxTween.tween(label, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(kicker, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(descriptionText, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
       }
     }
 
