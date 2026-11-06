@@ -1,6 +1,10 @@
 package funkin.util;
 
 import flixel.tweens.FlxTween;
+#if web
+import js.Browser;
+#end
+import funkin.util.DeviceUtil;
 #if FEATURE_HAPTICS
 import extension.haptics.Haptic;
 #end
@@ -66,6 +70,52 @@ class HapticUtil
     {
       Haptic.vibrateOneShot(duration, amplitudeValue, sharpness);
     }
+    #elseif web
+    // Browsers expose the Vibration API rather than Android's amplitude /
+    // sharpness controls. Use it when the phone browser supports it.
+    if (!HapticUtil.hapticsAvailable || duration <= 0 || amplitude <= 0) return;
+
+    final hapticsModes:Array<HapticsMode> = targetHapticsModes ?? [HapticsMode.ALL];
+    if (!hapticsModes.contains(Preferences.hapticsMode)) return;
+
+    final navigator:Dynamic = Browser.navigator;
+    final vibrateMethod:Dynamic = Reflect.field(navigator, "vibrate");
+    if (vibrateMethod == null) return;
+
+    final intensity:Float = (amplitude * Preferences.hapticsIntensityMultiplier).clamp(0, 1);
+    if (intensity <= 0) return;
+
+    final totalDurationMs:Int = Std.int(Math.max(1, Math.min(5000, Math.round(duration * 1000 * intensity))));
+    final pattern:Array<Int> = [];
+
+    if (period > 0)
+    {
+      final halfPeriodMs:Int = Std.int(Math.max(1, Math.round(period * 500)));
+      var remainingMs:Int = totalDurationMs;
+      while (remainingMs > 0)
+      {
+        final segmentMs:Int = Std.int(Math.min(halfPeriodMs, remainingMs));
+        pattern.push(segmentMs);
+        remainingMs -= segmentMs;
+        if (remainingMs <= 0) break;
+        final pauseMs:Int = Std.int(Math.min(halfPeriodMs, remainingMs));
+        pattern.push(pauseMs);
+        remainingMs -= pauseMs;
+      }
+    }
+    else
+    {
+      pattern.push(totalDurationMs);
+    }
+
+    try
+    {
+      Reflect.callMethod(navigator, vibrateMethod, [pattern]);
+    }
+    catch (error:Dynamic)
+    {
+      // Browser vibration is optional and may be blocked by device policy.
+    }
     #end
   }
 
@@ -123,6 +173,10 @@ class HapticUtil
   {
     #if FEATURE_HAPTICS
     if (Preferences.hapticsMode != HapticsMode.NONE) return true;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      && Preferences.hapticsMode != HapticsMode.NONE
+      && Reflect.field(Browser.navigator, "vibrate") != null;
     #end
 
     return false;
