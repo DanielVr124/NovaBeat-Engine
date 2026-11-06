@@ -453,6 +453,7 @@ class SongMenuItem extends FlxSpriteGroup
       {
         pixelIcon.setCharacter(freeplayData.songCharacter);
         pixelIcon.visible = pixelIcon.char == freeplayData.songCharacter;
+        if (pixelIcon.visible) layoutPixelIcon();
       }
       else
       {
@@ -468,6 +469,33 @@ class SongMenuItem extends FlxSpriteGroup
       checkClip();
     }
     updateSelected();
+  }
+
+  /**
+   * Normalize the Freeplay capsule icon's display size and anchor.
+   *
+   * Character icon atlases use different logical frame sizes. A fixed 2x
+   * scale made shorter/smaller frames look randomly undersized, while the old
+   * hard-coded origin only positioned a few specific characters correctly.
+   * Fit the logical frame to a 100px-high slot and keep its right/top edges
+   * fixed so changing songs or difficulties cannot move the icon around.
+   */
+  function layoutPixelIcon():Void
+  {
+    if (pixelIcon == null || pixelIcon.frameWidth <= 0 || pixelIcon.frameHeight <= 0) return;
+
+    final frameWidth:Float = pixelIcon.frameWidth;
+    final frameHeight:Float = pixelIcon.frameHeight;
+    final iconScale:Float = 100 / frameHeight;
+
+    pixelIcon.scale.set(iconScale, iconScale);
+    pixelIcon.origin.set(frameWidth * 0.5, frameHeight * 0.5);
+    pixelIcon.updateHitbox();
+
+    // Match the standard 50x50 icon's original visible bounds: right edge at
+    // x=160 and top edge at y=19, while preserving each character's aspect ratio.
+    pixelIcon.x = 160 - frameWidth * (iconScale + 1) * 0.5;
+    pixelIcon.y = 19 + frameHeight * (iconScale - 1) * 0.5;
   }
 
   function updateDifficultyRating(newRating:Int):Void
