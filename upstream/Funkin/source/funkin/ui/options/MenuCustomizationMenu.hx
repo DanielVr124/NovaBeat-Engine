@@ -228,6 +228,9 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     camera = menuCamera;
 
     items = new TextMenuList(NavControls.Vertical);
+    // FNF-style customization uses a dedicated scrolling camera. Keep the
+    // touch list and its hit targets on that same camera so taps map correctly.
+    items.cameras = [menuCamera];
     add(items);
 
     descriptions = [
@@ -254,6 +257,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         activate(itemIndex);
       });
       item.fireInstantly = true;
+      item.cameras = [menuCamera];
       optionRows.push(item);
 
       var value:AtlasText = new AtlasText(0, itemY, '', AtlasFont.DEFAULT);
