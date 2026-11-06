@@ -285,12 +285,12 @@ class StoryMenuState extends MusicBeatState
       scoreText.fieldWidth = 0;
 
       levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
-      levelTitleText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
+      levelTitleText.fieldWidth = 0;
       levelTitleText.y = 10;
       levelTitleText.x = width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
 
       tracklistText.setFormat('VCR OSD Mono', 32);
-      tracklistText.fieldWidth = novaBeatStyle ? width * 0.55 : 0;
+      tracklistText.fieldWidth = 0;
       tracklistText.alignment = CENTER;
       tracklistText.y = height * 0.77;
       tracklistText.screenCenter(X);
