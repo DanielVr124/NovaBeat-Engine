@@ -61,6 +61,7 @@ class ExperienceManager
       var polymodMetadata:Dynamic = readJson(Path.join([modPath, "_polymod_meta.json"]));
       var novaBeatMetadata:Dynamic = readJson(Path.join([modPath, "_novabeat.json"]));
       var genericMetadata:Dynamic = polymodMetadata;
+      if (genericMetadata == null) genericMetadata = novaBeatMetadata;
       if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "meta.json"]));
       if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "pack.json"]));
 
@@ -215,13 +216,16 @@ class ExperienceManager
       return "No V-Slice song folders were found in this experience yet. It cannot launch as a standalone song library.";
     }
 
-    // Commit the selection only after package validation has succeeded.
-    PolymodHandler.forceReloadAssets(modDirs);
+    // Make the selected ownership context visible before registries and scripts
+    // reload, so any initialization hooks query the correct experience.
     activeExperienceId = ownerId;
     activeSongIds = ownerId == OFFICIAL_EXPERIENCE_ID ? [] : songIds;
 
     Save.instance.activeExperienceId.value = ownerId;
     Save.system.flush();
+
+    // Reload only after the active ownership context is established.
+    PolymodHandler.forceReloadAssets(modDirs);
     return null;
   }
 
