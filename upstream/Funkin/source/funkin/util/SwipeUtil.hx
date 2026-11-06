@@ -5,6 +5,7 @@ import flixel.FlxG;
 import flixel.input.FlxSwipe;
 #end
 import flixel.util.FlxAxes;
+import funkin.util.DeviceUtil;
 
 /**
  * Utility class for handling swipe gestures in HaxeFlixel and dispatching signals for different swipe directions.
@@ -164,7 +165,7 @@ class SwipeUtil
   static inline function get_swipeUp():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.justMovedUp && TouchUtil.touch.pressed;
+    return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedUp && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -174,7 +175,7 @@ class SwipeUtil
   static inline function get_swipeRight():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.justMovedRight && TouchUtil.touch.pressed;
+    return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedRight && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -184,7 +185,7 @@ class SwipeUtil
   static inline function get_swipeLeft():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.justMovedLeft && TouchUtil.touch.pressed;
+    return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedLeft && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -194,7 +195,7 @@ class SwipeUtil
   static inline function get_swipeDown():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.justMovedDown && TouchUtil.touch.pressed;
+    return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedDown && TouchUtil.touch.pressed;
     #else
     return false;
     #end
@@ -208,7 +209,7 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     final swipe:FlxSwipe = (FlxG.swipes.length > 0) ? FlxG.swipes[0] : null;
-    return (swipe?.degrees > 45 && swipe?.degrees < 135 && swipe?.distance > MIN_SWIPE_DISTANCE);
+    return DeviceUtil.isMobileBrowser && (swipe?.degrees > 45 && swipe?.degrees < 135 && swipe?.distance > MIN_SWIPE_DISTANCE);
     #else
     return false;
     #end
@@ -219,7 +220,7 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     final swipe:FlxSwipe = (FlxG.swipes.length > 0) ? FlxG.swipes[0] : null;
-    return (swipe?.degrees > -45 && swipe?.degrees < 45 && swipe?.distance > MIN_SWIPE_DISTANCE);
+    return DeviceUtil.isMobileBrowser && (swipe?.degrees > -45 && swipe?.degrees < 45 && swipe?.distance > MIN_SWIPE_DISTANCE);
     #else
     return false;
     #end
@@ -230,7 +231,7 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     final swipe:FlxSwipe = (FlxG.swipes.length > 0) ? FlxG.swipes[0] : null;
-    return ((swipe?.degrees > 135 || swipe?.degrees < -135) && swipe?.distance > MIN_SWIPE_DISTANCE);
+    return DeviceUtil.isMobileBrowser && ((swipe?.degrees > 135 || swipe?.degrees < -135) && swipe?.distance > MIN_SWIPE_DISTANCE);
     #else
     return false;
     #end
@@ -241,7 +242,7 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     final swipe:FlxSwipe = (FlxG.swipes.length > 0) ? FlxG.swipes[0] : null;
-    return (swipe?.degrees > -135 && swipe?.degrees < -45 && swipe?.distance > MIN_SWIPE_DISTANCE);
+    return DeviceUtil.isMobileBrowser && (swipe?.degrees > -135 && swipe?.degrees < -45 && swipe?.distance > MIN_SWIPE_DISTANCE);
     #else
     return false;
     #end
@@ -258,12 +259,12 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
-    return FlxG.touches.flickManager.flickUp;
+    return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickUp;
     #elseif web
     #if FLX_TOUCH
-    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickUp;
+    if (FlxG.touches.list.length > 0) return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickUp;
     #end
-    return FlxG.mouse.flickManager.flickUp;
+    return DeviceUtil.isMobileBrowser && FlxG.mouse.flickManager.flickUp;
     #else
     return FlxG.mouse.flickManager.flickUp;
     #end
@@ -277,12 +278,12 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
-    return FlxG.touches.flickManager.flickRight;
+    return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickRight;
     #elseif web
     #if FLX_TOUCH
-    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickRight;
+    if (FlxG.touches.list.length > 0) return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickRight;
     #end
-    return FlxG.mouse.flickManager.flickRight;
+    return DeviceUtil.isMobileBrowser && FlxG.mouse.flickManager.flickRight;
     #else
     return FlxG.mouse.flickManager.flickRight;
     #end
@@ -296,12 +297,12 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
-    return FlxG.touches.flickManager.flickLeft;
+    return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickLeft;
     #elseif web
     #if FLX_TOUCH
-    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickLeft;
+    if (FlxG.touches.list.length > 0) return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickLeft;
     #end
-    return FlxG.mouse.flickManager.flickLeft;
+    return DeviceUtil.isMobileBrowser && FlxG.mouse.flickManager.flickLeft;
     #else
     return FlxG.mouse.flickManager.flickLeft;
     #end
@@ -315,12 +316,12 @@ class SwipeUtil
   {
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
-    return FlxG.touches.flickManager.flickDown;
+    return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickDown;
     #elseif web
     #if FLX_TOUCH
-    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickDown;
+    if (FlxG.touches.list.length > 0) return DeviceUtil.isMobileBrowser && FlxG.touches.flickManager.flickDown;
     #end
-    return FlxG.mouse.flickManager.flickDown;
+    return DeviceUtil.isMobileBrowser && FlxG.mouse.flickManager.flickDown;
     #else
     return FlxG.mouse.flickManager.flickDown;
     #end

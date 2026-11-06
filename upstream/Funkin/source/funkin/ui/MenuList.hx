@@ -156,6 +156,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #end
 
     #if FEATURE_TOUCH_CONTROLS
+    if (DeviceUtil.isMobileBrowser)
+    {
     // Update touch position
     if (TouchUtil.pressed)
     {
@@ -229,6 +231,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     if (newIndex != selectedIndex && !_isMainMenuState)
     {
+      playNavigationSound();
+      selectItem(newIndex);
+    }
+    }
+    else if (newIndex != selectedIndex)
+    {
+      // Ordinary desktop web keyboard/controller selection remains unchanged.
       playNavigationSound();
       selectItem(newIndex);
     }
