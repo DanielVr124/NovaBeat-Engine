@@ -3082,11 +3082,12 @@ class FreeplayState extends MusicBeatSubState
       if (fpScoreDisplay != null) fpScoreDisplay.setPosition(width - fpScoreDisplay.width - 22, 64);
       if (txtCompletion != null) txtCompletion.x = width - txtCompletion.width - 22;
 
-      for (obj in novaBeatHeaderObjects)
+      if (novaBeatHeaderObjects.length >= 4)
       {
-        if (obj == null) continue;
-        obj.x = 16 + (obj.x - 24);
-        obj.y = 16 + (obj.y - 20);
+        novaBeatHeaderObjects[0].setPosition(16, 16);
+        novaBeatHeaderObjects[1].setPosition(16, 16);
+        novaBeatHeaderObjects[2].setPosition(34, 22);
+        novaBeatHeaderObjects[3].setPosition(34, 38);
       }
     }
     else
@@ -3103,6 +3104,13 @@ class FreeplayState extends MusicBeatSubState
       diffSelRight.setPosition((CUTOUT_WIDTH * DJ_POS_MULTI) + 325, grpDifficulties.y - 10);
       if (letterSort != null) letterSort.setPosition((CUTOUT_WIDTH * SONGS_POS_MULTI) + 400, 75);
       if (albumRoll != null) albumRoll.layoutViewport(width, height, false);
+      if (novaBeatHeaderObjects.length >= 4)
+      {
+        novaBeatHeaderObjects[0].setPosition(24, 20);
+        novaBeatHeaderObjects[1].setPosition(24, 20);
+        novaBeatHeaderObjects[2].setPosition(42, 26);
+        novaBeatHeaderObjects[3].setPosition(42, 42);
+      }
       if (freeplayTitleText != null)
       {
         freeplayTitleText.setFormat('VCR OSD Mono', 48);
@@ -3124,7 +3132,8 @@ class FreeplayState extends MusicBeatSubState
 
     layoutFreeplayCapsules();
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (backButton != null) backButton.setPosition(width - backButton.width - (portrait ? 18 : 230), height - backButton.height - 18);
+    if (backButton != null) backButton.setPosition(width - backButton.width - (portrait ? 18 : 230),
+      height - (portrait ? backButton.height + 18 : 200));
     #end
   }
 
