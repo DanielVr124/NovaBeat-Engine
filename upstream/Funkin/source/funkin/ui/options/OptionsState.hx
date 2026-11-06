@@ -394,6 +394,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
       novaBeatDescription = new FlxText(margin + 22, panelTop + 42, width - margin * 2 - 44,
         'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 11);
       novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 11, 0xFFB7C9E8);
+      novaBeatDescription.visible = false;
       novaBeatDescription.wordWrap = true;
       novaBeatDescription.autoSize = false;
       add(novaBeatDescription);
@@ -437,6 +438,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
       novaBeatDescription = new FlxText(margin + 28, panelTop + 84, leftWidth - 56,
         'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 15);
       novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB7C9E8);
+      novaBeatDescription.visible = false;
       novaBeatDescription.wordWrap = true;
       novaBeatDescription.autoSize = false;
       add(novaBeatDescription);
@@ -494,7 +496,8 @@ class OptionsMenu extends Page<OptionsMenuPageName>
 
   function updateNovaBeatSelection(selected:TextMenuItem):Void
   {
-    if (novaBeatDescription != null) novaBeatDescription.text = novaBeatDescriptionFor(selected.name);
+    // Selection is conveyed by the highlighted row; NovaBeat does not show
+    // a changing description block above the menu.
     updateNovaBeatRows();
   }
 
