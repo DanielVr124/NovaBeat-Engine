@@ -184,7 +184,8 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     if (visible)
     {
       #if web
-      final useQuestMousePointer:Bool = DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0;
+      final questMouseGesture:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
+      final useQuestMousePointer:Bool = DeviceUtil.isQuestBrowser && (FlxG.touches.list.length == 0 || questMouseGesture);
       #else
       final useQuestMousePointer:Bool = false;
       #end

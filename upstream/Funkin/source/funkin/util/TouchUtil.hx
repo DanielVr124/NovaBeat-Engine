@@ -183,6 +183,11 @@ class TouchUtil
   @:noCompletion
   static function get_touch():Dynamic
   {
+    // Quest Browser can retain inert touch records while its controller/hand
+    // ray is delivered through mouse input. Prefer that live mouse gesture.
+    if (DeviceUtil.isQuestBrowser && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
+      return FlxG.mouse;
+
     #if FLX_TOUCH
     // Prefer an actively held contact. A just-released touch remains a fallback
     // for the release frame, but it must not mask another finger still held.

@@ -62,6 +62,14 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   // Helper variable
   var _isMainMenuState:Bool = false;
 
+  /** Start point and item for a mobile/Quest pointer tap. */
+  var pointerTapActive:Bool = false;
+  var pointerTapStartX:Float = 0;
+  var pointerTapStartY:Float = 0;
+  var pointerTapItem:Int = -1;
+
+  static inline final POINTER_TAP_MAX_DISTANCE:Float = 32;
+
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
     this.navControls = navControls;
@@ -158,82 +166,31 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
     {
-    // Update touch position
-    if (TouchUtil.pressed)
-    {
-      touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
-    }
+      // Keep controller navigation available, but let an actual tap/click take
+      // priority even when a controller is connected (common on Quest).
+      final pointerEvent:Bool = TouchUtil.touch != null
+        && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased);
 
-    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && TouchUtil.pressed))
-    {
-      if (newIndex != selectedIndex)
+      if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !pointerEvent)
+      {
+        if (newIndex != selectedIndex)
+        {
+          playNavigationSound();
+          selectItem(newIndex);
+        }
+      }
+      else
+      {
+        if (TouchUtil.justPressed) beginPointerTap();
+        if (TouchUtil.justReleased) finishPointerTap();
+      }
+
+      // Swipes continue to navigate lists; they are not treated as clicks.
+      if (newIndex != selectedIndex && !_isMainMenuState)
       {
         playNavigationSound();
         selectItem(newIndex);
       }
-    }
-    else if (TouchUtil.pressed)
-    {
-      for (i in 0...members.length)
-      {
-        final item = members[i];
-        final menuCamera = FlxG.cameras.list[1];
-
-        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, menuCamera);
-        final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
-
-        final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
-
-        if (item.available && isTouchingItem && TouchUtil.justPressed)
-        {
-          var prevIndex:Int = selectedIndex;
-
-          if (!_isMainMenuState && selectedIndex != i)
-          {
-            newIndex = i;
-            break;
-          }
-          else
-          {
-            playNavigationSound();
-            selectItem(i);
-          }
-
-          if (_isMainMenuState)
-          {
-            if (prevIndex == i)
-            {
-              FlxTween.cancelTweensOf(item);
-              item.scale.set(1.1, 1.1);
-              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-              HapticUtil.vibrate(0, 0.05, 1);
-              accept();
-            }
-            else
-            {
-              FlxTween.cancelTweensOf(item);
-              item.scale.set(0.94, 0.94);
-              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-              HapticUtil.vibrate(0, 0.01, 0.5);
-            }
-          }
-          else
-          {
-            accept();
-          }
-
-          break;
-        }
-      }
-    }
-
-    if (newIndex != selectedIndex && !_isMainMenuState)
-    {
-      playNavigationSound();
-      selectItem(newIndex);
-    }
     }
     else if (newIndex != selectedIndex)
     {
@@ -253,6 +210,97 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     if (controls.ACCEPT_P) accept();
 
     return;
+  }
+
+  /**
+   * Captures the start of a touch or Quest ray-pointer tap. A short movement
+   * allowance absorbs controller-ray jitter without turning swipes into clicks.
+   */
+  function beginPointerTap():Void
+  {
+    if (TouchUtil.touch == null) return;
+
+    pointerTapActive = true;
+    pointerTapStartX = TouchUtil.touch.x;
+    pointerTapStartY = TouchUtil.touch.y;
+    pointerTapItem = findPointerItem();
+  }
+
+  /**
+   * Activates an item only when the pointer is released over the same item
+   * where the press began. This makes one tap enough to open a menu row.
+   */
+  function finishPointerTap():Void
+  {
+    if (!pointerTapActive || TouchUtil.touch == null)
+    {
+      clearPointerTap();
+      return;
+    }
+
+    final deltaX:Float = TouchUtil.touch.x - pointerTapStartX;
+    final deltaY:Float = TouchUtil.touch.y - pointerTapStartY;
+    final movedDistance:Float = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    final releasedItem:Int = findPointerItem();
+
+    if (movedDistance <= POINTER_TAP_MAX_DISTANCE
+      && pointerTapItem >= 0
+      && releasedItem == pointerTapItem
+      && releasedItem < members.length
+      && members[releasedItem].available)
+    {
+      final item:T = members[releasedItem];
+
+      if (selectedIndex != releasedItem)
+      {
+        playNavigationSound();
+        selectItem(releasedItem);
+      }
+
+      if (_isMainMenuState)
+      {
+        FlxTween.cancelTweensOf(item);
+        item.scale.set(1.1, 1.1);
+        FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+        HapticUtil.vibrate(0, 0.05, 1);
+      }
+
+      accept();
+    }
+
+    clearPointerTap();
+  }
+
+  /** Returns the item directly under the current pointer, or -1. */
+  function findPointerItem():Int
+  {
+    if (TouchUtil.touch == null) return -1;
+
+    touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
+
+    for (i in 0...members.length)
+    {
+      final item:T = members[i];
+      if (!item.available) continue;
+
+      // Main-menu entries use their artwork's visible pixels. Other menus use
+      // each item's own camera, never a hard-coded global camera-list index.
+      final overlaps:Bool = _isMainMenuState
+        ? FlxG.pixelPerfectOverlap(touchBuddy, item, 0)
+        : TouchUtil.overlaps(item);
+
+      if (overlaps) return i;
+    }
+
+    return -1;
+  }
+
+  function clearPointerTap():Void
+  {
+    pointerTapActive = false;
+    pointerTapItem = -1;
+    pointerTapStartX = 0;
+    pointerTapStartY = 0;
   }
 
   function playNavigationSound():Void
