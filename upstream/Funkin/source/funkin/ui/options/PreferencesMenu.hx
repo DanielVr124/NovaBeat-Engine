@@ -252,27 +252,33 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       Preferences.strumlineBackgroundOpacity = value;
     }, Preferences.strumlineBackgroundOpacity);
-    #if FEATURE_HAPTICS
-    createPrefItemEnum('Haptics', 'When enabled, the game plays haptic feedback effects.', [
-      "All" => HapticsMode.ALL,
-      "Notes Only" => HapticsMode.NOTES_ONLY,
-      "None" => HapticsMode.NONE,
-    ], function(key:String, value:HapticsMode):Void
+    #if (FEATURE_HAPTICS || web)
+    // Native mobile builds use the haptics extension. Phone browsers expose
+    // the simpler Vibration API on supported devices (currently most Android
+    // browsers); hide the setting where the browser has no vibration support.
+    if (#if FEATURE_HAPTICS true #else DeviceUtil.isMobileBrowser && HapticUtil.hapticsAvailable #end)
     {
-      Preferences.hapticsMode = value;
-    }, switch (Preferences.hapticsMode)
+      createPrefItemEnum('Haptics', 'When enabled, the game plays haptic feedback effects.', [
+        "All" => HapticsMode.ALL,
+        "Notes Only" => HapticsMode.NOTES_ONLY,
+        "None" => HapticsMode.NONE,
+      ], function(key:String, value:HapticsMode):Void
       {
-        case HapticsMode.NOTES_ONLY:
-          "Notes Only";
-        case HapticsMode.NONE:
-          "None";
-        default:
-          "All";
-      });
-    createPrefItemNumber('Haptics Intensity', 'Intensity multiplier for all haptic feedback effects.', function(value:Float)
-    {
-      Preferences.hapticsIntensityMultiplier = value;
-    }, null, Preferences.hapticsIntensityMultiplier, 0.1, 5, 0.1, 1);
+        Preferences.hapticsMode = value;
+      }, switch (Preferences.hapticsMode)
+        {
+          case HapticsMode.NOTES_ONLY:
+            "Notes Only";
+          case HapticsMode.NONE:
+            "None";
+          default:
+            "All";
+        });
+      createPrefItemNumber('Haptics Intensity', 'Intensity multiplier for all haptic feedback effects.', function(value:Float)
+      {
+        Preferences.hapticsIntensityMultiplier = value;
+      }, null, Preferences.hapticsIntensityMultiplier, 0.1, 5, 0.1, 1);
+    }
     #end
     createPrefItemCheckbox('Flashing Lights', 'When disabled, flashing effects are dampened. Useful for people with photosensitive epilepsy.',
       function(value:Bool):Void
