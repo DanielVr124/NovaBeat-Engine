@@ -297,7 +297,7 @@ jobs:
             echo "- GitHub Pages published-site limit: 1 GB"
             echo
             echo "### Largest 25 files"
-            find "$WEB_ROOT" -type f -printf '%s\t%p\n' | sort -nr | head -25 | awk -F '\t' '{printf "- %.1f MiB — `%s`\n", $1 / 1048576, $2}'
+            find "$WEB_ROOT" -type f -printf '%s\t%p\n' | sort -nr | awk -F '\t' '{printf "- %.1f MiB — `%s`\n", $1 / 1048576, $2}'
           } >> "$GITHUB_STEP_SUMMARY"
 
           if (( payload_bytes >= 1000000000 )); then
