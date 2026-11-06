@@ -40,6 +40,8 @@ A standalone experience loads its own native Polymod package and the compatible 
 
 For modern V-Slice Freeplay, song IDs are collected from the selected packages' `data/songs/<song-id>` folders. Freeplay filters its native song list to those owned IDs. Playable-character categories are then derived from the characters used by those songs. Original character assets are not removed.
 
+Song scores and Story Mode level scores/completion checks are namespaced by the active experience, so two experiences that use the same song or level ID do not overwrite each other's scores. Existing official FNF score keys are left unchanged for backwards compatibility. Other progression details such as character-seen flags and favorites still need their own experience-scoped pass.
+
 ## Engine identification and compatibility
 
 Engine identification is separate from package classification:
