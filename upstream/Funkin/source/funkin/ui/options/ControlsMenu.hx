@@ -305,7 +305,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       var labelIndex:Int = Std.int(controlGrid.selectedIndex / COLUMNS);
       if (labelIndex >= 0 && labelIndex < labels.members.length)
       {
-        labels.members[labelIndex].alpha = 1.0;
+        labels.members[labelIndex].alpha = novaBeatStyle ? 0.0 : 1.0;
       }
 
       if (novaBeatStyle) updateNovaBeatControlSelection();
