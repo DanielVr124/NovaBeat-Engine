@@ -1,5 +1,8 @@
 package funkin.mobile.util;
 
+#if web
+import js.Browser;
+#end
 #if ios
 import funkin.external.apple.ScreenUtil as NativeScreenUtil;
 #elseif android
@@ -15,6 +18,86 @@ import openfl.geom.Rectangle;
 @:unreflective
 class ScreenUtil
 {
+  #if web
+  /**
+   * Read the browser's CSS safe-area insets in CSS pixels.
+   * The returned array is ordered [left, top, right, bottom].
+   *
+   * viewport-fit=cover is applied at runtime so mobile browsers expose the
+   * env(safe-area-inset-*) values instead of keeping the page inside a
+   * pre-inset viewport.
+   */
+  public static function getSafeAreaInsets():Array<Float>
+  {
+    ensureViewportFitCover();
+
+    final document:Dynamic = Browser.document;
+    final body:Dynamic = Reflect.field(document, "body");
+    if (body == null) return [0, 0, 0, 0];
+
+    final createElement:Dynamic = Reflect.field(document, "createElement");
+    final probe:Dynamic = Reflect.callMethod(document, createElement, ["div"]);
+    final style:Dynamic = Reflect.field(probe, "style");
+    Reflect.setField(style, "cssText",
+      "position:fixed;visibility:hidden;pointer-events:none;"
+      + "padding-left:env(safe-area-inset-left);"
+      + "padding-top:env(safe-area-inset-top);"
+      + "padding-right:env(safe-area-inset-right);"
+      + "padding-bottom:env(safe-area-inset-bottom);");
+
+    Reflect.callMethod(body, Reflect.field(body, "appendChild"), [probe]);
+    final getComputedStyle:Dynamic = Reflect.field(Browser.window, "getComputedStyle");
+    final computed:Dynamic = Reflect.callMethod(Browser.window, getComputedStyle, [probe]);
+
+    final left:Float = parseCssPixels(Reflect.field(computed, "paddingLeft"));
+    final top:Float = parseCssPixels(Reflect.field(computed, "paddingTop"));
+    final right:Float = parseCssPixels(Reflect.field(computed, "paddingRight"));
+    final bottom:Float = parseCssPixels(Reflect.field(computed, "paddingBottom"));
+
+    Reflect.callMethod(body, Reflect.field(body, "removeChild"), [probe]);
+    return [left, top, right, bottom];
+  }
+
+  static var viewportFitConfigured:Bool = false;
+
+  static function ensureViewportFitCover():Void
+  {
+    if (viewportFitConfigured) return;
+    viewportFitConfigured = true;
+
+    final document:Dynamic = Browser.document;
+    var viewport:Dynamic = document.querySelector('meta[name="viewport"]');
+    if (viewport == null)
+    {
+      viewport = document.createElement("meta");
+      viewport.setAttribute("name", "viewport");
+      viewport.setAttribute("content", "width=device-width, initial-scale=1, viewport-fit=cover");
+      final head:Dynamic = Reflect.field(document, "head");
+      if (head != null) Reflect.callMethod(head, Reflect.field(head, "appendChild"), [viewport]);
+      return;
+    }
+
+    final contentValue:Dynamic = viewport.getAttribute("content");
+    var content:String = contentValue == null ? "" : Std.string(contentValue);
+    if (content.indexOf("viewport-fit") < 0)
+    {
+      content += ", viewport-fit=cover";
+    }
+    else
+    {
+      content = StringTools.replace(content, "viewport-fit=auto", "viewport-fit=cover");
+      content = StringTools.replace(content, "viewport-fit=contain", "viewport-fit=cover");
+    }
+    viewport.setAttribute("content", content);
+  }
+
+  static function parseCssPixels(value:Dynamic):Float
+  {
+    final parsed:Float = Std.parseFloat(value == null ? "0" : Std.string(value));
+    return Math.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+  }
+  #end
+
   /**
    * Get `Rectangle` Object that contains the dimensions of the screen's Notch.
    * Scales the dimensions to return coords in pixels, not points
@@ -56,6 +139,43 @@ class ScreenUtil
             notchRect.height += dimension;
         }
       }
+    }
+    #elseif web
+    final safeArea:Array<Float> = getSafeAreaInsets();
+    final leftInset:Float = safeArea[0];
+    final topInset:Float = safeArea[1];
+    final rightInset:Float = safeArea[2];
+    final bottomInset:Float = safeArea[3];
+    final deviceWidth:Float = Browser.window.innerWidth;
+    final deviceHeight:Float = Browser.window.innerHeight;
+
+    // Represent the largest unsafe edge as a notch rectangle for systems
+    // that already consume this legacy value. All four insets are exposed
+    // separately through getSafeAreaInsets() for actual layout calculations.
+    if (deviceWidth >= deviceHeight)
+    {
+      if (leftInset >= rightInset)
+      {
+        notchRect.width = leftInset;
+        notchRect.height = deviceHeight;
+      }
+      else
+      {
+        notchRect.width = rightInset;
+        notchRect.height = deviceHeight;
+        notchRect.x = deviceWidth - rightInset;
+      }
+    }
+    else if (topInset >= bottomInset)
+    {
+      notchRect.width = deviceWidth;
+      notchRect.height = topInset;
+    }
+    else
+    {
+      notchRect.width = deviceWidth;
+      notchRect.height = bottomInset;
+      notchRect.y = deviceHeight - bottomInset;
     }
     #elseif ios
     var topInset:Float = -1;
