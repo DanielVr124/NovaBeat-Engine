@@ -343,15 +343,40 @@ class ExperienceLibraryState extends MusicBeatState
     }
   }
 
+  function pointerOver(sprite:FlxSprite):Bool
+  {
+    if (sprite == null) return false;
+
+    // TouchUtil handles native touch and Quest pointer rays. The mouse check
+    // is an additional HTML5 fallback because some mobile browsers deliver a
+    // synthesized mouse release separately from the touch release.
+    var touchOver:Bool = TouchUtil.overlaps(sprite);
+    #if web
+    return touchOver || FlxG.mouse.overlaps(sprite, sprite.camera);
+    #else
+    return touchOver;
+    #end
+  }
+
   function handleTouchInput():Void
   {
-    if (!usesTouchControls || TouchUtil.touch == null) return;
+    if (!usesTouchControls) return;
 
-    if (TouchUtil.justPressed)
+    var pointer:Dynamic = TouchUtil.touch;
+    if (pointer == null) return;
+
+    // Treat browser touch and synthesized mouse events as the same gesture.
+    // Using both release signals avoids dropping taps on Android browsers
+    // that emit only one of the two event streams.
+    var justPressed:Bool = TouchUtil.justPressed || FlxG.mouse.justPressed;
+    var pressed:Bool = TouchUtil.pressed || FlxG.mouse.pressed;
+    var justReleased:Bool = TouchUtil.justReleased || FlxG.mouse.justReleased;
+
+    if (justPressed)
     {
       touchGestureActive = true;
-      touchGestureStartX = TouchUtil.touch.x;
-      touchGestureStartY = TouchUtil.touch.y;
+      touchGestureStartX = pointer.x;
+      touchGestureStartY = pointer.y;
       touchGestureLastY = touchGestureStartY;
       touchGestureStartSelected = selectedIndex;
       touchGestureStartedInList = touchGestureStartX >= listX
@@ -361,18 +386,18 @@ class ExperienceLibraryState extends MusicBeatState
       touchGestureDragged = false;
     }
 
-    if (touchGestureActive && TouchUtil.pressed && TouchUtil.touch != null)
+    if (touchGestureActive && pressed)
     {
-      var pointerX:Float = TouchUtil.touch.x;
-      var pointerY:Float = TouchUtil.touch.y;
+      var pointerX:Float = pointer.x;
+      var pointerY:Float = pointer.y;
       if (Math.abs(pointerX - touchGestureStartX) > 24 || Math.abs(pointerY - touchGestureStartY) > 24)
         touchGestureDragged = true;
       touchGestureLastY = pointerY;
     }
 
-    if (touchGestureActive && TouchUtil.justReleased)
+    if (touchGestureActive && justReleased)
     {
-      var releaseY:Float = TouchUtil.touch != null ? TouchUtil.touch.y : touchGestureLastY;
+      var releaseY:Float = pointer.y;
       var deltaY:Float = releaseY - touchGestureStartY;
       if (touchGestureStartedInList && Math.abs(deltaY) > 28)
       {
@@ -384,7 +409,7 @@ class ExperienceLibraryState extends MusicBeatState
         var actionFound:Bool = false;
         for (index in 0...touchButtonHitboxes.length)
         {
-          if (TouchUtil.pressAction(touchButtonHitboxes[index], null, false))
+          if (pointerOver(touchButtonHitboxes[index]))
           {
             performTouchAction(touchButtonActions[index]);
             actionFound = true;
@@ -396,7 +421,7 @@ class ExperienceLibraryState extends MusicBeatState
         {
           for (index in 0...rowHitboxes.length)
           {
-            if (TouchUtil.pressAction(rowHitboxes[index], null, false))
+            if (pointerOver(rowHitboxes[index]))
             {
               selectExperience(firstVisibleIndex + index);
               break;
