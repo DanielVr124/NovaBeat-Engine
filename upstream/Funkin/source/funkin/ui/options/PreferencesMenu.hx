@@ -309,10 +309,13 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     }, Preferences.debugDisplayBGOpacity);
     #end
     #if !mobile
-    createPrefItemCheckbox('Pause on Unfocus', 'When enabled, the game automatically pauses when losing focus.', function(value:Bool):Void
+    if (!DeviceUtil.isMobileBrowser)
     {
-      Preferences.autoPause = value;
-    }, Preferences.autoPause);
+      createPrefItemCheckbox('Pause on Unfocus', 'When enabled, the game automatically pauses when losing focus.', function(value:Bool):Void
+      {
+        Preferences.autoPause = value;
+      }, Preferences.autoPause);
+    }
     createPrefItemCheckbox('Launch in Fullscreen', 'When enabled, the game automatically starts up in fullscreen mode.', function(value:Bool):Void
     {
       Preferences.autoFullscreen = value;
