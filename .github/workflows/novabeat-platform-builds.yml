@@ -1,6 +1,6 @@
 name: NovaBeat platform build checks
 
-# User-requested full native verification run (2026-11-03).
+# User-requested parallel Windows + Android native verification run.
 # Reuse dependency and tool caches without clearing the restored local Haxe repository.
 # Android-only validation run requested after the NovaBeat menu compiler fixes.
 
