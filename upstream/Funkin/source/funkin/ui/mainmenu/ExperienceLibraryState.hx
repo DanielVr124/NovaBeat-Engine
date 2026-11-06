@@ -347,16 +347,16 @@ class ExperienceLibraryState extends MusicBeatState
   {
     if (sprite == null) return false;
 
-    // TouchUtil handles native touch and Quest pointer rays. The mouse check
-    // is an additional HTML5 fallback because some mobile browsers deliver a
-    // synthesized mouse release separately from the touch release.
-    var touchOver:Bool = TouchUtil.overlaps(sprite, sprite.camera)
-      || TouchUtil.overlapsComplex(sprite, sprite.camera);
+    // Prefer the browser pointer coordinates when that is the event stream
+    // which actually fired. Otherwise use the native FlxTouch / Quest pointer.
     #if web
-    return touchOver || FlxG.mouse.overlaps(sprite, sprite.camera);
-    #else
-    return touchOver;
+    if (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased)
+    {
+      if (FlxG.mouse.overlaps(sprite, sprite.camera)) return true;
+    }
     #end
+    return TouchUtil.overlaps(sprite, sprite.camera)
+      || TouchUtil.overlapsComplex(sprite, sprite.camera);
   }
 
   function handleTouchInput():Void
@@ -364,6 +364,14 @@ class ExperienceLibraryState extends MusicBeatState
     if (!usesTouchControls) return;
 
     var pointer:Dynamic = TouchUtil.touch;
+    // On HTML5, some browsers expose only the synthesized mouse stream.
+    // Use that stream as the gesture pointer when there is no active FlxTouch.
+    #if web
+    var touchContactActive:Bool = pointer != null
+      && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased);
+    var browserMouseEvent:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
+    if (!touchContactActive && browserMouseEvent) pointer = FlxG.mouse;
+    #end
     if (pointer == null) return;
 
     // Treat browser touch and synthesized mouse events as the same gesture.
