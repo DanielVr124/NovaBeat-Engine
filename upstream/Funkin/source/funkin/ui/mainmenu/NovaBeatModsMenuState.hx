@@ -18,6 +18,9 @@ import funkin.ui.options.ModMenu;
 class NovaBeatModsMenuState extends MusicBeatState
 {
   var modPage:ModMenu;
+  var menuBackground:Null<FlxSprite> = null;
+  var backgroundDimmer:Null<FlxSprite> = null;
+  var novaBeatStyle:Bool = false;
 
   override function create():Void
   {
@@ -26,7 +29,9 @@ class NovaBeatModsMenuState extends MusicBeatState
     super.create();
 
     var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    this.novaBeatStyle = novaBeatStyle;
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
+    menuBackground = background;
     if (novaBeatStyle)
     {
       var scale:Float = Math.max(FlxG.width / background.width, FlxG.height / background.height);
@@ -43,6 +48,7 @@ class NovaBeatModsMenuState extends MusicBeatState
     add(background);
 
     var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, novaBeatStyle ? 0xA9040A1A : 0x78000000);
+    backgroundDimmer = dimmer;
     dimmer.scrollFactor.set();
     add(dimmer);
 
@@ -57,6 +63,30 @@ class NovaBeatModsMenuState extends MusicBeatState
     modPage = new ModMenu();
     modPage.onExit.add(goBack);
     add(modPage);
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (menuBackground != null)
+    {
+      if (novaBeatStyle)
+      {
+        var scale:Float = Math.max(width / Math.max(1, menuBackground.frameWidth), height / Math.max(1, menuBackground.frameHeight));
+        menuBackground.scale.set(scale, scale);
+      }
+      else
+      {
+        menuBackground.setGraphicSize(Std.int(width * 1.1));
+      }
+      menuBackground.updateHitbox();
+      menuBackground.screenCenter();
+    }
+    if (backgroundDimmer != null)
+    {
+      backgroundDimmer.makeGraphic(width, height, novaBeatStyle ? 0xA9040A1A : 0x78000000);
+      backgroundDimmer.setPosition(0, 0);
+    }
   }
 
   function goBack():Void

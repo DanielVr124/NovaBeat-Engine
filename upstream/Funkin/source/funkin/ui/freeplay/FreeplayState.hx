@@ -744,16 +744,24 @@ class FreeplayState extends MusicBeatSubState
         });
       }
 
+      var portraitFreeplay:Bool = FlxG.height > FlxG.width * 1.12;
+      var difficultyGroupX:Float = portraitFreeplay ? Math.max(12, FlxG.width * 0.08) : (CUTOUT_WIDTH * DJ_POS_MULTI) + 90;
       FlxTween.cancelTweensOf(grpDifficulties);
-      for (diff in grpDifficulties.group.members)
+      for (index => diff in grpDifficulties.group.members)
       {
         if (diff == null) continue;
         FlxTween.cancelTweensOf(diff);
-        FlxTween.tween(diff, {x: (CUTOUT_WIDTH * DJ_POS_MULTI) + 90}, 0.6, {ease: FlxEase.quartOut});
-        diff.y = 80;
+        diff.y = portraitFreeplay ? 0 : 80;
         diff.visible = diff == currentDifficultySprite;
+        if (portraitFreeplay)
+          diff.x = index * 4;
+        else
+          FlxTween.tween(diff, {x: (CUTOUT_WIDTH * DJ_POS_MULTI) + 90}, 0.6, {ease: FlxEase.quartOut});
       }
-      FlxTween.tween(grpDifficulties, {x: (CUTOUT_WIDTH * DJ_POS_MULTI) + 90}, 0.6, {ease: FlxEase.quartOut});
+      FlxTween.tween(grpDifficulties, {
+        x: difficultyGroupX,
+        y: portraitFreeplay ? FlxG.height * 0.19 : 80
+      }, 0.6, {ease: FlxEase.quartOut});
 
       diffSelLeft.visible = true;
       diffSelRight.visible = true;

@@ -86,6 +86,8 @@ class CharSelectSubState extends MusicBeatSubState
   var charHitbox:FlxObject = new FlxObject();
   var cutoutSize:Float = 0;
   var fadeShader:BlueFade = new BlueFade();
+  var isPortraitLayout:Bool = false;
+  var layoutHasBeenBuilt:Bool = false;
 
   public function new(?params:CharSelectSubStateParams)
   {
@@ -302,6 +304,7 @@ class CharSelectSubState extends MusicBeatSubState
     FlxG.debugger.addTrackerProfile(new TrackerProfile(FlxSound, ['pitch', 'volume']));
 
     add(cursors);
+    layoutHasBeenBuilt = true;
 
     charHitbox.active = false;
     charHitbox.scrollFactor.set();
@@ -434,6 +437,88 @@ class CharSelectSubState extends MusicBeatSubState
 
       Save.instance.oldChar.value = true;
     });
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (!layoutHasBeenBuilt || width <= 0 || height <= 0) return;
+
+    isPortraitLayout = height > width * 1.12;
+    if (isPortraitLayout)
+    {
+      grpXSpread = Math.min(104, (width - 142) / 2);
+      grpYSpread = Math.min(100, height * 0.105);
+      grpIcons.scale.set(0.76, 0.76);
+      grpIcons.x = (width - (grpXSpread * 2 + 128) * 0.76) * 0.5;
+      grpIcons.y = height * 0.63;
+
+      playerChill.scale.set(0.72, 0.72);
+      playerChillOut.scale.set(0.72, 0.72);
+      gfChill.scale.set(0.72, 0.72);
+      playerChill.setPosition(width * 0.14, height * 0.13);
+      playerChillOut.setPosition(width * 0.14, height * 0.13);
+      gfChill.setPosition(width * 0.40, height * 0.12);
+
+      nametag.midpoint.set(width * 0.5, height * 0.42);
+      chooseDipshit.scale.set(0.58, 0.58);
+      dipshitBacking.scale.set(0.58, 0.58);
+      dipshitBlur.scale.set(0.58, 0.58);
+      chooseDipshit.setPosition((width - chooseDipshit.width) * 0.5, height * 0.47);
+      dipshitBacking.setPosition((width - dipshitBacking.width) * 0.5, height * 0.455);
+      dipshitBlur.setPosition((width - dipshitBlur.width) * 0.5, height * 0.445);
+
+      charHitbox.setPosition(width * 0.10, height * 0.10);
+      charHitbox.setSize(width * 0.80, height * 0.40);
+      cursorFactor = Math.min(76, width * 0.20);
+      cursorOffsetX = -16;
+      cursorOffsetY = -48;
+      camFollow.setPosition(width * 0.5, height * 0.5);
+    }
+    else
+    {
+      grpXSpread = 107;
+      grpYSpread = 127;
+      grpIcons.scale.set(1, 1);
+      grpIcons.x = cutoutSize + 450;
+      grpIcons.y = 120;
+
+      playerChill.scale.set(1, 1);
+      playerChillOut.scale.set(1, 1);
+      gfChill.scale.set(1, 1);
+      playerChill.setPosition(cutoutSize, 0);
+      playerChillOut.setPosition(cutoutSize, 0);
+      gfChill.setPosition(cutoutSize, 0);
+
+      nametag.midpoint.set(1008 + cutoutSize, 100);
+      chooseDipshit.scale.set(1, 1);
+      dipshitBacking.scale.set(1, 1);
+      dipshitBlur.scale.set(1, 1);
+      chooseDipshit.setPosition(cutoutSize + 426, -13);
+      dipshitBacking.setPosition(cutoutSize + 423, -17);
+      dipshitBlur.setPosition(cutoutSize + 419, -65);
+
+      charHitbox.setPosition(width * 0.65, height * 0.20);
+      charHitbox.setSize(300, 500);
+      cursorFactor = 110;
+      cursorOffsetX = -16;
+      cursorOffsetY = -48;
+      camFollow.setPosition(width * 0.5, height * 0.5);
+    }
+
+    updateIconPositions();
+    cursorLocIntended.set(
+      (cursorFactor * cursorX) + (width / 2) - cursors.main.width / 2 + cursorOffsetX,
+      (cursorFactor * cursorY) + (height / 2) - cursors.main.height / 2 + cursorOffsetY
+    );
+    cursors.lerpToLocation(cursorLocIntended);
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (backButton != null)
+      backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
+
+    if (autoFollow) camFollow.setPosition(width * 0.5, height * 0.5);
   }
 
   override public function destroy():Void
@@ -644,8 +729,16 @@ class CharSelectSubState extends MusicBeatSubState
 
   function updateIconPositions()
   {
-    grpIcons.x = cutoutSize + 450;
-    grpIcons.y = 120;
+    if (isPortraitLayout)
+    {
+      grpIcons.x = (FlxG.width - (grpXSpread * 2 + 128) * grpIcons.scale.x) * 0.5;
+      grpIcons.y = FlxG.height * 0.63;
+    }
+    else
+    {
+      grpIcons.x = cutoutSize + 450;
+      grpIcons.y = 120;
+    }
 
     for (index => member in grpIcons.members)
     {
@@ -667,8 +760,11 @@ class CharSelectSubState extends MusicBeatSubState
       member.x = posX * grpXSpread;
       member.y = posY * grpYSpread;
 
-      member.x += grpIcons.x + 20;
-      member.y += grpIcons.y + 20;
+      var iconScale:Float = isPortraitLayout ? 0.76 : 1.0;
+      member.x = grpIcons.x + (posX * grpXSpread + 20) * iconScale;
+      member.y = grpIcons.y + (posY * grpYSpread + 20) * iconScale;
+      member.width = 86 * iconScale;
+      member.height = 86 * iconScale;
     }
   }
 

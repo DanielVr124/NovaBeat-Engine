@@ -37,6 +37,10 @@ class CharacterUnlockState extends MusicBeatState
   static final DIALOG_FONT_COLOR:FlxColor = 0xFFFFFFFF; // Iconic
 
   var busy:Bool = false;
+  var dialogContainer:Null<FlxSpriteGroup> = null;
+  var dialogBackground:Null<FlxSprite> = null;
+  var dialogText:Null<FlxText> = null;
+  var healthIcon:Null<HealthIcon> = null;
 
   public function new(targetPlayableCharacter:String, ?nextState:FlxState)
   {
@@ -56,6 +60,7 @@ class CharacterUnlockState extends MusicBeatState
     bgColor = DIALOG_BG_COLOR;
 
     var dialogContainer:FlxSpriteGroup = new FlxSpriteGroup();
+    this.dialogContainer = dialogContainer;
     add(dialogContainer);
 
     // Build the graphic for the text...
@@ -63,9 +68,11 @@ class CharacterUnlockState extends MusicBeatState
     // var dialogText:FlxText = new FlxText(0, 0, 0, 'You can now play as     $charName.\n\nCheck it out in Freeplay!');
     var dialogText:FlxText = new FlxText(0, 0, 0, 'You can now play as     $charName.');
     dialogText.setFormat("VCR OSD Mono", 32, DIALOG_FONT_COLOR, LEFT);
+    this.dialogText = dialogText;
 
     // THEN we can size the dialog to match...
     var dialogBG:FlxSprite = new FlxSprite(0, 0);
+    this.dialogBackground = dialogBG;
     dialogBG.makeGraphic(Std.int(dialogText.width + 32), Std.int(dialogText.height + 32), FlxColor.TRANSPARENT);
     dialogBG.drawRoundRect(0, 0, dialogBG.width, dialogBG.height, 16, 16, DIALOG_COLOR);
     dialogContainer.add(dialogBG);
@@ -82,6 +89,7 @@ class CharacterUnlockState extends MusicBeatState
     var healthIconCharacterId = targetCharacterData?.getOwnedCharacterIds()[0];
     var baseCharacter = CharacterDataParser.fetchCharacter(healthIconCharacterId ?? Constants.DEFAULT_CHARACTER);
     var healthIcon:HealthIcon = new HealthIcon(healthIconCharacterId);
+    this.healthIcon = healthIcon;
     @:privateAccess
     healthIcon.configure(baseCharacter?._data.healthIcon);
     healthIcon.autoUpdate = false;
@@ -103,6 +111,31 @@ class CharacterUnlockState extends MusicBeatState
     });
 
     // performUnlock();
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (dialogContainer == null || dialogBackground == null || dialogText == null || healthIcon == null) return;
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = portrait ? 20 : 64;
+    var iconSpace:Float = portrait ? 0 : 190;
+    var maxWidth:Float = Math.max(120, width - margin * 2);
+    dialogText.fieldWidth = Math.max(120, maxWidth - 32 - iconSpace);
+    dialogText.size = portrait ? 21 : 32;
+    dialogText.wordWrap = true;
+
+    var panelWidth:Int = Std.int(Math.min(maxWidth, dialogText.width + 32 + iconSpace));
+    var panelHeight:Int = Std.int(dialogText.height + 32);
+    dialogBackground.makeGraphic(panelWidth, panelHeight, FlxColor.TRANSPARENT);
+    dialogBackground.drawRoundRect(0, 0, panelWidth, panelHeight, 16, 16, DIALOG_COLOR);
+    dialogBackground.updateHitbox();
+    dialogBackground.screenCenter(XY);
+    dialogText.setPosition(dialogBackground.x + 16, dialogBackground.y + 16);
+    healthIcon.visible = !portrait;
+    healthIcon.setPosition(dialogBackground.x + dialogBackground.width - healthIcon.width - 12,
+      dialogBackground.y + (dialogBackground.height - healthIcon.height) * 0.5);
+    dialogContainer.setPosition(0, 0);
   }
 
   function handleMusic():Void
