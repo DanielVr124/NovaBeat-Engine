@@ -175,6 +175,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         if (value == "Original FNF")
         {
+          // Switching styles should land on the interactive Press Enter screen,
+          // not replay or inherit a partially initialized intro sequence.
+          TitleState.initialized = true;
           var startedTrack:Bool = FunkinSound.playMusic('freakyMenu', {
             startingVolume: 0.0,
             overrideExisting: true,
