@@ -236,7 +236,16 @@ class SwipeUtil
   static inline function get_flickUp():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickUp;
+    #if mobile
+    return FlxG.touches.flickManager.flickUp;
+    #elseif web
+    #if FLX_TOUCH
+    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickUp;
+    #end
+    return FlxG.mouse.flickManager.flickUp;
+    #else
+    return FlxG.mouse.flickManager.flickUp;
+    #end
     #else
     return false;
     #end
@@ -246,7 +255,16 @@ class SwipeUtil
   static inline function get_flickRight():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickRight;
+    #if mobile
+    return FlxG.touches.flickManager.flickRight;
+    #elseif web
+    #if FLX_TOUCH
+    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickRight;
+    #end
+    return FlxG.mouse.flickManager.flickRight;
+    #else
+    return FlxG.mouse.flickManager.flickRight;
+    #end
     #else
     return false;
     #end
@@ -256,7 +274,16 @@ class SwipeUtil
   static inline function get_flickLeft():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickLeft;
+    #if mobile
+    return FlxG.touches.flickManager.flickLeft;
+    #elseif web
+    #if FLX_TOUCH
+    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickLeft;
+    #end
+    return FlxG.mouse.flickManager.flickLeft;
+    #else
+    return FlxG.mouse.flickManager.flickLeft;
+    #end
     #else
     return false;
     #end
@@ -266,7 +293,16 @@ class SwipeUtil
   static inline function get_flickDown():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
-    return TouchUtil.touch != null && TouchUtil.touch.flickManager.flickDown;
+    #if mobile
+    return FlxG.touches.flickManager.flickDown;
+    #elseif web
+    #if FLX_TOUCH
+    if (FlxG.touches.list.length > 0) return FlxG.touches.flickManager.flickDown;
+    #end
+    return FlxG.mouse.flickManager.flickDown;
+    #else
+    return FlxG.mouse.flickManager.flickDown;
+    #end
     #else
     return false;
     #end
