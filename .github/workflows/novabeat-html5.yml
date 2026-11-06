@@ -3,6 +3,7 @@ name: NovaBeat HTML5 browser test build
 # Separate experimental browser build. Native Windows/Android builds remain unchanged.
 # [web-build] Rebuild the browser test site from the latest compiler-fixed source.
 # [web-build] User-requested HTML5 verification build for the current feature branch.
+# [web-build] Fresh HTML5 rebuild requested after the Pages retry failed.
 # Quest mobile-controls validation build requested for the current feature branch.
 # Single long-lived integration branch: feature/optional-novabeat-menu-mod-manager.
 # Keep NovaBeat feature work on that branch; main remains the release/production branch.
@@ -144,7 +145,7 @@ jobs:
             fi
           done
 
-          if ((${#missing_packages[@]} > 0)); then
+          if (("${#missing_packages[@]}" > 0)); then
             echo "Installing ${#missing_packages[@]} missing Linux packages: ${missing_packages[*]}"
             sudo apt-get "${apt_options[@]}" update
             sudo apt-get "${apt_options[@]}" install -y "${missing_packages[@]}"
@@ -164,15 +165,12 @@ jobs:
             fi
           done
           pkg-config --exists libpipewire-0.3 libudev wayland-client alsa libpulse
-          # Ubuntu stores PipeWire headers in a versioned include directory.
-          # Use pkg-config's flags, exactly as the native compiler should.
           cat <<'EOF' | cc $(pkg-config --cflags libpipewire-0.3) -x c -fsyntax-only -
           #include <pipewire/pipewire.h>
           EOF
           command -v wayland-scanner
           wayland-scanner --version
           command -v ffmpeg
-          # Keep restored APT files readable/writable by the cache action on the next run.
           sudo chown -R "$(id -u):$(id -g)" "$apt_cache_root"
           chmod -R u+rwX,go+rX "$apt_cache_root"
 
