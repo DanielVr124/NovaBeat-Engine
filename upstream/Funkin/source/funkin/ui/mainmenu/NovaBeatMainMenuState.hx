@@ -130,7 +130,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     routeInterfaceObjects = true;
 
     showingTitle = showTitleOnCreate;
-    persistentUpdate = true;
+    // A Freeplay substate owns input while it is open. Do not let the
+    // underlying main-menu handler process the same key presses.
+    persistentUpdate = subState == null;
     persistentDraw = true;
 
     if (showTitleOnCreate)
@@ -585,6 +587,7 @@ class NovaBeatMainMenuState extends MusicBeatState
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId
           }));
+          persistentUpdate = false;
         case 2:
           FlxG.switchState(() -> new NovaBeatModsMenuState());
         case 3:
