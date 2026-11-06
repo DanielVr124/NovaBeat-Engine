@@ -256,7 +256,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     // Native mobile builds use the haptics extension. Phone browsers expose
     // the simpler Vibration API on supported devices (currently most Android
     // browsers); hide the setting where the browser has no vibration support.
-    if (#if FEATURE_HAPTICS true #else DeviceUtil.isMobileBrowser && HapticUtil.hapticsAvailable #end)
+    if (HapticUtil.hapticsSupported)
     {
       createPrefItemEnum('Haptics', 'When enabled, the game plays haptic feedback effects.', [
         "All" => HapticsMode.ALL,
