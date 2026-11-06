@@ -30,6 +30,12 @@ class HapticUtil
   public static var hapticsAvailable(get, never):Bool;
 
   /**
+   * Indicates whether the current platform can provide haptic feedback,
+   * regardless of the user's preference to enable or disable it.
+   */
+  public static var hapticsSupported(get, never):Bool;
+
+  /**
    * Triggers vibration.
    *
    * @param period The time for one complete vibration in seconds.
@@ -171,15 +177,18 @@ class HapticUtil
 
   static function get_hapticsAvailable():Bool
   {
-    #if FEATURE_HAPTICS
-    if (Preferences.hapticsMode != HapticsMode.NONE) return true;
-    #elseif web
-    return DeviceUtil.isMobileBrowser
-      && Preferences.hapticsMode != HapticsMode.NONE
-      && Reflect.field(Browser.navigator, "vibrate") != null;
-    #end
+    return hapticsSupported && Preferences.hapticsMode != HapticsMode.NONE;
+  }
 
+  static function get_hapticsSupported():Bool
+  {
+    #if FEATURE_HAPTICS
+    return true;
+    #elseif web
+    return DeviceUtil.isMobileBrowser && Reflect.field(Browser.navigator, "vibrate") != null;
+    #else
     return false;
+    #end
   }
 }
 
