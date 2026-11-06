@@ -7,6 +7,7 @@ import flixel.FlxSprite;
 import funkin.ui.mainmenu.MainMenuState;
 import flixel.group.FlxSpriteGroup;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 import funkin.ui.credits.CreditsData.CreditsDataRole;
 import funkin.ui.credits.CreditsData.CreditsDataMember;
 
@@ -146,8 +147,8 @@ class CreditsState extends MusicBeatState
     });
     FlxG.sound.music.fadeIn(6, 0, 0.8);
 
-    #if mobile
-    addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, exit, 0.7);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser) addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, exit, 0.7);
     #end
   }
 
@@ -264,7 +265,8 @@ class CreditsState extends MusicBeatState
     if (!scrollPaused)
     {
       // TODO: Replace with whatever the special note button is.
-      if (FlxG.keys.pressed.ENTER || FlxG.keys.pressed.SPACE #if mobile || TouchUtil.pressed && !TouchUtil.overlaps(backButton) #end)
+      if (FlxG.keys.pressed.ENTER || FlxG.keys.pressed.SPACE
+        || (DeviceUtil.isMobileBrowser && TouchUtil.pressed && !TouchUtil.overlaps(backButton)))
       {
         // Move the whole group by the base scroll speed.
         creditsGroup.y -= CREDITS_SCROLL_FAST_SPEED * elapsed;

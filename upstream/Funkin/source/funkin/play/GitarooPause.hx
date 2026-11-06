@@ -6,10 +6,11 @@ import funkin.graphics.FunkinSprite;
 import funkin.ui.MusicBeatState;
 import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.mainmenu.MainMenuState;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.TouchUtil;
 import funkin.util.SwipeUtil;
 #end
+import funkin.util.DeviceUtil;
 
 class GitarooPause extends MusicBeatState
 {
@@ -62,7 +63,7 @@ class GitarooPause extends MusicBeatState
     super.create();
   }
 
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   function checkSelectionPress():Bool
   {
     var buttonAcceptCheck:Bool = replaySelect ? TouchUtil.pressAction(replayButton) : TouchUtil.pressAction(cancelButton);
@@ -72,9 +73,10 @@ class GitarooPause extends MusicBeatState
 
   override function update(elapsed:Float):Void
   {
-    if (controls.UI_LEFT_P || controls.UI_RIGHT_P #if mobile || SwipeUtil.justSwipedLeft || SwipeUtil.justSwipedRight #end) changeThing();
+    if (controls.UI_LEFT_P || controls.UI_RIGHT_P
+      || (DeviceUtil.isMobileBrowser && (SwipeUtil.justSwipedLeft || SwipeUtil.justSwipedRight))) changeThing();
 
-    if (controls.ACCEPT_P #if mobile || checkSelectionPress() #end)
+    if (controls.ACCEPT_P || (DeviceUtil.isMobileBrowser && checkSelectionPress()))
     {
       if (replaySelect)
       {

@@ -24,6 +24,7 @@ import funkin.ui.FullScreenScaleMode;
 import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 #if FEATURE_MOBILE_ADVERTISEMENTS
 import funkin.mobile.util.AdMobUtil;
 #end
@@ -184,7 +185,7 @@ class PauseSubState extends MusicBeatSubState
   // Graphics Variables
   // ===============
 
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * The pause button for the game, only appears in Mobile targets. Shows up breifly to finish the pause animation.
    */
@@ -413,8 +414,10 @@ class PauseSubState extends MusicBeatSubState
     background.updateHitbox();
     add(background);
 
-    #if mobile
-    pauseButton = FunkinSprite.createSparrow(0, 0, 'pauseButton');
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      pauseButton = FunkinSprite.createSparrow(0, 0, 'pauseButton');
     pauseButton.animation.addByIndices('idle', 'pause', [0], '', 24, false);
     pauseButton.animation.addByIndices('hold', 'pause', [5], '', 24, false);
     pauseButton.animation.addByIndices('confirm', 'pause', [
@@ -458,8 +461,9 @@ class PauseSubState extends MusicBeatSubState
     pauseCircle.y = ((pauseButton.y + (pauseButton.height / 2)) - (pauseCircle.height / 2));
     pauseCircle.alpha = 0.1;
 
-    add(pauseCircle);
-    add(pauseButton);
+      add(pauseCircle);
+      add(pauseButton);
+    }
     #end
   }
 
@@ -472,8 +476,14 @@ class PauseSubState extends MusicBeatSubState
     metadata.scrollFactor.set(0, 0);
     add(metadata);
 
-    var metadataSong:FlxText = new FlxText(20,
-      #if mobile (PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155 #else 15 #end,
+    var metadataSongY:Float = #if mobile
+      (PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155
+      #elseif web
+      DeviceUtil.isMobileBrowser ? ((PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155) : 15
+      #else
+      15
+      #end;
+    var metadataSong:FlxText = new FlxText(20, metadataSongY,
       camera.width - Math.max(40, funkin.ui.FullScreenScaleMode.gameNotchSize.x), 'Song Name');
     metadataSong.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     if (PlayState.instance?.currentChart != null)
@@ -611,10 +621,12 @@ class PauseSubState extends MusicBeatSubState
   {
     FlxTween.tween(background, {alpha: 0.6}, 0.8, {ease: FlxEase.quartOut});
 
-    #if mobile
-    HapticUtil.vibrate(0, 0.05, 0.5);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      HapticUtil.vibrate(0, 0.05, 0.5);
 
-    pauseButton.animation.play('confirm');
+      pauseButton.animation.play('confirm');
     pauseCircle.scale.set(0.84 * 1.4, 0.8 * 1.4);
     pauseCircle.alpha = 0.4;
     FlxTween.tween(pauseCircle.scale, {x: 0.84 * 0.8, y: 0.8 * 0.8}, 0.4, {ease: FlxEase.backInOut});
@@ -627,9 +639,14 @@ class PauseSubState extends MusicBeatSubState
 
     dataFadeTimer.start(0.3, function(_)
     {
+        transitionMetadataIn();
+        FlxTween.tween(pauseButton, {alpha: 0}, 0.6, {ease: FlxEase.quartOut});
+      });
+    }
+    else
+    {
       transitionMetadataIn();
-      FlxTween.tween(pauseButton, {alpha: 0}, 0.6, {ease: FlxEase.quartOut});
-    });
+    }
     #else
     transitionMetadataIn();
     #end
@@ -796,7 +813,8 @@ class PauseSubState extends MusicBeatSubState
     var prevEntry:Int = currentEntry;
     currentEntry += change;
 
-    if (#if FEATURE_TOUCH_CONTROLS !funkin.mobile.input.ControlsHandler.usingExternalInputDevice #else false #end)
+    if (#if FEATURE_TOUCH_CONTROLS (!funkin.mobile.input.ControlsHandler.usingExternalInputDevice
+      || (DeviceUtil.isQuestBrowser && TouchUtil.pressed)) #else false #end)
     {
       if (currentEntry < 0) currentEntry = 0;
       if (currentEntry >= currentMenuEntries.length) currentEntry = currentMenuEntries.length - 1;
@@ -819,20 +837,22 @@ class PauseSubState extends MusicBeatSubState
       // Set the transparency.
       text.alpha = isCurrent ? 1.0 : 0.6;
 
-      #if mobile
-      // Set the position.
-      if (isCurrent && currentEntry != prevEntry)
+      if (DeviceUtil.isMobileBrowser)
       {
-        FlxTween.globalManager.cancelTweensOf(text);
-        text.x = 165;
-        FlxTween.tween(text, {x: 150}, 0.2, {ease: FlxEase.backInOut});
+        if (isCurrent && currentEntry != prevEntry)
+        {
+          FlxTween.globalManager.cancelTweensOf(text);
+          text.x = 165;
+          FlxTween.tween(text, {x: 150}, 0.2, {ease: FlxEase.backInOut});
+        }
       }
-      #else
-      var targetX = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 20 + Math.max(90, funkin.ui.FullScreenScaleMode.gameNotchSize.x);
-      var targetY = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 120 + (camera.height * 0.48);
-      FlxTween.globalManager.cancelTweensOf(text);
-      FlxTween.tween(text, {x: targetX, y: targetY}, 0.33, {ease: FlxEase.quartOut});
-      #end
+      else
+      {
+        var targetX = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 20 + Math.max(90, funkin.ui.FullScreenScaleMode.gameNotchSize.x);
+        var targetY = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 120 + (camera.height * 0.48);
+        FlxTween.globalManager.cancelTweensOf(text);
+        FlxTween.tween(text, {x: targetX, y: targetY}, 0.33, {ease: FlxEase.quartOut});
+      }
     }
   }
 
@@ -927,39 +947,36 @@ class PauseSubState extends MusicBeatSubState
       else
       {
         // Handle visible entries.
-        #if mobile
-        // var yPos:Float = (150 * entryIndex) + 100;
-
-        // var yPos:Float = (140 * entryIndex) + 150;
-        var yPos:Float = (105 * entryIndex) + 150;
-
-        var text:AtlasText = new AtlasText(110, yPos, entry.text, AtlasFont.BOLD);
-        text.scrollFactor.set(0, 0);
-        text.alpha = 0;
-        for (letter in text)
+        if (DeviceUtil.isMobileBrowser)
         {
-          letter.width *= 1.2;
-          letter.height *= 1.4;
+          // Native mobile row spacing and readable, slightly enlarged labels.
+          var yPos:Float = (105 * entryIndex) + 150;
+          var text:AtlasText = new AtlasText(110, yPos, entry.text, AtlasFont.BOLD);
+          text.scrollFactor.set(0, 0);
+          text.alpha = 0;
+          for (letter in text)
+          {
+            letter.width *= 1.2;
+            letter.height *= 1.4;
+          }
+          menuEntryText.add(text);
+          FlxTween.tween(text, {x: 150}, 0.4 * (entryIndex + 1), {ease: FlxEase.expoOut});
+          entry.sprite = text;
         }
-        menuEntryText.add(text);
-
-        FlxTween.tween(text, {x: 150}, 0.4 * (entryIndex + 1), {ease: FlxEase.expoOut});
-
-        entry.sprite = text;
-        #else
-        var yPos:Float = 70 * entryIndex + 30;
-        var text:AtlasText = new AtlasText(0, yPos, entry.text, AtlasFont.BOLD);
-        text.scrollFactor.set(0, 0);
-        text.alpha = 0;
-        for (letter in text)
+        else
         {
-          letter.width *= 2;
-          letter.height *= 2;
+          var yPos:Float = 70 * entryIndex + 30;
+          var text:AtlasText = new AtlasText(0, yPos, entry.text, AtlasFont.BOLD);
+          text.scrollFactor.set(0, 0);
+          text.alpha = 0;
+          for (letter in text)
+          {
+            letter.width *= 2;
+            letter.height *= 2;
+          }
+          menuEntryText.add(text);
+          entry.sprite = text;
         }
-        menuEntryText.add(text);
-
-        entry.sprite = text;
-        #end
 
         entryIndex++;
       }
@@ -981,8 +998,9 @@ class PauseSubState extends MusicBeatSubState
   {
     metadataPractice.visible = PlayState.instance?.isPracticeMode ?? false;
 
-    #if mobile
-    if (metadata.members[0].y != camera.height - 185 && metadataPractice.visible)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser && metadata.members.length > 0
+      && metadata.members[0].y != camera.height - 185 && metadataPractice.visible)
     {
       for (text in metadata)
       {

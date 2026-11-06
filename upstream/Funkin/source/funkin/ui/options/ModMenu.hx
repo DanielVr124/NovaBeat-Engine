@@ -12,9 +12,10 @@ import funkin.ui.Page;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
 import polymod.Polymod.ModMetadata;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinBackButton;
 #end
+import funkin.util.DeviceUtil;
 
 /**
  * A real Polymod manager page.
@@ -51,9 +52,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     buildLayout();
     refreshModList();
 
-    #if mobile
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
-    add(backButton);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+    {
+      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
+      add(backButton);
+    }
     #end
   }
 
@@ -327,13 +331,16 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
       if (controls.UI_RIGHT_P) moveSelectedMod(1);
 
-      #if mobile
-      for (row in rows)
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      if (DeviceUtil.isMobileBrowser)
       {
-        if (TouchUtil.pressAction(row))
+        for (row in rows)
         {
-          selectMod(row.modIndex, true);
-          break;
+          if (TouchUtil.pressAction(row))
+          {
+            selectMod(row.modIndex, true);
+            break;
+          }
         }
       }
       #end

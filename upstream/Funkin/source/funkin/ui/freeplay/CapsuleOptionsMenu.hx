@@ -8,9 +8,10 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.TouchUtil;
 #end
+import funkin.util.DeviceUtil;
 
 @:nullSafety
 class CapsuleOptionsMenu extends FlxSpriteGroup
@@ -84,26 +85,26 @@ class CapsuleOptionsMenu extends FlxSpriteGroup
     @:privateAccess
     if (!busy)
     {
-      if (parent.controls.BACK_P #if mobile || TouchUtil.pressAction(parent.backButton) #end)
+      if (parent.controls.BACK_P || (DeviceUtil.isMobileBrowser && parent.backButton != null && TouchUtil.pressAction(parent.backButton)))
       {
         setBusy(true);
         close();
         return;
       }
 
-      if (parent.controls.UI_LEFT_P #if mobile || TouchUtil.pressAction(leftArrow) #end)
+      if (parent.controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(leftArrow)))
       {
         currentInstrumentalIndex = (currentInstrumentalIndex + 1) % instrumentalIds.length;
         changedInst = true;
       }
-      if (parent.controls.UI_RIGHT_P #if mobile || TouchUtil.pressAction(rightArrow) #end)
+      if (parent.controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(rightArrow)))
       {
         currentInstrumentalIndex = (currentInstrumentalIndex - 1 + instrumentalIds.length) % instrumentalIds.length;
         changedInst = true;
       }
-      if (parent.controls.ACCEPT_P #if mobile
-        || ((TouchUtil.pressAction(currentInstrumental))
-          && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow))) #end)
+      if (parent.controls.ACCEPT_P || (DeviceUtil.isMobileBrowser
+        && TouchUtil.pressAction(currentInstrumental)
+        && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow)))
       {
         setBusy(true);
         onConfirm(instrumentalIds[currentInstrumentalIndex] ?? '');
