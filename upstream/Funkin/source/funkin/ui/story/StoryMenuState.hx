@@ -83,6 +83,7 @@ class StoryMenuState extends MusicBeatState
    * The background behind the props.
    */
   var levelBackground:FlxSprite;
+  var novaBeatWeekPanel:FlxSprite;
   var baseLevelBackgroundWidth:Float = 0;
   var baseLevelBackgroundHeight:Float = 0;
 
@@ -165,6 +166,7 @@ class StoryMenuState extends MusicBeatState
     updateBackground();
     baseLevelBackgroundWidth = levelBackground.frameWidth;
     baseLevelBackgroundHeight = levelBackground.frameHeight;
+    updateNovaBeatWeekPanel(FlxG.width, FlxG.height);
 
     levelProps = new FlxTypedGroup<LevelProp>();
     levelProps.zIndex = 1000;
@@ -252,6 +254,7 @@ class StoryMenuState extends MusicBeatState
     levelBackground.scale.set(backgroundScale, backgroundScale);
     levelBackground.updateHitbox();
     levelBackground.screenCenter();
+    updateNovaBeatWeekPanel(width, height);
 
     if (portrait)
     {
@@ -742,6 +745,31 @@ class StoryMenuState extends MusicBeatState
     levelBackground.zIndex = -100;
     levelBackground.alpha = 1.0;
     add(levelBackground);
+  }
+
+  /**
+   * Add the dark lower panel used behind the NovaBeat week carousel.
+   * Its top edge matches the bottom edge of the stock FNF week-background
+   * region, so the week list begins in the same place in both menu styles.
+   */
+  function updateNovaBeatWeekPanel(width:Int, height:Int):Void
+  {
+    if (Preferences.menuStyle != "NovaBeat") return;
+
+    var panelY:Int = BACKGROUND_Y + BACKGROUND_HEIGHT;
+    var panelHeight:Int = Std.int(Math.max(0, height - panelY));
+
+    if (novaBeatWeekPanel == null)
+    {
+      novaBeatWeekPanel = new FlxSprite();
+      novaBeatWeekPanel.scrollFactor.set();
+      novaBeatWeekPanel.zIndex = -50;
+      novaBeatWeekPanel.alpha = 0.82;
+      add(novaBeatWeekPanel);
+    }
+
+    novaBeatWeekPanel.makeGraphic(Std.int(Math.max(1, width)), Std.int(Math.max(1, panelHeight)), FlxColor.BLACK);
+    novaBeatWeekPanel.setPosition(0, panelY);
   }
 
   function updateProps():Void
