@@ -58,7 +58,7 @@ class MainMenuState extends MusicBeatState
   var bg:Null<FlxSprite>;
   var magenta:FlxSprite;
   var camFollow:FlxObject;
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   var gyroPan:Null<FlxPoint>;
   #end
   var overrideMusic:Bool = false;
@@ -296,8 +296,8 @@ class MainMenuState extends MusicBeatState
 
     // FlxG.camera.setScrollBounds(bg.x, bg.x + bg.width, bg.y, bg.y + bg.height * 1.2);
 
-    #if mobile
-    gyroPan = new FlxPoint();
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser) gyroPan = new FlxPoint();
     #end
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -546,7 +546,7 @@ class MainMenuState extends MusicBeatState
 
     Conductor.instance.update();
 
-    #if mobile
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (gyroPan != null && bg != null && !ControlsHandler.usingExternalInputDevice)
     {
       gyroPan.add(FlxG.gyroscope.pitch * -1.25, FlxG.gyroscope.roll * -1.25);
