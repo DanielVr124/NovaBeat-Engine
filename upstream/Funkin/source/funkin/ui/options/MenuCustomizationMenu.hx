@@ -68,6 +68,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var listY:Float = 0;
   var listW:Float = 0;
   var valueColumnX:Float = 0;
+  var panelBackgrounds:Array<FlxSprite> = [];
+  var headerLabels:Array<FlxText> = [];
+  #if FEATURE_TOUCH_CONTROLS
+  var responsiveBackButton:Null<FunkinBackButton> = null;
+  #end
 
   public function new()
   {
@@ -93,21 +98,28 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       var leftPanel:FlxSprite = new FlxSprite(margin, panelTop);
       leftPanel.makeGraphic(Std.int(width * 0.39), Std.int(panelHeight), 0xC9091833);
       add(leftPanel);
+      panelBackgrounds.push(leftPanel);
 
       var rightPanel:FlxSprite = new FlxSprite(width * 0.49, panelTop);
       rightPanel.makeGraphic(Std.int(width * 0.46), Std.int(panelHeight), 0xC9091833);
       add(rightPanel);
+      panelBackgrounds.push(rightPanel);
     }
     else
     {
       var panel:FlxSprite = new FlxSprite(margin, panelTop);
       panel.makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
       add(panel);
+      panelBackgrounds.push(panel);
     }
 
-    add(makeLabel(margin, 22, width - margin * 2, 'CUSTOMIZATION', compactLayout ? 23 : 30, FlxColor.WHITE));
-    add(makeLabel(margin, 58, width - margin * 2,
-      'PERSONALIZE THE NOVABEAT MENU', 11, 0xFF48E7FF));
+    var pageTitle:FlxText = makeLabel(margin, 22, width - margin * 2, 'CUSTOMIZATION', compactLayout ? 23 : 30, FlxColor.WHITE);
+    add(pageTitle);
+    headerLabels.push(pageTitle);
+    var pageSubtitle:FlxText = makeLabel(margin, 58, width - margin * 2,
+      'PERSONALIZE THE NOVABEAT MENU', 11, 0xFF48E7FF);
+    add(pageSubtitle);
+    headerLabels.push(pageSubtitle);
 
     listX = rightSideLayout ? width * 0.515 : margin + 12;
     listY = rightSideLayout ? panelTop + 18 : panelTop + 12;
@@ -205,8 +217,8 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     updateRowHighlights();
 
     #if FEATURE_TOUCH_CONTROLS
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
-    add(backButton);
+    responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
+    add(responsiveBackButton);
     #end
   }
 
@@ -287,8 +299,8 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     layoutFNFItems();
 
     #if FEATURE_TOUCH_CONTROLS
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    add(backButton);
+    responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+    add(responsiveBackButton);
     #end
   }
 
@@ -301,11 +313,19 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       var item:TextMenuItem = optionRows[index];
       var value:AtlasText = fnfValueLabels[index];
       var valueWidth:Int = value.getWidth();
-      var nameWidth:Int = item.atlasText.getWidth();
-      var indent:Float = items.selectedIndex == index ? 150 : 120;
-      value.x = valueWidth - 75 + funkin.ui.FullScreenScaleMode.gameNotchSize.x + indent;
-      value.y = item.y;
-      item.x = value.x + valueWidth + 20;
+      if (FlxG.height > FlxG.width * 1.12)
+      {
+        value.x = FlxG.width - valueWidth - 22;
+        value.y = item.y;
+        item.x = Math.max(18, funkin.ui.FullScreenScaleMode.gameNotchSize.x + 18);
+      }
+      else
+      {
+        var indent:Float = items.selectedIndex == index ? 150 : 120;
+        value.x = valueWidth - 75 + funkin.ui.FullScreenScaleMode.gameNotchSize.x + indent;
+        value.y = item.y;
+        item.x = value.x + valueWidth + 20;
+      }
     }
   }
 
@@ -407,6 +427,97 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       case "ice": "ICE";
       default: "CYAN";
     };
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(16, width * 0.045);
+    if (novaBeatLayout)
+    {
+      var panelTop:Float = 98;
+      var panelHeight:Float = Math.max(170, height - 142);
+      if (panelBackgrounds.length > 0)
+      {
+        panelBackgrounds[0].visible = true;
+        panelBackgrounds[0].setPosition(margin, panelTop);
+        panelBackgrounds[0].makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
+        for (i in 1...panelBackgrounds.length) panelBackgrounds[i].visible = false;
+      }
+      if (headerLabels.length >= 2)
+      {
+        headerLabels[0].setPosition(margin, 22);
+        headerLabels[0].fieldWidth = width - margin * 2;
+        headerLabels[0].size = portrait ? 23 : 30;
+        headerLabels[1].setPosition(margin, 58);
+        headerLabels[1].fieldWidth = width - margin * 2;
+      }
+      rightSideLayout = false;
+      listX = margin + 12;
+      listY = panelTop + 12;
+      listW = width - margin * 2 - 24;
+      rowHeight = Math.max(22, Math.min(48, (height - listY - 74) / LABELS.length));
+      valueColumnX = listX + listW * 0.71;
+      for (index in 0...optionRows.length)
+      {
+        var y:Float = listY + index * rowHeight;
+        rowBackgrounds[index].setPosition(listX, y);
+        rowBackgrounds[index].makeGraphic(Std.int(listW), Std.int(rowHeight - 4), 0xFF0D1935);
+        rowAccents[index].setPosition(listX, y + 5);
+        rowAccents[index].makeGraphic(3, Std.int(Math.max(8, rowHeight - 14)), 0xFF48E7FF);
+        var item:TextMenuItem = optionRows[index];
+        item.setPosition(listX + 5, y + 2);
+        item.makeGraphic(Std.int(listW - 10), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
+        item.updateHitbox();
+        item.atlasText.visible = false;
+        var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
+        rowLabels[index].setPosition(listX + 13, y + 5);
+        rowLabels[index].fieldWidth = listW * 0.67;
+        rowLabels[index].setFormat(Paths.font('vcr.ttf'), fontSize, 0xFFB9C8E3, FlxTextAlign.LEFT);
+        rowValues[index].setPosition(valueColumnX, y + 5);
+        rowValues[index].fieldWidth = listW * 0.25;
+        rowValues[index].setFormat(Paths.font('vcr.ttf'), fontSize, 0xFF48E7FF, FlxTextAlign.RIGHT);
+      }
+      if (descriptionText != null)
+      {
+        descriptionText.setPosition(margin + 8, height - 68);
+        descriptionText.fieldWidth = width - margin * 2 - 16;
+        descriptionText.size = portrait ? 10 : 11;
+      }
+      if (statusText != null)
+      {
+        statusText.setPosition(listX, height - 38);
+        statusText.fieldWidth = listW;
+      }
+      refreshLabels();
+      updateRowHighlights();
+    }
+    else
+    {
+      var top:Float = portrait ? 76 : 30;
+      var rowGap:Float = portrait ? Math.min(72, (height * 0.60) / Math.max(1, optionRows.length)) : 120;
+      for (index in 0...optionRows.length) optionRows[index].y = top + index * rowGap;
+      if (itemDesc != null)
+      {
+        itemDesc.setPosition(18, height - (portrait ? 116 : 200));
+        itemDesc.fieldWidth = width - 36;
+        itemDesc.size = portrait ? 18 : 32;
+        itemDesc.alignment = FlxTextAlign.CENTER;
+        itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+        itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 22));
+        itemDescBox.updateHitbox();
+      }
+      if (camFollow != null && items != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
+      layoutFNFItems();
+      if (menuCamera != null) menuCamera.setSize(width, height);
+      if (hudCamera != null) hudCamera.setSize(width, height);
+    }
+    #if FEATURE_TOUCH_CONTROLS
+    if (responsiveBackButton != null)
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
+    #end
   }
 
   function goBack():Void

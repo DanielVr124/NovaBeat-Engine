@@ -50,6 +50,9 @@ class OptionsState extends MusicBeatState
   var optionsCodex:Codex<OptionsMenuPageName>;
 
   public var drumsBG:FunkinSound;
+  var menuBackground:Null<FlxSprite> = null;
+  var backgroundDimmer:Null<FlxSprite> = null;
+  var isNovaBeatStyle:Bool = false;
 
   public static var rememberedSelectedIndex:Int = 0;
 
@@ -62,7 +65,9 @@ class OptionsState extends MusicBeatState
     drumsBG = FunkinSound.load(Paths.music('offsetsLoop/drumsLoop'), 0, true, false, false, false);
 
     var novaBeatStyle:Bool = funkin.Preferences.menuStyle == "NovaBeat";
+    isNovaBeatStyle = novaBeatStyle;
     var menuBG = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
+    menuBackground = menuBG;
     if (novaBeatStyle)
     {
       var bgScale:Float = Math.max(FlxG.width / menuBG.width, FlxG.height / menuBG.height);
@@ -83,6 +88,7 @@ class OptionsState extends MusicBeatState
     {
       var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0x99040A1A);
       dimmer.scrollFactor.set();
+      backgroundDimmer = dimmer;
       add(dimmer);
     }
 
@@ -163,6 +169,28 @@ class OptionsState extends MusicBeatState
       hitbox.visible = false;
     }
     #end
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    if (menuBackground != null)
+    {
+      if (isNovaBeatStyle)
+      {
+        var scale:Float = Math.max(width / Math.max(1, menuBackground.frameWidth), height / Math.max(1, menuBackground.frameHeight));
+        menuBackground.scale.set(scale, scale);
+      }
+      else menuBackground.setGraphicSize(Std.int(width * 1.1));
+      menuBackground.updateHitbox();
+      menuBackground.screenCenter();
+    }
+    if (backgroundDimmer != null)
+    {
+      backgroundDimmer.makeGraphic(width, height, 0x99040A1A);
+      backgroundDimmer.setPosition(0, 0);
+    }
   }
 
   function exitOffsets():Void
@@ -582,6 +610,48 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     item.fireInstantly = fireInstantly;
     item.screenCenter(X);
     return item;
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    if (novaBeatLayout)
+    {
+      var margin:Float = Math.max(18, width * 0.045);
+      var panelTop:Float = 96;
+      novaBeatListX = margin + 16;
+      novaBeatListY = panelTop + (height > width * 1.12 ? 128 : 102);
+      novaBeatListWidth = width - margin * 2 - 32;
+      if (novaBeatDescription != null)
+      {
+        novaBeatDescription.x = margin + 22;
+        novaBeatDescription.y = panelTop + 42;
+        novaBeatDescription.fieldWidth = width - margin * 2 - 44;
+        novaBeatDescription.size = height > width * 1.12 ? 10 : 12;
+      }
+      layoutNovaBeatItems();
+    }
+    else
+    {
+      var portrait:Bool = height > width * 1.12;
+      var startY:Float = portrait ? height * 0.19 : 100;
+      var gap:Float = portrait ? Math.min(78, (height * 0.60) / Math.max(1, items.length)) : 100;
+      for (index in 0...items.members.length)
+      {
+        var item:TextMenuItem = items.members[index];
+        item.y = startY + index * gap;
+        item.x = 0;
+        item.screenCenter(X);
+      }
+      if (camFocusPoint != null && items.selectedItem != null) camFocusPoint.y = items.selectedItem.y;
+      FlxG.camera.deadzone.set(0, portrait ? height * 0.16 : CAMERA_MARGIN / 2,
+        width, portrait ? height * 0.66 : height - CAMERA_MARGIN + 40);
+    }
+    #if FEATURE_TOUCH_CONTROLS
+    if (backButton != null)
+      backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
   }
 
   override function update(elapsed:Float):Void

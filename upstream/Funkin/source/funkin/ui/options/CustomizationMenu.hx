@@ -32,6 +32,10 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var camFollow:FlxObject;
   var itemDesc:FlxText;
   var itemDescBox:FunkinSprite;
+  var categoryItems:Array<TextMenuItem> = [];
+  #if FEATURE_TOUCH_CONTROLS
+  var responsiveBackButton:Null<FunkinBackButton> = null;
+  #end
 
   public function new()
   {
@@ -56,12 +60,14 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       codex.switchPage(MenuCustomization);
     });
     item.screenCenter(X);
+    categoryItems.push(item);
 
     var performanceItem:TextMenuItem = items.createItem(0, itemY + 112, 'PERFORMANCE', AtlasFont.BOLD, function()
     {
       codex.switchPage(Performance);
     });
     performanceItem.screenCenter(X);
+    categoryItems.push(performanceItem);
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
@@ -71,6 +77,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         codex.switchPage(Mobile);
       });
       mobileItem.screenCenter(X);
+      categoryItems.push(mobileItem);
     }
     #end
 
@@ -110,8 +117,42 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     menuCamera.minScrollY = 0;
 
     #if FEATURE_TOUCH_CONTROLS
-    var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-    add(backButton);
+    responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+    add(responsiveBackButton);
+    #end
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    menuCamera.setSize(width, height);
+    hudCamera.setSize(width, height);
+    var portrait:Bool = height > width * 1.12;
+    var startY:Float = portrait ? height * 0.22 : (Preferences.menuStyle == "NovaBeat" ? 112 : 30);
+    var gap:Float = portrait ? Math.min(110, height * 0.145) : 112;
+    for (index in 0...categoryItems.length)
+    {
+      var item:TextMenuItem = categoryItems[index];
+      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
+      item.updateHitbox();
+      item.y = startY + index * gap;
+      item.screenCenter(X);
+    }
+    itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 18 : 32,
+      Preferences.menuStyle == "NovaBeat" ? 0xFF48E7FF : FlxColor.WHITE,
+      FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    itemDesc.fieldWidth = Math.max(160, width - (portrait ? 36 : 120));
+    itemDesc.x = (width - itemDesc.fieldWidth) * 0.5;
+    itemDesc.y = portrait ? height * 0.78 : height * 0.76;
+    itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+    itemDescBox.setGraphicSize(Std.int(itemDesc.fieldWidth + 20), Std.int(itemDesc.height + 22));
+    itemDescBox.updateHitbox();
+    camFollow.setPosition(width * 0.5, items.selectedItem == null ? startY : items.selectedItem.y);
+    menuCamera.deadzone.set(0, height * 0.14, width, height * 0.68);
+    #if FEATURE_TOUCH_CONTROLS
+    if (responsiveBackButton != null)
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
     #end
   }
 
