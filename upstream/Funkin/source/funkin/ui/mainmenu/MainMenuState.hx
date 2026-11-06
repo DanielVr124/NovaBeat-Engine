@@ -232,7 +232,7 @@ class MainMenuState extends MusicBeatState
       });
     }
 
-    if (#if (mobile || FEATURE_TOUCH_CONTROLS) ControlsHandler.usingExternalInputDevice #else true #end)
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
     {
       createMenuItem('options', 'mainmenu/options', function()
       {
@@ -426,7 +426,7 @@ class MainMenuState extends MusicBeatState
 
   function onMenuItemChange(selected:MenuListItem)
   {
-    if (#if (mobile || FEATURE_TOUCH_CONTROLS) ControlsHandler.usingExternalInputDevice #else true #end) camFollow.setPosition(selected.getGraphicMidpoint().x,
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end) camFollow.setPosition(selected.getGraphicMidpoint().x,
       selected.getGraphicMidpoint().y);
   }
 
