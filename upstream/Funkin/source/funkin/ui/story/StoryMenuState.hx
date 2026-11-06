@@ -797,15 +797,15 @@ class StoryMenuState extends MusicBeatState
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : 480;
 
-    // Keep the stock FNF week carousel. The single week image immediately
-    // above the selected week is hidden, and the hidden slot follows selection.
-    var hiddenWeekIndex:Int = currentIndex - 1;
+    // Hide every week title/artwork above the selected week. This is
+    // recalculated after each selection change so the hidden range follows
+    // the player as they scroll through the carousel.
     for (index in 0...levelTitles.members.length)
     {
       var item:LevelTitle = levelTitles.members[index];
-      var isHiddenWeek:Bool = index == hiddenWeekIndex;
-      item.visible = !isHiddenWeek;
-      item.alpha = isHiddenWeek ? 0.0 : (index == currentIndex ? 1.0 : 0.6);
+      var isAboveSelectedWeek:Bool = index < currentIndex;
+      item.visible = !isAboveSelectedWeek;
+      item.alpha = isAboveSelectedWeek ? 0.0 : (index == currentIndex ? 1.0 : 0.6);
       if (index == currentIndex) currentLevelTitle = item;
     }
 
