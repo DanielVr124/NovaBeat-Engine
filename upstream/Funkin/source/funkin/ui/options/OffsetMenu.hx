@@ -432,8 +432,10 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
       }
     }
 
+    #if FEATURE_TOUCH_CONTROLS
     if (backButton != null)
       backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+    #end
   }
 
   function onKeyPress(event:PreciseInputEvent):Void

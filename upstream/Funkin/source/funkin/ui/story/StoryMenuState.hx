@@ -83,6 +83,7 @@ class StoryMenuState extends MusicBeatState
    * The background behind the props.
    */
   var levelBackground:FlxSprite;
+  var levelBackgroundCover:Null<FunkinSprite> = null;
   var baseLevelBackgroundWidth:Float = 0;
   var baseLevelBackgroundHeight:Float = 0;
 
@@ -167,6 +168,7 @@ class StoryMenuState extends MusicBeatState
     baseLevelBackgroundHeight = levelBackground.height;
 
     var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
+    levelBackgroundCover = black;
     black.zIndex = levelBackground.zIndex - 1;
     add(black);
 
@@ -250,6 +252,11 @@ class StoryMenuState extends MusicBeatState
     levelBackground.scale.set(backgroundScale, backgroundScale);
     levelBackground.updateHitbox();
     levelBackground.screenCenter();
+    if (levelBackgroundCover != null)
+    {
+      levelBackgroundCover.makeSolidColor(width, height, FlxColor.BLACK);
+      levelBackgroundCover.setPosition(levelBackground.x, 0);
+    }
 
     scoreText.setFormat('VCR OSD Mono', portrait ? 19 : 32);
     scoreText.x = margin;

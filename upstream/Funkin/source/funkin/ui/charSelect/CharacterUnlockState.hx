@@ -135,7 +135,8 @@ class CharacterUnlockState extends MusicBeatState
     healthIcon.visible = !portrait;
     healthIcon.setPosition(dialogBackground.x + dialogBackground.width - healthIcon.width - 12,
       dialogBackground.y + (dialogBackground.height - healthIcon.height) * 0.5);
-    dialogContainer.setPosition(0, 0);
+    dialogContainer.x = 0;
+    dialogContainer.y = 0;
   }
 
   function handleMusic():Void
