@@ -9,6 +9,7 @@ import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import flixel.math.FlxPoint;
+import funkin.ui.AtlasText;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.audio.FunkinSound;
@@ -47,6 +48,10 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   var novaBeatRowBackgrounds:Array<FlxSprite> = [];
   var novaBeatRowAccents:Array<FlxSprite> = [];
   var novaBeatRowLabels:Array<FlxText> = [];
+  var novaBeatRowGap:Float = 62;
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  var responsiveBackButton:Null<FunkinBackButton> = null;
+  #end
 
   public function new()
   {
@@ -100,8 +105,8 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
     {
-      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
-      add(backButton);
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, exit, 1.0);
+      add(responsiveBackButton);
     }
     #end
   }
@@ -504,7 +509,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function novaBeatRowY(index:Int):Float
   {
-    return 84 + index * 62;
+    return 84 + index * novaBeatRowGap;
   }
 
   function styleNovaBeatPreferenceItem(item:TextMenuItem, prefName:String, index:Int):Void
@@ -553,6 +558,99 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   function preferenceItemY(index:Int):Float
   {
     return novaBeatStyle ? novaBeatRowY(index) + 5 : 30 + index * 120;
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    menuCamera.setSize(width, height);
+    hudCamera.setSize(width, height);
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(18, width * 0.035);
+    if (novaBeatStyle)
+    {
+      novaBeatRowGap = Math.max(44, Math.min(62, (height - 190) / Math.max(1, items.length)));
+      var rowX:Float = novaBeatRowX();
+      var rowW:Float = novaBeatRowWidth();
+      for (index in 0...items.length)
+      {
+        var rowY:Float = novaBeatRowY(index);
+        var rowHeight:Float = Math.min(54, novaBeatRowGap - 6);
+        novaBeatRowBackgrounds[index].setPosition(rowX, rowY);
+        novaBeatRowBackgrounds[index].makeSolidColor(Std.int(rowW), Std.int(rowHeight), 0xFF0D1935);
+        novaBeatRowAccents[index].setPosition(rowX, rowY + 6);
+        novaBeatRowAccents[index].makeSolidColor(4, Std.int(Math.max(12, rowHeight - 12)), 0xFF48E7FF);
+        novaBeatRowLabels[index].setPosition(rowX + 14, rowY + (rowHeight - novaBeatRowLabels[index].height) * 0.5);
+        novaBeatRowLabels[index].fieldWidth = Math.max(60, rowW - 220);
+        novaBeatRowLabels[index].size = portrait ? 12 : 15;
+        var item:TextMenuItem = items.members[index];
+        item.setPosition(rowX + 7, rowY + 3);
+        item.makeGraphic(Std.int(rowW - 14), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
+        item.updateHitbox();
+        item.atlasText.visible = false;
+        var widget:FlxSprite = preferenceItems.members[index];
+        if (Std.isOfType(widget, CheckboxPreferenceItem))
+          widget.setPosition(rowX + rowW - widget.width - 18, rowY + (rowHeight - widget.height) * 0.5);
+        else
+        {
+          var valueLabel:AtlasText = cast widget;
+          valueLabel.x = rowX + rowW - 190;
+          valueLabel.y = rowY + (rowHeight - valueLabel.height) * 0.5;
+        }
+      }
+      itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 11 : 13, 0xFFB7C9E8, FlxTextAlign.LEFT);
+      itemDesc.setPosition(margin + 18, height - 70);
+      itemDesc.fieldWidth = width - margin * 2 - 36;
+      itemDesc.autoSize = false;
+      itemDescBox.setPosition(margin + 10, height - 82);
+      itemDescBox.setGraphicSize(Std.int(width - margin * 2 - 20), 64);
+      itemDescBox.updateHitbox();
+    }
+    else
+    {
+      var top:Float = portrait ? 62 : 30;
+      var rowGap:Float = portrait ? Math.min(82, height * 0.09) : 120;
+      for (index in 0...items.length)
+      {
+        var item:TextMenuItem = items.members[index];
+        var textWidth:Int = 0;
+        switch (Type.typeof(item))
+        {
+          case TClass(CheckboxPreferenceItem):
+            textWidth = 0;
+          case TClass(EnumPreferenceItem):
+            textWidth = cast(item, EnumPreferenceItem<Dynamic>).lefthandText.getWidth();
+          case TClass(NumberPreferenceItem):
+            textWidth = cast(item, NumberPreferenceItem).lefthandText.getWidth();
+          default:
+        }
+        item.x = Math.max(18, FullScreenScaleMode.gameNotchSize.x + (portrait ? 20 : textWidth - 75 + 120));
+        item.y = top + index * rowGap;
+        var widget:FlxSprite = preferenceItems.members[index];
+        if (Std.isOfType(widget, CheckboxPreferenceItem))
+          widget.setPosition(width - widget.width - margin - 18, item.y - 18);
+        else
+        {
+          var valueLabel:AtlasText = cast widget;
+          valueLabel.x = width - valueLabel.width - margin - 18;
+          valueLabel.y = item.y;
+        }
+      }
+      itemDesc.setPosition(18, height - (portrait ? 116 : 200));
+      itemDesc.fieldWidth = width - 36;
+      itemDesc.size = portrait ? 18 : 32;
+      itemDesc.alignment = FlxTextAlign.CENTER;
+      itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+      itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 22));
+      itemDescBox.updateHitbox();
+    }
+    if (camFollow != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
+    menuCamera.deadzone.set(0, height * (portrait ? 0.14 : 0.22), width, height * (portrait ? 0.72 : 0.56));
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (responsiveBackButton != null)
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
+    #end
   }
 
   override function exit():Void

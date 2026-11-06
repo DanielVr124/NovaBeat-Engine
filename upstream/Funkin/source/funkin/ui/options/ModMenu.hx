@@ -37,6 +37,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var rowWidth:Float = 0;
   var rowHeight:Float = 56;
   var portraitLayout:Bool = false;
+  var layoutPanels:Array<FlxSprite> = [];
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  var responsiveBackButton:Null<FunkinBackButton> = null;
+  #end
 
   var heading:FlxText;
   var countText:FlxText;
@@ -55,8 +59,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
     {
-      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
-      add(backButton);
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
+      add(responsiveBackButton);
     }
     #end
   }
@@ -70,7 +74,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
-    portraitLayout = height > width;
+    portraitLayout = height > width * 1.12;
 
     var margin:Float = portraitLayout ? 22 : 48;
     heading = addLabel(margin, 35, width - margin * 2, 'MODS', portraitLayout ? 25 : 34, 0xFFFFFFFF);
@@ -347,15 +351,73 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     }
   }
 
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    portraitLayout = height > width * 1.12;
+    var margin:Float = portraitLayout ? 18 : 48;
+    heading.setPosition(margin, 25);
+    heading.fieldWidth = width - margin * 2;
+    heading.size = portraitLayout ? 25 : 34;
+    countText.setPosition(margin, 66);
+    countText.fieldWidth = width - margin * 2;
+    var listX:Float = margin;
+    var listY:Float = portraitLayout ? 105 : 132;
+    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.48;
+    var listH:Float = portraitLayout ? height * 0.40 : height - 230;
+    var detailX:Float = portraitLayout ? margin : width * 0.535;
+    var detailY:Float = portraitLayout ? listY + listH + 14 : listY;
+    var detailW:Float = portraitLayout ? width - margin * 2 : width - detailX - margin;
+    var detailH:Float = portraitLayout ? Math.max(120, height - detailY - 108) : listH;
+    if (layoutPanels.length >= 4)
+    {
+      layoutPanels[0].setPosition(listX, listY);
+      layoutPanels[0].makeGraphic(Std.int(listW), Std.int(listH), 0xFF4269B5);
+      layoutPanels[1].setPosition(listX + 2, listY + 2);
+      layoutPanels[1].makeGraphic(Std.int(listW - 4), Std.int(listH - 4), 0xF0061028);
+      layoutPanels[2].setPosition(detailX, detailY);
+      layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
+      layoutPanels[3].setPosition(detailX + 2, detailY + 2);
+      layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
+    }
+    rowX = listX + 16;
+    rowY = listY + 48;
+    rowWidth = listW - 32;
+    rowHeight = portraitLayout ? 46 : 58;
+    visibleRows = Std.int(Math.max(1, Math.floor((listH - 68) / rowHeight)));
+    detailTitle.setPosition(detailX + 20, detailY + 18);
+    detailTitle.fieldWidth = detailW - 40;
+    detailTitle.size = portraitLayout ? 17 : 24;
+    detailText.setPosition(detailX + 20, detailY + (portraitLayout ? 54 : 82));
+    detailText.fieldWidth = detailW - 40;
+    detailText.size = portraitLayout ? 11 : 13;
+    statusText.setPosition(margin, height - 75);
+    statusText.fieldWidth = width - margin * 2;
+    helpText.setPosition(margin, height - 48);
+    helpText.fieldWidth = width - margin * 2;
+    helpText.size = portraitLayout ? 8 : 9;
+    helpText.text = portraitLayout
+      ? 'TAP A MOD TO SELECT  •  TAP AGAIN OR ACCEPT TO TOGGLE  •  SWIPE TO SCROLL'
+      : 'UP / DOWN SELECT   ENTER TOGGLE   WHEEL SCROLL   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK';
+    renderRows();
+    renderDetails();
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (responsiveBackButton != null)
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
+    #end
+  }
+
   function addPanel(x:Float, y:Float, width:Float, height:Float):Void
   {
     var border:FlxSprite = new FlxSprite(x, y);
     border.makeGraphic(Std.int(Math.max(1, width)), Std.int(Math.max(1, height)), 0xFF4269B5);
     add(border);
-
+    layoutPanels.push(border);
     var fill:FlxSprite = new FlxSprite(x + 2, y + 2);
     fill.makeGraphic(Std.int(Math.max(1, width - 4)), Std.int(Math.max(1, height - 4)), 0xF0061028);
     add(fill);
+    layoutPanels.push(fill);
   }
 
   function addLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText

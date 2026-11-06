@@ -12,6 +12,7 @@ class ColorsMenu extends Page<OptionsState.OptionsMenuPageName>
 {
   var curSelected:Int = 0;
   var grpNotes:FlxTypedGroup<NoteSprite>;
+  var noteEffects:Array<FlxEffectSprite> = [];
 
   public function new()
   {
@@ -31,6 +32,7 @@ class ColorsMenu extends Page<OptionsState.OptionsMenuPageName>
         new FlxOutlineEffect(FlxOutlineMode.FAST, FlxColor.WHITE, 4, 1)
       ]);
       add(_effectSpr);
+      noteEffects.push(_effectSpr);
       _effectSpr.y = 0;
       _effectSpr.x = i * 130;
       _effectSpr.scale.x = _effectSpr.scale.y = 0.7;
@@ -41,6 +43,26 @@ class ColorsMenu extends Page<OptionsState.OptionsMenuPageName>
       // _effectSpr.updateHitbox();
 
       grpNotes.add(note);
+    }
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    var portrait:Bool = height > width * 1.12;
+    var spacing:Float = portrait ? Math.min(74, (width - 24) / 4) : 130;
+    var totalWidth:Float = spacing * 3;
+    for (index in 0...grpNotes.members.length)
+    {
+      var note:NoteSprite = grpNotes.members[index];
+      note.setPosition((width - totalWidth) * 0.5 + index * spacing, (height - note.height) * 0.5);
+      if (index < noteEffects.length)
+      {
+        var effect:FlxEffectSprite = noteEffects[index];
+        effect.setPosition(note.x, note.y);
+        effect.scale.set(portrait ? 0.48 : 0.7, portrait ? 0.48 : 0.7);
+      }
     }
   }
 

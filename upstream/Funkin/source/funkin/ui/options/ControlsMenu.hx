@@ -3,6 +3,7 @@ package funkin.ui.options;
 import funkin.util.InputUtil;
 import funkin.Preferences;
 import flixel.FlxCamera;
+import flixel.FlxSprite;
 import flixel.FlxObject;
 import funkin.graphics.FunkinCamera;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -70,7 +71,15 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   var actionPrevented:Bool = false;
   var novaBeatStyle:Bool = false;
   var novaBeatRows:FlxTypedGroup<FunkinSprite>;
+  var headersLayer:FlxTypedGroup<AtlasText>;
   var novaBeatRowBackgrounds:Array<FunkinSprite> = [];
+  var bindingPlates:Array<FunkinSprite> = [];
+  var controlRowBaseY:Array<Float> = [];
+  var controlHeaderBaseY:Array<Float> = [];
+  var deviceBackground:Null<FunkinSprite> = null;
+  #if FEATURE_TOUCH_CONTROLS
+  var responsiveBackButton:Null<FunkinBackButton> = null;
+  #end
 
   static final CONTROL_BASE_X = 50;
   static final CONTROL_MARGIN_X = 700;
@@ -92,8 +101,9 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     add(novaBeatRows);
     labels = new FlxTypedGroup<AtlasText>();
     labels.cameras = [menuCamera];
-    var headers:FlxTypedGroup<AtlasText> = new FlxTypedGroup<AtlasText>();
-    headers.cameras = [menuCamera];
+    headersLayer = new FlxTypedGroup<AtlasText>();
+    headersLayer.cameras = [menuCamera];
+    var headers:FlxTypedGroup<AtlasText> = headersLayer;
     controlGrid = new MenuTypedList(Columns(COLUMNS), Vertical);
     controlGrid.cameras = [menuCamera];
 
@@ -115,6 +125,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
         devicesBg.makeSolidColor(FlxG.width, 100, 0xFFFAFD6D);
       }
       devicesBg.cameras = [menuCamera];
+      deviceBackground = devicesBg;
       if (novaBeatStyle) novaBeatRows.add(devicesBg);
       else add(devicesBg);
       deviceList = new TextMenuList(Horizontal, None);
@@ -214,6 +225,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       }
 
       var label = labels.add(new AtlasText(labelX, y, formatName, AtlasFont.BOLD));
+      controlRowBaseY.push(y);
       label.cameras = [menuCamera];
       label.alpha = novaBeatStyle ? 1.0 : 0.6;
       if (novaBeatStyle) label.color = 0xFFB9C8E3;
@@ -275,7 +287,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
     {
-      var backButton:FunkinBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, function():Void
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 230, FlxG.height - 200, function():Void
       {
         if (controlGrid.enabled && deviceList != null && deviceListSelected == false)
         {
@@ -286,7 +298,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
           exit();
         }
       }, 1.0);
-      add(backButton);
+      add(responsiveBackButton);
     }
     #end
   }
@@ -305,6 +317,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
       header.screenCenter(X);
     }
     headers.add(header);
+    controlHeaderBaseY.push(y);
   }
 
   function addBindingPlate(x:Float, y:Float):Void
@@ -313,6 +326,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     plate.makeSolidColor(150, 42, 0xFF142747);
     plate.cameras = [menuCamera];
     novaBeatRows.add(plate);
+    bindingPlates.push(plate);
   }
 
   function updateNovaBeatControlSelection():Void
@@ -630,6 +644,117 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     popup.exists = false;
     actionPrevented = false;
     if (deviceList == null) canExit = true;
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    menuCamera.setSize(width, height);
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(16, width * 0.04);
+    var rowTop:Float = portrait ? (deviceList == null ? 112 : 174) : (deviceList == null ? 102 : 166);
+    var rowGap:Float = portrait ? Math.min(58, Math.max(42, height * 0.072)) : (novaBeatStyle ? 68 : 70);
+    var firstBaseY:Float = controlRowBaseY.length > 0 ? controlRowBaseY[0] : rowTop;
+    var yScale:Float = rowGap / (novaBeatStyle ? 68 : 70);
+
+    if (deviceBackground != null)
+    {
+      if (novaBeatStyle)
+      {
+        deviceBackground.setPosition(margin + 18, 84);
+        deviceBackground.makeSolidColor(Std.int(width - (margin + 18) * 2), 54, 0xFF0D1935);
+      }
+      else
+      {
+        deviceBackground.setPosition(0, 0);
+        deviceBackground.makeSolidColor(width, 100, 0xFFFAFD6D);
+      }
+    }
+    if (deviceList != null)
+    {
+      for (index in 0...deviceList.members.length)
+      {
+        var deviceItem:TextMenuItem = deviceList.members[index];
+        deviceItem.y = novaBeatStyle ? 99 : 35;
+        deviceItem.x = index == 0 ? width * (portrait ? 0.27 : 0.38) - deviceItem.width * 0.5
+          : width * (portrait ? 0.73 : 0.62) - deviceItem.width * 0.5;
+      }
+    }
+
+    for (index in 0...labels.members.length)
+    {
+      var baseY:Float = index < controlRowBaseY.length ? controlRowBaseY[index] : firstBaseY;
+      var y:Float = rowTop + (baseY - firstBaseY) * yScale;
+      var label:AtlasText = labels.members[index];
+      label.x = margin + (novaBeatStyle ? 18 : 8);
+      label.y = y;
+      label.scale.set(portrait ? 0.82 : 1.0, portrait ? 0.82 : 1.0);
+      if (novaBeatStyle && index < novaBeatRowBackgrounds.length)
+      {
+        var rowW:Float = width - margin * 2 - 24;
+        novaBeatRowBackgrounds[index].setPosition(margin + 12, y - 7);
+        novaBeatRowBackgrounds[index].makeSolidColor(Std.int(rowW), 48, 0xFF0D1935);
+      }
+
+      for (column in 0...COLUMNS)
+      {
+        var itemIndex:Int = index * COLUMNS + column;
+        if (itemIndex >= controlGrid.members.length) continue;
+        var bind:InputItem = controlGrid.members[itemIndex];
+        bind.scale.set(portrait ? 0.72 : 1.0, portrait ? 0.72 : 1.0);
+        bind.updateHitbox();
+        var x:Float;
+        if (portrait)
+          x = width * (column == 0 ? 0.55 : 0.80) - bind.width * 0.5;
+        else if (novaBeatStyle)
+          x = width * (column == 0 ? 0.57 : 0.78) + 12;
+        else
+          x = label.x + CONTROL_MARGIN_X + column * CONTROL_SPACING_X;
+        bind.setPosition(x, y);
+      }
+
+      if (novaBeatStyle)
+      {
+        var firstPlate:Int = index * COLUMNS;
+        for (column in 0...COLUMNS)
+        {
+          var plateIndex:Int = firstPlate + column;
+          if (plateIndex < bindingPlates.length)
+          {
+            var plate:FunkinSprite = bindingPlates[plateIndex];
+            var plateX:Float = width * (portrait ? (column == 0 ? 0.55 : 0.80) : (column == 0 ? 0.57 : 0.78));
+            plate.setPosition(plateX - (portrait ? 36 : 8), y - 2);
+            plate.makeSolidColor(portrait ? 74 : 150, portrait ? 38 : 42, 0xFF142747);
+          }
+        }
+      }
+    }
+
+    for (index in 0...headersLayer.members.length)
+    {
+      var header:AtlasText = headersLayer.members[index];
+      if (header == null) continue;
+      var baseY:Float = index < controlHeaderBaseY.length ? controlHeaderBaseY[index] : firstBaseY;
+      header.x = margin + 18;
+      header.y = rowTop + (baseY - firstBaseY) * yScale;
+      header.scale.set(portrait ? 0.85 : 1.0, portrait ? 0.85 : 1.0);
+    }
+
+    if (camFollow != null)
+    {
+      var selectedY:Float = rowTop;
+      if (deviceListSelected && deviceList != null && deviceList.selectedItem != null)
+        selectedY = deviceList.selectedItem.y;
+      else if (controlGrid.selectedItem != null)
+        selectedY = controlGrid.selectedItem.y;
+      camFollow.setPosition(width * 0.5, selectedY);
+    }
+    menuCamera.deadzone.set(0, height * (portrait ? 0.16 : 0.14), width, height * (portrait ? 0.68 : 0.72));
+    #if FEATURE_TOUCH_CONTROLS
+    if (responsiveBackButton != null)
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
+    #end
   }
 
   override function destroy()

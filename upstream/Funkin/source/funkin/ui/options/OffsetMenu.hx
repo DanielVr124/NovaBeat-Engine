@@ -24,6 +24,7 @@ import funkin.ui.options.items.NumberPreferenceItem;
 import haxe.Int64;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
+import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
@@ -386,6 +387,55 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
   /**
      * Callback executed when one of the note keys is pressed.
      */
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    menuCamera.setSize(width, height);
+    var portrait:Bool = height > width * 1.12;
+    blackRect.makeGraphic(width + 50, height + 50, FlxColor.BLACK);
+    blackRect.screenCenter();
+    receptor.setPosition(width * 0.5 - receptor.width * 0.5, height * 0.5 - receptor.height * 0.5);
+    jumpInText.fieldWidth = width - 24;
+    jumpInText.alignment = FlxTextAlign.CENTER;
+    jumpInText.x = 12;
+    jumpInText.y = portrait ? height * 0.16 : 150;
+    countText.fieldWidth = width - 24;
+    countText.alignment = FlxTextAlign.CENTER;
+    countText.x = 12;
+    countText.y = portrait ? height * 0.78 : 600;
+
+    if (testStrumline != null)
+    {
+      var scale:Float = portrait ? Math.max(0.52, Math.min(0.78, (width - 24) / 640)) : 1.0;
+      testStrumline.strumlineScale.set(scale, scale);
+      testStrumline.setPosition((width - testStrumline.width) * 0.5,
+        portrait ? height * (Preferences.downscroll ? 0.68 : 0.52) : height * 0.5);
+    }
+
+    for (index in 0...items.length)
+    {
+      var item:TextMenuItem = items.members[index];
+      var y:Float = (portrait ? 74 : 30) + index * (portrait ? 68 : 120);
+      item.y = y;
+      if (Std.isOfType(item, NumberPreferenceItem))
+      {
+        var numberItem:NumberPreferenceItem = cast item;
+        numberItem.lefthandText.x = portrait ? 18 : width * 0.5
+          - (numberItem.lefthandText.width + item.atlasText.width + 20) * 0.5;
+        numberItem.lefthandText.y = y;
+        item.x = portrait ? width - item.atlasText.width - 18 : numberItem.lefthandText.x + numberItem.lefthandText.width + 20;
+      }
+      else
+      {
+        item.x = width * 0.5 - item.atlasText.width * 0.5;
+      }
+    }
+
+    if (backButton != null)
+      backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
+  }
+
   function onKeyPress(event:PreciseInputEvent):Void
   {
     // Do the minimal possible work here.

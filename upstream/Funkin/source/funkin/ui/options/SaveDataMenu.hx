@@ -63,6 +63,22 @@ class SaveDataMenu extends Page<OptionsState.OptionsMenuPageName>
     return item;
   }
 
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    if (width <= 0 || height <= 0) return;
+    var portrait:Bool = height > width * 1.12;
+    var top:Float = portrait ? height * 0.22 : 100;
+    var gap:Float = portrait ? Math.min(86, height * 0.16) : 100;
+    for (index in 0...items.length)
+    {
+      var item = items.members[index];
+      item.y = top + index * gap;
+      item.x = 0;
+      item.screenCenter(X);
+    }
+  }
+
   override function update(elapsed:Float)
   {
     enabled = (prompt == null);
