@@ -2949,6 +2949,7 @@ class FreeplayState extends MusicBeatSubState
   {
     var prevSelected:Int = curSelected;
     curSelected = Math.round(curSelectedFloat);
+    var landscapeSongOffset:Float = FlxG.height > FlxG.width * 1.12 ? 0 : (CUTOUT_WIDTH * SONGS_POS_MULTI);
 
     for (index => capsule in grpCapsules.members)
     {
@@ -2958,7 +2959,7 @@ class FreeplayState extends MusicBeatSubState
       capsule.forceHighlight = index == curSelected + 1;
 
       capsule.targetPos.y = capsule.intendedY(index - curSelectedFloat);
-      capsule.targetPos.x = capsule.intendedX(index - curSelectedFloat) + (CUTOUT_WIDTH * SONGS_POS_MULTI);
+      capsule.targetPos.x = capsule.intendedX(index - curSelectedFloat) + landscapeSongOffset;
       if (index + 0.5 < curSelectedFloat) capsule.targetPos.y -= 100;
     }
 
@@ -3011,6 +3012,7 @@ class FreeplayState extends MusicBeatSubState
   function layoutFreeplayCapsules():Void
   {
     if (grpCapsules == null) return;
+    var landscapeSongOffset:Float = FlxG.height > FlxG.width * 1.12 ? 0 : (CUTOUT_WIDTH * SONGS_POS_MULTI);
     for (index => capsule in grpCapsules.members)
     {
       if (capsule == null) continue;
@@ -3021,7 +3023,7 @@ class FreeplayState extends MusicBeatSubState
       else if (capsuleIndex > 4) yOffset -= 10;
 
       capsule.targetPos.y = capsule.intendedY(capsuleIndex) - yOffset;
-      capsule.targetPos.x = capsule.intendedX(capsuleIndex) + (CUTOUT_WIDTH * SONGS_POS_MULTI);
+      capsule.targetPos.x = capsule.intendedX(capsuleIndex) + landscapeSongOffset;
       // The upstream Freeplay layout uses one-based capsule indices here.
       // Keep the preceding capsule in its normal slot instead of shifting it
       // off-screen one item too early.
