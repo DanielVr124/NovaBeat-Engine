@@ -763,8 +763,9 @@ class StoryMenuState extends MusicBeatState
     {
       novaBeatWeekPanel = new FlxSprite();
       novaBeatWeekPanel.scrollFactor.set();
-      novaBeatWeekPanel.zIndex = -50;
-      novaBeatWeekPanel.alpha = 0.82;
+      // Draw above the full-screen background but immediately below the week-title group.
+      novaBeatWeekPanel.zIndex = 14;
+      novaBeatWeekPanel.alpha = 1.0;
       add(novaBeatWeekPanel);
     }
 
