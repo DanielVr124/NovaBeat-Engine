@@ -289,8 +289,11 @@ class CreditsState extends MusicBeatState
     if (!scrollPaused)
     {
       // TODO: Replace with whatever the special note button is.
-      if (FlxG.keys.pressed.ENTER || FlxG.keys.pressed.SPACE
-        || (DeviceUtil.isMobileBrowser && TouchUtil.pressed && !TouchUtil.overlaps(backButton)))
+      var touchFastScroll:Bool = false;
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      touchFastScroll = DeviceUtil.isMobileBrowser && TouchUtil.pressed && !TouchUtil.overlaps(backButton);
+      #end
+      if (FlxG.keys.pressed.ENTER || FlxG.keys.pressed.SPACE || touchFastScroll)
       {
         // Move the whole group by the base scroll speed.
         creditsGroup.y -= CREDITS_SCROLL_FAST_SPEED * elapsed;

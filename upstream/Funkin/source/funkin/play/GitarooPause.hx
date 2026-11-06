@@ -73,10 +73,16 @@ class GitarooPause extends MusicBeatState
 
   override function update(elapsed:Float):Void
   {
-    if (controls.UI_LEFT_P || controls.UI_RIGHT_P
-      || (DeviceUtil.isMobileBrowser && (SwipeUtil.justSwipedLeft || SwipeUtil.justSwipedRight))) changeThing();
+    var mobileSwipe:Bool = false;
+    var mobileAccept:Bool = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    mobileSwipe = DeviceUtil.isMobileBrowser && (SwipeUtil.justSwipedLeft || SwipeUtil.justSwipedRight);
+    mobileAccept = DeviceUtil.isMobileBrowser && checkSelectionPress();
+    #end
 
-    if (controls.ACCEPT_P || (DeviceUtil.isMobileBrowser && checkSelectionPress()))
+    if (controls.UI_LEFT_P || controls.UI_RIGHT_P || mobileSwipe) changeThing();
+
+    if (controls.ACCEPT_P || mobileAccept)
     {
       if (replaySelect)
       {

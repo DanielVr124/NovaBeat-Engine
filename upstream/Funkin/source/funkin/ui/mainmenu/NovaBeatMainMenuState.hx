@@ -528,7 +528,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
       // TouchUtil prefers real browser touch contacts and falls back to
       // synthesized mouse / Quest controller pointer events when needed.
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
+      #end
 
       if (pressed) beginMenuTransition();
       return;

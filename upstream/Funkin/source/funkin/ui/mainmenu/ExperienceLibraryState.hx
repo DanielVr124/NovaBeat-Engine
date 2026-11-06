@@ -121,6 +121,7 @@ class ExperienceLibraryState extends MusicBeatState
     clearObjects(rowObjects);
     if (experiences.length == 0) return;
 
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     adjustScrollWindow();
     var rowGap:Float = 9;
 

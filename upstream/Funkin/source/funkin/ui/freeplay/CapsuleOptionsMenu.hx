@@ -85,26 +85,42 @@ class CapsuleOptionsMenu extends FlxSpriteGroup
     @:privateAccess
     if (!busy)
     {
-      if (parent.controls.BACK_P || (DeviceUtil.isMobileBrowser && parent.backButton != null && TouchUtil.pressAction(parent.backButton)))
+      var mobileBackPress:Bool = false;
+      var mobileLeftPress:Bool = false;
+      var mobileRightPress:Bool = false;
+      var mobileConfirmPress:Bool = false;
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      if (DeviceUtil.isMobileBrowser)
+      {
+        mobileBackPress = TouchUtil.pressAction()
+          && !TouchUtil.overlapsComplex(leftArrow)
+          && !TouchUtil.overlapsComplex(rightArrow)
+          && !TouchUtil.overlapsComplex(currentInstrumental);
+        mobileLeftPress = TouchUtil.pressAction(leftArrow);
+        mobileRightPress = TouchUtil.pressAction(rightArrow);
+        mobileConfirmPress = TouchUtil.pressAction(currentInstrumental)
+          && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow));
+      }
+      #end
+
+      if (parent.controls.BACK_P || mobileBackPress)
       {
         setBusy(true);
         close();
         return;
       }
 
-      if (parent.controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(leftArrow)))
+      if (parent.controls.UI_LEFT_P || mobileLeftPress)
       {
         currentInstrumentalIndex = (currentInstrumentalIndex + 1) % instrumentalIds.length;
         changedInst = true;
       }
-      if (parent.controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(rightArrow)))
+      if (parent.controls.UI_RIGHT_P || mobileRightPress)
       {
         currentInstrumentalIndex = (currentInstrumentalIndex - 1 + instrumentalIds.length) % instrumentalIds.length;
         changedInst = true;
       }
-      if (parent.controls.ACCEPT_P || (DeviceUtil.isMobileBrowser
-        && TouchUtil.pressAction(currentInstrumental)
-        && !(TouchUtil.overlapsComplex(leftArrow) || TouchUtil.overlapsComplex(rightArrow))))
+      if (parent.controls.ACCEPT_P || mobileConfirmPress)
       {
         setBusy(true);
         onConfirm(instrumentalIds[currentInstrumentalIndex] ?? '');
