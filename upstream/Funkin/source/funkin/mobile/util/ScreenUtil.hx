@@ -79,7 +79,11 @@ class ScreenUtil
 
     final contentValue:Dynamic = viewport.getAttribute("content");
     var content:String = contentValue == null ? "" : Std.string(contentValue);
-    if (content.indexOf("viewport-fit") < 0)
+    if (content.length == 0)
+    {
+      content = "width=device-width, initial-scale=1, viewport-fit=cover";
+    }
+    else if (content.indexOf("viewport-fit") < 0)
     {
       content += ", viewport-fit=cover";
     }
