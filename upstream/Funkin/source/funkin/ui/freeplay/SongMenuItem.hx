@@ -449,8 +449,16 @@ class SongMenuItem extends FlxSpriteGroup
     else
     {
       songText.text = freeplayData.fullSongName;
-      if (freeplayData.songCharacter != null) pixelIcon.setCharacter(freeplayData.songCharacter);
-      if (pixelIcon.char != freeplayData.songCharacter) pixelIcon.visible = false;
+      if (freeplayData.songCharacter != null)
+      {
+        pixelIcon.setCharacter(freeplayData.songCharacter);
+        pixelIcon.visible = pixelIcon.char == freeplayData.songCharacter;
+      }
+      else
+      {
+        // Recycled capsules must not retain the previous song's character icon.
+        pixelIcon.visible = false;
+      }
       updateBPM(Std.int(freeplayData.songStartingBpm) ?? 0);
       updateDifficultyRating(freeplayData.difficultyRating ?? 0);
       if (updateRank) updateScoringRank(freeplayData.scoringRank);
