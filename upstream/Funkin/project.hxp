@@ -917,7 +917,7 @@ class Project extends HXProject
 
     // Should be true only on mobile builds.
     FEATURE_HAPTICS.apply(this, isMobile());
-    FEATURE_TOUCH_CONTROLS.apply(this, isMobile());
+    FEATURE_TOUCH_CONTROLS.apply(this, isMobile() || isWeb());
 
     // Should be true only on mobile release builds. Remember you can add the flag manually for testing.
     FEATURE_MOBILE_ADVERTISEMENTS.apply(this, (isMobile() && isRelease()) && envConfig != null);

@@ -1,7 +1,9 @@
 package funkin;
 
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinHitbox;
+#end
+#if mobile
 import funkin.mobile.util.InAppPurchasesUtil;
 #end
 import funkin.save.Save;
@@ -634,7 +636,9 @@ class Preferences
     Save.system.flush();
     return value;
   }
+  #end
 
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * Controls Scheme for the hitbox.
    * @default `4 Lanes`
@@ -653,7 +657,9 @@ class Preferences
     Save.system.flush();
     return value;
   }
+  #end
 
+  #if mobile
   #if FEATURE_MOBILE_IAP
   /**
    * If bought, the game will not show any ads.

@@ -149,7 +149,7 @@ class Save implements ConsoleClass
           },
         },
       },
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       mobileOptions: {
         // Reasonable defaults.
         screenTimeout: false,
@@ -209,7 +209,7 @@ class Save implements ConsoleClass
     return data.options;
   }
 
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * NOTE: Modifications will not be saved without calling `Save.flush()`!
    */
@@ -991,7 +991,7 @@ typedef RawSaveData =
 
   var unlocks:SaveDataUnlocks;
 
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * The user's preferences for mobile.
    */
@@ -1270,7 +1270,7 @@ typedef PlayerControlData =
   var gamepad:SaveControlsData;
 }
 
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 typedef SaveDataMobileOptions =
 {
   /**
