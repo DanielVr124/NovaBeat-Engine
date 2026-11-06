@@ -3521,7 +3521,11 @@ class PlayState extends MusicBeatSubState
     if (currentConversation != null)
     {
       // Pause/unpause may conflict with advancing the conversation!
-      if ((controls.CUTSCENE_ADVANCE || (DeviceUtil.isMobileBrowser && !pauseButtonCheck && TouchUtil.justPressed)) && !justUnpaused)
+      var touchAdvance:Bool = false;
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      touchAdvance = DeviceUtil.isMobileBrowser && !pauseButtonCheck && TouchUtil.justPressed;
+      #end
+      if ((controls.CUTSCENE_ADVANCE || touchAdvance) && !justUnpaused)
       {
         currentConversation.advanceConversation();
       }

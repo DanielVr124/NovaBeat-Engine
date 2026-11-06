@@ -192,7 +192,9 @@ class FunkinButton extends FunkinSprite implements IFlxInput
 
       if (useBrowserMousePointer)
       {
+        #if (web && FLX_POINTER_INPUT)
         updateBrowserMousePointer();
+        #end
       }
       else
       {

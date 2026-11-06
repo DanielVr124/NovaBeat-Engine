@@ -286,7 +286,11 @@ class GameOverSubState extends MusicBeatSubState
     //
 
     // Restart the level when pressing the assigned key.
-    if ((controls.ACCEPT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput))
+    var touchAccept:Bool = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    touchAccept = DeviceUtil.isMobileBrowser && TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput;
+    #end
+    if ((controls.ACCEPT_P || touchAccept)
       && blueballed
       && !mustNotExit)
     {

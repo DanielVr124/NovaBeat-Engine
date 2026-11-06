@@ -166,6 +166,9 @@ class Save implements ConsoleClass
       mods: {
         // No mods enabled.
         enabledMods: [],
+        activeExperienceId: "friday-night-funkin",
+        modPackageKinds: [],
+        modExtensionOwners: [],
         modOptions: [],
       },
       unlocks: {
@@ -264,6 +267,12 @@ class Save implements ConsoleClass
   ///
   @:saveProperty(data.mods.enabledMods)
   public var enabledModDirs:SaveProperty<Array<String>>;
+  @:saveProperty(data.mods.activeExperienceId, "friday-night-funkin")
+  public var activeExperienceId:SaveProperty<String>;
+  @:saveProperty(data.mods.modPackageKinds, [])
+  public var modPackageKinds:SaveProperty<Map<String, String>>;
+  @:saveProperty(data.mods.modExtensionOwners, [])
+  public var modExtensionOwners:SaveProperty<Map<String, String>>;
   ///
   /// CHART EDITOR OPTIONS
   ///
@@ -416,6 +425,7 @@ class Save implements ConsoleClass
    */
   public function getLevelScore(levelId:String, difficultyId:String = 'normal'):Null<SaveScoreData>
   {
+    levelId = getExperienceScopedScoreId(levelId);
     if (data.scores?.levels == null)
     {
       if (data.scores == null)
@@ -444,6 +454,7 @@ class Save implements ConsoleClass
    */
   public function setLevelScore(levelId:String, difficultyId:String, score:SaveScoreData):Void
   {
+    levelId = getExperienceScopedScoreId(levelId);
     var level = data.scores.levels.get(levelId);
     if (level == null)
     {
@@ -456,6 +467,7 @@ class Save implements ConsoleClass
 
   public function isLevelHighScore(levelId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    levelId = getExperienceScopedScoreId(levelId);
     var level = data.scores.levels.get(levelId);
     if (level == null)
     {
@@ -509,6 +521,7 @@ class Save implements ConsoleClass
    */
   public function getSongScore(songId:String, difficultyId:String = 'normal', ?variation:String):Null<SaveScoreData>
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -536,6 +549,7 @@ class Save implements ConsoleClass
    */
   public function setSongScore(songId:String, difficultyId:String, score:SaveScoreData):Void
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -553,11 +567,12 @@ class Save implements ConsoleClass
   {
     var newRank = Scoring.calculateRank(newScoreData);
     if (newScoreData == null || newRank == null) return;
-    var song = data.scores.songs.get(songId);
+    var scoreKey:String = getExperienceScopedScoreId(songId);
+    var song = data.scores.songs.get(scoreKey);
     if (song == null)
     {
       song = [];
-      data.scores.songs.set(songId, song);
+      data.scores.songs.set(scoreKey, song);
     }
     var previousScoreData = song.get(difficultyId);
     var previousRank = Scoring.calculateRank(previousScoreData);
@@ -586,6 +601,7 @@ class Save implements ConsoleClass
    */
   public function isSongHighScore(songId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    songId = getExperienceScopedScoreId(songId);
     var song = data.scores.songs.get(songId);
     if (song == null)
     {
@@ -609,6 +625,7 @@ class Save implements ConsoleClass
    */
   public function isSongHighRank(songId:String, difficultyId:String = 'normal', score:SaveScoreData):Bool
   {
+    songId = getExperienceScopedScoreId(songId);
     var newScoreRank = Scoring.calculateRank(score);
     if (newScoreRank == null)
     {
@@ -629,6 +646,18 @@ class Save implements ConsoleClass
       return true;
     }
     return newScoreRank > currentScoreRank;
+  }
+
+  /**
+   * Add an experience prefix to score keys outside the official FNF experience.
+   * Existing official score keys remain unchanged for backwards compatibility.
+   */
+  function getExperienceScopedScoreId(id:String):String
+  {
+    var experienceId:Null<String> = activeExperienceId == null ? null : activeExperienceId.value;
+    if (experienceId == null || experienceId.length == 0 || experienceId == "friday-night-funkin")
+      return id;
+    return experienceId + "::" + id;
   }
 
   /**
@@ -1067,6 +1096,9 @@ typedef SaveHighScoresData =
 typedef SaveDataMods =
 {
   var enabledMods:Array<String>;
+  var activeExperienceId:String;
+  var modPackageKinds:Map<String, String>;
+  var modExtensionOwners:Map<String, String>;
   // TODO: Make this not trip up the serializer when debugging.
   @:jignored
   var modOptions:Map<String, Dynamic>;

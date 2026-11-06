@@ -68,9 +68,9 @@ class Main extends Sprite
     // You can remove this line if you want to read debug messages.
     openfl.utils._internal.Log.level = openfl.utils._internal.Log.LogLevel.INFO;
 
-    // Load mods to override assets.
-    // TODO: Replace with loadEnabledMods() once the user can configure the mod list.
-    funkin.modding.PolymodHandler.loadAllMods();
+    // Initialize Polymod with no user mods. The in-game Game Library selects
+    // the active experience and loads only that experience's enabled packages.
+    funkin.modding.PolymodHandler.loadNoMods();
 
     if (stage != null)
     {

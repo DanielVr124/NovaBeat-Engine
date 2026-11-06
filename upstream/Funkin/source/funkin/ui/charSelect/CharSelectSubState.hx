@@ -122,7 +122,7 @@ class CharSelectSubState extends MusicBeatSubState
 
   function loadAvailableCharacters():Void
   {
-    var playerIds:Array<String> = PlayerRegistry.instance.listEntryIds();
+    var playerIds:Array<String> = PlayerRegistry.instance.getAvailablePlayerIds();
 
     for (playerId in playerIds)
     {

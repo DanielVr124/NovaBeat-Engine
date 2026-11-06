@@ -30,6 +30,7 @@ import funkin.play.PlayStatePlaylist;
 import funkin.ui.debug.charting.ChartEditorState;
 import funkin.ui.debug.stageeditor.StageEditorState;
 import funkin.ui.title.TitleState;
+import funkin.ui.mainmenu.ExperienceLibraryState;
 import funkin.ui.transition.LoadingState;
 import funkin.util.CLIUtil;
 import funkin.util.CLIUtil.CLIParams;
@@ -502,10 +503,10 @@ class InitState extends FlxState
       }
       else
       {
-        FlxG.switchState(() -> new TitleState());
+        FlxG.switchState(() -> new ExperienceLibraryState());
       }
       #else
-      FlxG.switchState(() -> new TitleState());
+      FlxG.switchState(() -> new ExperienceLibraryState());
       #end
     }
   }

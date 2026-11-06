@@ -1,6 +1,9 @@
 package funkin.modding;
 
 import polymod.fs.ZipFileSystem;
+#if sys
+import sys.FileSystem;
+#end
 import funkin.data.dialogue.ConversationRegistry;
 import funkin.data.dialogue.DialogueBoxRegistry;
 import funkin.data.dialogue.SpeakerRegistry;
@@ -88,6 +91,36 @@ class PolymodHandler
   public static function createModRoot():Void
   {
     FileUtil.createDirIfNotExists(MOD_FOLDER);
+  }
+
+  /**
+   * Return the installed mod root for NovaBeat's experience scanner.
+   */
+  public static function getModRoot():String
+  {
+    return MOD_FOLDER;
+  }
+
+  /**
+   * List every installed package directory, including folders without
+   * Polymod metadata which may belong to another engine.
+   */
+  public static function getAllInstalledModDirs():Array<String>
+  {
+    #if sys
+    createModRoot();
+    var result:Array<String> = [];
+    for (entry in FileSystem.readDirectory(MOD_FOLDER))
+    {
+      if (entry.length == 0 || entry.charAt(0) == ".") continue;
+      var path:String = haxe.io.Path.join([MOD_FOLDER, entry]);
+      if (FileSystem.exists(path) && FileSystem.isDirectory(path)) result.push(entry);
+    }
+    result.sort(Reflect.compare);
+    return result;
+    #else
+    return getAllModDirs();
+    #end
   }
 
   /**
@@ -590,16 +623,18 @@ class PolymodHandler
    * Clear and reload from disk all data assets.
    * Useful for "hot reloading" for fast iteration!
    */
-  public static function forceReloadAssets():Void
+  public static function forceReloadAssets(?dirs:Array<String>):Void
   {
     // Forcibly clear scripts so that scripts can be edited.
     ModuleHandler.clearModuleCache();
     Polymod.clearScripts();
 
-    // Forcibly reload Polymod so it finds any new files.
-    // This will also register all scripts.
-    // TODO: Replace this with loadEnabledMods().
-    funkin.modding.PolymodHandler.loadAllMods();
+    // Forcibly reload Polymod so it finds any new files. Passing a package
+    // list isolates the selected experience; null preserves the legacy behavior.
+    if (dirs == null)
+      funkin.modding.PolymodHandler.loadAllMods();
+    else
+      funkin.modding.PolymodHandler.loadModsByDir(dirs);
 
     // Reload everything that is cached.
     // Currently this freezes the game for a second but I guess that's tolerable?
