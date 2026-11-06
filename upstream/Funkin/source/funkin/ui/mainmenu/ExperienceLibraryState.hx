@@ -143,6 +143,8 @@ class ExperienceLibraryState extends MusicBeatState
 
   function buildTouchControls(panelX:Float, panelY:Float, panelWidth:Float, panelHeight:Float):Void
   {
+    // Keep the primary and secondary hit targets inside the lower reserved
+    // panel area, with a small bottom inset for reliable edge taps.
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     var primaryHeight:Float = portrait ? 40 : 36;
     var secondaryHeight:Float = portrait ? 36 : 30;
