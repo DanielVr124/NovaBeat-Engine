@@ -3,6 +3,7 @@ package funkin.ui.options;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
+import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.modding.PolymodHandler;
 import funkin.save.Save;
@@ -37,7 +38,11 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var rowWidth:Float = 0;
   var rowHeight:Float = 56;
   var portraitLayout:Bool = false;
+  var usesTouchControls:Bool = false;
   var layoutPanels:Array<FlxSprite> = [];
+  var touchActionHitboxes:Array<FlxSprite> = [];
+  var touchActionLabels:Array<FlxText> = [];
+  var touchActionActions:Array<String> = [];
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -59,7 +64,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
     {
-      responsiveBackButton = new FunkinBackButton(FlxG.width - 150, FlxG.height - 125, FlxColor.WHITE, goBack, 1.0, true);
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 18, FlxColor.WHITE, goBack, 1.0, true);
+      responsiveBackButton.setPosition(FlxG.width - responsiveBackButton.width - 18, 18);
       add(responsiveBackButton);
     }
     #end
@@ -75,38 +81,119 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
     portraitLayout = height > width * 1.12;
+    usesTouchControls = DeviceUtil.isMobileBrowser;
+    var compactLandscapeTouch:Bool = usesTouchControls && !portraitLayout && height < 520;
 
-    var margin:Float = portraitLayout ? 22 : 48;
-    heading = addLabel(margin, 35, width - margin * 2, 'MODS', portraitLayout ? 25 : 34, 0xFFFFFFFF);
-    countText = addLabel(margin, 78, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 12, 0xFF48E7FF);
+    var margin:Float = compactLandscapeTouch ? 20 : (portraitLayout ? 22 : 48);
+    heading = addLabel(margin, compactLandscapeTouch ? 10 : 35,
+      width - margin * 2, 'MODS', compactLandscapeTouch ? 20 : (portraitLayout ? 25 : 34), 0xFFFFFFFF);
+    countText = addLabel(margin, compactLandscapeTouch ? 38 : 78,
+      width - margin * 2, 'SCANNING LOCAL LIBRARY...', compactLandscapeTouch ? 9 : 12, 0xFF48E7FF);
 
     var listX:Float = margin;
-    var listY:Float = portraitLayout ? 120 : 132;
-    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.48;
-    var listH:Float = portraitLayout ? height * 0.43 : height - 230;
+    var listY:Float = compactLandscapeTouch ? 68 : (portraitLayout ? 120 : 132);
+    var listW:Float = compactLandscapeTouch ? width * 0.46 : (portraitLayout ? width - margin * 2 : width * 0.48);
+    var listH:Float = compactLandscapeTouch ? height - 140 : (portraitLayout ? height * 0.43 : height - 230);
     addPanel(listX, listY, listW, listH);
 
-    rowX = listX + 16;
-    rowY = listY + 48;
-    rowWidth = listW - 32;
-    rowHeight = portraitLayout ? 50 : 58;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - 68) / rowHeight)));
+    rowX = listX + (compactLandscapeTouch ? 10 : 16);
+    var rowHeaderHeight:Float = compactLandscapeTouch ? 36 : 48;
+    rowY = listY + rowHeaderHeight;
+    rowWidth = listW - (compactLandscapeTouch ? 20 : 32);
+    rowHeight = compactLandscapeTouch ? 38 : (portraitLayout ? 50 : 58);
+    var touchButtonHeight:Float = compactLandscapeTouch ? 26 : (portraitLayout ? 32 : 34);
+    var reservedRowsHeight:Float = usesTouchControls
+      ? rowHeaderHeight + touchButtonHeight + 24
+      : 68;
+    visibleRows = Std.int(Math.max(1, Math.floor((listH - reservedRowsHeight) / rowHeight)));
 
-    var detailX:Float = portraitLayout ? margin : width * 0.535;
-    var detailY:Float = portraitLayout ? listY + listH + 18 : listY;
-    var detailW:Float = portraitLayout ? width - margin * 2 : width - detailX - margin;
-    var detailH:Float = portraitLayout ? Math.max(150, height - detailY - 115) : listH;
+    var detailX:Float = compactLandscapeTouch ? width * 0.49 : (portraitLayout ? margin : width * 0.535);
+    var detailY:Float = compactLandscapeTouch ? listY : (portraitLayout ? listY + listH + 18 : listY);
+    var detailW:Float = compactLandscapeTouch ? width - detailX - margin
+      : (portraitLayout ? width - margin * 2 : width - detailX - margin);
+    var detailH:Float = compactLandscapeTouch ? listH
+      : (portraitLayout ? Math.max(150, height - detailY - 115) : listH);
     addPanel(detailX, detailY, detailW, detailH);
 
-    addLabel(listX + 16, listY + 14, listW - 32, 'INSTALLED / DETECTED', 11, 0xFF48E7FF);
-    detailTitle = addLabel(detailX + 22, detailY + 22, detailW - 44, 'SELECT A MOD', portraitLayout ? 18 : 24, 0xFFFFFFFF);
-    detailText = addLabel(detailX + 22, detailY + (portraitLayout ? 62 : 82), detailW - 44,
-      'Choose a mod to view its information and manage its enabled state.', 13, 0xFFB5C6E4);
+    addLabel(listX + (compactLandscapeTouch ? 10 : 16), listY + (compactLandscapeTouch ? 10 : 14),
+      listW - (compactLandscapeTouch ? 20 : 32), 'INSTALLED / DETECTED', compactLandscapeTouch ? 9 : 11, 0xFF48E7FF);
+    detailTitle = addLabel(detailX + (compactLandscapeTouch ? 14 : 22), detailY + (compactLandscapeTouch ? 14 : 22),
+      detailW - (compactLandscapeTouch ? 28 : 44), 'SELECT A MOD',
+      compactLandscapeTouch ? 16 : (portraitLayout ? 18 : 24), 0xFFFFFFFF);
+    detailText = addLabel(detailX + (compactLandscapeTouch ? 14 : 22),
+      detailY + (compactLandscapeTouch ? 48 : (portraitLayout ? 62 : 82)),
+      detailW - (compactLandscapeTouch ? 28 : 44),
+      'Choose a mod to view its information and manage its enabled state.',
+      compactLandscapeTouch ? 9 : 13, 0xFFB5C6E4);
 
-    statusText = addLabel(margin, height - 75, width - margin * 2, '', 11, 0xFF48E7FF);
-    helpText = addLabel(margin, height - 48, width - margin * 2,
-      portraitLayout ? 'TAP A MOD TO SELECT  •  TAP AGAIN OR ACCEPT TO TOGGLE  •  SWIPE TO SCROLL' :
-      'UP / DOWN SELECT   ENTER TOGGLE   WHEEL SCROLL   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK', 9, 0xFF8DA8D8);
+    var statusY:Float = compactLandscapeTouch ? height - 58 : height - 75;
+    var helpY:Float = compactLandscapeTouch ? height - 32 : height - 48;
+    statusText = addLabel(margin, statusY, width - margin * 2, '', compactLandscapeTouch ? 9 : 11, 0xFF48E7FF);
+    helpText = addLabel(margin, helpY, width - margin * 2,
+      usesTouchControls
+        ? 'TAP A MOD TO SELECT  •  USE THE BUTTONS BELOW  •  SWIPE TO SCROLL'
+        : 'UP / DOWN SELECT   ENTER TOGGLE   WHEEL SCROLL   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK',
+      compactLandscapeTouch ? 7 : (portraitLayout ? 8 : 9), 0xFF8DA8D8);
+
+    if (usesTouchControls)
+      layoutTouchActions(rowX, listY + listH - touchButtonHeight - 8, rowWidth, touchButtonHeight);
+  }
+
+  function layoutTouchActions(x:Float, y:Float, width:Float, height:Float):Void
+  {
+    var labels:Array<String> = ['TOGGLE', 'ORDER -', 'ORDER +', 'RESCAN'];
+    var actions:Array<String> = ['toggle', 'priorityUp', 'priorityDown', 'rescan'];
+    var gap:Float = 5;
+    var buttonWidth:Float = Math.max(1, (width - gap * (labels.length - 1)) / labels.length);
+    var labelSize:Int = height <= 28 ? 8 : 9;
+
+    for (index in 0...labels.length)
+    {
+      var buttonX:Float = x + index * (buttonWidth + gap);
+      var button:FlxSprite;
+      var label:FlxText;
+      if (index >= touchActionHitboxes.length)
+      {
+        button = new FlxSprite(buttonX, y);
+        button.makeGraphic(Std.int(buttonWidth), Std.int(height), 0xFF18334A);
+        button.scrollFactor.set();
+        add(button);
+        touchActionHitboxes.push(button);
+
+        label = new FlxText(buttonX + 2, y + (height - labelSize) * 0.5, buttonWidth - 4, labels[index], labelSize);
+        label.setFormat(Paths.font('vcr.ttf'), labelSize, 0xFFEAF6FF, FlxTextAlign.CENTER);
+        label.scrollFactor.set();
+        add(label);
+        touchActionLabels.push(label);
+        touchActionActions.push(actions[index]);
+      }
+      else
+      {
+        button = touchActionHitboxes[index];
+        label = touchActionLabels[index];
+        button.setPosition(buttonX, y);
+        button.makeGraphic(Std.int(buttonWidth), Std.int(height), 0xFF18334A);
+        label.setPosition(buttonX + 2, y + (height - labelSize) * 0.5);
+        label.fieldWidth = buttonWidth - 4;
+        label.text = labels[index];
+        label.setFormat(Paths.font('vcr.ttf'), labelSize, 0xFFEAF6FF, FlxTextAlign.CENTER);
+      }
+    }
+  }
+
+  function performTouchAction(action:String):Void
+  {
+    switch (action)
+    {
+      case 'toggle':
+        toggleSelectedMod();
+      case 'priorityUp':
+        moveSelectedMod(-1);
+      case 'priorityDown':
+        moveSelectedMod(1);
+      case 'rescan':
+        refreshModList();
+    }
   }
 
   function refreshModList():Void
@@ -327,6 +414,34 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (FlxG.keys.justPressed.R) refreshModList();
 
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (usesTouchControls)
+    {
+      var touchActionHandled:Bool = false;
+      for (index in 0...touchActionHitboxes.length)
+      {
+        if (TouchUtil.pressAction(touchActionHitboxes[index]))
+        {
+          performTouchAction(touchActionActions[index]);
+          touchActionHandled = true;
+          break;
+        }
+      }
+
+      if (!touchActionHandled)
+      {
+        for (row in rows)
+        {
+          if (TouchUtil.pressAction(row))
+          {
+            selectMod(row.modIndex, false);
+            break;
+          }
+        }
+      }
+    }
+    #end
+
     if (detectedMods.length > 0)
     {
       if (controls.UI_UP_P || SwipeUtil.swipeUp) selectMod(selectedIndex - 1, false);
@@ -334,20 +449,6 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       if (controls.ACCEPT_P || FlxG.keys.justPressed.SPACE) toggleSelectedMod();
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
       if (controls.UI_RIGHT_P) moveSelectedMod(1);
-
-      #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (DeviceUtil.isMobileBrowser)
-      {
-        for (row in rows)
-        {
-          if (TouchUtil.pressAction(row))
-          {
-            selectMod(row.modIndex, true);
-            break;
-          }
-        }
-      }
-      #end
     }
   }
 
@@ -356,20 +457,26 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     super.onViewportResize(width, height);
     if (width <= 0 || height <= 0) return;
     portraitLayout = height > width * 1.12;
-    var margin:Float = portraitLayout ? 18 : 48;
-    heading.setPosition(margin, 25);
+    var compactLandscapeTouch:Bool = usesTouchControls && !portraitLayout && height < 520;
+    var margin:Float = compactLandscapeTouch ? 20 : (portraitLayout ? 22 : 48);
+
+    heading.setPosition(margin, compactLandscapeTouch ? 10 : 35);
     heading.fieldWidth = width - margin * 2;
-    heading.size = portraitLayout ? 25 : 34;
-    countText.setPosition(margin, 66);
+    heading.size = compactLandscapeTouch ? 20 : (portraitLayout ? 25 : 34);
+    countText.setPosition(margin, compactLandscapeTouch ? 38 : 78);
     countText.fieldWidth = width - margin * 2;
+
     var listX:Float = margin;
-    var listY:Float = portraitLayout ? 105 : 132;
-    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.48;
-    var listH:Float = portraitLayout ? height * 0.40 : height - 230;
-    var detailX:Float = portraitLayout ? margin : width * 0.535;
-    var detailY:Float = portraitLayout ? listY + listH + 14 : listY;
-    var detailW:Float = portraitLayout ? width - margin * 2 : width - detailX - margin;
-    var detailH:Float = portraitLayout ? Math.max(120, height - detailY - 108) : listH;
+    var listY:Float = compactLandscapeTouch ? 68 : (portraitLayout ? 120 : 132);
+    var listW:Float = compactLandscapeTouch ? width * 0.46 : (portraitLayout ? width - margin * 2 : width * 0.48);
+    var listH:Float = compactLandscapeTouch ? height - 140 : (portraitLayout ? height * 0.43 : height - 230);
+    var detailX:Float = compactLandscapeTouch ? width * 0.49 : (portraitLayout ? margin : width * 0.535);
+    var detailY:Float = compactLandscapeTouch ? listY : (portraitLayout ? listY + listH + 18 : listY);
+    var detailW:Float = compactLandscapeTouch ? width - detailX - margin
+      : (portraitLayout ? width - margin * 2 : width - detailX - margin);
+    var detailH:Float = compactLandscapeTouch ? listH
+      : (portraitLayout ? Math.max(150, height - detailY - 115) : listH);
+
     if (layoutPanels.length >= 4)
     {
       layoutPanels[0].setPosition(listX, listY);
@@ -381,30 +488,46 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       layoutPanels[3].setPosition(detailX + 2, detailY + 2);
       layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
     }
-    rowX = listX + 16;
-    rowY = listY + 48;
-    rowWidth = listW - 32;
-    rowHeight = portraitLayout ? 46 : 58;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - 68) / rowHeight)));
-    detailTitle.setPosition(detailX + 20, detailY + 18);
-    detailTitle.fieldWidth = detailW - 40;
-    detailTitle.size = portraitLayout ? 17 : 24;
-    detailText.setPosition(detailX + 20, detailY + (portraitLayout ? 54 : 82));
-    detailText.fieldWidth = detailW - 40;
-    detailText.size = portraitLayout ? 11 : 13;
-    statusText.setPosition(margin, height - 75);
+
+    var rowHeaderHeight:Float = compactLandscapeTouch ? 36 : 48;
+    rowX = listX + (compactLandscapeTouch ? 10 : 16);
+    rowY = listY + rowHeaderHeight;
+    rowWidth = listW - (compactLandscapeTouch ? 20 : 32);
+    rowHeight = compactLandscapeTouch ? 38 : (portraitLayout ? 50 : 58);
+    var touchButtonHeight:Float = compactLandscapeTouch ? 26 : (portraitLayout ? 32 : 34);
+    var reservedRowsHeight:Float = usesTouchControls
+      ? rowHeaderHeight + touchButtonHeight + 24
+      : 68;
+    visibleRows = Std.int(Math.max(1, Math.floor((listH - reservedRowsHeight) / rowHeight)));
+
+    detailTitle.setPosition(detailX + (compactLandscapeTouch ? 14 : 22),
+      detailY + (compactLandscapeTouch ? 14 : 22));
+    detailTitle.fieldWidth = detailW - (compactLandscapeTouch ? 28 : 44);
+    detailTitle.size = compactLandscapeTouch ? 16 : (portraitLayout ? 18 : 24);
+    detailText.setPosition(detailX + (compactLandscapeTouch ? 14 : 22),
+      detailY + (compactLandscapeTouch ? 48 : (portraitLayout ? 62 : 82)));
+    detailText.fieldWidth = detailW - (compactLandscapeTouch ? 28 : 44);
+    detailText.size = compactLandscapeTouch ? 9 : 13;
+
+    var statusY:Float = compactLandscapeTouch ? height - 58 : height - 75;
+    var helpY:Float = compactLandscapeTouch ? height - 32 : height - 48;
+    statusText.setPosition(margin, statusY);
     statusText.fieldWidth = width - margin * 2;
-    helpText.setPosition(margin, height - 48);
+    helpText.setPosition(margin, helpY);
     helpText.fieldWidth = width - margin * 2;
-    helpText.size = portraitLayout ? 8 : 9;
-    helpText.text = portraitLayout
-      ? 'TAP A MOD TO SELECT  •  TAP AGAIN OR ACCEPT TO TOGGLE  •  SWIPE TO SCROLL'
+    helpText.size = compactLandscapeTouch ? 7 : (portraitLayout ? 8 : 9);
+    helpText.text = usesTouchControls
+      ? 'TAP A MOD TO SELECT  •  USE THE BUTTONS BELOW  •  SWIPE TO SCROLL'
       : 'UP / DOWN SELECT   ENTER TOGGLE   WHEEL SCROLL   LEFT / RIGHT LOAD PRIORITY   R RESCAN   ESC BACK';
+
+    if (usesTouchControls)
+      layoutTouchActions(rowX, listY + listH - touchButtonHeight - 8, rowWidth, touchButtonHeight);
+
     renderRows();
     renderDetails();
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (responsiveBackButton != null)
-      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, 18);
     #end
   }
 
