@@ -388,6 +388,10 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
         thyOffset += 120;
       }
 
+      // Menu Style is a custom enum added by NovaBeat. Treat its label like
+      // the standard checkbox rows instead of shifting it by the long value
+      // text ("Original FNF").
+      if (items.members.indexOf(daItem) == 0) thyOffset = 0;
       daItem.x = thyOffset + funkin.ui.FullScreenScaleMode.gameNotchSize.x;
     });
   }
