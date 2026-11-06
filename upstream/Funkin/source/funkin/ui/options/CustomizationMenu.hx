@@ -55,6 +55,10 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     NovaBeatOptionsChrome.apply(this, 'CUSTOMIZATION', menuCamera);
 
     items = new TextMenuList();
+    // The category list is rendered through menuCamera. Assign that camera
+    // directly to the list so MenuTypedList's mobile pointer hit-tests use
+    // the same screen transform as the visible FNF-style entries.
+    items.cameras = [menuCamera];
     add(items);
 
     var itemY:Float = novaBeatStyle ? 112 : 30;
@@ -63,6 +67,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       codex.switchPage(MenuCustomization);
     });
     item.screenCenter(X);
+    item.cameras = [menuCamera];
     categoryItems.push(item);
     if (novaBeatStyle) styleNovaBeatCategory(item, 'NOVABEAT MENU');
 
@@ -71,6 +76,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       codex.switchPage(Performance);
     });
     performanceItem.screenCenter(X);
+    performanceItem.cameras = [menuCamera];
     categoryItems.push(performanceItem);
     if (novaBeatStyle) styleNovaBeatCategory(performanceItem, 'PERFORMANCE');
 
@@ -82,6 +88,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         codex.switchPage(Mobile);
       });
       mobileItem.screenCenter(X);
+      mobileItem.cameras = [menuCamera];
       categoryItems.push(mobileItem);
       if (novaBeatStyle) styleNovaBeatCategory(mobileItem, 'MOBILE');
     }
