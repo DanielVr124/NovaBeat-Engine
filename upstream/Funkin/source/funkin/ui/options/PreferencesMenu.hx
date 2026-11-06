@@ -131,7 +131,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       var margin:Float = Math.max(20, FlxG.width * 0.035);
       itemDescBox.makeSolidColor(1, 1, 0xFF0D1935);
       itemDescBox.alpha = 0.96;
-      itemDesc.setFormat(Paths.font('vcr.ttf'), 13, 0xFFB7C9E8, FlxTextAlign.LEFT);
+      itemDesc.setFormat("Arial", 13, 0xFFDCEBFF, FlxTextAlign.LEFT);
       itemDesc.x = margin + 18;
       itemDesc.y = FlxG.height - 82;
       itemDesc.width = FlxG.width - margin * 2 - 36;
