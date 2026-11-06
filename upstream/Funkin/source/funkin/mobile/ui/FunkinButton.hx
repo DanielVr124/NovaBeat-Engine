@@ -39,8 +39,8 @@ class FunkinButton extends FunkinSprite implements IFlxInput
    */
   public static var buttonsTouchID:Map<Int, FunkinButton> = new Map();
 
-  /** Reserved ID for the single Quest Browser pointer when it is emulated as a mouse. */
-  static inline final QUEST_MOUSE_POINTER_ID:Int = -2147483647;
+  /** Reserved ID for a browser pointer when touch is emulated as mouse input. */
+  static inline final BROWSER_MOUSE_POINTER_ID:Int = -2147483647;
 
   /**
    * The current state of the button, either `FunkinButtonStatus.NORMAL` or `FunkinButtonStatus.PRESSED`.
@@ -126,7 +126,7 @@ class FunkinButton extends FunkinSprite implements IFlxInput
    */
   var touchID:Int = -1;
 
-  var questMousePressed:Bool = false;
+  var browserMousePressed:Bool = false;
 
   /**
    * Whether the button should skip calling onDownHandler() on touch.pressed.
@@ -165,7 +165,7 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     buttonsTouchID.remove(touchID);
 
     touchID = -1;
-    questMousePressed = false;
+    browserMousePressed = false;
 
     super.destroy();
   }
@@ -178,21 +178,21 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     super.update(elapsed);
 
     #if FLX_POINTER_INPUT
-    // Use real multi-touch points whenever the browser supplies them. Quest
-    // Browser may instead translate controller/hand-ray clicks into mouse
-    // events, so fall back to its mouse pointer only when no touch is active.
+    // Use real multi-touch points when available. Some mobile browsers
+    // (including Quest Browser) instead surface taps as mouse pointer events.
+    // Support both transports so phone taps are never silently ignored.
     if (visible)
     {
       #if web
-      final questMouseGesture:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
-      final useQuestMousePointer:Bool = DeviceUtil.isQuestBrowser && (FlxG.touches.list.length == 0 || questMouseGesture);
+      final browserMouseGesture:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
+      final useBrowserMousePointer:Bool = DeviceUtil.isMobileBrowser && (FlxG.touches.list.length == 0 || browserMouseGesture);
       #else
-      final useQuestMousePointer:Bool = false;
+      final useBrowserMousePointer:Bool = false;
       #end
 
-      if (useQuestMousePointer)
+      if (useBrowserMousePointer)
       {
-        updateQuestMousePointer();
+        updateBrowserMousePointer();
       }
       else
       {
@@ -276,40 +276,40 @@ class FunkinButton extends FunkinSprite implements IFlxInput
 
   #if (web && FLX_POINTER_INPUT)
   /**
-   * Handles Quest controller/hand-ray clicks when Quest Browser exposes them
-   * as mouse input rather than DOM touch points.
+   * Handles mobile-browser pointer clicks when touch or controller input is
+   * exposed as mouse events rather than DOM touch points.
    */
-  function updateQuestMousePointer():Void
+  function updateBrowserMousePointer():Void
   {
-    final overlapFound:Bool = checkQuestMouseOverlap();
+    final overlapFound:Bool = checkBrowserMouseOverlap();
 
-    if (!questMousePressed && FlxG.mouse.justPressed && overlapFound)
+    if (!browserMousePressed && FlxG.mouse.justPressed && overlapFound)
     {
-      final previousButton:Null<FunkinButton> = buttonsTouchID.get(QUEST_MOUSE_POINTER_ID);
+      final previousButton:Null<FunkinButton> = buttonsTouchID.get(BROWSER_MOUSE_POINTER_ID);
       if (previousButton != null && previousButton != this) return;
 
-      questMousePressed = true;
-      touchID = QUEST_MOUSE_POINTER_ID;
-      buttonsTouchID.set(QUEST_MOUSE_POINTER_ID, this);
+      browserMousePressed = true;
+      touchID = BROWSER_MOUSE_POINTER_ID;
+      buttonsTouchID.set(BROWSER_MOUSE_POINTER_ID, this);
       @:privateAccess
       updateStatus(FlxG.mouse._leftButton);
     }
-    else if (questMousePressed)
+    else if (browserMousePressed)
     {
       if (FlxG.mouse.justReleased)
       {
-        questMousePressed = false;
+        browserMousePressed = false;
         if (overlapFound) onUpHandler(); else onOutHandler();
       }
       else if (limitToBounds && !overlapFound)
       {
-        questMousePressed = false;
+        browserMousePressed = false;
         onOutHandler();
       }
     }
   }
 
-  function checkQuestMouseOverlap():Bool
+  function checkBrowserMouseOverlap():Bool
   {
     for (camera in cameras)
     {

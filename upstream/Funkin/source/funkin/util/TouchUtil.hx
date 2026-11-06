@@ -136,7 +136,7 @@ class TouchUtil
    */
   public static function pressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
   {
-    if (TouchUtil.touch == null || (TouchUtil.touch != null && TouchUtil.touch.ticksDeltaSincePress > 200)) return false;
+    if (TouchUtil.touch == null) return false;
 
     if (object == null && camera == null)
     {
@@ -183,9 +183,10 @@ class TouchUtil
   @:noCompletion
   static function get_touch():Dynamic
   {
-    // Quest Browser can retain inert touch records while its controller/hand
-    // ray is delivered through mouse input. Prefer that live mouse gesture.
-    if (DeviceUtil.isQuestBrowser && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
+    // Some mobile browsers (including Quest Browser) expose taps through the
+    // mouse pointer path instead of FlxTouch. Prefer an active browser pointer
+    // gesture so stale or synthesized touch records cannot mask the real click.
+    if (DeviceUtil.isMobileBrowser && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
       return FlxG.mouse;
 
     #if FLX_TOUCH
