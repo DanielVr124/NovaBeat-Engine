@@ -108,11 +108,6 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     var pageTitle:FlxText = makeLabel(margin, 22, width - margin * 2, 'PERFORMANCE', compactLayout ? 23 : 30, FlxColor.WHITE);
     add(pageTitle);
     headerLabels.push(pageTitle);
-    var pageSubtitle:FlxText = makeLabel(margin, 58, width - margin * 2,
-      'TUNE VISUAL EFFECTS FOR YOUR DEVICE', 11, 0xFF48E7FF);
-    add(pageSubtitle);
-    headerLabels.push(pageSubtitle);
-
     listX = rightSideLayout ? width * 0.515 : margin + 12;
     listY = rightSideLayout ? panelTop + 18 : panelTop + 12;
     listW = rightSideLayout ? width * 0.405 : width - margin * 2 - 24;
@@ -379,19 +374,14 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
       var item:TextMenuItem = optionRows[index];
       var value:AtlasText = fnfValueLabels[index];
       var valueWidth:Int = value.getWidth();
-      if (FlxG.height > FlxG.width * 1.12)
-      {
-        value.x = FlxG.width - valueWidth - 22;
-        value.y = item.y;
-        item.x = Math.max(18, funkin.ui.FullScreenScaleMode.gameNotchSize.x + 18);
-      }
-      else
-      {
-        var indent:Float = items.selectedIndex == index ? 150 : 120;
-        value.x = valueWidth - 75 + funkin.ui.FullScreenScaleMode.gameNotchSize.x + indent;
-        value.y = item.y;
-        item.x = value.x + valueWidth + 20;
-      }
+      var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+      var notch:Float = funkin.ui.FullScreenScaleMode.gameNotchSize.x;
+      var leftMargin:Float = portrait ? Math.max(18, notch + 18) : Math.max(24, notch + 120);
+      var selectedIndent:Float = items.selectedIndex == index ? (portrait ? 18 : 30) : 0;
+
+      item.x = leftMargin + selectedIndent;
+      value.x = FlxG.width - valueWidth - Math.max(24, notch + 24);
+      value.y = item.y;
     }
   }
 
@@ -412,13 +402,11 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
         panelBackgrounds[0].makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
         for (i in 1...panelBackgrounds.length) panelBackgrounds[i].visible = false;
       }
-      if (headerLabels.length >= 2)
+      if (headerLabels.length >= 1)
       {
         headerLabels[0].setPosition(margin, 22);
         headerLabels[0].fieldWidth = width - margin * 2;
         headerLabels[0].size = portrait ? 23 : 30;
-        headerLabels[1].setPosition(margin, 58);
-        headerLabels[1].fieldWidth = width - margin * 2;
       }
       rightSideLayout = false;
       listX = margin + 12;
