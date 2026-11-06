@@ -276,9 +276,10 @@ class InitState extends FlxState
       funkin.mobile.input.ControlsHandler.initInputTrackers();
       #elseif web
       // Quest Browser is a desktop-target HTML5 build, but it still needs the
-      // mobile input-mode tracker to coordinate touch and controller input.
+      // native touch pointer and input-mode tracking used by mobile builds.
       if (funkin.util.DeviceUtil.isMobileBrowser)
       {
+        funkin.util.plugins.TouchPointerPlugin.initialize();
         funkin.mobile.input.ControlsHandler.initInputTrackers();
       }
       #end
