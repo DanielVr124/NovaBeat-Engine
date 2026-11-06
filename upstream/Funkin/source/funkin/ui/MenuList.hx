@@ -10,6 +10,7 @@ import funkin.audio.FunkinSound;
 import funkin.Preferences;
 import funkin.util.TouchUtil;
 import funkin.util.DeviceUtil;
+import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
 import funkin.ui.Page.PageName;
 import flixel.tweens.FlxEase;
@@ -161,7 +162,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
     }
 
-    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
+    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && TouchUtil.pressed))
     {
       if (newIndex != selectedIndex)
       {

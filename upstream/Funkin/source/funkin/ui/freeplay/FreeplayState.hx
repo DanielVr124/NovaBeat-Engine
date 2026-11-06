@@ -2021,7 +2021,7 @@ class FreeplayState extends MusicBeatSubState
 
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
-    if (draggingDifficulty || ControlsHandler.usingExternalInputDevice) return;
+    if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && TouchUtil.pressed))) return;
     if (TouchUtil.pressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
     if (TouchUtil.justPressed && TouchUtil.overlaps(capsuleHitbox, funnyCam))
@@ -2949,7 +2949,7 @@ class FreeplayState extends MusicBeatSubState
     if (curSelected < 0)
     {
       #if FEATURE_TOUCH_CONTROLS
-      curSelected = (SwipeUtil.flickUp && !ControlsHandler.usingExternalInputDevice) ? 0 : grpCapsules.countLiving() - 1;
+      curSelected = (SwipeUtil.flickUp && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? 0 : grpCapsules.countLiving() - 1;
       SwipeUtil.resetSwipeVelocity();
       #else
       curSelected = grpCapsules.countLiving() - 1;
@@ -2958,7 +2958,7 @@ class FreeplayState extends MusicBeatSubState
     if (curSelected >= grpCapsules.countLiving())
     {
       #if FEATURE_TOUCH_CONTROLS
-      curSelected = (SwipeUtil.flickDown && !ControlsHandler.usingExternalInputDevice) ? grpCapsules.countLiving() - 1 : 0;
+      curSelected = (SwipeUtil.flickDown && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? grpCapsules.countLiving() - 1 : 0;
       SwipeUtil.resetSwipeVelocity();
       #else
       curSelected = 0;
@@ -3196,7 +3196,7 @@ class FreeplayState extends MusicBeatSubState
   function updateFreeplayHintText()
   {
     #if FEATURE_TOUCH_CONTROLS
-    if (ControlsHandler.usingExternalInputDevice)
+    if (ControlsHandler.usingExternalInputDevice && !DeviceUtil.isQuestBrowser)
       charSelectHint.text = 'Press [ ${controls.getDialogueNameFromControl(FREEPLAY_CHAR_SELECT, true)} ] to change characters';
     else
       charSelectHint.text = 'Tap the DJ to change characters';
