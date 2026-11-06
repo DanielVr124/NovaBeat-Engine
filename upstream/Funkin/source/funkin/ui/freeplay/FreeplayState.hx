@@ -2341,8 +2341,13 @@ class FreeplayState extends MusicBeatSubState
     }
 
     #if FEATURE_TOUCH_CONTROLS
-    FlxTween.tween(backButton, {x: FlxG.width + 300}, 0.45, {ease: FlxEase.expoIn});
-    FlxTween.tween(backButton, {alpha: 0}, 0.3, {ease: FlxEase.quadOut, startDelay: 0.15});
+    // The button is only created in mobile browsers. Never pass a missing
+    // back button to FlxTween on desktop builds.
+    if (backButton != null)
+    {
+      FlxTween.tween(backButton, {x: FlxG.width + 300}, 0.45, {ease: FlxEase.expoIn});
+      FlxTween.tween(backButton, {alpha: 0}, 0.3, {ease: FlxEase.quadOut, startDelay: 0.15});
+    }
     #end
 
     for (caps in grpCapsules.members)
