@@ -49,6 +49,13 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   var novaBeatRowAccents:Array<FunkinSprite> = [];
   var novaBeatRowLabels:Array<FlxText> = [];
   var novaBeatRowGap:Float = 62;
+  var novaBeatCheckboxSources:Array<CheckboxPreferenceItem> = [];
+  var novaBeatCheckboxPlates:Array<FunkinSprite> = [];
+  var novaBeatCheckboxMarks:Array<FlxText> = [];
+  var novaBeatCheckboxRows:Array<Int> = [];
+  var novaBeatValueSources:Array<AtlasText> = [];
+  var novaBeatValueLabels:Array<FlxText> = [];
+  var novaBeatValueRows:Array<Int> = [];
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -341,6 +348,10 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     if (novaBeatStyle)
     {
       updateNovaBeatRows();
+      for (index in 0...novaBeatCheckboxSources.length)
+        novaBeatCheckboxMarks[index].text = novaBeatCheckboxSources[index].currentValue ? "✓" : "";
+      for (index in 0...novaBeatValueSources.length)
+        novaBeatValueLabels[index].text = novaBeatValueSources[index].text;
       return;
     }
 
@@ -406,12 +417,25 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
+      checkbox.visible = false;
+
       var rowX:Float = novaBeatRowX();
       var rowW:Float = novaBeatRowWidth();
       var rowY:Float = novaBeatRowY(index);
-      checkbox.x = rowX + rowW - checkbox.width - 22;
-      checkbox.y = rowY + (54 - checkbox.height) * 0.5;
-      checkbox.color = 0xFF48E7FF;
+      var plate:FunkinSprite = new FunkinSprite(rowX + rowW - 56, rowY + 13);
+      plate.makeSolidColor(30, 30, 0xFF142B49);
+      plate.cameras = [menuCamera];
+      novaBeatRowLayer.add(plate);
+
+      var mark:FlxText = new FlxText(plate.x, plate.y - 1, 30, checkbox.currentValue ? "✓" : "", 20);
+      mark.setFormat("Arial", 20, 0xFF55E8FF, FlxTextAlign.CENTER);
+      mark.cameras = [menuCamera];
+      novaBeatLabelLayer.add(mark);
+
+      novaBeatCheckboxSources.push(checkbox);
+      novaBeatCheckboxPlates.push(plate);
+      novaBeatCheckboxMarks.push(mark);
+      novaBeatCheckboxRows.push(index);
     }
   }
 
@@ -437,9 +461,15 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
-      item.lefthandText.y = novaBeatRowY(index) + 15;
-      item.lefthandText.color = 0xFF48E7FF;
+      item.lefthandText.visible = false;
+      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
+        item.lefthandText.text, 15);
+      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      valueLabel.cameras = [menuCamera];
+      novaBeatLabelLayer.add(valueLabel);
+      novaBeatValueSources.push(item.lefthandText);
+      novaBeatValueLabels.push(valueLabel);
+      novaBeatValueRows.push(index);
     }
   }
 
@@ -469,9 +499,15 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
-      item.lefthandText.y = novaBeatRowY(index) + 15;
-      item.lefthandText.color = 0xFF48E7FF;
+      item.lefthandText.visible = false;
+      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
+        item.lefthandText.text, 15);
+      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      valueLabel.cameras = [menuCamera];
+      novaBeatLabelLayer.add(valueLabel);
+      novaBeatValueSources.push(item.lefthandText);
+      novaBeatValueLabels.push(valueLabel);
+      novaBeatValueRows.push(index);
     }
   }
 
@@ -491,9 +527,15 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.x = novaBeatRowX() + novaBeatRowWidth() - 190;
-      item.lefthandText.y = novaBeatRowY(index) + 15;
-      item.lefthandText.color = 0xFF48E7FF;
+      item.lefthandText.visible = false;
+      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
+        item.lefthandText.text, 15);
+      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      valueLabel.cameras = [menuCamera];
+      novaBeatLabelLayer.add(valueLabel);
+      novaBeatValueSources.push(item.lefthandText);
+      novaBeatValueLabels.push(valueLabel);
+      novaBeatValueRows.push(index);
     }
   }
 
@@ -531,7 +573,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     novaBeatRowAccents.push(accent);
 
     var label:FlxText = new FlxText(rowX + 18, rowY + 17, rowW - 230, prefName, 15);
-    label.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB9C8E3, FlxTextAlign.LEFT);
+    label.setFormat("Arial", 16, 0xFFDCEBFF, FlxTextAlign.LEFT);
     label.cameras = [menuCamera];
     novaBeatLabelLayer.add(label);
     novaBeatRowLabels.push(label);
@@ -551,7 +593,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
       novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.82;
       novaBeatRowAccents[index].alpha = selected ? 1.0 : 0.42;
-      novaBeatRowLabels[index].color = selected ? FlxColor.WHITE : 0xFFB9C8E3;
+      novaBeatRowLabels[index].color = selected ? FlxColor.WHITE : 0xFFDCEBFF;
     }
   }
 
@@ -591,15 +633,31 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
         item.atlasText.visible = false;
         var widget:FlxSprite = preferenceItems.members[index];
         if (Std.isOfType(widget, CheckboxPreferenceItem))
-          widget.setPosition(rowX + rowW - widget.width - 18, rowY + (rowHeight - widget.height) * 0.5);
+        {
+          widget.visible = false;
+          var visualIndex:Int = novaBeatCheckboxRows.indexOf(index);
+          if (visualIndex >= 0)
+          {
+            var plate:FunkinSprite = novaBeatCheckboxPlates[visualIndex];
+            var mark:FlxText = novaBeatCheckboxMarks[visualIndex];
+            plate.setPosition(rowX + rowW - 58, rowY + (rowHeight - 28) * 0.5);
+            mark.setPosition(plate.x, plate.y - 1);
+          }
+        }
         else
         {
-          var valueLabel:AtlasText = cast widget;
-          valueLabel.x = rowX + rowW - 190;
-          valueLabel.y = rowY + (rowHeight - valueLabel.height) * 0.5;
+          var source:AtlasText = cast widget;
+          source.visible = false;
+          var visualIndex:Int = novaBeatValueRows.indexOf(index);
+          if (visualIndex >= 0)
+          {
+            var valueLabel:FlxText = novaBeatValueLabels[visualIndex];
+            valueLabel.setPosition(rowX + rowW - 210, rowY + (rowHeight - valueLabel.height) * 0.5);
+            valueLabel.fieldWidth = 180;
+          }
         }
       }
-      itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 11 : 13, 0xFFB7C9E8, FlxTextAlign.LEFT);
+      itemDesc.setFormat("Arial", portrait ? 12 : 14, 0xFFDCEBFF, FlxTextAlign.LEFT);
       itemDesc.setPosition(margin + 18, height - 70);
       itemDesc.fieldWidth = width - margin * 2 - 36;
       itemDesc.autoSize = false;
