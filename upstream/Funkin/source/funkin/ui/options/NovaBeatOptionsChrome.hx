@@ -54,6 +54,9 @@ class NovaBeatOptionsChrome
     brand.setFormat("Arial", 11, 0xFF63E8FF, FlxTextAlign.LEFT);
     brand.scrollFactor.set();
     brand.cameras = [camera];
+    // The page title is sufficient here; the extra cyan brand line was
+    // crowding the content area on the customization screen.
+    brand.visible = false;
     group.add(brand);
     chromeElements.push(brand);
 
