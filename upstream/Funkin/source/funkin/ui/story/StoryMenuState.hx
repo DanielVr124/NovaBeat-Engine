@@ -888,8 +888,19 @@ class StoryMenuState extends MusicBeatState
     tracklistText.text = 'TRACKS\n\n';
     tracklistText.text += currentLevel.getSongDisplayNames(currentDifficultyId).join('\n');
 
-    tracklistText.screenCenter(X);
-    tracklistText.x -= (FlxG.width * 0.33);
+    if (FlxG.height > FlxG.width * 1.12)
+    {
+      // Keep the portrait track list inside the viewport after week changes.
+      var margin:Float = Math.max(18, FlxG.width * 0.045);
+      tracklistText.fieldWidth = FlxG.width - margin * 2;
+      tracklistText.alignment = CENTER;
+      tracklistText.x = margin;
+    }
+    else
+    {
+      tracklistText.screenCenter(X);
+      tracklistText.x -= (FlxG.width * 0.33);
+    }
 
     var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
     highScore = levelScore?.score ?? 0;
