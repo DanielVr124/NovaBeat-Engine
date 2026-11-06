@@ -249,15 +249,33 @@ class ExperienceManager
   {
     var ownerId:String = info.isOfficial ? OFFICIAL_EXPERIENCE_ID : info.id;
     var result:Array<String> = [];
-    if (!info.isOfficial && info.directory != null) result.push(info.directory);
 
     for (candidate in scanInstalled())
     {
-      if (candidate.isOfficial || candidate.packageType != PACKAGE_EXTENSION || candidate.directory == null) continue;
-      if (!candidate.launchable) continue;
-      if (candidate.enabled && getExtensionOwner(candidate.directory) == ownerId && result.indexOf(candidate.directory) == -1)
+      if (candidate.isOfficial || candidate.directory == null || !candidate.enabled || !candidate.launchable) continue;
+
+      var isSelectedExperience:Bool = !info.isOfficial
+        && candidate.id == ownerId
+        && candidate.packageType == PACKAGE_STANDALONE;
+      var isAssignedExtension:Bool = candidate.packageType == PACKAGE_EXTENSION
+        && getExtensionOwner(candidate.directory) == ownerId;
+
+      if ((isSelectedExperience || isAssignedExtension) && result.indexOf(candidate.directory) == -1)
         result.push(candidate.directory);
     }
+
+    // Keep the same relative load priority the player configured in the Mod
+    // Manager, but only among packages belonging to the active experience.
+    var configuredOrder:Array<String> = Save.instance.enabledModDirs.value;
+    result.sort(function(a:String, b:String):Int
+    {
+      var aIndex:Int = configuredOrder.indexOf(a);
+      var bIndex:Int = configuredOrder.indexOf(b);
+      if (aIndex >= 0 && bIndex >= 0) return aIndex - bIndex;
+      if (aIndex >= 0) return -1;
+      if (bIndex >= 0) return 1;
+      return Reflect.compare(a, b);
+    });
 
     return result;
   }
