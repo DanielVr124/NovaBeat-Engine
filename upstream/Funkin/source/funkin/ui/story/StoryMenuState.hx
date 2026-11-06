@@ -172,8 +172,12 @@ class StoryMenuState extends MusicBeatState
 
     updateProps();
 
-    // x on tracklistText is set/updated later, we dont need to init it
-    tracklistText = new FlxText(0, levelBackground.x + levelBackground.height + 100, 0, 'Tracks', 32);
+    // The original FNF track list sits below the stock week area. NovaBeat
+    // uses a bottom-anchored position for its full-screen menu composition.
+    var initialTracklistY:Float = Preferences.menuStyle == "NovaBeat"
+      ? levelBackground.y + levelBackground.height + 100
+      : BACKGROUND_Y + BACKGROUND_HEIGHT + 100;
+    tracklistText = new FlxText(0, initialTracklistY, 0, 'Tracks', 32);
     tracklistText.setFormat('VCR OSD Mono', 32);
     tracklistText.alignment = CENTER;
     tracklistText.color = 0xFFE55777;
@@ -240,8 +244,8 @@ class StoryMenuState extends MusicBeatState
     var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
     var margin:Float = Math.max(18, width * 0.045);
 
-    // Story Mode keeps the stock FNF layout in both styles. Only the artwork
-    // behind it changes; always cover-fit the selected custom background.
+    // Keep the custom replacement artwork behind Story Mode, while the
+    // selected menu style controls the layout of the menu elements.
     if (baseLevelBackgroundWidth <= 0) baseLevelBackgroundWidth = levelBackground.frameWidth;
     if (baseLevelBackgroundHeight <= 0) baseLevelBackgroundHeight = levelBackground.frameHeight;
     var backgroundScale:Float = Math.max(width / baseLevelBackgroundWidth, height / baseLevelBackgroundHeight);
