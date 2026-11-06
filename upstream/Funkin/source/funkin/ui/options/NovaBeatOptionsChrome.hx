@@ -51,14 +51,14 @@ class NovaBeatOptionsChrome
     chromeElements.push(leftAccent);
 
     var brand:FlxText = new FlxText(margin + 2, 8, width * 0.55, 'NOVABEAT ENGINE', 11);
-    brand.setFormat(Paths.font('vcr.ttf'), 11, 0xFF48E7FF, FlxTextAlign.LEFT);
+    brand.setFormat("Arial", 11, 0xFF63E8FF, FlxTextAlign.LEFT);
     brand.scrollFactor.set();
     brand.cameras = [camera];
     group.add(brand);
     chromeElements.push(brand);
 
     var heading:FlxText = new FlxText(margin, 27, panelWidth, pageTitle, 21);
-    heading.setFormat(Paths.font('vcr.ttf'), 21, FlxColor.WHITE, FlxTextAlign.LEFT);
+    heading.setFormat("Arial Black", 21, FlxColor.WHITE, FlxTextAlign.LEFT);
     heading.scrollFactor.set();
     heading.cameras = [camera];
     group.add(heading);
