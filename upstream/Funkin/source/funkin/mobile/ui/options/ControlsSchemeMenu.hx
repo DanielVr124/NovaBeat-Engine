@@ -80,12 +80,12 @@ class ControlsSchemeMenu extends MusicBeatSubState
   /**
    * Touch X position when touch was just pressed. Resets on release.
    */
-  var dragStartingX:Int;
+  var dragStartingX:Float;
 
   /**
    * Touch X distance between dragStartingX and current touch position. Resets on release.
    */
-  var dragDistance:Int;
+  var dragDistance:Float;
 
   /**
    * Represents the background shader for the menu, utilizing HSV color adjustments.
