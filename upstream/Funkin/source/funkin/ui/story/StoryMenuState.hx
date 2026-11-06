@@ -84,6 +84,7 @@ class StoryMenuState extends MusicBeatState
    */
   var levelBackground:FlxSprite;
   var levelBackgroundCover:Null<FunkinSprite> = null;
+  var weekListPanel:Null<FunkinSprite> = null;
   var baseLevelBackgroundWidth:Float = 0;
   var baseLevelBackgroundHeight:Float = 0;
 
@@ -171,6 +172,18 @@ class StoryMenuState extends MusicBeatState
     levelBackgroundCover = black;
     black.zIndex = levelBackground.zIndex - 1;
     add(black);
+
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // Preserve the custom full-screen backdrop while restoring a dark panel
+      // behind the scrolling week titles.
+      weekListPanel = new FunkinSprite();
+      weekListPanel.makeSolidColor(1, 1, 0xD9000000);
+      weekListPanel.scrollFactor.set();
+      weekListPanel.zIndex = levelTitles.zIndex - 1;
+      add(weekListPanel);
+      layoutNovaBeatWeekPanel(FlxG.width, FlxG.height);
+    }
 
     levelProps = new FlxTypedGroup<LevelProp>();
     levelProps.zIndex = 1000;
@@ -280,6 +293,8 @@ class StoryMenuState extends MusicBeatState
         levelBackgroundCover.setPosition(levelBackground.x, 0);
       }
     }
+
+    layoutNovaBeatWeekPanel(width, height);
 
     if (portrait)
     {
@@ -785,6 +800,19 @@ class StoryMenuState extends MusicBeatState
         }, true);
       });
     });
+  }
+
+  function layoutNovaBeatWeekPanel(width:Int, height:Int):Void
+  {
+    if (weekListPanel == null || width <= 0 || height <= 0) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var panelWidth:Float = portrait ? width * 0.86 : Math.min(width * 0.68, 820);
+    var panelHeight:Float = portrait ? height * 0.30 : height * 0.56;
+    var panelY:Float = portrait ? height * 0.24 : height * 0.29;
+
+    weekListPanel.makeSolidColor(Std.int(panelWidth), Std.int(panelHeight), 0xD9000000);
+    weekListPanel.setPosition((width - panelWidth) * 0.5, panelY);
   }
 
   function updateBackground(?previousLevelId:String = ''):Void
