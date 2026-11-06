@@ -144,15 +144,41 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       return;
     }
 
+    layoutOriginalFNFDescription(FlxG.width, FlxG.height);
+  }
+
+  /**
+   * Keep the stock FNF preference description readable and inside the
+   * viewport. The previous fixed-size, vertically centered VCR text could
+   * cover rows or render as an oversized black rectangle on browser screens.
+   */
+  function layoutOriginalFNFDescription(width:Int, height:Int):Void
+  {
+    if (width <= 0 || height <= 0) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var margin:Float = Math.max(16, width * 0.025);
+    var panelHeight:Float = portrait ? 68 : 62;
+    var panelY:Float = height - panelHeight - (portrait ? 14 : 18);
+    var textSize:Int = portrait ? 13 : 17;
+    var textWidth:Float = Math.max(80, width - margin * 2 - 24);
+
     itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
-    itemDescBox.alpha = 0.6;
-    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE,
+    itemDescBox.alpha = 0.68;
+    itemDesc.setFormat(Paths.font('vcr.ttf'), textSize, FlxColor.WHITE,
       FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-    itemDesc.borderSize = 3;
-    itemDesc.screenCenter();
-    itemDesc.y += 270;
-    itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
-    itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 25));
+    itemDesc.borderSize = portrait ? 1 : 2;
+    itemDesc.scrollFactor.set();
+    itemDesc.setPosition(margin + 12, panelY + 8);
+    itemDesc.width = textWidth;
+    itemDesc.fieldWidth = textWidth;
+    itemDesc.height = panelHeight - 16;
+    itemDesc.wordWrap = true;
+    itemDesc.autoSize = false;
+    itemDesc.alignment = FlxTextAlign.CENTER;
+
+    itemDescBox.setPosition(margin, panelY);
+    itemDescBox.setGraphicSize(Std.int(width - margin * 2), Std.int(panelHeight));
     itemDescBox.updateHitbox();
   }
 
@@ -161,7 +187,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItems():Void
   {
-    createPrefItemEnum('Menu Style', 'Choose the main-menu presentation. The matching menu soundtrack switches immediately; the selected layout is used when you return to the main menu.', [
+    createPrefItemEnum('Menu Style', 'Switch between the original FNF menu and the NovaBeat menu without restarting the game.', [
       "Original FNF" => "Original FNF",
       "NovaBeat" => "NovaBeat"
     ], function(key:String, value:String):Void
@@ -703,13 +729,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
           valueLabel.y = item.y;
         }
       }
-      itemDesc.setPosition(18, height - (portrait ? 116 : 200));
-      itemDesc.fieldWidth = width - 36;
-      itemDesc.size = portrait ? 18 : 32;
-      itemDesc.alignment = FlxTextAlign.CENTER;
-      itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
-      itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 22));
-      itemDescBox.updateHitbox();
+      layoutOriginalFNFDescription(width, height);
     }
     if (camFollow != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
     menuCamera.deadzone.set(0, height * (portrait ? 0.14 : 0.22), width, height * (portrait ? 0.72 : 0.56));
