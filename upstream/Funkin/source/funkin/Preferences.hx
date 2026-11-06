@@ -8,6 +8,7 @@ import funkin.mobile.util.InAppPurchasesUtil;
 #end
 import funkin.save.Save;
 import funkin.util.WindowUtil;
+import funkin.util.DeviceUtil;
 import funkin.util.HapticUtil.HapticsMode;
 import funkin.ui.debug.FunkinDebugDisplay.DebugDisplayMode;
 #if FEATURE_DISCORD_RPC
@@ -102,7 +103,7 @@ class Preferences
 
   static function get_downscroll():Bool
   {
-    return Save?.instance?.options?.downscroll #if mobile ?? true #else ?? false #end;
+    return Save?.instance?.options?.downscroll #if mobile ?? true #elseif web ?? DeviceUtil.isMobileBrowser #else ?? false #end;
   }
 
   static function set_downscroll(value:Bool):Bool
