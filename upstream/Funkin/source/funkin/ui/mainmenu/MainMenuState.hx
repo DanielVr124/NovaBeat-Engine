@@ -248,6 +248,9 @@ class MainMenuState extends MusicBeatState
     layoutMenuItems();
 
     menuItems.selectItem(rememberedSelectedIndex);
+    // Selecting swaps atlas frames; run layout again with the selected frame
+    // so every entry keeps its true visual center from the first frame.
+    layoutMenuItems();
 
     if (!hasUpgraded)
     {
@@ -344,16 +347,25 @@ class MainMenuState extends MusicBeatState
 
     for (index => menuItem in menuItems)
     {
-      var targetScale:Float = portrait ? Math.min(1.0, (FlxG.width - 64) / Math.max(1, menuItem.width)) : 1.0;
-      menuItem.scale.set(targetScale, targetScale);
-      menuItem.updateHitbox();
-      menuItem.x = FlxG.width / 2;
-      menuItem.y = top + spacing * index;
-      menuItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
-      menuItem.scrollFactor.y = 0.4;
+      // Idle and selected atlas frames can have different dimensions. Always
+      // recenter after choosing the right frame and applying responsive scale.
+      var atlasItem:AtlasMenuItem = cast menuItem;
+      atlasItem.changeAnim(index == menuItems.selectedIndex ? 'selected' : 'idle');
 
-      if (index == 1) camFollow.setPosition(menuItem.getGraphicMidpoint().x, menuItem.getGraphicMidpoint().y);
+      var targetScale:Float = portrait ? Math.min(1.0, (FlxG.width - 64) / Math.max(1, atlasItem.width)) : 1.0;
+      atlasItem.scale.set(targetScale, targetScale);
+      atlasItem.updateHitbox();
+      atlasItem.centerOrigin();
+      atlasItem.offset.copyFrom(atlasItem.origin);
+
+      atlasItem.x = FlxG.width / 2;
+      atlasItem.y = top + spacing * index;
+      atlasItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
+      atlasItem.scrollFactor.y = 0.4;
     }
+
+    var selectedItem:MenuListItem = menuItems.members[menuItems.selectedIndex];
+    camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -460,13 +472,21 @@ class MainMenuState extends MusicBeatState
       #end
     }
 
+    var shouldRestoreMenuLayout:Bool = !(subState is flixel.addons.transition.Transition);
     super.closeSubState();
+
+    if (shouldRestoreMenuLayout)
+    {
+      layoutMenuItems();
+      resetCamStuff();
+    }
   }
 
   function onMenuItemChange(selected:MenuListItem)
   {
-    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end) camFollow.setPosition(selected.getGraphicMidpoint().x,
-      selected.getGraphicMidpoint().y);
+    layoutMenuItems();
+    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+      camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
   }
 
   #if FEATURE_OPEN_URL
