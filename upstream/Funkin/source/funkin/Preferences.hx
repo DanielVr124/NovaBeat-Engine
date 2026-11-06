@@ -274,6 +274,8 @@ class Preferences
   {
     #if mobile
     return false;
+    #elseif web
+    return DeviceUtil.isMobileBrowser ? false : (Save?.instance?.options?.autoPause ?? true);
     #else
     return Save?.instance?.options?.autoPause ?? true;
     #end
@@ -283,6 +285,15 @@ class Preferences
   {
     #if mobile
     return false;
+    #elseif web
+    if (DeviceUtil.isMobileBrowser) return false;
+
+    if (value != Save.instance.options.autoPause) FlxG.autoPause = value;
+
+    var save:Save = Save.instance;
+    save.options.autoPause = value;
+    Save.system.flush();
+    return value;
     #else
     if (value != Save.instance.options.autoPause) FlxG.autoPause = value;
 
