@@ -3,6 +3,7 @@ package funkin.ui.mainmenu;
 import flixel.FlxBasic;
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.math.FlxPoint;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -489,7 +490,17 @@ class ExperienceLibraryState extends MusicBeatState
   function pointerOverAt(sprite:FlxSprite, pointer:Dynamic):Bool
   {
     if (sprite == null || pointer == null) return false;
-    return pointer.overlaps(sprite, sprite.camera);
+
+    // FlxPointer.overlaps() can miss taps on HTML5 touch browsers when the
+    // browser reports the touch in screen coordinates but the camera's
+    // overlap helper resolves it through a different pointer path. Resolve
+    // the pointer into this sprite's camera space and test the actual point.
+    var worldPoint:FlxPoint = pointer.getWorldPosition(sprite.camera);
+    if (worldPoint == null) return false;
+
+    var isOver:Bool = sprite.overlapsPoint(worldPoint, true, sprite.camera);
+    worldPoint.putWeak();
+    return isOver;
   }
 
   function handleTapAt(pointer:Dynamic):Bool
