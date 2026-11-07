@@ -5,6 +5,7 @@ import funkin.ui.freeplay.FreeplayState.FreeplaySongData;
 import funkin.data.story.level.LevelRegistry;
 import funkin.graphics.shaders.HSVShader;
 import funkin.graphics.shaders.GaussianBlurShader;
+import funkin.Preferences;
 import flixel.group.FlxGroup;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
@@ -459,6 +460,7 @@ class SongMenuItem extends FlxSpriteGroup
       favIconBlurred.visible = freeplayData.isFav;
       checkClip();
     }
+    updateNovaBeatPixelIconLayout();
     updateSelected();
   }
 
@@ -685,6 +687,29 @@ class SongMenuItem extends FlxSpriteGroup
     var portrait:Bool = height > width * 1.12;
     var layoutScale:Float = portrait ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled)) : 1.0;
     scale.set(layoutScale, layoutScale);
+    updateNovaBeatPixelIconLayout();
+  }
+
+  /**
+   * The NovaBeat portrait layout scales the whole capsule group to fit narrow
+   * screens. Keep the official character portrait at its intended 2x (64px)
+   * size and anchor point instead of shrinking and shifting it with the group.
+   * The original FNF style retains the stock PixelatedIcon transform.
+   */
+  function updateNovaBeatPixelIconLayout():Void
+  {
+    if (pixelIcon == null) return;
+
+    if (Preferences.menuStyle != "NovaBeat")
+    {
+      pixelIcon.setPosition(160, 35);
+      pixelIcon.scale.set(2, 2);
+      return;
+    }
+
+    var parentScale:Float = Math.max(0.001, scale.x);
+    pixelIcon.setPosition(160 / parentScale, 35 / parentScale);
+    pixelIcon.scale.set(2 / parentScale, 2 / parentScale);
   }
 
   override function update(elapsed:Float):Void
