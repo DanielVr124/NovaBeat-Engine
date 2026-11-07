@@ -445,20 +445,6 @@ jobs:
                   output.write(f"\n- Offline precache includes {len(song_assets)} song audio files (instrumentals and vocals).\n")
           PY
 
-          index = root / "index.html"
-          html = index.read_text(encoding="utf-8")
-          registration = """<script>
-          if ("serviceWorker" in navigator && location.protocol !== "file:") {
-            window.addEventListener("load", () => {
-              navigator.serviceWorker.register("./service-worker.js", {scope: "./", updateViaCache: "none"})
-                .catch(error => console.warn("NovaBeat offline cache unavailable:", error));
-            }, {once: true});
-          }
-          </script>"""
-          if "service-worker.js" not in html:
-            html = html.replace("</body>", registration + "</body>") if "</body>" in html else html + registration
-            index.write_text(html, encoding="utf-8")
-          PY
           touch "$web_root/.nojekyll"
           echo "web_root=$web_root" >> "$GITHUB_OUTPUT"
 
