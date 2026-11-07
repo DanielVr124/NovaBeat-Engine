@@ -14,7 +14,6 @@ import flixel.input.touch.FlxTouch;
  * These helpers normalize mouse-backed browser pointers and real touch contacts
  * without changing the upstream TouchUtil/SwipeUtil path used by Original FNF.
  */
- */
 class NovaBeatMenuInput
 {
   public static var pointer(get, never):Dynamic;
