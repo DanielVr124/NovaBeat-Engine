@@ -12,7 +12,6 @@ import funkin.Preferences;
 import funkin.ui.Page;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
 import polymod.Polymod.ModMetadata;
 #if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinBackButton;
@@ -421,9 +420,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var touchActionHandled:Bool = false;
       for (index in 0...touchActionHitboxes.length)
       {
-        if (Preferences.menuStyle == "NovaBeat"
-          ? NovaBeatMenuInput.pressAction(touchActionHitboxes[index])
-          : TouchUtil.pressAction(touchActionHitboxes[index]))
+        if (TouchUtil.pressAction(touchActionHitboxes[index]))
         {
           performTouchAction(touchActionActions[index]);
           touchActionHandled = true;
@@ -435,9 +432,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         for (row in rows)
         {
-          if (Preferences.menuStyle == "NovaBeat"
-            ? NovaBeatMenuInput.pressAction(row)
-            : TouchUtil.pressAction(row))
+          if (TouchUtil.pressAction(row))
           {
             selectMod(row.modIndex, false);
             break;
@@ -449,9 +444,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (detectedMods.length > 0)
     {
-      if (controls.UI_UP_P || (Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.swipeUp : SwipeUtil.swipeUp))
+      if (controls.UI_UP_P || SwipeUtil.swipeUp)
         selectMod(selectedIndex - 1, false);
-      if (controls.UI_DOWN_P || (Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.swipeDown : SwipeUtil.swipeDown))
+      if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
         selectMod(selectedIndex + 1, false);
       if (controls.ACCEPT_P || FlxG.keys.justPressed.SPACE) toggleSelectedMod();
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
