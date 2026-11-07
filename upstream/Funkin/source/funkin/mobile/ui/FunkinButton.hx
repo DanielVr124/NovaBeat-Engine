@@ -244,7 +244,15 @@ class FunkinButton extends FunkinSprite implements IFlxInput
             break;
           }
         }
-        if (blockedByDeadZone) continue;
+        if (blockedByDeadZone)
+        {
+          #if web
+          // Ignore only this blocked browser contact; other fingers remain valid.
+          continue;
+          #else
+          return false;
+          #end
+        }
 
         function updateTouchID():Void
         {
