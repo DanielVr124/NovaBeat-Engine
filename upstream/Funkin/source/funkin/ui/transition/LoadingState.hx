@@ -52,6 +52,8 @@ class LoadingState extends MusicBeatSubState
 
     this.loadBar = new FunkinSprite(0, FlxG.height - 20).makeSolidColor(0, 10, 0xFFff16d2);
     this.funkay = FunkinSprite.create('funkay');
+    this.statusText = new FlxText(16, 16, FlxG.width - 32, 'Preparing song assets...');
+    this.statusText.size = 16;
   }
 
   override function create():Void
@@ -67,8 +69,6 @@ class LoadingState extends MusicBeatSubState
 
     add(loadBar);
 
-    statusText = new FlxText(16, 16, FlxG.width - 32, 'Preparing song assets...');
-    statusText.size = 16;
     statusText.scrollFactor.set();
     add(statusText);
 
