@@ -50,9 +50,6 @@ class TouchUtil
    */
   public static var justMoved(get, never):Bool;
 
-  /** Whether a real FlxTouch contact is currently down or was just pressed. */
-  public static var hasActiveTouchContact(get, never):Bool;
-
   #if mobile
   /**
    * The first touch in the FlxG.touches list.
@@ -75,28 +72,9 @@ class TouchUtil
    */
   public static function overlaps(?object:FlxBasic, ?camera:FlxCamera):Bool
   {
-    if (object == null) return false;
+    if (object == null || touch == null) return false;
 
-    final targetCamera:Null<FlxCamera> = camera ?? object.camera;
-
-    #if FLX_TOUCH
-    // Inspect all live contacts. A stale first touch must never hide a second
-    // finger that is currently interacting with a menu control.
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch == null || !(activeTouch.pressed || activeTouch.justPressed || activeTouch.justReleased)) continue;
-      if (activeTouch.overlaps(object, targetCamera)) return true;
-    }
-    #end
-
-    #if web
-    if (FlxG.mouse.pressed || FlxG.mouse.justPressed || FlxG.mouse.justReleased)
-    {
-      if (FlxG.mouse.overlaps(object, targetCamera)) return true;
-    }
-    #elseif !mobile
-    if (FlxG.mouse.overlaps(object, targetCamera)) return true;
-    #end
+    return touch.overlaps(object, camera ?? object.camera);
 
     return false;
   }
@@ -111,33 +89,12 @@ class TouchUtil
    */
   public static function overlapsComplex(?object:FlxObject, ?camera:FlxCamera):Bool
   {
-    if (object == null) return false;
+    if (object == null || touch == null) return false;
 
-    if (camera == null)
-    {
-      if (object.cameras == null || object.cameras.length == 0) return false;
-      camera = object.cameras[0];
-    }
+    if (camera == null) camera = object.cameras[0];
 
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch == null || !(activeTouch.pressed || activeTouch.justPressed || activeTouch.justReleased)) continue;
-      @:privateAccess
-      if (object.overlapsPoint(activeTouch.getWorldPosition(camera, object._point), true, camera)) return true;
-    }
-    #end
-
-    #if web
-    if (FlxG.mouse.pressed || FlxG.mouse.justPressed || FlxG.mouse.justReleased)
-    {
-      @:privateAccess
-      if (object.overlapsPoint(FlxG.mouse.getWorldPosition(camera, object._point), true, camera)) return true;
-    }
-    #elseif !mobile
     @:privateAccess
-    if (object.overlapsPoint(FlxG.mouse.getWorldPosition(camera, object._point), true, camera)) return true;
-    #end
+    return object.overlapsPoint(touch.getWorldPosition(camera, object._point), true, camera);
 
     return false;
   }
@@ -197,70 +154,13 @@ class TouchUtil
   // weird mix between "looks weird" and "looks neat" but i'll keep it for now -Zack
 
   @:noCompletion
-  static function get_justMoved():Bool
-  {
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && activeTouch.justMoved) return true;
-    }
-    #end
-    #if web
-    return FlxG.mouse.justMoved;
-    #elseif !mobile
-    return FlxG.mouse.justMoved;
-    #else
-    return false;
-    #end
-  }
+  static inline function get_justMoved():Bool return touch != null && touch.justMoved;
 
   @:noCompletion
-  static function get_pressed():Bool
-  {
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && activeTouch.pressed) return true;
-    }
-    #end
-    #if web
-    return FlxG.mouse.pressed;
-    #elseif !mobile
-    return FlxG.mouse.pressed;
-    #else
-    return false;
-    #end
-  }
+  static inline function get_pressed():Bool return touch != null && touch.pressed;
 
   @:noCompletion
-  static function get_justPressed():Bool
-  {
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && activeTouch.justPressed) return true;
-    }
-    #end
-    #if web
-    return FlxG.mouse.justPressed;
-    #elseif !mobile
-    return FlxG.mouse.justPressed;
-    #else
-    return false;
-    #end
-  }
-
-  @:noCompletion
-  static function get_hasActiveTouchContact():Bool
-  {
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && (activeTouch.pressed || activeTouch.justPressed)) return true;
-    }
-    #end
-    return false;
-  }
+  static inline function get_justPressed():Bool return touch != null && touch.justPressed;
 
   @:noCompletion
   static function get_justReleased():Bool
@@ -276,56 +176,23 @@ class TouchUtil
     }
     #end
     return FlxG.mouse.justReleased;
-    #elseif mobile
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && activeTouch.justReleased) return true;
-    }
-    #end
-    return false;
     #else
     return touch != null && touch.justReleased;
     #end
   }
 
   @:noCompletion
-  static function get_released():Bool
-  {
-    #if FLX_TOUCH
-    for (activeTouch in FlxG.touches.list)
-    {
-      if (activeTouch != null && activeTouch.released) return true;
-    }
-    #end
-    #if web
-    return FlxG.mouse.released;
-    #elseif !mobile
-    return FlxG.mouse.released;
-    #else
-    return false;
-    #end
-  }
+  static function get_released():Bool return touch != null && touch.released;
 
   #if mobile
   @:noCompletion
   static function get_touch():FlxTouch
   {
-    var pressedTouch:Null<FlxTouch> = null;
-    var releasedTouch:Null<FlxTouch> = null;
-
-    // Prefer the newest press, then any active contact, then a release frame.
-    // This avoids pinning menu hit-tests to the first/stale pointer in the list.
-    for (activeTouch in FlxG.touches.list)
+    for (touch in FlxG.touches.list)
     {
-      if (activeTouch == null) continue;
-      if (activeTouch.justPressed) return activeTouch;
-      if (pressedTouch == null && activeTouch.pressed) pressedTouch = activeTouch;
-      if (releasedTouch == null && activeTouch.justReleased) releasedTouch = activeTouch;
+      if (touch != null) return touch;
     }
 
-    if (pressedTouch != null) return pressedTouch;
-    if (releasedTouch != null) return releasedTouch;
     return FlxG.touches.getFirst();
   }
   #elseif web
@@ -338,20 +205,21 @@ class TouchUtil
     if (DeviceUtil.isMobileBrowser) FlxG.mouse.visible = false;
 
     #if FLX_TOUCH
-    // Prefer a newly pressed real contact over older held contacts, then keep
-    // the active finger selected through its release frame. Mouse remains the
-    // fallback for Quest controller rays and browsers without DOM touch input.
-    var pressedTouch:Null<FlxTouch> = null;
+    // Prefer the actual touch contact when the browser supplies both touch
+    // and synthesized mouse events for the same tap. Choosing the mouse first
+    // can make the title/menu listen to a different release than the visible
+    // touch pointer, so the tap appears to do nothing.
+    //
+    // A released contact is retained for its release frame, but an actively
+    // held finger always takes priority for multi-touch correctness.
     var releasedTouch:Null<FlxTouch> = null;
-    for (activeTouch in FlxG.touches.list)
+    for (touch in FlxG.touches.list)
     {
-      if (activeTouch == null) continue;
-      if (activeTouch.justPressed) return activeTouch;
-      if (pressedTouch == null && activeTouch.pressed) pressedTouch = activeTouch;
-      if (releasedTouch == null && activeTouch.justReleased) releasedTouch = activeTouch;
+      if (touch == null) continue;
+      if (touch.pressed || touch.justPressed) return touch;
+      if (releasedTouch == null && touch.justReleased) releasedTouch = touch;
     }
 
-    if (pressedTouch != null) return pressedTouch;
     if (releasedTouch != null) return releasedTouch;
     #end
 
