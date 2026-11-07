@@ -1,4 +1,5 @@
 name: NovaBeat HTML5 browser test build
+# [web-build] Verify Story Mode clipping/bop timing, browser mobile controls, customization input, and hidden cursor.
 # [web-build] User-requested HTML5-only build of the current mobile touch-control changes.
 # [web-build] User-requested rebuild of the latest mobile browser test build.
 
