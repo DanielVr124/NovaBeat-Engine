@@ -74,7 +74,10 @@ class TitleState extends MusicBeatState
 
   function startIntro():Void
   {
-    if (!initialized || FlxG.sound.music == null) playMenuMusic();
+    // A fresh Mod Library launch must restart the selected theme at time zero.
+    // The library already keeps that same track playing, so restartTrack=false
+    // would otherwise resume partway through and make the beat-timed intro skip.
+    if (!initialized || FlxG.sound.music == null) playMenuMusic(!initialized);
 
     persistentUpdate = true;
 
@@ -214,7 +217,7 @@ class TitleState extends MusicBeatState
     });
   }
 
-  function playMenuMusic():Void
+  function playMenuMusic(restartTrack:Bool = false):Void
   {
     if (Preferences.menuStyle == "NovaBeat")
     {
@@ -222,7 +225,7 @@ class TitleState extends MusicBeatState
       FunkinSound.playMusic('novabeat-menu', {
         startingVolume: 0.82,
         overrideExisting: true,
-        restartTrack: false,
+        restartTrack: restartTrack,
         persist: true,
         mapTimeChanges: false
       });
@@ -234,7 +237,7 @@ class TitleState extends MusicBeatState
     FunkinSound.playMusic('freakyMenu', {
       startingVolume: 0.0,
       overrideExisting: true,
-      restartTrack: false,
+      restartTrack: restartTrack,
       // Continue playing this music between states, until a different music track gets played.
       persist: true
     });
