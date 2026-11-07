@@ -174,7 +174,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 62 : 66;
+    rowHeight = portraitLayout ? 82 : 74;
     visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
     addLabel(listX + 12, listY + 12, listW - 24, 'INSTALLED MODS', 12, 0xFF48E7FF);
@@ -342,11 +342,32 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       add(bg);
       rowBackgrounds.push(bg);
 
-      var marker:String = enabled ? '[ON]  ' : '[OFF] ';
-      var rowFontSize:Int = usesTouchControls ? (portraitLayout ? 16 : 15) : (portraitLayout ? 13 : 16);
-      var row:ModMenuItem = new ModMenuItem(rowX + 12, y + (rowHeight - rowFontSize - 4) * 0.5,
-        rowWidth - 24, marker + mod.title, rowFontSize, modIndex);
-      row.setFormat(Paths.font('vcr.ttf'), rowFontSize, modIndex == selectedIndex ? 0xFF48E7FF : 0xFFD5E1F6, FlxTextAlign.LEFT);
+      var marker:String = enabled ? '[ENABLED]' : '[DISABLED]';
+      var rowFontSize:Int = usesTouchControls ? 13 : (portraitLayout ? 13 : 16);
+      var rowText:String;
+      if (usesTouchControls)
+      {
+        var author:String = metadataValue(mod, 'author', 'Unknown author');
+        var description:String = metadataValue(mod, 'description', 'No description provided.');
+        if (description.length > 72) description = description.substr(0, 69) + '...';
+        rowText = marker + '  •  v' + Std.string(mod.modVersion)
+          + '\n' + mod.title
+          + '\n' + author + '  —  ' + description;
+      }
+      else
+      {
+        rowText = (enabled ? '[ON]  ' : '[OFF] ') + mod.title;
+      }
+      var row:ModMenuItem = new ModMenuItem(rowX + 12, y + (usesTouchControls ? 6 : (rowHeight - rowFontSize - 4) * 0.5),
+        rowWidth - 24, rowText, rowFontSize, modIndex);
+      row.setFormat(Paths.font('vcr.ttf'), rowFontSize,
+        modIndex == selectedIndex ? 0xFF48E7FF : 0xFFD5E1F6, FlxTextAlign.LEFT);
+      if (usesTouchControls)
+      {
+        row.wordWrap = true;
+        row.autoSize = false;
+        row.fieldHeight = rowHeight - 10;
+      }
       add(row);
       rows.push(row);
     }
