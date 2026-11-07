@@ -102,7 +102,7 @@ class SwipeUtil
   public static var flickAny(get, never):Bool;
 
   static final DEFAULT_SWIPE_THRESHOLD:Float = 100;
-  static final MIN_SWIPE_DISTANCE:Float = 72;
+  static final MIN_SWIPE_DISTANCE:Float = 20;
 
   /**
    * Flick manager for the active input source. Browser touch contacts use the
@@ -165,7 +165,13 @@ class SwipeUtil
   static inline function get_swipeUp():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
+    #if mobile
+    return TouchUtil.touch?.justMovedUp ?? false;
+    #elseif web
     return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedUp && TouchUtil.touch.pressed;
+    #else
+    return false;
+    #end
     #else
     return false;
     #end
@@ -175,7 +181,13 @@ class SwipeUtil
   static inline function get_swipeRight():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
+    #if mobile
+    return TouchUtil.touch?.justMovedRight ?? false;
+    #elseif web
     return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedRight && TouchUtil.touch.pressed;
+    #else
+    return false;
+    #end
     #else
     return false;
     #end
@@ -185,7 +197,13 @@ class SwipeUtil
   static inline function get_swipeLeft():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
+    #if mobile
+    return TouchUtil.touch?.justMovedLeft ?? false;
+    #elseif web
     return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedLeft && TouchUtil.touch.pressed;
+    #else
+    return false;
+    #end
     #else
     return false;
     #end
@@ -195,7 +213,13 @@ class SwipeUtil
   static inline function get_swipeDown():Bool
   {
     #if FEATURE_TOUCH_CONTROLS
+    #if mobile
+    return TouchUtil.touch?.justMovedDown ?? false;
+    #elseif web
     return DeviceUtil.isMobileBrowser && TouchUtil.touch != null && TouchUtil.touch.justMovedDown && TouchUtil.touch.pressed;
+    #else
+    return false;
+    #end
     #else
     return false;
     #end
