@@ -121,6 +121,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
     items = new TextMenuList(NavControls.Vertical);
     items.cameras = [FlxG.camera];
+    items.acceptOnTouchSelection = novaBeatLayout;
     descriptions = [
       'Choose a graphics preset. Custom is selected automatically when you change an individual option.',
       'Display the animated splash effect when notes are hit. Turning this off reduces extra sprite and draw work.',
@@ -214,6 +215,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
     items = new TextMenuList(NavControls.Vertical);
     items.cameras = [menuCamera];
+    items.acceptOnTouchSelection = novaBeatLayout;
     add(items);
 
     descriptions = [
