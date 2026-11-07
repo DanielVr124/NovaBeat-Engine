@@ -825,8 +825,17 @@ class StoryMenuState extends MusicBeatState
   {
     if (Preferences.menuStyle != "NovaBeat") return;
 
-    var panelY:Int = BACKGROUND_Y + BACKGROUND_HEIGHT;
-    var panelHeight:Int = Std.int(Math.max(0, height - panelY));
+    if (width <= 0 || height <= 0) return;
+
+    var portrait:Bool = height > width * 1.12;
+    // The stock background area is 456px tall in the desktop layout. Scale
+    // that boundary down on short browser viewports; portrait uses its own
+    // lower-screen band for the week/track information.
+    var panelY:Int = portrait
+      ? Std.int(height * 0.66)
+      : Std.int(Math.min(BACKGROUND_Y + BACKGROUND_HEIGHT, height * 0.635));
+    panelY = Std.int(Math.max(0, Math.min(height - 1, panelY)));
+    var panelHeight:Int = Std.int(Math.max(1, height - panelY));
 
     if (novaBeatWeekPanel == null)
     {
@@ -910,7 +919,10 @@ class StoryMenuState extends MusicBeatState
     if (currentIndex < 0 || currentIndex >= levelTitles.members.length) return;
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
-    levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : 480;
+    var landscapeTargetY:Float = Preferences.menuStyle == "NovaBeat"
+      ? Math.min(480, FlxG.height * 0.67)
+      : 480;
+    levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : landscapeTargetY;
 
     // Hide every week title/artwork above the selected week. This is
     // recalculated after each selection change so the hidden range follows
