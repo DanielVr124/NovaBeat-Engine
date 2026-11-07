@@ -10,6 +10,7 @@ import funkin.mobile.ui.options.objects.SchemeMenuButton;
 import funkin.mobile.ui.options.objects.HitboxShowcase;
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.util.TouchUtil;
+import funkin.util.NovaBeatMenuInput;
 import funkin.util.MathUtil;
 import funkin.ui.MusicBeatSubState;
 import funkin.ui.AtlasText;
@@ -333,16 +334,37 @@ class ControlsSchemeMenu extends MusicBeatSubState
   }
 
   #if FEATURE_TOUCH_CONTROLS
+  inline function menuPointer():Dynamic
+  {
+    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pointer : TouchUtil.touch;
+  }
+
+  inline function menuPointerPressed():Bool
+  {
+    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
+  }
+
+  inline function menuPointerJustPressed():Bool
+  {
+    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.justPressed : TouchUtil.justPressed;
+  }
+
+  inline function menuPointerJustReleased():Bool
+  {
+    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
+  }
+
   /**
    * Handles touch dragging.
    */
   function handleDrag():Void
   {
-    if (TouchUtil.justPressed && TouchUtil.touch != null) dragStartingX = TouchUtil.touch.x;
+    final pointer:Dynamic = menuPointer();
+    if (menuPointerJustPressed() && pointer != null) dragStartingX = pointer.x;
 
-    if (TouchUtil.pressed && TouchUtil.touch != null) dragDistance = TouchUtil.touch.x - dragStartingX;
+    if (menuPointerPressed() && pointer != null) dragDistance = pointer.x - dragStartingX;
 
-    if (TouchUtil.justReleased)
+    if (menuPointerJustReleased())
     {
       dragStartingX = 0;
       dragDistance = 0;
@@ -362,7 +384,9 @@ class ControlsSchemeMenu extends MusicBeatSubState
 
     handleDrag();
 
-    if (TouchUtil.pressAction(itemNavHitbox))
+    if (Preferences.menuStyle == "NovaBeat"
+      ? NovaBeatMenuInput.pressAction(itemNavHitbox)
+      : TouchUtil.pressAction(itemNavHitbox))
     {
       hitboxShowcases.members[currentIndex].onPress();
 
@@ -382,9 +406,9 @@ class ControlsSchemeMenu extends MusicBeatSubState
 
     handleInputs();
 
-    if (TouchUtil.justPressed) originX = hitboxShowcases.x;
+    if (menuPointerJustPressed()) originX = hitboxShowcases.x;
 
-    if (TouchUtil.pressed && dragDistance != 0)
+    if (menuPointerPressed() && dragDistance != 0)
     {
       final showcasesTargetX:Float = originX + dragDistance * 10;
       hitboxShowcases.x = MathUtil.smoothLerpPrecision(hitboxShowcases.x, showcasesTargetX, elapsed, 0.5);
