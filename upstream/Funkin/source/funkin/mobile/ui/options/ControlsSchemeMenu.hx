@@ -10,7 +10,6 @@ import funkin.mobile.ui.options.objects.SchemeMenuButton;
 import funkin.mobile.ui.options.objects.HitboxShowcase;
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
 import funkin.util.MathUtil;
 import funkin.ui.MusicBeatSubState;
 import funkin.ui.AtlasText;
@@ -334,25 +333,13 @@ class ControlsSchemeMenu extends MusicBeatSubState
   }
 
   #if FEATURE_TOUCH_CONTROLS
-  inline function menuPointer():Dynamic
-  {
-    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pointer : TouchUtil.touch;
-  }
+  inline function menuPointer():Dynamic return TouchUtil.touch;
 
-  inline function menuPointerPressed():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
-  }
+  inline function menuPointerPressed():Bool return TouchUtil.pressed;
 
-  inline function menuPointerJustPressed():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.justPressed : TouchUtil.justPressed;
-  }
+  inline function menuPointerJustPressed():Bool return TouchUtil.justPressed;
 
-  inline function menuPointerJustReleased():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
-  }
+  inline function menuPointerJustReleased():Bool return TouchUtil.justReleased;
 
   /**
    * Handles touch dragging.
@@ -384,9 +371,7 @@ class ControlsSchemeMenu extends MusicBeatSubState
 
     handleDrag();
 
-    if (Preferences.menuStyle == "NovaBeat"
-      ? NovaBeatMenuInput.pressAction(itemNavHitbox)
-      : TouchUtil.pressAction(itemNavHitbox))
+    if (TouchUtil.pressAction(itemNavHitbox))
     {
       hitboxShowcases.members[currentIndex].onPress();
 
