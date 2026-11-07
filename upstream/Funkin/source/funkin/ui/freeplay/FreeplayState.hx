@@ -2105,7 +2105,7 @@ class FreeplayState extends MusicBeatSubState
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
     // Scale the drag against a song row rather than treating each screen pixel
     // as a complete song selection.
-    final scrollPixelsPerSong:Float = Math.max(96, FlxG.height * 0.18);
+    final scrollPixelsPerSong:Float = Math.max(128, FlxG.height * 0.30);
     #if web
     if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)
     {

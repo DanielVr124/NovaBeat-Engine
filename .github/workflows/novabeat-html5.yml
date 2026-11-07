@@ -353,7 +353,10 @@ jobs:
           async function getPreviousResponse(previous, key, expectedHash) {
             if (!previous) return null;
             const response = await previous.cache.match(key, {ignoreSearch: true});
-            if (!response) return null;
+            // Older workers could accidentally store a 206 byte-range response
+            // under the full asset URL. Never promote that partial body into
+            // the next version's complete offline cache.
+            if (!response || response.status !== 200) return null;
 
             if (previous.manifest) {
               return previous.manifest[key] === expectedHash ? response : null;
@@ -412,18 +415,95 @@ jobs:
             })());
           });
 
+          async function makeHeadResponse(fullResponse) {
+            const blob = await fullResponse.clone().blob();
+            const headers = new Headers(fullResponse.headers);
+            headers.set("Accept-Ranges", "bytes");
+            headers.set("Content-Length", String(blob.size));
+            headers.delete("Content-Encoding");
+            headers.delete("Transfer-Encoding");
+            return new Response(null, {
+              status: fullResponse.status,
+              statusText: fullResponse.statusText,
+              headers
+            });
+          }
+
+          async function makeRangeResponse(fullResponse, rangeHeader) {
+            // FlxPartialSound sends single byte ranges for Freeplay previews.
+            // Multiple ranges are intentionally left to the network fallback.
+            const match = /^bytes=(\\d*)-(\\d*)$/i.exec(rangeHeader.trim());
+            if (!match) return null;
+
+            const blob = await fullResponse.clone().blob();
+            const total = blob.size;
+            const first = match[1];
+            const last = match[2];
+            let start;
+            let end;
+
+            if (first === "") {
+              const suffixLength = Number(last);
+              if (!Number.isFinite(suffixLength) || suffixLength <= 0 || total <= 0) {
+                return new Response(null, {
+                  status: 416,
+                  headers: {"Content-Range": "bytes */" + total, "Accept-Ranges": "bytes"}
+                });
+              }
+              start = Math.max(0, total - suffixLength);
+              end = total - 1;
+            } else {
+              start = Number(first);
+              end = last === "" ? total - 1 : Number(last);
+              if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= total) {
+                return new Response(null, {
+                  status: 416,
+                  headers: {"Content-Range": "bytes */" + total, "Accept-Ranges": "bytes"}
+                });
+              }
+              end = Math.min(end, total - 1);
+            }
+
+            const partialBlob = blob.slice(start, end + 1);
+            const headers = new Headers(fullResponse.headers);
+            headers.set("Accept-Ranges", "bytes");
+            headers.set("Content-Range", "bytes " + start + "-" + end + "/" + total);
+            headers.set("Content-Length", String(partialBlob.size));
+            headers.delete("Content-Encoding");
+            headers.delete("Transfer-Encoding");
+            return new Response(partialBlob, {
+              status: 206,
+              statusText: "Partial Content",
+              headers
+            });
+          }
+
           self.addEventListener("fetch", event => {
             const request = event.request;
             const requestURL = new URL(request.url);
-            if (request.method !== "GET" || requestURL.origin !== self.location.origin) return;
+            if ((request.method !== "GET" && request.method !== "HEAD") || requestURL.origin !== self.location.origin) return;
             event.respondWith((async () => {
               const cache = await caches.open(CACHE_NAME);
               const key = canonicalURL(request);
+              const rangeHeader = request.headers.get("Range");
               const cached = await cache.match(key, {ignoreSearch: true});
-              if (cached) return cached;
+              if (cached) {
+                // The song preview decoder asks for HEAD plus one or more
+                // Range GETs. Satisfy both from the pre-cached complete file,
+                // rather than forcing a network request or returning the
+                // entire MP3/Ogg file for a range request.
+                if (request.method === "HEAD") return makeHeadResponse(cached);
+                if (rangeHeader) {
+                  const partial = await makeRangeResponse(cached, rangeHeader);
+                  if (partial != null) return partial;
+                }
+                return cached;
+              }
               try {
                 const response = await fetch(request);
-                if (response.ok && response.type === "basic") await cache.put(key, response.clone());
+                // Never overwrite a complete song with a 206 partial response.
+                if (request.method === "GET" && !rangeHeader && response.status === 200 && response.type === "basic")
+                  await cache.put(key, response.clone());
                 return response;
               } catch (error) {
                 if (request.mode === "navigate") {

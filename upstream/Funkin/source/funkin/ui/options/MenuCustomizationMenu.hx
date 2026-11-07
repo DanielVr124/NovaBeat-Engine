@@ -170,6 +170,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       });
       item.makeGraphic(Std.int(listW - 10), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
       item.updateHitbox();
+      item.cameras = [FlxG.camera];
       item.atlasText.visible = false;
       optionRows.push(item);
 
@@ -559,7 +560,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       for (index in 0...optionRows.length)
       {
         var item:TextMenuItem = optionRows[index];
-        if (TouchUtil.pressAction(item, null, true) && !items.busy)
+        // These are transparent rectangular hit targets, so use the same
+        // camera as the visible NovaBeat page and a bounds-based overlap.
+        // Pixel-perfect hit-testing against an empty transparent graphic
+        // makes the rows impossible to select reliably on touch screens.
+        if (TouchUtil.pressAction(item, FlxG.camera, false) && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();

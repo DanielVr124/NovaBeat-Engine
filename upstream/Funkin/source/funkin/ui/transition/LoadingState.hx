@@ -150,7 +150,6 @@ class LoadingState extends MusicBeatSubState
     checkLibrary('shared');
     checkLibrary('videos');
     checkLibrary(stageDirectory);
-    checkLibrary('tutorial');
 
     var fadeTime:Float = 0.5;
     FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
