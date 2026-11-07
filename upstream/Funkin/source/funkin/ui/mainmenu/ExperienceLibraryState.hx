@@ -116,6 +116,7 @@ class ExperienceLibraryState extends MusicBeatState
     touchButtonActions.resize(0);
     touchGestureActive = false;
 
+    var compactTouchLayout:Bool = usesTouchControls && !portrait && height < 500;
     var margin:Float = usesTouchControls ? (portrait ? 14 : 22) : (portrait ? 22 : 42);
 
     // Full-bleed NovaBeat artwork replaces the old flat grey selector.
@@ -142,9 +143,9 @@ class ExperienceLibraryState extends MusicBeatState
       "CHOOSE AN EXPERIENCE TO PLAY", 9, 0xFF68DFF7, false);
 
     var panelX:Float = margin;
-    var panelY:Float = portrait ? 106 : 122;
+    var panelY:Float = portrait ? 106 : (compactTouchLayout ? 90 : 122);
     var panelWidth:Float = width - margin * 2;
-    var panelHeight:Float = height - panelY - (usesTouchControls ? 66 : 72);
+    var panelHeight:Float = height - panelY - (usesTouchControls ? (compactTouchLayout ? 52 : 66) : 72);
 
     addTracked(addRoundRect(panelX, panelY, panelWidth, panelHeight, 22, 22, 0xFF3B8FB4), false);
     addTracked(addRoundRect(panelX + 2, panelY + 2, panelWidth - 4, panelHeight - 4, 20, 20, 0xE9081429), false);
@@ -152,12 +153,11 @@ class ExperienceLibraryState extends MusicBeatState
 
     var inset:Float = portrait ? 12 : 18;
     listX = panelX + inset;
-    listY = panelY + 54;
+    listY = panelY + (compactTouchLayout ? 46 : 54);
     listWidth = panelWidth - inset * 2;
-    var compactTouchLayout:Bool = usesTouchControls && !portrait && height < 500;
-    rowHeight = portrait ? 88 : (compactTouchLayout ? 58 : 82);
+    rowHeight = portrait ? 88 : (compactTouchLayout ? 58 : (height < 500 ? 68 : 82));
     var rowGap:Float = 9;
-    listHeight = panelHeight - (usesTouchControls ? 174 : 88);
+    listHeight = panelHeight - (usesTouchControls ? (compactTouchLayout ? 150 : 174) : 88);
     visibleRows = Std.int(Math.max(1, Math.floor((listHeight + rowGap) / (rowHeight + rowGap))));
     firstVisibleIndex = 0;
 
@@ -167,7 +167,7 @@ class ExperienceLibraryState extends MusicBeatState
       Std.string(experiences.length) + (experiences.length == 1 ? " EXPERIENCE" : " EXPERIENCES"),
       8, 0xFF9AAFD0, false);
 
-    var statusY:Float = panelY + panelHeight - (usesTouchControls ? 111 : 34);
+    var statusY:Float = panelY + panelHeight - (usesTouchControls ? (compactTouchLayout ? 90 : 111) : 34);
     statusText = addLabel(panelX + 16, statusY, panelWidth - 32, "",
       usesTouchControls ? 9 : 10, 0xFF72DDF5, false);
 
