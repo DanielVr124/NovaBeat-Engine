@@ -35,6 +35,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   /** Set to false to disable nav control */
   public var enabled:Bool = true;
 
+  /**
+   * When enabled, touching a different row both selects and accepts it.
+   * Keep disabled by default so existing FNF menus retain their stock behavior.
+   */
+  public var acceptOnTouchSelection:Bool = false;
+
   /**  */
   public var wrapMode:WrapMode = Both;
 
@@ -182,7 +188,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         {
           var prevIndex:Int = selectedIndex;
 
-          if (!_isMainMenuState && selectedIndex != i)
+          if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
           {
             newIndex = i;
             break;
