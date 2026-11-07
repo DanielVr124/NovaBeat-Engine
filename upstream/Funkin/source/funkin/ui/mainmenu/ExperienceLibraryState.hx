@@ -371,26 +371,36 @@ class ExperienceLibraryState extends MusicBeatState
     }
   }
 
-  // Use the original FNF pointer utility in both experience themes.
-  inline function menuPointer():Dynamic return TouchUtil.touch;
+  // Use the original FNF pointer utility in both experience themes. HTML5
+  // mobile browsers can drop FlxTouch from the active list on release, so
+  // fall back to FlxMouse (which receives the browser's compatibility events).
+  inline function menuPointer():Dynamic
+  {
+    var touchPointer:Dynamic = TouchUtil.touch;
+    return touchPointer != null ? touchPointer : FlxG.mouse;
+  }
 
   function pointerOver(sprite:FlxSprite):Bool
   {
     if (sprite == null) return false;
-    return TouchUtil.overlaps(sprite, sprite.camera)
-      || TouchUtil.overlapsComplex(sprite, sprite.camera);
+    var pointer:Dynamic = menuPointer();
+    if (pointer == null) return false;
+    return pointer.overlaps(sprite, sprite.camera);
   }
 
   function handleTouchInput():Void
   {
     if (!usesTouchControls) return;
 
-    var pointer:Dynamic = menuPointer();
+    var touchPointer:Dynamic = TouchUtil.touch;
+    var pointer:Dynamic = touchPointer != null ? touchPointer : FlxG.mouse;
     if (pointer == null) return;
 
-    var justPressed:Bool = TouchUtil.justPressed;
-    var pressed:Bool = TouchUtil.pressed;
-    var justReleased:Bool = TouchUtil.justReleased;
+    // Prefer the real finger when present. If the browser has already
+    // removed it from FlxG.touches.list, use the synthesized mouse event.
+    var justPressed:Bool = touchPointer != null ? TouchUtil.justPressed : FlxG.mouse.justPressed;
+    var pressed:Bool = touchPointer != null ? TouchUtil.pressed : FlxG.mouse.pressed;
+    var justReleased:Bool = touchPointer != null ? TouchUtil.justReleased : FlxG.mouse.justReleased;
 
     if (justPressed)
     {
@@ -437,7 +447,7 @@ class ExperienceLibraryState extends MusicBeatState
         {
           if (pointerOver(rowHitboxes[index]))
           {
-            selectExperience(firstVisibleIndex + index);
+            handleTouchRowTap(firstVisibleIndex + index);
             break;
           }
         }
@@ -473,7 +483,7 @@ class ExperienceLibraryState extends MusicBeatState
           {
             if (pointerOver(rowHitboxes[index]))
             {
-              selectExperience(firstVisibleIndex + index);
+              handleTouchRowTap(firstVisibleIndex + index);
               break;
             }
           }
@@ -483,6 +493,22 @@ class ExperienceLibraryState extends MusicBeatState
       touchGestureActive = false;
       touchGestureDragged = false;
     }
+  }
+
+  /**
+   * The official Base Game is selected by default. Tapping an already-selected
+   * row should launch it instead of appearing to ignore the tap. A first tap
+   * on another package selects it; tapping that selected row again launches it.
+   */
+  function handleTouchRowTap(index:Int):Void
+  {
+    if (index < 0 || index >= experiences.length) return;
+    if (index == selectedIndex)
+    {
+      launchExperience(experiences[index]);
+      return;
+    }
+    selectExperience(index);
   }
 
   function performTouchAction(action:String):Void
