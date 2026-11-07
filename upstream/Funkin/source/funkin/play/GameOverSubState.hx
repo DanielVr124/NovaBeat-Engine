@@ -21,7 +21,6 @@ import funkin.util.MathUtil;
 import funkin.effects.RetroCameraFade;
 import flixel.math.FlxPoint;
 import funkin.util.TouchUtil;
-import funkin.util.DeviceUtil;
 #if FEATURE_MOBILE_ADVERTISEMENTS
 import funkin.mobile.util.AdMobUtil;
 #end
@@ -68,7 +67,6 @@ class GameOverSubState extends MusicBeatSubState
    * The boyfriend character.
    */
   var boyfriend:Null<BaseCharacter> = null;
-  var backgroundSprite:Null<FunkinSprite> = null;
 
   /**
    * The invisible object in the scene which the camera focuses on.
@@ -154,7 +152,6 @@ class GameOverSubState extends MusicBeatSubState
     bg.alpha = transparent ? 0.25 : 1.0;
     bg.scrollFactor.set();
     bg.screenCenter();
-    backgroundSprite = bg;
     add(bg);
 
     // Pluck Boyfriend from the PlayState and place him (in the same position) in the GameOverSubState.
@@ -183,8 +180,8 @@ class GameOverSubState extends MusicBeatSubState
     // The conductor now represents the BPM of the game over music.
     Conductor.instance.update(0);
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack);
+    #if mobile
+    addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack);
     #end
 
     HapticUtil.vibrate(0, Constants.DEFAULT_VIBRATION_DURATION);
@@ -194,20 +191,6 @@ class GameOverSubState extends MusicBeatSubState
     {
       canInput = true;
     });
-  }
-
-  override public function onViewportResize(width:Int, height:Int):Void
-  {
-    super.onViewportResize(width, height);
-    if (backgroundSprite != null)
-    {
-      backgroundSprite.makeSolidColor(width * 2, height * 2, FlxColor.BLACK);
-      backgroundSprite.alpha = transparent ? 0.25 : 1.0;
-      backgroundSprite.screenCenter();
-    }
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (backButton != null) backButton.setPosition(width - backButton.width - 20, height - backButton.height - 20);
-    #end
   }
 
   function setCameraTarget():Void
@@ -286,11 +269,7 @@ class GameOverSubState extends MusicBeatSubState
     //
 
     // Restart the level when pressing the assigned key.
-    var touchAccept:Bool = false;
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    touchAccept = DeviceUtil.isMobileBrowser && TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput;
-    #end
-    if ((controls.ACCEPT_P || touchAccept)
+    if ((controls.ACCEPT_P #if mobile || (TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput) #end)
       && blueballed
       && !mustNotExit)
     {

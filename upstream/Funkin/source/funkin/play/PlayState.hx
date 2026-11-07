@@ -67,13 +67,9 @@ import funkin.ui.MusicBeatSubState;
 import funkin.ui.transition.LoadingState;
 import funkin.util.SerializerUtil;
 import funkin.util.HapticUtil;
-import funkin.util.DeviceUtil;
-#if web
-import funkin.mobile.util.MobileWakeLockUtil;
-#end
 import funkin.util.GRhythmUtil;
 import haxe.Int64;
-#if (mobile || FEATURE_TOUCH_CONTROLS)
+#if mobile
 import funkin.util.TouchUtil;
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.mobile.input.ControlsHandler;
@@ -567,8 +563,6 @@ class PlayState extends MusicBeatSubState
    * Emma says the image is slightly skewed so I'm leaving it as an image instead of a `createGraphic`.
    */
   public var healthBarBG:FunkinSprite;
-  var baseHealthBarWidth:Float = 0;
-  var baseHealthBarHeight:Float = 0;
 
   /**
    * A sprite group for subtitle display.
@@ -643,7 +637,7 @@ class PlayState extends MusicBeatSubState
 
   public var isSongEnd:Bool = false;
 
-  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  #if mobile
   /**
    * The pause button for the game, only appears in Mobile targets.
    */
@@ -814,8 +808,6 @@ class PlayState extends MusicBeatSubState
 
     // Healthbar
     healthBarBG = FunkinSprite.create(0, 0, 'healthBar');
-    baseHealthBarWidth = healthBarBG.width;
-    baseHealthBarHeight = healthBarBG.height;
     healthBar = new FlxBar(0, 0, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), null, 0, 2);
     scoreText = new FlxBitmapText(0, 0, '', FlxBitmapFont.fromAngelCode(Paths.font("vcr-bmp.png"), Paths.font("vcr-bmp.fnt")));
 
@@ -823,7 +815,7 @@ class PlayState extends MusicBeatSubState
     comboPopUps = new PopUpStuff(noteStyle);
 
     // Pause sprites
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    #if mobile
     pauseButton = FunkinSprite.createSparrow(0, 0, "pauseButton");
     pauseCircle = FunkinSprite.create(0, 0, 'pauseCircle');
     #end
@@ -849,12 +841,6 @@ class PlayState extends MusicBeatSubState
     #end
 
     if (!assertChartExists()) return;
-
-    #if web
-    // Match Android gameplay behavior using the browser Screen Wake Lock API
-    // when the current HTML5 client is running on a phone.
-    if (DeviceUtil.isMobileBrowser) MobileWakeLockUtil.setGameplayActive(true);
-    #end
 
     #if mobile
     // Force allowScreenTimeout to be disabled
@@ -909,43 +895,32 @@ class PlayState extends MusicBeatSubState
       initMinimalMode();
     }
     initStrumlines();
-
-    // Apply the current viewport layout immediately. onViewportResize() is not
-    // guaranteed to run after PlayState is created (especially when a phone
-    // opens the game directly in portrait), so otherwise the HUD can retain
-    // its default landscape positions until the next resize.
-    layoutGameplayHealthBar(FlxG.width, FlxG.height);
-    layoutGameplayStrumlines(FlxG.width, FlxG.height);
-
     initPopups();
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
+    #if mobile
+    if (!ControlsHandler.hasExternalInputDevice)
     {
-      // Quest remains touch-first when controllers are connected, so keep the
-      // on-screen hitbox available alongside controller input.
-      if (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser)
+      // Initialize the hitbox for mobile controls
+      addHitbox(false);
+      if (hitbox != null)
       {
-        addHitbox(false);
-        if (hitbox != null)
-        {
-          hitbox.isPixel = currentChart.noteStyle == 'pixel';
+        hitbox.isPixel = currentChart.noteStyle == 'pixel';
 
-          if (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
+        if (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
+        {
+          for (direction in Strumline.DIRECTIONS)
           {
-            for (direction in Strumline.DIRECTIONS)
-            {
-              hitbox.getFirstHintByDirection(direction).follow(playerStrumline.getByDirection(direction));
-            }
+            hitbox.getFirstHintByDirection(direction).follow(playerStrumline.getByDirection(direction));
           }
         }
       }
-      else
-      {
-        camControls = new FunkinCamera('camControls');
-        FlxG.cameras.add(camControls, false);
-        camControls.bgColor = 0x0;
-      }
+    }
+    else
+    {
+      // The camera is still needed for the pause button!
+      camControls = new FunkinCamera('camControls');
+      FlxG.cameras.add(camControls, false);
+      camControls.bgColor = 0x0;
     }
     #end
 
@@ -974,8 +949,8 @@ class PlayState extends MusicBeatSubState
     startCountdown();
 
     // Create the pause button.
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) initPauseSprites();
+    #if mobile
+    initPauseSprites();
     #end
 
     // Do this last to prevent beatHit from being called before create() is done.
@@ -1002,8 +977,7 @@ class PlayState extends MusicBeatSubState
 
   public function togglePauseButton(visible:Bool = false):Void
   {
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (!DeviceUtil.isMobileBrowser) return;
+    #if mobile
     pauseCircle.alpha = visible ? 0.1 : 0;
     pauseButton.alpha = visible ? 1 : 0;
     #end
@@ -1218,8 +1192,8 @@ class PlayState extends MusicBeatSubState
     var pauseButtonCheck:Bool = false;
     var androidPause:Bool = false;
     // So the player wouldn't miss when pressing the pause button
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) pauseButtonCheck = TouchUtil.pressAction(pauseButton);
+    #if mobile
+    pauseButtonCheck = TouchUtil.pressAction(pauseButton);
     #end
 
     #if android
@@ -1229,8 +1203,8 @@ class PlayState extends MusicBeatSubState
     // Attempt to pause the game.
     if ((controls.PAUSE_P || androidPause || pauseButtonCheck)) pause();
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser && justUnpaused)
+    #if mobile
+    if (justUnpaused)
     {
       tweenPauseButtonIn();
       if (!startingSong && hitbox != null) hitbox.visible = true;
@@ -1358,12 +1332,9 @@ class PlayState extends MusicBeatSubState
     // Moving notes into position is now done by Strumline.update().
     if (!isInCutscene) processNotes(elapsed);
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      if ((VideoCutscene.isPlaying() || isInCutscene) && !pauseButton.visible) pauseButton.visible = true;
-      pauseCircle.visible = pauseButton.visible;
-    }
+    #if mobile
+    if ((VideoCutscene.isPlaying() || isInCutscene) && !pauseButton.visible) pauseButton.visible = true;
+    pauseCircle.visible = pauseButton.visible;
     #end
 
     justUnpaused = false;
@@ -1445,15 +1416,12 @@ class PlayState extends MusicBeatSubState
 
   function preparePauseUI():Void
   {
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      FlxTween.cancelTweensOf(pauseButton);
-      FlxTween.cancelTweensOf(pauseCircle);
-      pauseButton.alpha = 0;
-      pauseCircle.alpha = 0;
-      if (hitbox != null) hitbox.visible = false;
-    }
+    #if mobile
+    FlxTween.cancelTweensOf(pauseButton);
+    FlxTween.cancelTweensOf(pauseCircle);
+    pauseButton.alpha = 0;
+    pauseCircle.alpha = 0;
+    if (hitbox != null) hitbox.visible = false;
     #end
   }
 
@@ -1880,7 +1848,7 @@ class PlayState extends MusicBeatSubState
     // This is an arbitrary number chosen so that the camera doesn't move insanely far in when the bop speed is fast.
     final MAX_RELATIVE_CAM_ZOOM:Float = 1.35;
 
-    if (Preferences.zoomCamera && Preferences.performanceCameraBops
+    if (Preferences.zoomCamera
       && camHUD.zoom < (MAX_RELATIVE_CAM_ZOOM * defaultHUDCameraZoom)
       && cameraZoomRate > 0
       && (Conductor.instance.currentStep + cameraZoomRateOffset * Constants.STEPS_PER_BEAT) % (cameraZoomRate * Constants.STEPS_PER_BEAT) == 0)
@@ -1960,122 +1928,8 @@ class PlayState extends MusicBeatSubState
     return true;
   }
 
-  override public function onViewportResize(width:Int, height:Int):Void
-  {
-    super.onViewportResize(width, height);
-    if (width <= 0 || height <= 0) return;
-
-    camGame.setSize(width, height);
-    camHUD.setSize(width, height);
-    camCutscene.setSize(width, height);
-    camSubtitles.setSize(width, height);
-    camPause.setSize(width, height);
-    camTransition.setSize(width, height);
-    camCutouts.setPosition((width - FlxG.initialWidth) / 2, (height - FlxG.initialHeight) / 2);
-
-    layoutGameplayHealthBar(width, height);
-    layoutGameplayStrumlines(width, height);
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (pauseButton != null)
-    {
-      pauseButton.setPosition(width - FullScreenScaleMode.gameSafeAreaBottomRight.x - pauseButton.width - 22,
-        FullScreenScaleMode.gameSafeAreaTopLeft.y + 22);
-      pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
-        pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
-    }
-    #end
-
-    if (subtitles != null)
-    {
-      subtitles.x = FullScreenScaleMode.gameSafeAreaTopLeft.x;
-      subtitles.y = Preferences.downscroll
-        ? FullScreenScaleMode.gameSafeAreaTopLeft.y + 110
-        : height - FullScreenScaleMode.gameSafeAreaBottomRight.y - subtitles.height - 110;
-    }
-  }
-
-  function layoutGameplayHealthBar(width:Int, height:Int):Void
-  {
-    if (healthBarBG == null || healthBar == null) return;
-    if (baseHealthBarWidth <= 0) baseHealthBarWidth = healthBarBG.frameWidth;
-    if (baseHealthBarHeight <= 0) baseHealthBarHeight = healthBarBG.frameHeight;
-
-    var portrait:Bool = height > width * 1.12;
-    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
-    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
-    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
-    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
-    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
-    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
-    var scale:Float = portrait ? Math.min(1.0, Math.max(0.1, (safeWidth - 32) / baseHealthBarWidth)) : 1.0;
-    healthBarBG.scale.set(scale, scale);
-    healthBarBG.updateHitbox();
-    healthBar.scale.set(scale, scale);
-    healthBar.updateHitbox();
-    healthBarBG.x = safeLeft + (safeWidth - healthBarBG.width) * 0.5;
-    healthBarBG.y = portrait ? safeTop + 24 : safeTop + (Preferences.downscroll ? safeHeight * 0.1 : safeHeight * 0.9);
-    healthBar.setPosition(healthBarBG.x + 4 * scale, healthBarBG.y + 4 * scale);
-    scoreText.scale.set(portrait ? Math.min(1, safeWidth / 720) : 1, portrait ? Math.min(1, safeWidth / 720) : 1);
-    scoreText.x = healthBarBG.x + healthBarBG.width - scoreText.width - (portrait ? 8 : 190);
-    scoreText.y = healthBarBG.y + healthBarBG.height + (portrait ? 4 : 8);
-    iconP1?.updatePosition();
-    iconP2?.updatePosition();
-  }
-
-  function layoutGameplayStrumlines(width:Int, height:Int):Void
-  {
-    if (playerStrumline == null || opponentStrumline == null) return;
-
-    var portrait:Bool = height > width * 1.12;
-    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
-    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
-    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
-    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
-    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
-    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
-    var touchArrowControls:Bool = false;
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    touchArrowControls = DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser);
-    #end
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (touchArrowControls)
-    {
-      layoutTouchNoteHitbox(width, height);
-      return;
-    }
-    #end
-
-    if (portrait)
-    {
-      var laneScale:Float = Math.max(0.38, Math.min(0.78, (safeWidth - 28) / 620));
-      playerStrumline.strumlineScale.set(laneScale, laneScale);
-      opponentStrumline.strumlineScale.set(laneScale * 0.48, laneScale * 0.48);
-      playerStrumline.x = safeLeft + (safeWidth - playerStrumline.width) * 0.5;
-      opponentStrumline.x = safeLeft + (safeWidth - opponentStrumline.width) * 0.5;
-      playerStrumline.y = safeTop + (Preferences.downscroll ? safeHeight * 0.27 : safeHeight * 0.64);
-      opponentStrumline.y = safeTop + (Preferences.downscroll ? safeHeight * 0.62 : safeHeight * 0.18);
-    }
-    else
-    {
-      playerStrumline.strumlineScale.set(1, 1);
-      opponentStrumline.strumlineScale.set(1, 1);
-      var cutoutSize:Float = FullScreenScaleMode.gameCutoutSize.x / 2.5;
-      playerStrumline.x = safeLeft + safeWidth / 2 + Constants.STRUMLINE_X_OFFSET + cutoutSize / 2;
-      opponentStrumline.x = safeLeft + Constants.STRUMLINE_X_OFFSET + cutoutSize;
-      playerStrumline.y = Preferences.downscroll ? height - safeBottom - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : safeTop + Constants.STRUMLINE_Y_OFFSET;
-      opponentStrumline.y = Preferences.downscroll ? height - safeBottom - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : safeTop + Constants.STRUMLINE_Y_OFFSET;
-    }
-  }
-
   override public function destroy():Void
   {
-    #if web
-    MobileWakeLockUtil.setGameplayActive(false);
-    #end
-
     performCleanup();
 
     #if mobile
@@ -2135,7 +1989,8 @@ class PlayState extends MusicBeatSubState
      */
   function initHealthBar():Void
   {
-    final isDownscroll:Bool = #if (mobile || FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser))
+    final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+      && !ControlsHandler.hasExternalInputDevice)
       || #end Preferences.downscroll;
 
     var healthBarYPos:Float = isDownscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
@@ -2174,7 +2029,8 @@ class PlayState extends MusicBeatSubState
     // Create subtitles if they are enabled.
     if (Preferences.subtitles)
     {
-      final isDownscroll:Bool = #if (mobile || FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser))
+      final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+        && !ControlsHandler.hasExternalInputDevice)
         || #end Preferences.downscroll;
 
       final subtitlesAlignment:SubtitlesAlignment = isDownscroll ? SubtitlesAlignment.SUBTITLES_TOP : SubtitlesAlignment.SUBTITLES_BOTTOM;
@@ -2223,10 +2079,6 @@ class PlayState extends MusicBeatSubState
       // Actually create and position the sprites.
       var event:ScriptEvent = new ScriptEvent(CREATE, false);
       ScriptEventDispatcher.callEvent(currentStage, event);
-
-      // Keep background stage props lightweight when the player chooses a lower preset.
-      if (Preferences.performanceStageAnimations) currentStage.resume();
-      else currentStage.pause();
 
       resetCameraZoom();
 
@@ -2412,13 +2264,8 @@ class PlayState extends MusicBeatSubState
     opponentStrumline.zIndex = 1000;
     opponentStrumline.cameras = [camHUD];
 
-    // Mobile gameplay only needs the player's receptors. Keep the opponent
-    // strumline active for note logic, but hide its receptors and notes.
-    if (DeviceUtil.isMobileBrowser) opponentStrumline.visible = false;
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && (!ControlsHandler.hasExternalInputDevice || DeviceUtil.isQuestBrowser))
+    #if mobile
+    if (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && !ControlsHandler.hasExternalInputDevice)
     {
       initNoteHitbox();
     }
@@ -2431,35 +2278,24 @@ class PlayState extends MusicBeatSubState
   /**
      * Configures the position of strumline for the default control scheme
      */
-  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  #if mobile
   function initNoteHitbox()
   {
-    // Strum widths are widened once when touch controls are constructed.
-    @:nullSafety(Off)
+    final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
+    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 1.95) * amplification;
+    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 2.8) * amplification;
+
+    playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
+    playerStrumline.setNoteSpacing(playerNoteSpacing);
+    @:nullSafety(Off) // Who thought it'd be a good idea to make the iterator nullable?
     for (strum in playerStrumline)
     {
       strum.width *= 2;
     }
-    opponentStrumline.enterMiniMode(0.4);
-    layoutTouchNoteHitbox(FlxG.width, FlxG.height);
-  }
+    opponentStrumline.enterMiniMode(0.4 * amplification);
 
-  function layoutTouchNoteHitbox(width:Int, height:Int):Void
-  {
-    final safeLeft:Float = FullScreenScaleMode.gameSafeAreaTopLeft.x;
-    final safeTop:Float = FullScreenScaleMode.gameSafeAreaTopLeft.y;
-    final safeRight:Float = FullScreenScaleMode.gameSafeAreaBottomRight.x;
-    final safeBottom:Float = FullScreenScaleMode.gameSafeAreaBottomRight.y;
-    final safeWidth:Float = Math.max(1, width - safeLeft - safeRight);
-    final safeHeight:Float = Math.max(1, height - safeTop - safeBottom);
-    final amplification:Float = (safeWidth / safeHeight) / (FlxG.initialWidth / FlxG.initialHeight);
-    final playerStrumlineScale:Float = ((safeHeight / safeWidth) * 1.95) * amplification;
-    final playerNoteSpacing:Float = ((safeHeight / safeWidth) * 2.8) * amplification;
-
-    playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
-    playerStrumline.setNoteSpacing(playerNoteSpacing);
-    playerStrumline.x = safeLeft + (safeWidth - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-    playerStrumline.y = safeTop + (safeHeight - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+    playerStrumline.x = (FlxG.width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
+    playerStrumline.y = (FlxG.height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
     if (currentChart?.noteStyle != 'pixel')
     {
       #if android playerStrumline.y += 10; #end
@@ -2468,20 +2304,8 @@ class PlayState extends MusicBeatSubState
     {
       playerStrumline.y -= 10;
     }
-    final portrait:Bool = height > width * 1.12;
-    if (portrait)
-    {
-      // Keep the opponent receptors below the top HUD in portrait mode.
-      var hudBottom:Float = safeTop;
-      if (healthBarBG != null) hudBottom = Math.max(hudBottom, healthBarBG.y + healthBarBG.height);
-      if (scoreText != null) hudBottom = Math.max(hudBottom, scoreText.y + scoreText.height);
-      opponentStrumline.y = Math.max(safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3, hudBottom + 16);
-    }
-    else
-    {
-      opponentStrumline.y = safeTop + Constants.STRUMLINE_Y_OFFSET * 0.3;
-    }
-    opponentStrumline.x = safeLeft + (safeWidth - opponentStrumline.width) * 0.5;
+    opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
+    opponentStrumline.x -= 30;
   }
 
   function initPauseSprites()
@@ -2520,8 +2344,7 @@ class PlayState extends MusicBeatSubState
     pauseButton.scale.set(0.8, 0.8);
     pauseButton.updateHitbox();
     pauseButton.animation.play('idle');
-    pauseButton.setPosition(FlxG.width - pauseButton.width - FullScreenScaleMode.gameSafeAreaBottomRight.x - 35,
-      FullScreenScaleMode.gameSafeAreaTopLeft.y + 35);
+    pauseButton.setPosition((FlxG.width - pauseButton.width) - 35, 35);
     if (camControls != null) pauseButton.cameras = [camControls];
 
     pauseCircle.scale.set(0.84, 0.8);
@@ -2813,8 +2636,8 @@ class PlayState extends MusicBeatSubState
   {
     startingSong = false;
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser && hitbox != null) hitbox.visible = true;
+    #if mobile
+    if (hitbox != null) hitbox.visible = true;
     #end
 
     if (!overrideMusic && !isGamePaused && currentChart != null)
@@ -3325,7 +3148,7 @@ class PlayState extends MusicBeatSubState
     if (event.eventCanceled) return;
     // Display the hit on the strums
     playerStrumline.hitNote(note, !event.isComboBreak);
-    if (event.doesNotesplash && Preferences.performanceNoteSplashes) playerStrumline.playNoteSplash(note.noteData.getDirection());
+    if (event.doesNotesplash) playerStrumline.playNoteSplash(note.noteData.getDirection());
     if (note.isHoldNote && note.holdNoteSprite != null) playerStrumline.playNoteHoldCover(note.holdNoteSprite);
     if (vocals != null)
     {
@@ -3574,18 +3397,14 @@ class PlayState extends MusicBeatSubState
     androidPause = FlxG.android.justPressed.BACK;
     #end
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) pauseButtonCheck = TouchUtil.overlapsComplex(pauseButton);
+    #if mobile
+    pauseButtonCheck = TouchUtil.overlapsComplex(pauseButton);
     #end
 
     if (currentConversation != null)
     {
       // Pause/unpause may conflict with advancing the conversation!
-      var touchAdvance:Bool = false;
-      #if (mobile || FEATURE_TOUCH_CONTROLS)
-      touchAdvance = DeviceUtil.isMobileBrowser && !pauseButtonCheck && TouchUtil.justPressed;
-      #end
-      if ((controls.CUTSCENE_ADVANCE || touchAdvance) && !justUnpaused)
+      if ((controls.CUTSCENE_ADVANCE #if mobile || (!pauseButtonCheck && TouchUtil.justPressed) #end) && !justUnpaused)
       {
         currentConversation.advanceConversation();
       }
@@ -3629,14 +3448,11 @@ class PlayState extends MusicBeatSubState
     // Prevent ghost misses while the song is ending.
     disableKeys = true;
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      // Hide the buttons while the song is ending.
-      if (hitbox != null) hitbox.visible = false;
-      pauseButton.visible = false;
-      pauseCircle.visible = false;
-    }
+    #if mobile
+    // Hide the buttons while the song is ending.
+    if (hitbox != null) hitbox.visible = false;
+    pauseButton.visible = false;
+    pauseCircle.visible = false;
     #end
 
     // Check if any events want to prevent the song from ending.

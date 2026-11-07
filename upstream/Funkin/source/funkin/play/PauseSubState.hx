@@ -24,7 +24,6 @@ import funkin.ui.FullScreenScaleMode;
 import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
-import funkin.util.DeviceUtil;
 #if FEATURE_MOBILE_ADVERTISEMENTS
 import funkin.mobile.util.AdMobUtil;
 #end
@@ -185,7 +184,7 @@ class PauseSubState extends MusicBeatSubState
   // Graphics Variables
   // ===============
 
-  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  #if mobile
   /**
    * The pause button for the game, only appears in Mobile targets. Shows up breifly to finish the pause animation.
    */
@@ -304,57 +303,6 @@ class PauseSubState extends MusicBeatSubState
    * Called every frame.
    * @param elapsed The time elapsed since the last frame, in seconds.
    */
-  override public function onViewportResize(width:Int, height:Int):Void
-  {
-    super.onViewportResize(width, height);
-    if (width <= 0 || height <= 0) return;
-
-    background?.makeSolidColor(width, height, FlxColor.BLACK);
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (pauseButton != null)
-    {
-      pauseButton.setPosition(width - pauseButton.width - 22, 22);
-      pauseCircle.setPosition(pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5,
-        pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5);
-    }
-    #end
-
-    var portrait:Bool = height > width * 1.12;
-    if (metadata != null)
-    {
-      var margin:Float = Math.max(18, width * 0.05);
-      var lineHeight:Float = portrait ? 24 : 32;
-      var index:Int = 0;
-      for (line in metadata.members)
-      {
-        if (line == null) continue;
-        line.x = margin;
-        line.fieldWidth = width - margin * 2;
-        line.y = 22 + lineHeight * index;
-        line.size = portrait ? 18 : 32;
-        line.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
-        index++;
-      }
-    }
-
-    if (offsetText != null)
-    {
-      offsetText.x = 18;
-      offsetText.fieldWidth = width - 36;
-      offsetText.y = height - offsetText.height - (offsetTextInfo?.height ?? 0) - 28;
-      offsetText.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
-    }
-    if (offsetTextInfo != null)
-    {
-      offsetTextInfo.x = 18;
-      offsetTextInfo.fieldWidth = width - 36;
-      offsetTextInfo.y = offsetText.y + offsetText.height + 4;
-      offsetTextInfo.alignment = portrait ? FlxTextAlign.CENTER : FlxTextAlign.RIGHT;
-    }
-
-    if (menuEntryText != null) changeSelection(0);
-  }
-
   override public function update(elapsed:Float):Void
   {
     super.update(elapsed);
@@ -465,10 +413,8 @@ class PauseSubState extends MusicBeatSubState
     background.updateHitbox();
     add(background);
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      pauseButton = FunkinSprite.createSparrow(0, 0, 'pauseButton');
+    #if mobile
+    pauseButton = FunkinSprite.createSparrow(0, 0, 'pauseButton');
     pauseButton.animation.addByIndices('idle', 'pause', [0], '', 24, false);
     pauseButton.animation.addByIndices('hold', 'pause', [5], '', 24, false);
     pauseButton.animation.addByIndices('confirm', 'pause', [
@@ -512,9 +458,8 @@ class PauseSubState extends MusicBeatSubState
     pauseCircle.y = ((pauseButton.y + (pauseButton.height / 2)) - (pauseCircle.height / 2));
     pauseCircle.alpha = 0.1;
 
-      add(pauseCircle);
-      add(pauseButton);
-    }
+    add(pauseCircle);
+    add(pauseButton);
     #end
   }
 
@@ -527,14 +472,8 @@ class PauseSubState extends MusicBeatSubState
     metadata.scrollFactor.set(0, 0);
     add(metadata);
 
-    var metadataSongY:Float = #if mobile
-      (PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155
-      #elseif web
-      DeviceUtil.isMobileBrowser ? ((PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155) : 15
-      #else
-      15
-      #end;
-    var metadataSong:FlxText = new FlxText(20, metadataSongY,
+    var metadataSong:FlxText = new FlxText(20,
+      #if mobile (PlayState.instance?.isPracticeMode ?? false) ? camera.height - 185 : camera.height - 155 #else 15 #end,
       camera.width - Math.max(40, funkin.ui.FullScreenScaleMode.gameNotchSize.x), 'Song Name');
     metadataSong.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     if (PlayState.instance?.currentChart != null)
@@ -672,12 +611,10 @@ class PauseSubState extends MusicBeatSubState
   {
     FlxTween.tween(background, {alpha: 0.6}, 0.8, {ease: FlxEase.quartOut});
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      HapticUtil.vibrate(0, 0.05, 0.5);
+    #if mobile
+    HapticUtil.vibrate(0, 0.05, 0.5);
 
-      pauseButton.animation.play('confirm');
+    pauseButton.animation.play('confirm');
     pauseCircle.scale.set(0.84 * 1.4, 0.8 * 1.4);
     pauseCircle.alpha = 0.4;
     FlxTween.tween(pauseCircle.scale, {x: 0.84 * 0.8, y: 0.8 * 0.8}, 0.4, {ease: FlxEase.backInOut});
@@ -690,14 +627,9 @@ class PauseSubState extends MusicBeatSubState
 
     dataFadeTimer.start(0.3, function(_)
     {
-        transitionMetadataIn();
-        FlxTween.tween(pauseButton, {alpha: 0}, 0.6, {ease: FlxEase.quartOut});
-      });
-    }
-    else
-    {
       transitionMetadataIn();
-    }
+      FlxTween.tween(pauseButton, {alpha: 0}, 0.6, {ease: FlxEase.quartOut});
+    });
     #else
     transitionMetadataIn();
     #end
@@ -709,8 +641,7 @@ class PauseSubState extends MusicBeatSubState
     var delay:Float = 0.1;
     for (child in metadata.members)
     {
-      FlxTween.tween(child, {alpha: 1, y: DeviceUtil.isMobileBrowser ? child.y - 5 : child.y + 5}, 1.8,
-        {ease: FlxEase.quartOut, startDelay: delay});
+      FlxTween.tween(child, {alpha: 1, y: #if mobile child.y - 5 #else child.y + 5 #end}, 1.8, {ease: FlxEase.quartOut, startDelay: delay});
       delay += 0.1;
     }
   }
@@ -768,7 +699,7 @@ class PauseSubState extends MusicBeatSubState
   function handleTouchInputs():Void
   {
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser && !SwipeUtil.justSwipedAny && currentMenuEntries.length > 0)
+    if (!SwipeUtil.justSwipedAny && currentMenuEntries.length > 0)
     {
       for (i in 0...menuEntryText.members.length)
       {
@@ -865,10 +796,16 @@ class PauseSubState extends MusicBeatSubState
     var prevEntry:Int = currentEntry;
     currentEntry += change;
 
-    // Pause-menu navigation wraps on every input source, including touch and
-    // Quest pointers, just like the original keyboard/controller behavior.
-    if (currentEntry < 0) currentEntry = currentMenuEntries.length - 1;
-    if (currentEntry >= currentMenuEntries.length) currentEntry = 0;
+    if (#if FEATURE_TOUCH_CONTROLS !funkin.mobile.input.ControlsHandler.usingExternalInputDevice #else false #end)
+    {
+      if (currentEntry < 0) currentEntry = 0;
+      if (currentEntry >= currentMenuEntries.length) currentEntry = currentMenuEntries.length - 1;
+    }
+    else
+    {
+      if (currentEntry < 0) currentEntry = currentMenuEntries.length - 1;
+      if (currentEntry >= currentMenuEntries.length) currentEntry = 0;
+    }
 
     if (currentEntry != prevEntry) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
 
@@ -882,23 +819,20 @@ class PauseSubState extends MusicBeatSubState
       // Set the transparency.
       text.alpha = isCurrent ? 1.0 : 0.6;
 
-      var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-      if (DeviceUtil.isMobileBrowser || portraitLayout)
+      #if mobile
+      // Set the position.
+      if (isCurrent && currentEntry != prevEntry)
       {
-        var portraitGap:Float = Math.min(84, (FlxG.height * 0.56) / Math.max(1, currentMenuEntries.length));
-        var portraitTop:Float = Math.max(96, (FlxG.height - portraitGap * currentMenuEntries.length) * 0.5);
-        var targetX:Float = portraitLayout ? Math.max(24, FlxG.width * 0.08) : 150;
-        var targetY:Float = portraitLayout ? portraitTop + entryIndex * portraitGap : text.y;
         FlxTween.globalManager.cancelTweensOf(text);
-        FlxTween.tween(text, {x: targetX, y: targetY}, 0.24, {ease: FlxEase.quartOut});
+        text.x = 165;
+        FlxTween.tween(text, {x: 150}, 0.2, {ease: FlxEase.backInOut});
       }
-      else
-      {
-        var targetX = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 20 + Math.max(90, funkin.ui.FullScreenScaleMode.gameNotchSize.x);
-        var targetY = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 120 + (camera.height * 0.48);
-        FlxTween.globalManager.cancelTweensOf(text);
-        FlxTween.tween(text, {x: targetX, y: targetY}, 0.33, {ease: FlxEase.quartOut});
-      }
+      #else
+      var targetX = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 20 + Math.max(90, funkin.ui.FullScreenScaleMode.gameNotchSize.x);
+      var targetY = FlxMath.remapToRange((entryIndex - currentEntry), 0, 1, 0, 1.3) * 120 + (camera.height * 0.48);
+      FlxTween.globalManager.cancelTweensOf(text);
+      FlxTween.tween(text, {x: targetX, y: targetY}, 0.33, {ease: FlxEase.quartOut});
+      #end
     }
   }
 
@@ -993,36 +927,39 @@ class PauseSubState extends MusicBeatSubState
       else
       {
         // Handle visible entries.
-        if (DeviceUtil.isMobileBrowser)
+        #if mobile
+        // var yPos:Float = (150 * entryIndex) + 100;
+
+        // var yPos:Float = (140 * entryIndex) + 150;
+        var yPos:Float = (105 * entryIndex) + 150;
+
+        var text:AtlasText = new AtlasText(110, yPos, entry.text, AtlasFont.BOLD);
+        text.scrollFactor.set(0, 0);
+        text.alpha = 0;
+        for (letter in text)
         {
-          // Native mobile row spacing and readable, slightly enlarged labels.
-          var yPos:Float = (105 * entryIndex) + 150;
-          var text:AtlasText = new AtlasText(110, yPos, entry.text, AtlasFont.BOLD);
-          text.scrollFactor.set(0, 0);
-          text.alpha = 0;
-          for (letter in text)
-          {
-            letter.width *= 1.2;
-            letter.height *= 1.4;
-          }
-          menuEntryText.add(text);
-          FlxTween.tween(text, {x: 150}, 0.4 * (entryIndex + 1), {ease: FlxEase.expoOut});
-          entry.sprite = text;
+          letter.width *= 1.2;
+          letter.height *= 1.4;
         }
-        else
+        menuEntryText.add(text);
+
+        FlxTween.tween(text, {x: 150}, 0.4 * (entryIndex + 1), {ease: FlxEase.expoOut});
+
+        entry.sprite = text;
+        #else
+        var yPos:Float = 70 * entryIndex + 30;
+        var text:AtlasText = new AtlasText(0, yPos, entry.text, AtlasFont.BOLD);
+        text.scrollFactor.set(0, 0);
+        text.alpha = 0;
+        for (letter in text)
         {
-          var yPos:Float = 70 * entryIndex + 30;
-          var text:AtlasText = new AtlasText(0, yPos, entry.text, AtlasFont.BOLD);
-          text.scrollFactor.set(0, 0);
-          text.alpha = 0;
-          for (letter in text)
-          {
-            letter.width *= 2;
-            letter.height *= 2;
-          }
-          menuEntryText.add(text);
-          entry.sprite = text;
+          letter.width *= 2;
+          letter.height *= 2;
         }
+        menuEntryText.add(text);
+
+        entry.sprite = text;
+        #end
 
         entryIndex++;
       }
@@ -1044,9 +981,8 @@ class PauseSubState extends MusicBeatSubState
   {
     metadataPractice.visible = PlayState.instance?.isPracticeMode ?? false;
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser && metadata.members.length > 0
-      && metadata.members[0].y != camera.height - 185 && metadataPractice.visible)
+    #if mobile
+    if (metadata.members[0].y != camera.height - 185 && metadataPractice.visible)
     {
       for (text in metadata)
       {
