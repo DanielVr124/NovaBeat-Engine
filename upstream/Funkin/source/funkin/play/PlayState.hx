@@ -2005,7 +2005,8 @@ class PlayState extends MusicBeatSubState
   {
     final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
       && !ControlsHandler.hasExternalInputDevice)
-      || #end Preferences.downscroll;
+      #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+      && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
 
     var healthBarYPos:Float = isDownscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
 
@@ -2044,8 +2045,9 @@ class PlayState extends MusicBeatSubState
     if (Preferences.subtitles)
     {
       final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-        && !ControlsHandler.hasExternalInputDevice)
-        || #end Preferences.downscroll;
+      && !ControlsHandler.hasExternalInputDevice)
+      #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+      && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
 
       final subtitlesAlignment:SubtitlesAlignment = isDownscroll ? SubtitlesAlignment.SUBTITLES_TOP : SubtitlesAlignment.SUBTITLES_BOTTOM;
       subtitles = new Subtitles(0, 139, subtitlesAlignment);
