@@ -162,9 +162,13 @@ class LoadingState extends MusicBeatSubState
   function scheduleRetry(label:String, nextAttempt:Int, retry:Void->Void, error:Dynamic):Void
   {
     var delay:Float = Math.min(MAX_RETRY_DELAY_SECONDS, Math.pow(2, nextAttempt - 2));
-    loadStatus = 'Could not load ' + label + '. Retrying (attempt ' + nextAttempt + ') in ' + Math.ceil(delay) + 's...';
+    var errorDetails:String = Std.string(error);
+    if (errorDetails.length > 100) errorDetails = errorDetails.substr(0, 97) + '...';
+
+    loadStatus = 'Request failed for ' + label + ': ' + errorDetails
+      + '. Re-requesting (attempt ' + nextAttempt + ') in ' + Math.ceil(delay) + 's...';
     lastLoadActivityTime = haxe.Timer.stamp();
-    trace('Loading ' + label + ' failed. Retry attempt ' + nextAttempt + ' in ' + delay + 's. Details: ' + Std.string(error));
+    trace('Loading ' + label + ' failed. Retry attempt ' + nextAttempt + ' in ' + delay + 's. Details: ' + errorDetails);
 
     new FlxTimer().start(delay, function(_)
     {
