@@ -513,7 +513,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     }
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (usesTouchControls && mobileBackButton != null && TouchUtil.pressAction(mobileBackButton))
+    // Do not use pressAction here: its 200ms tap-age filter can discard
+    // ordinary mobile back-button taps. A release-overlap is reliable for
+    // both quick taps and slightly longer presses.
+    if (usesTouchControls && mobileBackButton != null && TouchUtil.justReleased && TouchUtil.overlaps(mobileBackButton))
     {
       FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
