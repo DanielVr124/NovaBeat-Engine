@@ -1,6 +1,7 @@
 package funkin.ui.story;
 
 import funkin.play.stage.Bopper;
+import funkin.Preferences;
 import funkin.util.assets.FlxAnimationUtil;
 import funkin.data.story.level.LevelData.LevelPropData;
 
@@ -16,7 +17,7 @@ class LevelProp extends Bopper
       this.propData = value;
 
       this.visible = this.propData != null;
-      danceEvery = this.propData?.danceEvery ?? 1.0;
+      danceEvery = Preferences.menuStyle == "NovaBeat" ? 1.0 : (this.propData?.danceEvery ?? 1.0);
 
       applyData();
     }
