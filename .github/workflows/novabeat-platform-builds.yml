@@ -181,6 +181,20 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Restore the pinned Android toolchain before setup-android runs. This avoids
+      # downloading the same SDK platforms, build-tools, and NDK on every build.
+      - name: Restore Android SDK and NDK package cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/cmdline-tools
+            /usr/local/lib/android/sdk/platform-tools
+            /usr/local/lib/android/sdk/platforms
+            /usr/local/lib/android/sdk/build-tools
+            /usr/local/lib/android/sdk/ndk
+          key: android-sdk-ubuntu-24.04-cmdline-15859902-api29-api35-build35-ndk29
+          save-always: true
+
       - name: Set up Android SDK, build tools, and the Lime-compatible NDK
         uses: android-actions/setup-android@v4
         with:
@@ -323,7 +337,9 @@ jobs:
         working-directory: upstream/Funkin
         run: |
           set -euo pipefail
-          haxelib run lime rebuild android -clean -v
+          # Reuse the Lime Android native libraries restored from the Haxe/Lime cache.
+          # Do not pass -clean here: it deletes the cached outputs on every run.
+          haxelib run lime rebuild android -v
           ndll=".haxelib/lime/git/ndll/Android"
           if [[ ! -s "$ndll/liblime-64.so" ]]; then
             echo "::error title=Android Lime ARM64 library missing::Lime rebuild completed without producing $ndll/liblime-64.so"
