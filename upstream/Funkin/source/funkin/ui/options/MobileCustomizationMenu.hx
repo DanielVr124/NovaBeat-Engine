@@ -16,7 +16,6 @@ import funkin.ui.Page;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.util.SwipeUtil;
-import funkin.util.NovaBeatMenuInput;
 import funkin.util.DeviceUtil;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
@@ -394,10 +393,9 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (!enabled || items == null) return;
 
-    var movedLeft:Bool = controls.UI_LEFT_P
-      || (Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft);
-    var movedRight:Bool = controls.UI_RIGHT_P
-      || (Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight);
+    // Keep the original FNF mobile swipe recognizer for every menu style.
+    var movedLeft:Bool = controls.UI_LEFT_P || SwipeUtil.swipeLeft;
+    var movedRight:Bool = controls.UI_RIGHT_P || SwipeUtil.swipeRight;
 
     if (movedLeft || movedRight)
     {
