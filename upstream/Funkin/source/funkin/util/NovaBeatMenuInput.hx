@@ -1,6 +1,7 @@
 package funkin.util;
 
 import flixel.FlxBasic;
+import flixel.FlxObject;
 import flixel.FlxCamera;
 import flixel.FlxG;
 #if FLX_TOUCH
@@ -271,6 +272,34 @@ class NovaBeatMenuInput
     }
     #elseif !mobile
     if (FlxG.mouse.overlaps(object, targetCamera)) return true;
+    #end
+
+    return false;
+  }
+
+  public static function overlapsComplex(object:FlxObject, ?camera:FlxCamera):Bool
+  {
+    if (object == null) return false;
+    final targetCamera:FlxCamera = camera ?? object.camera;
+
+    #if FLX_TOUCH
+    for (touch in FlxG.touches.list)
+    {
+      if (touch == null || !(touch.pressed || touch.justPressed || touch.justReleased)) continue;
+      @:privateAccess
+      if (object.overlapsPoint(touch.getWorldPosition(targetCamera, object._point), true, targetCamera)) return true;
+    }
+    #end
+
+    #if web
+    if (FlxG.mouse.pressed || FlxG.mouse.justPressed || FlxG.mouse.justReleased)
+    {
+      @:privateAccess
+      if (object.overlapsPoint(FlxG.mouse.getWorldPosition(targetCamera, object._point), true, targetCamera)) return true;
+    }
+    #elseif !mobile
+    @:privateAccess
+    if (object.overlapsPoint(FlxG.mouse.getWorldPosition(targetCamera, object._point), true, targetCamera)) return true;
     #end
 
     return false;
