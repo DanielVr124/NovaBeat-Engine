@@ -2077,7 +2077,13 @@ class FreeplayState extends MusicBeatSubState
       final pointer = TouchUtil.touch;
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
       {
-        final delta = pointer.deltaViewY * framerateMultiplier;
+        #if web
+        final delta:Float = Preferences.menuStyle == "NovaBeat"
+          ? pointer.deltaViewY
+          : pointer.deltaViewY * framerateMultiplier;
+        #else
+        final delta:Float = pointer.deltaViewY * framerateMultiplier;
+        #end
         if (Math.isFinite(delta) && Math.abs(delta) >= 2)
         {
           var dpiScale = FlxG.stage.window.display.dpi / 160;
@@ -2104,7 +2110,9 @@ class FreeplayState extends MusicBeatSubState
         // must not be divided by the target frame rate again; doing so made
         // Freeplay scrolling dozens of times weaker than a normal finger drag.
         #if web
-        final delta:Float = touch.deltaViewY;
+        final delta:Float = Preferences.menuStyle == "NovaBeat"
+          ? touch.deltaViewY
+          : touch.deltaViewY * framerateMultiplier;
         #else
         final delta:Float = touch.deltaViewY * framerateMultiplier;
         #end
@@ -2116,7 +2124,9 @@ class FreeplayState extends MusicBeatSubState
           dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
 
           #if web
-          var moveLength:Float = delta / dpiScale;
+          var moveLength:Float = Preferences.menuStyle == "NovaBeat"
+            ? delta / dpiScale
+            : delta / FlxG.updateFramerate / dpiScale;
           #else
           var moveLength:Float = delta / FlxG.updateFramerate / dpiScale;
           #end
@@ -2125,7 +2135,8 @@ class FreeplayState extends MusicBeatSubState
           updateSongsScroll();
         }
       }
-      else if (_moveLength > 0 && !TouchUtil.pressed)
+      else if (_moveLength > 0
+        && !(Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pressed : TouchUtil.pressed))
       {
         // A stale/released entry in FlxG.touches.list must not cancel a
         // different finger that is still dragging the song list.
