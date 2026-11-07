@@ -451,6 +451,10 @@ class SongMenuItem extends FlxSpriteGroup
     {
       songText.text = freeplayData.fullSongName;
       if (freeplayData.songCharacter != null) pixelIcon.setCharacter(freeplayData.songCharacter);
+      // setCharacter() restores PixelatedIcon's stock 2x scale. Re-apply the
+      // NovaBeat portrait-layout compensation immediately so newly selected
+      // songs use the same 64px icon size and position as the first selection.
+      updateNovaBeatPixelIconLayout();
       if (pixelIcon.char != freeplayData.songCharacter) pixelIcon.visible = false;
       updateBPM(Std.int(freeplayData.songStartingBpm) ?? 0);
       updateDifficultyRating(freeplayData.difficultyRating ?? 0);
@@ -621,6 +625,7 @@ class SongMenuItem extends FlxSpriteGroup
   public var realScaled:Float = 0.8;
   var lastLayoutWidth:Int = -1;
   var lastLayoutHeight:Int = -1;
+  var lastLayoutMenuStyle:String = "";
 
   public function initJumpIn(maxTimer:Float, ?force:Bool):Void
   {
@@ -680,22 +685,33 @@ class SongMenuItem extends FlxSpriteGroup
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
-    if (width <= 0 || height <= 0 || (width == lastLayoutWidth && height == lastLayoutHeight)) return;
-    lastLayoutWidth = width;
-    lastLayoutHeight = height;
+    if (width <= 0 || height <= 0) return;
 
-    var portrait:Bool = height > width * 1.12;
-    var layoutScale:Float = portrait ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled)) : 1.0;
-    scale.set(layoutScale, layoutScale);
+    // The stock FNF Freeplay capsules are not responsively scaled. Only
+    // NovaBeat applies the narrow-screen capsule fit.
+    var menuStyle:String = Preferences.menuStyle == "NovaBeat" ? "NovaBeat" : "FNF";
+    if (width != lastLayoutWidth || height != lastLayoutHeight || menuStyle != lastLayoutMenuStyle)
+    {
+      lastLayoutWidth = width;
+      lastLayoutHeight = height;
+      lastLayoutMenuStyle = menuStyle;
+
+      var portrait:Bool = height > width * 1.12;
+      var layoutScale:Float = menuStyle == "NovaBeat" && portrait
+        ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled))
+        : 1.0;
+      scale.set(layoutScale, layoutScale);
+    }
+
+    // PixelatedIcon.setCharacter() resets its scale to the stock 2x value.
+    // Keep this transform in sync after character changes as well as resizes.
     updateNovaBeatPixelIconLayout();
   }
 
   /**
-   * The NovaBeat portrait layout scales the whole capsule group to fit narrow
-   * screens. Keep the official character portrait at its intended 2x (64px)
-   * size and anchor point instead of shrinking and shifting it with the group.
-   * The original FNF style retains the stock PixelatedIcon transform.
-   * [web-build] Include this NovaBeat-only layout fix in the browser verification build.
+   * Preserve the original 2x PixelatedIcon size and anchor point. NovaBeat's
+   * portrait capsule scaling is compensated here; stock FNF uses the exact
+   * original child transform and does not scale the capsule group.
    */
   function updateNovaBeatPixelIconLayout():Void
   {
