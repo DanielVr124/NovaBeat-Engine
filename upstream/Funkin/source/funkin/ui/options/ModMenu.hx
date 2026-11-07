@@ -651,130 +651,60 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function layoutMobileViewport(width:Int, height:Int):Void
   {
     portraitLayout = height > width * 1.12;
-    var margin:Float = 18;
-    var showActions:Bool = mobileModActionsEnabled();
-    heading.setPosition(margin, 10);
-    heading.fieldWidth = width - margin * 2 - 94;
+    var margin:Float = 16;
+    heading.setPosition(margin, 14);
+    heading.fieldWidth = width - 150;
     heading.size = portraitLayout ? 25 : 23;
-    countText.setPosition(margin, 44);
+    countText.setPosition(margin, 48);
     countText.fieldWidth = width - margin * 2;
-
-    if (portraitLayout)
-    {
-      var mainX:Float = margin;
-      var mainY:Float = 82;
-      var mainW:Float = width - margin * 2;
-      var mainH:Float = Math.max(220, height - 164);
-      var detailX:Float = mainX + 12;
-      var detailY:Float = mainY + 12;
-      var detailW:Float = mainW - 24;
-      var detailH:Float = 128;
-
-      if (layoutPanels.length >= 4)
-      {
-        layoutPanels[0].setPosition(mainX, mainY);
-        layoutPanels[0].makeGraphic(Std.int(mainW), Std.int(mainH), 0xFF4269B5);
-        layoutPanels[1].setPosition(mainX + 2, mainY + 2);
-        layoutPanels[1].makeGraphic(Std.int(mainW - 4), Std.int(mainH - 4), 0xF0061028);
-        layoutPanels[2].setPosition(detailX, detailY);
-        layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
-        layoutPanels[3].setPosition(detailX + 2, detailY + 2);
-        layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
-      }
-
-      detailTitle.setPosition(detailX + 14, detailY + 10);
-      detailTitle.fieldWidth = detailW - 28;
-      detailTitle.size = 18;
-      detailText.setPosition(detailX + 14, detailY + 40);
-      detailText.fieldWidth = detailW - 28;
-      detailText.fieldHeight = detailH - 66;
-      detailText.size = 12;
-      statusText.setPosition(detailX + 14, detailY + detailH - 22);
-      statusText.fieldWidth = detailW - 28;
-
-      rowX = mainX + 14;
-      rowWidth = mainW - 28;
-      rowHeight = 68;
-      listHeading.setPosition(rowX, detailY + detailH + 14);
-      listHeading.fieldWidth = rowWidth;
-      rowY = detailY + detailH + 38;
-
-      var buttonHeight:Float = 42;
-      var buttonGap:Float = 8;
-      var actionBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
-      var actionY:Float = mainY + mainH - actionBlockHeight - 12;
-      var listBottom:Float = showActions ? actionY - 10 : mainY + mainH - 12;
-      visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
-      if (showActions)
-        layoutMobileTouchActions(rowX, actionY, rowWidth, buttonHeight, buttonGap, true);
-
-      helpText.setPosition(margin, height - 22);
-      helpText.fieldWidth = width - margin * 2;
-      helpText.size = 9;
-      helpText.text = showActions
-        ? 'TAP A CARD TO INSPECT  •  USE THE ACTIONS BELOW'
-        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE';
-    }
-    else
-    {
-      var listX:Float = margin;
-      var listY:Float = 82;
-      var listW:Float = width * 0.40;
-      var listH:Float = Math.max(180, height - 150);
-      var detailX:Float = listX + listW + 14;
-      var detailY:Float = listY;
-      var detailW:Float = width - detailX - margin;
-      var buttonHeight:Float = 48;
-      var buttonGap:Float = 8;
-      var buttonBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
-      var detailH:Float = Math.max(150, listH - buttonBlockHeight - (showActions ? 18 : 0));
-
-      if (layoutPanels.length >= 4)
-      {
-        layoutPanels[0].setPosition(listX, listY);
-        layoutPanels[0].makeGraphic(Std.int(listW), Std.int(listH), 0xFF4269B5);
-        layoutPanels[1].setPosition(listX + 2, listY + 2);
-        layoutPanels[1].makeGraphic(Std.int(listW - 4), Std.int(listH - 4), 0xF0061028);
-        layoutPanels[2].setPosition(detailX, detailY);
-        layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
-        layoutPanels[3].setPosition(detailX + 2, detailY + 2);
-        layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
-      }
-
-      rowX = listX + 12;
-      rowY = listY + 42;
-      rowWidth = listW - 24;
-      rowHeight = 68;
-      visibleRows = Std.int(Math.max(1, Math.floor((listH - 60) / rowHeight)));
-      listHeading.setPosition(listX + 12, listY + 12);
-      listHeading.fieldWidth = listW - 24;
-
-      detailTitle.setPosition(detailX + 16, detailY + 14);
-      detailTitle.fieldWidth = detailW - 32;
-      detailTitle.size = 18;
-      detailText.setPosition(detailX + 16, detailY + 46);
-      detailText.fieldWidth = detailW - 32;
-      detailText.fieldHeight = Math.max(32, detailH - 82);
-      detailText.size = 13;
-      statusText.setPosition(detailX + 16, detailY + detailH - 26);
-      statusText.fieldWidth = detailW - 32;
-
-      if (showActions)
-        layoutMobileTouchActions(detailX, detailY + detailH + 10, detailW, buttonHeight, buttonGap, false);
-
-      helpText.setPosition(margin, height - 18);
-      helpText.fieldWidth = width - margin * 2;
-      helpText.size = 9;
-      helpText.text = showActions
-        ? 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE'
-        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE';
-    }
 
     if (mobileBackButton != null)
     {
       mobileBackButton.setPosition(width - 126, 12);
       mobileBackLabel.setPosition(width - 122, 25);
     }
+
+    var panelY:Float = 82;
+    var panelHeight:Float = Math.max(180, height - 118);
+    var panelWidth:Float = width - margin * 2;
+    var innerX:Float = margin + 14;
+    var innerWidth:Float = panelWidth - 28;
+    var summaryY:Float = panelY + 14;
+    var summaryHeight:Float = portraitLayout ? 112 : 92;
+
+    if (layoutPanels.length >= 4)
+    {
+      layoutPanels[0].setPosition(margin, panelY);
+      layoutPanels[0].makeGraphic(Std.int(panelWidth), Std.int(panelHeight), 0xFF4269B5);
+      layoutPanels[1].setPosition(margin + 2, panelY + 2);
+      layoutPanels[1].makeGraphic(Std.int(panelWidth - 4), Std.int(panelHeight - 4), 0xF0061028);
+      layoutPanels[2].setPosition(innerX, summaryY);
+      layoutPanels[2].makeGraphic(Std.int(innerWidth), Std.int(summaryHeight), 0xFF285A82);
+      layoutPanels[3].setPosition(innerX + 2, summaryY + 2);
+      layoutPanels[3].makeGraphic(Std.int(innerWidth - 4), Std.int(summaryHeight - 4), 0xF0132845);
+    }
+
+    detailTitle.setPosition(innerX + 14, summaryY + 12);
+    detailTitle.fieldWidth = innerWidth - 28;
+    detailTitle.size = 16;
+    detailText.setPosition(innerX + 14, summaryY + 40);
+    detailText.fieldWidth = innerWidth - 28;
+    detailText.fieldHeight = summaryHeight - 46;
+    detailText.size = 11;
+    statusText.setPosition(innerX + 14, summaryY + summaryHeight - 20);
+    statusText.fieldWidth = innerWidth - 28;
+
+    listHeading.setPosition(innerX + 2, summaryY + summaryHeight + 18);
+    listHeading.fieldWidth = innerWidth - 4;
+    rowX = innerX;
+    rowY = summaryY + summaryHeight + 44;
+    rowWidth = innerWidth;
+    rowHeight = 74;
+    visibleRows = Std.int(Math.max(1, Math.floor((panelY + panelHeight - 18 - rowY) / rowHeight)));
+
+    helpText.setPosition(margin, height - 22);
+    helpText.fieldWidth = width - margin * 2;
+    helpText.size = 9;
 
     renderRows();
     renderDetails();
