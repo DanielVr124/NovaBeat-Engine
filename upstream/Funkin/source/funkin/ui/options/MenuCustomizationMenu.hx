@@ -119,15 +119,18 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var pageTitle:FlxText = makeLabel(margin, 22, width - margin * 2, 'CUSTOMIZATION', compactLayout ? 23 : 30, FlxColor.WHITE);
     add(pageTitle);
     headerLabels.push(pageTitle);
-    listX = rightSideLayout ? width * 0.515 : margin + 12;
-    listY = rightSideLayout ? panelTop + 18 : panelTop + 12;
-    listW = rightSideLayout ? width * 0.405 : width - margin * 2 - 24;
-    var footerReserve:Float = rightSideLayout ? 62 : 74;
-    rowHeight = Math.max(22, Math.min(rightSideLayout ? 48 : 44,
-      (height - listY - footerReserve) / LABELS.length));
+    listX = margin + 12;
+    listW = width - margin * 2 - 24;
+    var availableTop:Float = panelTop + 20;
+    var availableHeight:Float = Math.max(120, height - availableTop - 74);
+    rowHeight = Math.max(16, Math.min(44, availableHeight / LABELS.length));
+    var settingsHeight:Float = rowHeight * LABELS.length;
+    listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
     valueColumnX = listX + listW * 0.72;
 
     items = new TextMenuList(NavControls.Vertical);
+    // Draw and hit-test the visible NovaBeat rows through the same camera.
+    items.cameras = [FlxG.camera];
 
     descriptions = [
       'Choose the primary NovaBeat highlight and selection colour.',
@@ -454,9 +457,12 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       }
       rightSideLayout = false;
       listX = margin + 12;
-      listY = panelTop + 12;
       listW = width - margin * 2 - 24;
-      rowHeight = Math.max(22, Math.min(48, (height - listY - 74) / LABELS.length));
+      var availableTop:Float = panelTop + 20;
+      var availableHeight:Float = Math.max(120, height - availableTop - 74);
+      rowHeight = Math.max(16, Math.min(44, availableHeight / LABELS.length));
+      var settingsHeight:Float = rowHeight * LABELS.length;
+      listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
       valueColumnX = listX + listW * 0.71;
       for (index in 0...optionRows.length)
       {

@@ -84,9 +84,9 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     add(intro);
 
     var rowX:Float = margin + 18;
-    var rowY:Float = panelTop + 66;
     var rowWidth:Float = width - margin * 2 - 36;
     var rowHeight:Float = Math.max(56, Math.min(72, height * 0.082));
+    var rowY:Float = centeredRowsTop(panelTop, panelHeight, rowHeight);
     var controlsRowY:Float = rowY + rowHeight + 14;
 
     rowBackground = new FlxSprite(rowX, rowY);
@@ -106,6 +106,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     add(controlsRowAccent);
 
     items = new TextMenuList(NavControls.Vertical);
+    items.cameras = [FlxG.camera];
 
     var orientationItem:TextMenuItem = items.createItem(rowX + 6, rowY + 4,
       "LOCK CURRENT ORIENTATION", AtlasFont.BOLD, toggleOrientationLock);
@@ -185,9 +186,9 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var panelTop:Float = 104;
     var panelHeight:Float = Math.max(190, height - 142);
     var rowX:Float = margin + 18;
-    var rowY:Float = panelTop + 66;
     var rowWidth:Float = width - margin * 2 - 36;
     var rowHeight:Float = Math.max(56, Math.min(72, height * 0.082));
+    var rowY:Float = centeredRowsTop(panelTop, panelHeight, rowHeight);
     var controlsRowY:Float = rowY + rowHeight + 14;
     var portrait:Bool = height > width * 1.12;
 
@@ -257,6 +258,16 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     updateRowHighlight();
     updateDescription();
+  }
+
+  function centeredRowsTop(panelTop:Float, panelHeight:Float, rowHeight:Float):Float
+  {
+    var availableTop:Float = panelTop + 58;
+    var availableBottom:Float = panelTop + panelHeight - 58;
+    var availableHeight:Float = Math.max(0, availableBottom - availableTop);
+    // Treat both settings and their explanation as one centered content block.
+    var contentHeight:Float = rowHeight * 2 + 14 + 72;
+    return availableTop + Math.max(0, (availableHeight - contentHeight) * 0.5);
   }
 
   function toggleOrientationLock():Void

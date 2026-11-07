@@ -98,8 +98,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       camFollow = new FlxObject(FlxG.width / 2, itemY, 140, 70);
       menuCamera.follow(camFollow, null, 0.085);
-      menuCamera.deadzone.set(0, 160, menuCamera.width, menuCamera.height - 320);
+      menuCamera.deadzone.set(0, FlxG.height * 0.14, menuCamera.width, FlxG.height * 0.72);
       menuCamera.minScrollY = 0;
+      layoutNovaBeatCategoryItems(FlxG.width, FlxG.height);
     }
     else
     {
@@ -164,18 +165,29 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     if (categoryItems.length == 0 || width <= 0 || height <= 0) return;
 
     var portrait:Bool = height > width * 1.12;
-    // Match Preferences: a fixed left column, consistent 120px row spacing,
-    // and a small horizontal indent on the currently selected entry.
+    // Keep the stock FNF left-column alignment, but center the complete short
+    // category group vertically so it does not bunch up at the top of the page.
     var notch:Float = FullScreenScaleMode.gameNotchSize.x;
     var baseX:Float = portrait ? Math.max(18, notch + 18) : Math.max(24, notch + 120);
-    var top:Float = portrait ? 76 : 30;
-    var gap:Float = portrait ? Math.min(112, (height * 0.60) / Math.max(1, categoryItems.length)) : 120;
+    var availableTop:Float = Math.max(58, height * 0.10);
+    var availableBottom:Float = height * 0.68;
+    var availableHeight:Float = Math.max(100, availableBottom - availableTop);
+    var gap:Float = portrait ? Math.min(112, availableHeight / Math.max(1, categoryItems.length)) : 120;
+    var rowHeight:Float = 0;
+
+    for (item in categoryItems)
+    {
+      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
+      item.updateHitbox();
+      rowHeight = Math.max(rowHeight, item.height);
+    }
+
+    var groupHeight:Float = rowHeight + Math.max(0, categoryItems.length - 1) * gap;
+    var top:Float = availableTop + Math.max(0, (availableHeight - groupHeight) * 0.5);
 
     for (index in 0...categoryItems.length)
     {
       var item:TextMenuItem = categoryItems[index];
-      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
-      item.updateHitbox();
       var selectedIndent:Float = index == items.selectedIndex ? (portrait ? 18 : 30) : 0;
       item.setPosition(baseX + selectedIndent, top + index * gap);
     }
@@ -198,6 +210,39 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     categoryLabels.push(label);
   }
 
+  function layoutNovaBeatCategoryItems(width:Int, height:Int):Void
+  {
+    if (width <= 0 || height <= 0 || categoryItems.length == 0) return;
+
+    var portrait:Bool = height > width * 1.12;
+    var availableTop:Float = Math.max(76, height * 0.12);
+    var availableBottom:Float = height * 0.84;
+    var availableHeight:Float = Math.max(100, availableBottom - availableTop);
+    var gap:Float = portrait ? Math.min(110, availableHeight / Math.max(1, categoryItems.length)) : 112;
+    var rowHeight:Float = 62;
+    var groupHeight:Float = rowHeight + Math.max(0, categoryItems.length - 1) * gap;
+    var startY:Float = availableTop + Math.max(0, (availableHeight - groupHeight) * 0.5);
+
+    for (index in 0...categoryItems.length)
+    {
+      var item:TextMenuItem = categoryItems[index];
+      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
+      item.setPosition(0, startY + index * gap);
+      item.makeGraphic(width, Std.int(rowHeight), 0x00000000);
+      item.updateHitbox();
+
+      if (index < categoryLabels.length)
+      {
+        var label:FlxText = categoryLabels[index];
+        label.setPosition(0, item.y + 8);
+        label.fieldWidth = width;
+        label.size = portrait ? 22 : 25;
+      }
+    }
+
+    if (camFollow != null) camFollow.setPosition(width * 0.5, height * 0.5);
+  }
+
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
@@ -205,37 +250,10 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     menuCamera.setSize(width, height);
     hudCamera.setSize(width, height);
     var portrait:Bool = height > width * 1.12;
-    var startY:Float = portrait ? height * 0.22 : 112;
-    var gap:Float = portrait ? Math.min(110, height * 0.145) : 112;
-    for (index in 0...categoryItems.length)
-    {
-      var item:TextMenuItem = categoryItems[index];
-      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
-      item.updateHitbox();
-      item.y = startY + index * gap;
-      if (novaBeatStyle)
-      {
-        item.setPosition(0, startY + index * gap);
-        item.makeGraphic(width, 62, 0x00000000);
-        item.updateHitbox();
-        if (index < categoryLabels.length)
-        {
-          var label:FlxText = categoryLabels[index];
-          label.setPosition(0, item.y + 8);
-          label.fieldWidth = width;
-          label.size = portrait ? 22 : 25;
-        }
-      }
-      else
-      {
-        item.screenCenter(X);
-      }
-    }
     if (novaBeatStyle)
     {
-      if (camFollow != null)
-        camFollow.setPosition(width * 0.5, items.selectedItem == null ? startY : items.selectedItem.y);
-      menuCamera.deadzone.set(0, height * 0.14, width, height * 0.68);
+      layoutNovaBeatCategoryItems(width, height);
+      menuCamera.deadzone.set(0, height * 0.14, width, height * 0.72);
     }
     else
     {
