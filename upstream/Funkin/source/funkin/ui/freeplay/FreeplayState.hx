@@ -3083,7 +3083,6 @@ class FreeplayState extends MusicBeatSubState
     for (index => capsule in grpCapsules.members)
     {
       if (capsule == null) continue;
-      capsule.updateResponsiveScale();
       var capsuleIndex:Float = (index + 1) - curSelected;
       var yOffset:Float = 0;
       if (capsuleIndex < 0) yOffset += 50;
