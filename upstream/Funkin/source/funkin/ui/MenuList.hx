@@ -88,7 +88,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     if (length == selectedIndex) item.select();
 
     // Keep NovaBeat's transparent hit rows on the same camera as their list.
-    // Native mobile input below still uses the original TouchUtil path.
+    // All mobile menu presses and swipes use the original FNF TouchUtil path.
     if (Preferences.menuStyle == "NovaBeat" && cameras != null) item.cameras = cameras;
 
     byName[name] = item;
