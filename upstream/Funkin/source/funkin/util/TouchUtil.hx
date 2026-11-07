@@ -94,6 +94,8 @@ class TouchUtil
     {
       if (FlxG.mouse.overlaps(object, targetCamera)) return true;
     }
+    #elseif !mobile
+    if (FlxG.mouse.overlaps(object, targetCamera)) return true;
     #end
 
     return false;
@@ -132,6 +134,9 @@ class TouchUtil
       @:privateAccess
       if (object.overlapsPoint(FlxG.mouse.getWorldPosition(camera, object._point), true, camera)) return true;
     }
+    #elseif !mobile
+    @:privateAccess
+    if (object.overlapsPoint(FlxG.mouse.getWorldPosition(camera, object._point), true, camera)) return true;
     #end
 
     return false;
@@ -202,6 +207,8 @@ class TouchUtil
     #end
     #if web
     return FlxG.mouse.justMoved;
+    #elseif !mobile
+    return FlxG.mouse.justMoved;
     #else
     return false;
     #end
@@ -218,6 +225,8 @@ class TouchUtil
     #end
     #if web
     return FlxG.mouse.pressed;
+    #elseif !mobile
+    return FlxG.mouse.pressed;
     #else
     return false;
     #end
@@ -233,6 +242,8 @@ class TouchUtil
     }
     #end
     #if web
+    return FlxG.mouse.justPressed;
+    #elseif !mobile
     return FlxG.mouse.justPressed;
     #else
     return false;
@@ -265,7 +276,7 @@ class TouchUtil
     }
     #end
     return FlxG.mouse.justReleased;
-    #else
+    #elseif mobile
     #if FLX_TOUCH
     for (activeTouch in FlxG.touches.list)
     {
@@ -273,6 +284,8 @@ class TouchUtil
     }
     #end
     return false;
+    #else
+    return touch != null && touch.justReleased;
     #end
   }
 
@@ -286,6 +299,8 @@ class TouchUtil
     }
     #end
     #if web
+    return FlxG.mouse.released;
+    #elseif !mobile
     return FlxG.mouse.released;
     #else
     return false;
