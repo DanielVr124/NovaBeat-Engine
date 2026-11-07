@@ -348,6 +348,11 @@ class ExperienceLibraryState extends MusicBeatState
       FunkinSound.playOnce(Paths.sound("cancelMenu"));
       return;
     }
+
+    // The Mod Library is the game's startup entry point. The stock title
+    // intro normally runs only once per process, so clear its session flag
+    // here to ensure the randomized black-screen intro plays after launch.
+    TitleState.initialized = false;
     FlxG.switchState(() -> new TitleState());
   }
 
