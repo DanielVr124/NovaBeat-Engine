@@ -5,7 +5,6 @@ import funkin.ui.freeplay.FreeplayState.FreeplaySongData;
 import funkin.data.story.level.LevelRegistry;
 import funkin.graphics.shaders.HSVShader;
 import funkin.graphics.shaders.GaussianBlurShader;
-import funkin.Preferences;
 import flixel.group.FlxGroup;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
@@ -451,10 +450,6 @@ class SongMenuItem extends FlxSpriteGroup
     {
       songText.text = freeplayData.fullSongName;
       if (freeplayData.songCharacter != null) pixelIcon.setCharacter(freeplayData.songCharacter);
-      // setCharacter() restores PixelatedIcon's stock 2x scale. Re-apply the
-      // NovaBeat portrait-layout compensation immediately so newly selected
-      // songs use the same 64px icon size and position as the first selection.
-      updateNovaBeatPixelIconLayout();
       if (pixelIcon.char != freeplayData.songCharacter) pixelIcon.visible = false;
       updateBPM(Std.int(freeplayData.songStartingBpm) ?? 0);
       updateDifficultyRating(freeplayData.difficultyRating ?? 0);
@@ -464,7 +459,6 @@ class SongMenuItem extends FlxSpriteGroup
       favIconBlurred.visible = freeplayData.isFav;
       checkClip();
     }
-    updateNovaBeatPixelIconLayout();
     updateSelected();
   }
 
@@ -623,10 +617,6 @@ class SongMenuItem extends FlxSpriteGroup
   ]; // NUMBERS ARE JANK CUZ THE SCALING OR WHATEVER
 
   public var realScaled:Float = 0.8;
-  var lastLayoutWidth:Int = -1;
-  var lastLayoutHeight:Int = -1;
-  var lastLayoutMenuStyle:String = "";
-
   public function initJumpIn(maxTimer:Float, ?force:Bool):Void
   {
     frameInTypeBeat = 0;
@@ -681,54 +671,8 @@ class SongMenuItem extends FlxSpriteGroup
     setVisibleGrp(true);
   }
 
-  public function updateResponsiveScale():Void
-  {
-    var width:Int = FlxG.width;
-    var height:Int = FlxG.height;
-    if (width <= 0 || height <= 0) return;
-
-    // The stock FNF Freeplay capsules are not responsively scaled. Only
-    // NovaBeat applies the narrow-screen capsule fit.
-    var menuStyle:String = Preferences.menuStyle == "NovaBeat" ? "NovaBeat" : "FNF";
-    if (width != lastLayoutWidth || height != lastLayoutHeight || menuStyle != lastLayoutMenuStyle)
-    {
-      lastLayoutWidth = width;
-      lastLayoutHeight = height;
-      lastLayoutMenuStyle = menuStyle;
-
-      var portrait:Bool = height > width * 1.12;
-      var layoutScale:Float = menuStyle == "NovaBeat" && portrait
-        ? Math.min(1.0, (width - 28) / Math.max(1, capsule.frameWidth * realScaled))
-        : 1.0;
-      scale.set(layoutScale, layoutScale);
-    }
-
-    // PixelatedIcon.setCharacter() resets its scale to the stock 2x value.
-    // Keep this transform in sync after character changes as well as resizes.
-    updateNovaBeatPixelIconLayout();
-  }
-
-  /**
-   * [web-build] Preserve the original 2x PixelatedIcon size and anchor point. NovaBeat's
-   * portrait capsule scaling is compensated here; stock FNF uses the exact
-   * original child transform and does not scale the capsule group.
-   */
-  function updateNovaBeatPixelIconLayout():Void
-  {
-    if (pixelIcon == null) return;
-
-    // FlxSpriteGroup.scale copies its value directly to each child sprite;
-    // it does not apply a parent transform to child positions. Reapply the
-    // stock PixelatedIcon transform after the capsule group is responsively
-    // scaled so every character portrait stays at its original 2x size and
-    // (160, 35) anchor in both menu styles.
-    pixelIcon.setPosition(160, 35);
-    pixelIcon.scale.set(2, 2);
-  }
-
   override function update(elapsed:Float):Void
   {
-    updateResponsiveScale();
     if (impactThing != null) impactThing.angle = capsule.angle;
 
     if (doJumpIn)
@@ -818,7 +762,6 @@ class SongMenuItem extends FlxSpriteGroup
 
   public function intendedX(index:Float):Float
   {
-    updateResponsiveScale();
     if (FlxG.height > FlxG.width * 1.12)
     {
       var displayedWidth:Float = capsule.frameWidth * realScaled * scale.x;
@@ -829,7 +772,6 @@ class SongMenuItem extends FlxSpriteGroup
 
   public function intendedY(index:Float):Float
   {
-    updateResponsiveScale();
     if (FlxG.height > FlxG.width * 1.12)
     {
       var displayedHeight:Float = capsule.frameHeight * realScaled * scale.y;
