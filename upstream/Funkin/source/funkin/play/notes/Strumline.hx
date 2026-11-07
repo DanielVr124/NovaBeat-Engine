@@ -16,7 +16,8 @@ import funkin.util.GRhythmUtil;
 import funkin.play.notes.notekind.NoteKind;
 import funkin.play.notes.notekind.NoteKindManager;
 import flixel.math.FlxPoint;
-#if mobile
+import funkin.util.DeviceUtil;
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.input.ControlsHandler;
 import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
 #end
@@ -170,14 +171,16 @@ class Strumline extends FlxSpriteGroup
   public var noteVibrations:NoteVibrationsHandler = new NoteVibrationsHandler();
 
   final inArrowControlSchemeMode:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-    && !ControlsHandler.hasExternalInputDevice) #else false #end;
+    && !ControlsHandler.hasExternalInputDevice) #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser
+    && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && !ControlsHandler.hasExternalInputDevice) #else false #end;
 
   /**
    * Whether the strumline is downscroll.
    */
   public var isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
     && !ControlsHandler.hasExternalInputDevice)
-    || #end Preferences.downscroll;
+    #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+    && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
 
   /**
    * The note data for the song. Should NOT be altered after the song starts (but we alter it in OffsetState :DDD),
@@ -238,7 +241,7 @@ class Strumline extends FlxSpriteGroup
     this.add(this.noteSplashes);
 
     var backgroundWidth:Float = KEY_COUNT * Strumline.NOTE_SPACING + BACKGROUND_PAD * 2;
-    #if mobile
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (inArrowControlSchemeMode && isPlayer)
     {
       backgroundWidth = backgroundWidth * 1.84;
@@ -249,7 +252,7 @@ class Strumline extends FlxSpriteGroup
     this.background.alpha = Preferences.strumlineBackgroundOpacity / 100.0;
     this.background.scrollFactor.set(0, 0);
     this.background.x = -BACKGROUND_PAD;
-    #if mobile
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (inArrowControlSchemeMode && isPlayer) this.background.x -= 100;
     #end
     this.add(this.background);
@@ -1150,7 +1153,7 @@ class Strumline extends FlxSpriteGroup
       noteSprite.setupNoteGraphic(noteKindStyle);
 
       var trueScale = new FlxPoint(strumlineScale.x, strumlineScale.y);
-      #if mobile
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
       if (inArrowControlSchemeMode)
       {
         final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
@@ -1333,7 +1336,7 @@ class Strumline extends FlxSpriteGroup
   function getXPos(direction:NoteDirection):Float
   {
     var pos:Float = 0;
-    #if mobile
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (inArrowControlSchemeMode && isPlayer) pos = 35 * (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
     #end
     return switch (direction)
