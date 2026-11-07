@@ -827,7 +827,7 @@ class PauseSubState extends MusicBeatSubState
     var prevEntry:Int = currentEntry;
     currentEntry += change;
 
-    if (#if FEATURE_TOUCH_CONTROLS !funkin.mobile.input.ControlsHandler.usingExternalInputDevice #else false #end)
+    if (#if FEATURE_TOUCH_CONTROLS (isMobileTouchLayout() && !funkin.mobile.input.ControlsHandler.usingExternalInputDevice) #else false #end)
     {
       if (currentEntry < 0) currentEntry = 0;
       if (currentEntry >= currentMenuEntries.length) currentEntry = currentMenuEntries.length - 1;
