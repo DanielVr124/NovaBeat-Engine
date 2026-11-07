@@ -678,7 +678,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 62 : 66;
+    rowHeight = portraitLayout ? 82 : 74;
     visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
     detailTitle.setPosition(detailX + 16, detailY + 14);

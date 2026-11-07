@@ -77,9 +77,9 @@ class ControlsSchemeMenu extends MusicBeatSubState
   final availableSchemes:Array<String> = [
     FunkinHitbox.FunkinHitboxControlSchemes.Arrows,
     FunkinHitbox.FunkinHitboxControlSchemes.FourLanes,
+    FunkinHitbox.FunkinHitboxControlSchemes.DoubleThumbDPad,
     FunkinHitbox.FunkinHitboxControlSchemes.DoubleThumbTriangle,
-    FunkinHitbox.FunkinHitboxControlSchemes.DoubleThumbSquare,
-    FunkinHitbox.FunkinHitboxControlSchemes.DoubleThumbDPad
+    FunkinHitbox.FunkinHitboxControlSchemes.DoubleThumbSquare
   ];
 
   /**

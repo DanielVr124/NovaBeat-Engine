@@ -347,17 +347,22 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
           }
         }
       case FunkinHitboxControlSchemes.DoubleThumbDPad:
-        final hintSize:Int = 75;
+        // Keep the two thumb clusters inside their own screen halves. The
+        // old fixed X offsets overlapped both joysticks on narrow portrait
+        // screens, making this scheme unusable on phones.
+        final hintSize:Int = Std.int(Math.max(44, Math.min(75, FlxG.width * 0.14)));
         final outlineThickness:Int = 5;
         final hintsAngles:Array<Float> = [Math.PI, Math.PI / 2, Math.PI * 1.5, 0];
-        final hintsZoneRadius:Int = 115;
+        final hintsZoneRadius:Int = Std.int(hintSize * 1.55);
+        final centerY:Float = FlxG.height - (hintSize * 3.75);
 
         for (i in 0...2)
         {
+          final centerX:Float = FlxG.width * (i == 0 ? 0.25 : 0.75);
           for (j in 0...hintsAngles.length)
           {
-            final x:Float = ((i == 1) ? FlxG.width - (hintSize * 4) : hintSize * 2) + Math.cos(hintsAngles[j]) * hintsZoneRadius;
-            final y:Float = (FlxG.height - (hintSize * 3.75)) + Math.sin(hintsAngles[j]) * hintsZoneRadius;
+            final x:Float = centerX + Math.cos(hintsAngles[j]) * hintsZoneRadius;
+            final y:Float = centerY + Math.sin(hintsAngles[j]) * hintsZoneRadius;
 
             add(createHintCircle(i == 0 ? x + FullScreenScaleMode.gameNotchSize.x : x - FullScreenScaleMode.gameNotchSize.x, y,
               hintsNoteDirections[j % hintsNoteDirections.length], hintSize, outlineThickness, hintsColors[j % hintsColors.length]));
