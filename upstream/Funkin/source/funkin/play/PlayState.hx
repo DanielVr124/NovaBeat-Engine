@@ -3786,7 +3786,8 @@ class PlayState extends MusicBeatSubState
       currentConversation.kill();
     }
 
-    if (currentChart != null)
+    final chartForCleanup:Null<SongDifficulty> = currentChart;
+    if (chartForCleanup != null)
     {
       // Native builds purge unused assets when switching states. The HTML5
       // NO_PRELOAD_ALL path can return to Freeplay without that bulk purge, so
@@ -3794,8 +3795,8 @@ class PlayState extends MusicBeatSubState
       #if (web && NO_PRELOAD_ALL)
       if (!overrideMusic)
       {
-        var songAudioPaths:Array<String> = currentChart.buildVoiceList();
-        songAudioPaths.push(currentChart.getInstPath(currentInstrumental));
+        var songAudioPaths:Array<String> = chartForCleanup.buildVoiceList();
+        songAudioPaths.push(chartForCleanup.getInstPath(currentInstrumental));
         funkin.FunkinMemory.uncacheSounds(songAudioPaths);
 
         @:nullSafety(Off)
