@@ -213,7 +213,11 @@ class NovaBeatMenuInput
     return FlxG.touches.flickManager;
     #elseif web
     #if FLX_TOUCH
-    if (hasActiveTouchContact()) return FlxG.touches.flickManager;
+    // FlxTouch initializes its flick manager on release, so retain the touch
+    // manager through the release frame and the full inertia phase. On Quest,
+    // where taps may arrive only as mouse events, use the mouse manager instead.
+    if (hasActiveTouchContact() || hasReleasedTouchContact() || FlxG.touches.flickManager.initialized)
+      return FlxG.touches.flickManager;
     #end
     return FlxG.mouse.flickManager;
     #else
@@ -232,6 +236,17 @@ class NovaBeatMenuInput
     for (touch in FlxG.touches.list)
     {
       if (touch != null && (touch.pressed || touch.justPressed)) return true;
+    }
+    #end
+    return false;
+  }
+
+  static function hasReleasedTouchContact():Bool
+  {
+    #if FLX_TOUCH
+    for (touch in FlxG.touches.list)
+    {
+      if (touch != null && touch.justReleased) return true;
     }
     #end
     return false;
