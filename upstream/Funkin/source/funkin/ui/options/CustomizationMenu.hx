@@ -287,7 +287,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       for (index in 0...categoryItems.length)
       {
         var item:TextMenuItem = categoryItems[index];
-        if (TouchUtil.pressAction(item, menuCamera, true) && !items.busy)
+        if ((TouchUtil.justReleased && TouchUtil.overlapsComplex(item, menuCamera)) && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();
