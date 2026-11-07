@@ -170,7 +170,15 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #end
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser)
+    // NovaBeat's HTML5 menus support both touch and ordinary desktop mouse
+    // input. Do not put browser mouse clicks behind the mobile-UA check:
+    // desktop-mode browsers and PC browsers must still be able to activate
+    // every Options/Customization row.
+    final usePointerControls:Bool = DeviceUtil.isMobileBrowser
+      #if web
+      || novaBeatTouchMenu
+      #end;
+    if (usePointerControls)
     {
       // Keep controller navigation available, but let an actual tap/click take
       // priority even when a controller is connected (common on Quest).
