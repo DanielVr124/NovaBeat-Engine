@@ -199,7 +199,11 @@ class TouchUtil
       {
         if (touch != null) return touch;
       }
-      return null;
+
+      // Keep the touch manager's first pointer available for the release frame.
+      // On HTML5 mobile, the active list can be empty by the time the state
+      // processes justReleased; returning null here drops every button tap.
+      return FlxG.touches.getFirst();
     }
 
     FlxG.mouse.visible = true;
