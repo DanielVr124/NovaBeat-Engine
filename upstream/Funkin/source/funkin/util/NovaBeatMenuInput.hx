@@ -25,7 +25,13 @@ class NovaBeatMenuInput
   public static var swipeDown(get, never):Bool;
   public static var swipeLeft(get, never):Bool;
   public static var swipeRight(get, never):Bool;
+  public static var swipeAny(get, never):Bool;
   public static var justSwipedAny(get, never):Bool;
+  public static var flickManager(get, never):Dynamic;
+  public static var flickUp(get, never):Bool;
+  public static var flickDown(get, never):Bool;
+  public static var flickLeft(get, never):Bool;
+  public static var flickRight(get, never):Bool;
 
   static function get_pointer():Dynamic
   {
@@ -193,6 +199,47 @@ class NovaBeatMenuInput
     #else
     return false;
     #end
+  }
+
+  static function get_swipeAny():Bool
+  {
+    return swipeUp || swipeDown || swipeLeft || swipeRight;
+  }
+
+  static function get_flickManager():Dynamic
+  {
+    #if mobile
+    return FlxG.touches.flickManager;
+    #elseif web
+    #if FLX_TOUCH
+    if (hasActiveTouchContact()) return FlxG.touches.flickManager;
+    #end
+    return FlxG.mouse.flickManager;
+    #else
+    return FlxG.mouse.flickManager;
+    #end
+  }
+
+  static inline function get_flickUp():Bool return flickManager.flickUp;
+  static inline function get_flickDown():Bool return flickManager.flickDown;
+  static inline function get_flickLeft():Bool return flickManager.flickLeft;
+  static inline function get_flickRight():Bool return flickManager.flickRight;
+
+  static function hasActiveTouchContact():Bool
+  {
+    #if FLX_TOUCH
+    for (touch in FlxG.touches.list)
+    {
+      if (touch != null && (touch.pressed || touch.justPressed)) return true;
+    }
+    #end
+    return false;
+  }
+
+  public static inline function resetSwipeVelocity():Void
+  {
+    FlxG.mouse.flickManager.destroy();
+    FlxG.touches.flickManager.destroy();
   }
 
   static function get_justSwipedAny():Bool
