@@ -717,16 +717,13 @@ class SongMenuItem extends FlxSpriteGroup
   {
     if (pixelIcon == null) return;
 
-    if (Preferences.menuStyle != "NovaBeat")
-    {
-      pixelIcon.setPosition(160, 35);
-      pixelIcon.scale.set(2, 2);
-      return;
-    }
-
-    var parentScale:Float = Math.max(0.001, scale.x);
-    pixelIcon.setPosition(160 / parentScale, 35 / parentScale);
-    pixelIcon.scale.set(2 / parentScale, 2 / parentScale);
+    // FlxSpriteGroup.scale copies its value directly to each child sprite;
+    // it does not apply a parent transform to child positions. Reapply the
+    // stock PixelatedIcon transform after the capsule group is responsively
+    // scaled so every character portrait stays at its original 2x size and
+    // (160, 35) anchor in both menu styles.
+    pixelIcon.setPosition(160, 35);
+    pixelIcon.scale.set(2, 2);
   }
 
   override function update(elapsed:Float):Void
