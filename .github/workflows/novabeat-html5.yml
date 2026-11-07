@@ -249,6 +249,85 @@ jobs:
                   html = style + html
               index.write_text(html, encoding="utf-8")
           PY
+          # Build a versioned, atomic offline cache. The previous cache remains
+          # active until every file in the new build has been downloaded successfully.
+          python3 - "$web_root" "${GITHUB_SHA}" <<'PY'
+          from pathlib import Path
+          import json
+          import sys
+
+          root = Path(sys.argv[1])
+          version = sys.argv[2]
+          assets = sorted(
+              "./" + path.relative_to(root).as_posix()
+              for path in root.rglob("*")
+              if path.is_file()
+              and path.name not in {"service-worker.js", ".nojekyll"}
+          )
+          worker = """const CACHE_PREFIX = "novabeat-static-";
+          const CACHE_NAME = CACHE_PREFIX + VERSION;
+          const ASSETS = ASSET_LIST;
+
+          self.addEventListener("install", event => {
+            event.waitUntil((async () => {
+              const cache = await caches.open(CACHE_NAME);
+              try {
+                await cache.addAll(ASSETS.map(path => new Request(new URL(path, self.registration.scope), {cache: "reload"})));
+                await self.skipWaiting();
+              } catch (error) {
+                await caches.delete(CACHE_NAME);
+                throw error;
+              }
+            })());
+          });
+
+          self.addEventListener("activate", event => {
+            event.waitUntil((async () => {
+              const names = await caches.keys();
+              await Promise.all(names.filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map(name => caches.delete(name)));
+              await self.clients.claim();
+            })());
+          });
+
+          self.addEventListener("fetch", event => {
+            const request = event.request;
+            if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+            event.respondWith((async () => {
+              const cache = await caches.open(CACHE_NAME);
+              const cached = await cache.match(request);
+              if (cached) return cached;
+              try {
+                const response = await fetch(request);
+                if (response.ok && response.type === "basic") await cache.put(request, response.clone());
+                return response;
+              } catch (error) {
+                if (request.mode === "navigate") {
+                  const offlinePage = await cache.match(new URL("./index.html", self.registration.scope).href);
+                  if (offlinePage) return offlinePage;
+                }
+                throw error;
+              }
+            })());
+          });
+          """
+          worker = worker.replace("VERSION", json.dumps(version), 1)
+          worker = worker.replace("ASSET_LIST", json.dumps(assets, separators=(",", ":")))
+          (root / "service-worker.js").write_text(worker, encoding="utf-8")
+
+          index = root / "index.html"
+          html = index.read_text(encoding="utf-8")
+          registration = """<script>
+          if ("serviceWorker" in navigator && location.protocol !== "file:") {
+            window.addEventListener("load", () => {
+              navigator.serviceWorker.register("./service-worker.js", {scope: "./", updateViaCache: "none"})
+                .catch(error => console.warn("NovaBeat offline cache unavailable:", error));
+            }, {once: true});
+          }
+          </script>"""
+          if "service-worker.js" not in html:
+            html = html.replace("</body>", registration + "</body>") if "</body>" in html else html + registration
+            index.write_text(html, encoding="utf-8")
+          PY
           touch "$web_root/.nojekyll"
           echo "web_root=$web_root" >> "$GITHUB_OUTPUT"
 
