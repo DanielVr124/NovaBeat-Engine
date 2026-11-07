@@ -259,6 +259,19 @@ jobs:
           </style>"""
           if "novabeat-mobile-viewport" not in html:
               html = html.replace("</head>", style + "</head>", 1) if "</head>" in html else style + html
+
+          # Keep service-worker registration in index.html itself so offline
+          # reloads can install/update the worker after the page is restored.
+          registration = """<script>
+          if ("serviceWorker" in navigator && location.protocol !== "file:") {
+            window.addEventListener("load", () => {
+              navigator.serviceWorker.register("./service-worker.js", {scope: "./", updateViaCache: "none"})
+                .catch(error => console.warn("NovaBeat offline cache unavailable:", error));
+            }, {once: true});
+          }
+          </script>"""
+          if "service-worker.js" not in html:
+              html = html.replace("</body>", registration + "</body>") if "</body>" in html else html + registration
           index.write_text(html, encoding="utf-8")
           PY
           # Hash the full output, then copy unchanged assets from the previous
