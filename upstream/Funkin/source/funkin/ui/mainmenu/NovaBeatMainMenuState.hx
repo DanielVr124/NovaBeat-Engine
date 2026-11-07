@@ -27,6 +27,7 @@ import funkin.ui.credits.CreditsState;
 import funkin.ui.options.OptionsState;
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
+import funkin.util.NovaBeatMenuInput;
 #if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.SwipeUtil;
 #end
@@ -623,7 +624,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       // TouchUtil prefers real browser touch contacts and falls back to
       // synthesized mouse / Quest controller pointer events when needed.
       #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressed = true;
+      if (DeviceUtil.isMobileBrowser && NovaBeatMenuInput.justReleased && !NovaBeatMenuInput.justSwipedAny) pressed = true;
       #end
 
       if (pressed) beginMenuTransition();
@@ -679,14 +680,14 @@ class NovaBeatMainMenuState extends MusicBeatState
    */
   function handleHeaderPointerInput():Void
   {
-    if (homeOptionsHitbox != null && TouchUtil.pressAction(homeOptionsHitbox, uiCamera, false))
+    if (homeOptionsHitbox != null && NovaBeatMenuInput.pressAction(homeOptionsHitbox, uiCamera))
     {
       playSfx('confirm', 0.8);
       openOptions();
       return;
     }
 
-    if (homeAudioHitbox != null && TouchUtil.pressAction(homeAudioHitbox, uiCamera, false))
+    if (homeAudioHitbox != null && NovaBeatMenuInput.pressAction(homeAudioHitbox, uiCamera))
     {
       final music = FlxG.sound.music;
       if (music == null) return;
