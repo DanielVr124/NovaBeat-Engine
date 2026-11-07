@@ -7,6 +7,8 @@ import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.Preferences;
 import funkin.mobile.util.MobileOrientationUtil;
+import funkin.mobile.ui.options.ControlsSchemeMenu;
+import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
 import funkin.save.Save;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.MenuList.NavControls;
@@ -21,11 +23,23 @@ import funkin.mobile.ui.FunkinBackButton;
 
 class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 {
+  static final AVAILABLE_CONTROL_SCHEMES:Array<String> = [
+    FunkinHitboxControlSchemes.Arrows,
+    FunkinHitboxControlSchemes.FourLanes,
+    FunkinHitboxControlSchemes.DoubleThumbTriangle,
+    FunkinHitboxControlSchemes.DoubleThumbSquare,
+    FunkinHitboxControlSchemes.DoubleThumbDPad
+  ];
+
   var items:TextMenuList;
   var rowBackground:FlxSprite;
   var rowAccent:FlxSprite;
+  var controlsRowBackground:FlxSprite;
+  var controlsRowAccent:FlxSprite;
   var rowLabel:FlxText;
   var valueLabel:FlxText;
+  var controlsSchemeLabel:FlxText;
+  var controlsSchemeValue:FlxText;
   var descriptionText:FlxText;
   var statusText:FlxText;
   var novaBeatLayout:Bool = true;
@@ -72,7 +86,8 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var rowX:Float = margin + 18;
     var rowY:Float = panelTop + 66;
     var rowWidth:Float = width - margin * 2 - 36;
-    var rowHeight:Float = Math.max(58, Math.min(76, height * 0.085));
+    var rowHeight:Float = Math.max(56, Math.min(72, height * 0.082));
+    var controlsRowY:Float = rowY + rowHeight + 14;
 
     rowBackground = new FlxSprite(rowX, rowY);
     rowBackground.makeGraphic(Std.int(rowWidth), Std.int(rowHeight), 0xFF0D1935);
@@ -82,44 +97,71 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     rowAccent.makeGraphic(4, Std.int(rowHeight - 14), accentColor);
     add(rowAccent);
 
+    controlsRowBackground = new FlxSprite(rowX, controlsRowY);
+    controlsRowBackground.makeGraphic(Std.int(rowWidth), Std.int(rowHeight), 0xFF0D1935);
+    add(controlsRowBackground);
+
+    controlsRowAccent = new FlxSprite(rowX, controlsRowY + 7);
+    controlsRowAccent.makeGraphic(4, Std.int(rowHeight - 14), accentColor);
+    add(controlsRowAccent);
+
     items = new TextMenuList(NavControls.Vertical);
+
     var orientationItem:TextMenuItem = items.createItem(rowX + 6, rowY + 4,
       "LOCK CURRENT ORIENTATION", AtlasFont.BOLD, toggleOrientationLock);
     orientationItem.fireInstantly = true;
     orientationItem.makeGraphic(Std.int(rowWidth - 12), Std.int(rowHeight - 8), FlxColor.TRANSPARENT);
     orientationItem.updateHitbox();
     orientationItem.atlasText.visible = false;
+
+    var controlsSchemeItem:TextMenuItem = items.createItem(rowX + 6, controlsRowY + 4,
+      "TOUCH CONTROL SCHEME", AtlasFont.BOLD, openControlsSchemeMenu);
+    controlsSchemeItem.fireInstantly = true;
+    controlsSchemeItem.makeGraphic(Std.int(rowWidth - 12), Std.int(rowHeight - 8), FlxColor.TRANSPARENT);
+    controlsSchemeItem.updateHitbox();
+    controlsSchemeItem.atlasText.visible = false;
+
     add(items);
 
-    rowLabel = makeLabel(rowX + 18, rowY + 8, rowWidth * 0.68, "LOCK CURRENT ORIENTATION", 14, 0xFFB9C8E3);
+    rowLabel = makeLabel(rowX + 18, rowY + 8, rowWidth * 0.66, "LOCK CURRENT ORIENTATION", 14, 0xFFB9C8E3);
     add(rowLabel);
 
     valueLabel = makeLabel(rowX + rowWidth * 0.72, rowY + 8, rowWidth * 0.24, "OFF", 14, accentColor);
     valueLabel.alignment = FlxTextAlign.RIGHT;
     add(valueLabel);
 
-    descriptionText = makeLabel(rowX + 4, rowY + rowHeight + 28, rowWidth - 8,
-      "Keep the phone in its current orientation. Turn this off to allow automatic rotation again.",
+    controlsSchemeLabel = makeLabel(rowX + 18, controlsRowY + 8, rowWidth * 0.60, "TOUCH CONTROL SCHEME", 14, 0xFFB9C8E3);
+    add(controlsSchemeLabel);
+
+    controlsSchemeValue = makeLabel(rowX + rowWidth * 0.66, controlsRowY + 8, rowWidth * 0.30, "ARROWS", 13, accentColor);
+    controlsSchemeValue.alignment = FlxTextAlign.RIGHT;
+    add(controlsSchemeValue);
+
+    descriptionText = makeLabel(rowX + 4, controlsRowY + rowHeight + 18, rowWidth - 8,
+      "Choose one of the five original FNF touch layouts. Tap this row to preview them, or use left and right to cycle.",
       12, novaBeatLayout ? 0xFFB6C7E5 : FlxColor.WHITE);
     descriptionText.wordWrap = true;
     descriptionText.autoSize = false;
     add(descriptionText);
 
     statusText = makeLabel(rowX + 4, panelTop + panelHeight - 42, rowWidth - 8,
-      "TAP OR PRESS ENTER TO CHANGE   •   ESC BACK", 9, novaBeatLayout ? 0xFF8DA8D8 : 0xFFCCCCCC);
+      "TAP A ROW TO CHANGE   •   ESC BACK", 9, novaBeatLayout ? 0xFF8DA8D8 : 0xFFCCCCCC);
     add(statusText);
 
     items.onChange.add(function(selected:TextMenuItem)
     {
       updateRowHighlight();
+      updateDescription();
     });
     updateValue();
+    updateControlsSchemeValue();
     updateRowHighlight();
+    updateDescription();
 
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
     {
-      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
+      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, FlxG.height - 92, FlxColor.WHITE, goBack, 1.0, true);
       add(responsiveBackButton);
     }
     #end
@@ -130,7 +172,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     else if (!MobileOrientationUtil.isSupported())
       statusText.text = MobileOrientationUtil.getUnavailableMessage().toUpperCase();
     #else
-    statusText.text = "MOBILE ORIENTATION SETTINGS ARE UNAVAILABLE IN THIS BUILD";
+    statusText.text = "MOBILE SETTINGS ARE UNAVAILABLE IN THIS BUILD";
     #end
   }
 
@@ -138,14 +180,17 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super.onViewportResize(width, height);
     if (width <= 0 || height <= 0) return;
+
     var margin:Float = Math.max(18, width * 0.04);
     var panelTop:Float = 104;
     var panelHeight:Float = Math.max(190, height - 142);
     var rowX:Float = margin + 18;
     var rowY:Float = panelTop + 66;
     var rowWidth:Float = width - margin * 2 - 36;
-    var rowHeight:Float = Math.max(58, Math.min(76, height * 0.085));
+    var rowHeight:Float = Math.max(56, Math.min(72, height * 0.082));
+    var controlsRowY:Float = rowY + rowHeight + 14;
     var portrait:Bool = height > width * 1.12;
+
     if (panelBackground != null)
     {
       panelBackground.setPosition(margin, panelTop);
@@ -167,27 +212,51 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       introLabel.setPosition(margin + 22, panelTop + 18);
       introLabel.fieldWidth = width - margin * 2 - 44;
     }
+
     rowBackground.setPosition(rowX, rowY);
     rowBackground.makeGraphic(Std.int(rowWidth), Std.int(rowHeight), 0xFF0D1935);
     rowAccent.setPosition(rowX, rowY + 7);
     rowAccent.makeGraphic(4, Std.int(rowHeight - 14), novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
-    var item:TextMenuItem = items.members[0];
-    item.setPosition(rowX + 6, rowY + 4);
-    item.makeGraphic(Std.int(rowWidth - 12), Std.int(rowHeight - 8), FlxColor.TRANSPARENT);
-    item.updateHitbox();
+
+    controlsRowBackground.setPosition(rowX, controlsRowY);
+    controlsRowBackground.makeGraphic(Std.int(rowWidth), Std.int(rowHeight), 0xFF0D1935);
+    controlsRowAccent.setPosition(rowX, controlsRowY + 7);
+    controlsRowAccent.makeGraphic(4, Std.int(rowHeight - 14), novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+
+    var orientationItem:TextMenuItem = items.members[0];
+    orientationItem.setPosition(rowX + 6, rowY + 4);
+    orientationItem.makeGraphic(Std.int(rowWidth - 12), Std.int(rowHeight - 8), FlxColor.TRANSPARENT);
+    orientationItem.updateHitbox();
+
+    var controlsSchemeItem:TextMenuItem = items.members[1];
+    controlsSchemeItem.setPosition(rowX + 6, controlsRowY + 4);
+    controlsSchemeItem.makeGraphic(Std.int(rowWidth - 12), Std.int(rowHeight - 8), FlxColor.TRANSPARENT);
+    controlsSchemeItem.updateHitbox();
+
     rowLabel.setPosition(rowX + 18, rowY + 8);
-    rowLabel.fieldWidth = rowWidth * 0.68;
+    rowLabel.fieldWidth = rowWidth * 0.66;
     valueLabel.setPosition(rowX + rowWidth * 0.72, rowY + 8);
     valueLabel.fieldWidth = rowWidth * 0.24;
-    descriptionText.setPosition(rowX + 4, rowY + rowHeight + 28);
+
+    controlsSchemeLabel.setPosition(rowX + 18, controlsRowY + 8);
+    controlsSchemeLabel.fieldWidth = rowWidth * 0.60;
+    controlsSchemeValue.setPosition(rowX + rowWidth * 0.66, controlsRowY + 8);
+    controlsSchemeValue.fieldWidth = rowWidth * 0.30;
+    controlsSchemeValue.size = portrait ? 11 : 13;
+
+    descriptionText.setPosition(rowX + 4, controlsRowY + rowHeight + 18);
     descriptionText.fieldWidth = rowWidth - 8;
     descriptionText.size = portrait ? 12 : 13;
     statusText.setPosition(rowX + 4, panelTop + panelHeight - 42);
     statusText.fieldWidth = rowWidth - 8;
+
     #if FEATURE_TOUCH_CONTROLS
     if (responsiveBackButton != null)
       responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
     #end
+
+    updateRowHighlight();
+    updateDescription();
   }
 
   function toggleOrientationLock():Void
@@ -222,26 +291,88 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
   }
 
+  function openControlsSchemeMenu():Void
+  {
+    FlxG.state.openSubState(new ControlsSchemeMenu(function():Void
+    {
+      updateControlsSchemeValue();
+      updateDescription();
+      statusText.text = "CONTROL SCHEME SAVED";
+    }));
+  }
+
+  function cycleControlsScheme(direction:Int):Void
+  {
+    if (AVAILABLE_CONTROL_SCHEMES.length == 0 || direction == 0) return;
+
+    var index:Int = AVAILABLE_CONTROL_SCHEMES.indexOf(Preferences.controlsScheme);
+    if (index < 0) index = 0;
+    index = (index + direction + AVAILABLE_CONTROL_SCHEMES.length) % AVAILABLE_CONTROL_SCHEMES.length;
+
+    Preferences.controlsScheme = AVAILABLE_CONTROL_SCHEMES[index];
+    updateControlsSchemeValue();
+    statusText.text = "CONTROL SCHEME: " + schemeDisplayName(Preferences.controlsScheme);
+  }
+
+  function schemeDisplayName(scheme:String):String
+  {
+    return switch (scheme)
+    {
+      case FunkinHitboxControlSchemes.Arrows: "ARROWS";
+      case FunkinHitboxControlSchemes.FourLanes: "FOUR LANES";
+      case FunkinHitboxControlSchemes.DoubleThumbTriangle: "TRIANGLE";
+      case FunkinHitboxControlSchemes.DoubleThumbSquare: "SQUARE";
+      case FunkinHitboxControlSchemes.DoubleThumbDPad: "D-PAD";
+      default: scheme.toUpperCase();
+    };
+  }
+
   function updateValue():Void
   {
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     var enabled:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
     valueLabel.text = enabled ? "ON" : "OFF";
     valueLabel.color = enabled ? 0xFF6FE8FF : (novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE);
-    rowLabel.color = enabled ? FlxColor.WHITE : 0xFFB9C8E3;
     #else
     valueLabel.text = "N/A";
     valueLabel.color = FlxColor.GRAY;
-    rowLabel.color = FlxColor.GRAY;
     #end
+  }
+
+  function updateControlsSchemeValue():Void
+  {
+    controlsSchemeValue.text = schemeDisplayName(Preferences.controlsScheme);
   }
 
   function updateRowHighlight():Void
   {
-    var selected:Bool = items != null && items.selectedIndex == 0;
-    rowBackground.color = selected ? 0xFF123B5C : 0xFF0D1935;
-    rowBackground.alpha = selected ? 1.0 : 0.82;
-    rowAccent.alpha = selected ? 1.0 : 0.4;
+    var selectedOrientation:Bool = items != null && items.selectedIndex == 0;
+    var selectedScheme:Bool = items != null && items.selectedIndex == 1;
+
+    rowBackground.color = selectedOrientation ? 0xFF123B5C : 0xFF0D1935;
+    rowBackground.alpha = selectedOrientation ? 1.0 : 0.82;
+    rowAccent.alpha = selectedOrientation ? 1.0 : 0.4;
+    rowLabel.color = selectedOrientation ? FlxColor.WHITE : 0xFFB9C8E3;
+
+    controlsRowBackground.color = selectedScheme ? 0xFF123B5C : 0xFF0D1935;
+    controlsRowBackground.alpha = selectedScheme ? 1.0 : 0.82;
+    controlsRowAccent.alpha = selectedScheme ? 1.0 : 0.4;
+    controlsSchemeLabel.color = selectedScheme ? FlxColor.WHITE : 0xFFB9C8E3;
+    controlsSchemeValue.color = selectedScheme ? 0xFF48E7FF : (novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE);
+  }
+
+  function updateDescription():Void
+  {
+    if (descriptionText == null || items == null) return;
+
+    if (items.selectedIndex == 0)
+    {
+      descriptionText.text = "Keep the phone in its current orientation. Turn this off to allow automatic rotation again.";
+    }
+    else
+    {
+      descriptionText.text = "Choose one of the five original FNF touch layouts. Tap this row to preview them, or use left and right to cycle.";
+    }
   }
 
   function goBack():Void
@@ -262,8 +393,15 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (!enabled || items == null) return;
 
-    if (controls.UI_LEFT_P || controls.UI_RIGHT_P || SwipeUtil.swipeLeft || SwipeUtil.swipeRight)
-      toggleOrientationLock();
+    var movedLeft:Bool = controls.UI_LEFT_P || SwipeUtil.swipeLeft;
+    var movedRight:Bool = controls.UI_RIGHT_P || SwipeUtil.swipeRight;
+
+    if (movedLeft || movedRight)
+    {
+      var direction:Int = movedLeft ? -1 : 1;
+      if (items.selectedIndex == 0) toggleOrientationLock();
+      else cycleControlsScheme(direction);
+    }
   }
 
   override function destroy():Void
