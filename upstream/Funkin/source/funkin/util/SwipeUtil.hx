@@ -5,6 +5,9 @@ import flixel.FlxG;
 import flixel.input.FlxSwipe;
 #end
 import flixel.util.FlxAxes;
+#if web
+import funkin.util.DeviceUtil;
+#end
 
 /**
  * Utility class for handling swipe gestures in HaxeFlixel and dispatching signals for different swipe directions.
@@ -145,6 +148,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return TouchUtil.touch?.justMovedUp ?? false;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? (TouchUtil.touch?.justMovedUp ?? false)
+      : (FlxG.mouse.justMovedUp && FlxG.mouse.pressed);
     #else
     return FlxG.mouse.justMovedUp && FlxG.mouse.pressed;
     #end
@@ -159,6 +166,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return TouchUtil.touch?.justMovedRight ?? false;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? (TouchUtil.touch?.justMovedRight ?? false)
+      : (FlxG.mouse.justMovedRight && FlxG.mouse.pressed);
     #else
     return FlxG.mouse.justMovedRight && FlxG.mouse.pressed;
     #end
@@ -173,6 +184,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return TouchUtil.touch?.justMovedLeft ?? false;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? (TouchUtil.touch?.justMovedLeft ?? false)
+      : (FlxG.mouse.justMovedLeft && FlxG.mouse.pressed);
     #else
     return FlxG.mouse.justMovedLeft && FlxG.mouse.pressed;
     #end
@@ -187,6 +202,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return TouchUtil.touch?.justMovedDown ?? false;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? (TouchUtil.touch?.justMovedDown ?? false)
+      : (FlxG.mouse.justMovedDown && FlxG.mouse.pressed);
     #else
     return FlxG.mouse.justMovedDown && FlxG.mouse.pressed;
     #end
@@ -254,6 +273,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return FlxG.touches.flickManager.flickUp;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? FlxG.touches.flickManager.flickUp
+      : FlxG.mouse.flickManager.flickUp;
     #else
     return FlxG.mouse.flickManager.flickUp;
     #end
@@ -268,6 +291,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return FlxG.touches.flickManager.flickRight;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? FlxG.touches.flickManager.flickRight
+      : FlxG.mouse.flickManager.flickRight;
     #else
     return FlxG.mouse.flickManager.flickRight;
     #end
@@ -282,6 +309,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return FlxG.touches.flickManager.flickLeft;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? FlxG.touches.flickManager.flickLeft
+      : FlxG.mouse.flickManager.flickLeft;
     #else
     return FlxG.mouse.flickManager.flickLeft;
     #end
@@ -296,6 +327,10 @@ class SwipeUtil
     #if FEATURE_TOUCH_CONTROLS
     #if mobile
     return FlxG.touches.flickManager.flickDown;
+    #elseif web
+    return DeviceUtil.isMobileBrowser
+      ? FlxG.touches.flickManager.flickDown
+      : FlxG.mouse.flickManager.flickDown;
     #else
     return FlxG.mouse.flickManager.flickDown;
     #end

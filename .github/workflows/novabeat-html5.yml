@@ -233,46 +233,156 @@ jobs:
 
           web_root="$(dirname "$index_file")"
           test -s "$index_file"
-          # The game draws its own mobile-dot pointer. Hide the browser's OS
-          # cursor across the entire HTML5 page, including menus and gameplay.
+          # Give mobile browsers an edge-to-edge viewport without changing
+          # desktop cursor or layout behavior.
           python3 - "$index_file" <<'PY'
           from pathlib import Path
+          import re
           import sys
 
           index = Path(sys.argv[1])
           html = index.read_text(encoding="utf-8")
-          style = "<style>@media (hover: none) and (pointer: coarse) { html,body,canvas,#openfl-content{cursor:none!important} }</style>"
-          if style not in html:
-              if "</head>" in html:
-                  html = html.replace("</head>", style + "</head>", 1)
-              else:
-                  html = style + html
-              index.write_text(html, encoding="utf-8")
+          viewport = '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">'
+          viewport_pattern = r"""<meta\s+name=["']viewport["'][^>]*>"""
+          if re.search(viewport_pattern, html, re.I):
+              html = re.sub(viewport_pattern, viewport, html, count=1, flags=re.I)
+          elif "</head>" in html:
+              html = html.replace("</head>", viewport + "</head>", 1)
+
+          style = """<style id="novabeat-mobile-viewport">
+          @media (hover:none) and (pointer:coarse) {
+            html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;min-height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+            #openfl-content{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-width:none!important;max-height:none!important;overflow:hidden!important}
+            #openfl-content canvas,canvas{display:block!important}
+            html,body,canvas,#openfl-content{cursor:none!important}
+          }
+          </style>"""
+          if "novabeat-mobile-viewport" not in html:
+              html = html.replace("</head>", style + "</head>", 1) if "</head>" in html else style + html
+          index.write_text(html, encoding="utf-8")
           PY
-          # Build a versioned, atomic offline cache. The previous cache remains
-          # active until every file in the new build has been downloaded successfully.
+          # Hash the full output, then copy unchanged assets from the previous
+          # cache and download only changed/missing files. Songs stay included.
           python3 - "$web_root" "${GITHUB_SHA}" <<'PY'
+          from hashlib import sha256
           from pathlib import Path
           import json
+          import os
           import sys
 
           root = Path(sys.argv[1])
           version = sys.argv[2]
-          assets = sorted(
-              "./" + path.relative_to(root).as_posix()
-              for path in root.rglob("*")
-              if path.is_file()
-              and path.name not in {"service-worker.js", ".nojekyll"}
-          )
+
+          # Cache the final HTML document, including this registration script.
+          # Insert it before hashing ASSETS so offline navigation never restores
+          # an index.html that cannot register/update its service worker.
+          index = root / "index.html"
+          html = index.read_text(encoding="utf-8")
+          registration = """<script>
+          if ("serviceWorker" in navigator && location.protocol !== "file:") {
+            window.addEventListener("load", () => {
+              navigator.serviceWorker.register("./service-worker.js", {scope: "./", updateViaCache: "none"})
+                .catch(error => console.warn("NovaBeat offline cache unavailable:", error));
+            }, {once: true});
+          }
+          </script>"""
+          if "service-worker.js" not in html:
+              html = html.replace("</body>", registration + "</body>") if "</body>" in html else html + registration
+              index.write_text(html, encoding="utf-8")
+
+          def digest_file(path: Path) -> str:
+              digest = sha256()
+              with path.open("rb") as source:
+                  for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          assets = []
+          for path in sorted(root.rglob("*")):
+              if not path.is_file() or path.name in {"service-worker.js", ".nojekyll"}:
+                  continue
+              assets.append({
+                  "path": "./" + path.relative_to(root).as_posix(),
+                  "sha256": digest_file(path)
+              })
+
+          song_assets = [asset for asset in assets if asset["path"].startswith("./assets/songs/")]
+          if not song_assets:
+              raise SystemExit("HTML5 output has no assets/songs files; refusing to publish an incomplete offline build.")
+
           worker = """const CACHE_PREFIX = "novabeat-static-";
           const CACHE_NAME = CACHE_PREFIX + VERSION;
           const ASSETS = ASSET_LIST;
+          const MANIFEST_URL = new URL("__novabeat_asset_manifest.json", self.registration.scope).href;
+
+          function canonicalURL(value) {
+            const url = new URL(typeof value === "string" ? value : value.url, self.registration.scope);
+            url.search = "";
+            url.hash = "";
+            return url.href;
+          }
+
+          async function findPreviousCache() {
+            const names = (await caches.keys()).filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).reverse();
+            for (const name of names) {
+              const cache = await caches.open(name);
+              const response = await cache.match(MANIFEST_URL);
+              if (response) {
+                try { return {cache, manifest: await response.json()}; } catch (_) {}
+              }
+              // Previous worker versions did not store hashes. Keep a handle
+              // so ETag validation can avoid fetching unchanged large media.
+              return {cache, manifest: null};
+            }
+            return null;
+          }
+
+          async function getPreviousResponse(previous, key, expectedHash) {
+            if (!previous) return null;
+            const response = await previous.cache.match(key, {ignoreSearch: true});
+            if (!response) return null;
+
+            if (previous.manifest) {
+              return previous.manifest[key] === expectedHash ? response : null;
+            }
+
+            const etag = response.headers.get("ETag");
+            if (!etag) return null;
+            const validation = await fetch(new Request(key, {
+              method: "HEAD",
+              headers: {"If-None-Match": etag},
+              cache: "no-store"
+            }));
+            if (validation.status === 304 || validation.headers.get("ETag") === etag) return response;
+            return null;
+          }
 
           self.addEventListener("install", event => {
             event.waitUntil((async () => {
               const cache = await caches.open(CACHE_NAME);
+              const previous = await findPreviousCache();
+              const nextManifest = {};
               try {
-                await cache.addAll(ASSETS.map(path => new Request(new URL(path, self.registration.scope), {cache: "reload"})));
+                // Small batches avoid a single giant addAll burst on phones.
+                for (let offset = 0; offset < ASSETS.length; offset += 6) {
+                  const batch = ASSETS.slice(offset, offset + 6);
+                  await Promise.all(batch.map(async asset => {
+                    const key = canonicalURL(asset.path);
+                    nextManifest[key] = asset.sha256;
+                    const oldResponse = await getPreviousResponse(previous, key, asset.sha256);
+                    if (oldResponse) {
+                      await cache.put(key, oldResponse.clone());
+                      return;
+                    }
+                    const response = await fetch(new Request(key, {cache: "reload"}));
+                    if (!response.ok) throw new Error("Failed to cache " + key + " (" + response.status + ")");
+                    await cache.put(key, response.clone());
+                  }));
+                }
+
+                await cache.put(MANIFEST_URL, new Response(JSON.stringify(nextManifest), {
+                  headers: {"Content-Type": "application/json"}
+                }));
                 await self.skipWaiting();
               } catch (error) {
                 await caches.delete(CACHE_NAME);
@@ -291,18 +401,20 @@ jobs:
 
           self.addEventListener("fetch", event => {
             const request = event.request;
-            if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+            const requestURL = new URL(request.url);
+            if (request.method !== "GET" || requestURL.origin !== self.location.origin) return;
             event.respondWith((async () => {
               const cache = await caches.open(CACHE_NAME);
-              const cached = await cache.match(request);
+              const key = canonicalURL(request);
+              const cached = await cache.match(key, {ignoreSearch: true});
               if (cached) return cached;
               try {
                 const response = await fetch(request);
-                if (response.ok && response.type === "basic") await cache.put(request, response.clone());
+                if (response.ok && response.type === "basic") await cache.put(key, response.clone());
                 return response;
               } catch (error) {
                 if (request.mode === "navigate") {
-                  const offlinePage = await cache.match(new URL("./index.html", self.registration.scope).href);
+                  const offlinePage = await cache.match(new URL("./index.html", self.registration.scope).href, {ignoreSearch: true});
                   if (offlinePage) return offlinePage;
                 }
                 throw error;
@@ -313,6 +425,12 @@ jobs:
           worker = worker.replace("VERSION", json.dumps(version), 1)
           worker = worker.replace("ASSET_LIST", json.dumps(assets, separators=(",", ":")))
           (root / "service-worker.js").write_text(worker, encoding="utf-8")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as output:
+                  output.write(f"\n- Offline precache includes {len(song_assets)} song audio files (instrumentals and vocals).\n")
+          PY
 
           index = root / "index.html"
           html = index.read_text(encoding="utf-8")

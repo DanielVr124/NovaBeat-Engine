@@ -124,7 +124,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     listW = width - margin * 2 - 24;
     var availableTop:Float = panelTop + 20;
     var availableHeight:Float = Math.max(120, height - availableTop - 74);
-    rowHeight = Math.max(16, Math.min(44, availableHeight / LABELS.length));
+    rowHeight = Math.max(16, Math.min(48, availableHeight / LABELS.length));
     var settingsHeight:Float = rowHeight * LABELS.length;
     listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
     valueColumnX = listX + listW * 0.72;
@@ -463,7 +463,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       listW = width - margin * 2 - 24;
       var availableTop:Float = panelTop + 20;
       var availableHeight:Float = Math.max(120, height - availableTop - 74);
-      rowHeight = Math.max(16, Math.min(44, availableHeight / LABELS.length));
+      rowHeight = Math.max(16, Math.min(48, availableHeight / LABELS.length));
       var settingsHeight:Float = rowHeight * LABELS.length;
       listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
       valueColumnX = listX + listW * 0.71;

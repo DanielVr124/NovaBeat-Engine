@@ -3788,7 +3788,24 @@ class PlayState extends MusicBeatSubState
 
     if (currentChart != null)
     {
-      // TODO: Uncache the song.
+      // Native builds purge unused assets when switching states. The HTML5
+      // NO_PRELOAD_ALL path can return to Freeplay without that bulk purge, so
+      // release only this chart's decoded audio after its playback is stopped.
+      #if (web && NO_PRELOAD_ALL)
+      if (!overrideMusic)
+      {
+        var songAudioPaths:Array<String> = currentChart.buildVoiceList();
+        songAudioPaths.push(currentChart.getInstPath(currentInstrumental));
+        funkin.FunkinMemory.uncacheSounds(songAudioPaths);
+
+        @:nullSafety(Off)
+        if (FlxG.sound.music != null)
+        {
+          FlxG.sound.music.destroy();
+          FlxG.sound.music = null;
+        }
+      }
+      #end
     }
 
     // Prevent vwoosh timer from running outside PlayState (e.g Chart Editor)

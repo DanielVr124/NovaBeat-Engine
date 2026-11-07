@@ -246,7 +246,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
             if (_isMainMenuState)
             {
-              if (prevIndex == i)
+              if (prevIndex == i || (Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser))
               {
                 FlxTween.cancelTweensOf(item);
                 item.scale.set(1.1, 1.1);

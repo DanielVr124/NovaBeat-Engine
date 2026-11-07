@@ -354,6 +354,24 @@ class FunkinMemory
   }
 
   /**
+   * Removes completed song audio from the runtime sound caches.
+   * Permanent UI/menu sounds are deliberately left untouched.
+   */
+  public static function uncacheSounds(keys:Array<String>):Void
+  {
+    if (keys == null) return;
+
+    for (key in keys)
+    {
+      if (permanentCachedSounds.exists(key)) continue;
+
+      currentCachedSounds.remove(key);
+      previousCachedSounds.remove(key);
+      Assets.cache.removeSound(key);
+    }
+  }
+
+  /**
    * Permanently caches a sound with the given key.
    * @param key The key of the sound to cache.
    */

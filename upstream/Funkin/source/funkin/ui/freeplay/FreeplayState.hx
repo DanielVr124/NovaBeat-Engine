@@ -2103,6 +2103,9 @@ class FreeplayState extends MusicBeatSubState
     }
 
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
+    // The previous NovaBeat path interpreted each screen pixel as a song
+    // index. Convert pixels to a fraction of a row so scrolling is controlled.
+    final scrollPixelsPerSong:Float = Math.max(96, FlxG.height * 0.18);
     #if web
     if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)
     {
@@ -2120,7 +2123,9 @@ class FreeplayState extends MusicBeatSubState
         {
           var dpiScale = FlxG.stage.window.display.dpi / 160;
           dpiScale = dpiScale.clamp(0.5, 2);
-          var moveLength = delta / dpiScale;
+          var moveLength:Float = Preferences.menuStyle == "NovaBeat"
+            ? (delta / dpiScale / scrollPixelsPerSong)
+            : (delta / dpiScale);
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
@@ -2157,8 +2162,8 @@ class FreeplayState extends MusicBeatSubState
 
           #if web
           var moveLength:Float = Preferences.menuStyle == "NovaBeat"
-            ? delta / dpiScale
-            : delta / FlxG.updateFramerate / dpiScale;
+            ? (delta / dpiScale / scrollPixelsPerSong)
+            : (delta / FlxG.updateFramerate / dpiScale);
           #else
           var moveLength:Float = delta / FlxG.updateFramerate / dpiScale;
           #end
@@ -2189,7 +2194,9 @@ class FreeplayState extends MusicBeatSubState
         var dpiScale = FlxG.stage.window.display.dpi / 160;
 
         dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
-        var velocityMove = flickVelocity * elapsed / dpiScale;
+        var velocityMove:Float = Preferences.menuStyle == "NovaBeat"
+          ? (flickVelocity * elapsed / dpiScale / scrollPixelsPerSong)
+          : (flickVelocity * elapsed / dpiScale);
         _moveLength += Math.abs(velocityMove);
         curSelectedFloat -= velocityMove;
         updateSongsScroll();

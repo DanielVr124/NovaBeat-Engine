@@ -151,8 +151,9 @@ class LoadingState extends MusicBeatSubState
 
     checkLibrary('shared');
     checkLibrary('videos');
+    // The selected stage directory already loads this when Tutorial is chosen.
+    // Do not load the tutorial library for every other song.
     checkLibrary(stageDirectory);
-    checkLibrary('tutorial');
 
     var fadeTime:Float = 0.5;
     FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);

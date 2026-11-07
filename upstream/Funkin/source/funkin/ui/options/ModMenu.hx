@@ -155,14 +155,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var listY:Float = 82;
     var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
     var listH:Float = portraitLayout
-      ? Math.max(160, Math.min(height * 0.34, height - 360))
+      ? Math.max(180, Math.min(height * 0.40, height - 360))
       : Math.max(180, height - 150);
     addPanel(listX, listY, listW, listH);
 
     var detailX:Float = portraitLayout ? margin : listX + listW + 14;
     var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
     var detailW:Float = portraitLayout ? listW : width - detailX - margin;
-    var buttonHeight:Float = portraitLayout ? 48 : 50;
+    var buttonHeight:Float = portraitLayout ? 52 : 50;
     var buttonGap:Float = 8;
     var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
     var detailH:Float = portraitLayout
@@ -174,7 +174,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 82 : 74;
+    rowHeight = portraitLayout ? 76 : 72;
     visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
     addLabel(listX + 12, listY + 12, listW - 24, 'INSTALLED MODS', 12, 0xFF48E7FF);
@@ -650,12 +650,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var listY:Float = 82;
     var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
     var listH:Float = portraitLayout
-      ? Math.max(160, Math.min(height * 0.34, height - 360))
+      ? Math.max(180, Math.min(height * 0.40, height - 360))
       : Math.max(180, height - 150);
     var detailX:Float = portraitLayout ? margin : listX + listW + 14;
     var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
     var detailW:Float = portraitLayout ? listW : width - detailX - margin;
-    var buttonHeight:Float = portraitLayout ? 48 : 50;
+    var buttonHeight:Float = portraitLayout ? 52 : 50;
     var buttonGap:Float = 8;
     var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
     var detailH:Float = portraitLayout
@@ -678,7 +678,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 82 : 74;
+    rowHeight = portraitLayout ? 76 : 72;
     visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
     detailTitle.setPosition(detailX + 16, detailY + 14);

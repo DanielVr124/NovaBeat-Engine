@@ -549,16 +549,16 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        // Keep the original FNF drag convention in both themes: dragging
-        // upward moves the carousel content downward, and vice versa.
-        // Do not invert the NovaBeat path a second time.
-        if (controls.UI_UP_P || menuSwipeUp())
+        // On NovaBeat/mobile, dragging the list follows the finger: swiping
+        // upward advances to the next level. Keep FNF's original mapping intact.
+        final invertNovaBeatTouchSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
+        if (controls.UI_UP_P || (invertNovaBeatTouchSwipe ? menuSwipeDown() : menuSwipeUp()))
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || menuSwipeDown())
+        if (controls.UI_DOWN_P || (invertNovaBeatTouchSwipe ? menuSwipeUp() : menuSwipeDown()))
         {
           changeLevel(1);
           changeDifficulty(0);

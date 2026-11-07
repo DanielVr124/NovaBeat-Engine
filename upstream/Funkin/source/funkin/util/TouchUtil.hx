@@ -58,10 +58,14 @@ class TouchUtil
    * The first touch in the FlxG.touches list.
    */
   public static var touch(get, never):FlxTouch;
-  #else
-
+  #elseif web
   /**
-   * The first touch in the FlxG.touches list.
+   * Mobile browsers use FlxTouch; desktop browsers continue to use FlxMouse.
+   */
+  public static var touch(get, never):Dynamic;
+  #else
+  /**
+   * Desktop/native pointer.
    */
   public static var touch(get, never):FlxMouse;
   #end
@@ -183,15 +187,28 @@ class TouchUtil
 
     return FlxG.touches.getFirst();
   }
+  #elseif web
+  @:noCompletion
+  static function get_touch():Dynamic
+  {
+    // HTML5 touch-enabled builds also run on desktop. Use the real touch list
+    // on phones/tablets, but leave mouse-driven navigation on FlxG.mouse.
+    if (DeviceUtil.isMobileBrowser)
+    {
+      for (touch in FlxG.touches.list)
+      {
+        if (touch != null) return touch;
+      }
+      return null;
+    }
+
+    FlxG.mouse.visible = true;
+    return FlxG.mouse;
+  }
   #else
   @:noCompletion
   static function get_touch():FlxMouse
   {
-    // Only suppress the OS cursor when a mobile browser uses the in-game touch
-    // pointer. Desktop HTML5 users need the normal visible mouse cursor.
-    #if web
-    FlxG.mouse.visible = !DeviceUtil.isMobileBrowser;
-    #end
     return FlxG.mouse;
   }
   #end

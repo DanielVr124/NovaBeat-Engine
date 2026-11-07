@@ -60,7 +60,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     // directly to the list so MenuTypedList's mobile pointer hit-tests use
     // the same screen transform as the visible FNF-style entries.
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = novaBeatStyle;
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser || novaBeatStyle;
     add(items);
 
     var itemY:Float = novaBeatStyle ? 112 : 30;

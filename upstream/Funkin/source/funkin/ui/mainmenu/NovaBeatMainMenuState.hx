@@ -146,6 +146,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     super.create();
 
     interfaceLayer = new FlxTypedGroup<FlxBasic>();
+    interfaceLayer.cameras = [uiCamera];
     super.add(interfaceLayer);
     routeInterfaceObjects = true;
 
@@ -441,6 +442,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
     menuItems.cameras = [uiCamera];
+    menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
     for (index in 0...ITEM_NAMES.length)
     {
