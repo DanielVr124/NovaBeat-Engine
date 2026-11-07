@@ -716,7 +716,7 @@ class Preferences
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * Controls Scheme for the hitbox.
-   * @default `4 Lanes`
+   * @default `Arrows`
    */
   public static var controlsScheme(get, set):String;
 
