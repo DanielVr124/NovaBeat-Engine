@@ -695,6 +695,7 @@ class SongMenuItem extends FlxSpriteGroup
    * screens. Keep the official character portrait at its intended 2x (64px)
    * size and anchor point instead of shrinking and shifting it with the group.
    * The original FNF style retains the stock PixelatedIcon transform.
+   * [web-build] Include this NovaBeat-only layout fix in the browser verification build.
    */
   function updateNovaBeatPixelIconLayout():Void
   {
