@@ -166,7 +166,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final item = members[i];
         final menuCamera = FlxG.cameras.list[1];
 
-        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, item.camera ?? menuCamera);
+        // Original FNF uses its stock menu camera. NovaBeat rows are assigned
+        // their visible list camera when added, so keep drawing and hit-testing aligned.
+        final touchCamera = Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera;
+        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
         final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
         final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
