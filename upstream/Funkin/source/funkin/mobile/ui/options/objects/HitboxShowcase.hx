@@ -80,7 +80,7 @@ class HitboxShowcase extends FlxSpriteGroup
     bg.screenCenter();
     add(bg);
 
-    final hitbox:FunkinHitbox = new FunkinHitbox(controlsScheme, false);
+    final hitbox:FunkinHitbox = new FunkinHitbox(controlsScheme, false, null, null, false);
     hitbox.forEachAlive(function(hint:FunkinHint):Void
     {
       if (controlsScheme != FunkinHitbox.FunkinHitboxControlSchemes.FourLanes) hint.alpha = 0.3;

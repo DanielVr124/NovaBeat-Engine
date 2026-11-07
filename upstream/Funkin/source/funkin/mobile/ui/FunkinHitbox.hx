@@ -284,7 +284,7 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
   /**
    * Creates a new `FunkinHitbox` object.
    */
-  public function new(?schemeOverride:String, ?showGradint:Bool = true, ?directionsOverride:Array<NoteDirection>, ?colorsOverride:Array<FlxColor>):Void
+  public function new(?schemeOverride:String, ?showGradint:Bool = true, ?directionsOverride:Array<NoteDirection>, ?colorsOverride:Array<FlxColor>, ?registerControls:Bool = true):Void
   {
     super();
 
@@ -381,7 +381,9 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
 
     scrollFactor.set();
 
-    ControlsHandler.setupHitbox(PlayerSettings.player1.controls, this, trackedInputs);
+    // Preview hitboxes are decorative only. Registering every preview as a
+    // live controls layer duplicates input bindings and can stall mobile UI.
+    if (registerControls) ControlsHandler.setupHitbox(PlayerSettings.player1.controls, this, trackedInputs);
   }
 
   public function getFirstHintByDirection(direction:NoteDirection):Null<FunkinHint>
