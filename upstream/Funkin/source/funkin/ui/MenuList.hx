@@ -193,28 +193,17 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #end
     {
       // Mobile browsers retain native touch input, but some browsers expose
-      // taps to Flixel as synthetic mouse events instead of FlxTouch events.
-      // Bridge those taps for NovaBeat menus only; the original FNF menu keeps
-      // its stock touch handling.
-      final novaBeatMouseTap:Bool = Preferences.menuStyle == "NovaBeat" && FlxG.mouse.justReleased;
-      if (novaBeatMouseTap)
-      {
-        for (i in 0...members.length)
-        {
-          final item = members[i];
-          final pointerCamera = (cameras != null && cameras.length > 0) ? cameras[0] : item.camera;
-          if (!item.available || !FlxG.mouse.overlaps(item, pointerCamera)) continue;
-
-          selectItem(i);
-          accept();
-          pointerAccepted = true;
-          break;
-        }
-      }
-
+      // Some mobile browsers expose taps as synthetic FlxMouse events rather
+      // than FlxTouch events. Route those taps through the same selection and
+      // confirmation rules as native touch for both FNF and NovaBeat menus.
+      final mobileBrowserMouseTap:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased;
       if (TouchUtil.pressed)
       {
         touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
+      }
+      else if (mobileBrowserMouseTap)
+      {
+        touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
       }
 
       if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
@@ -225,7 +214,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           selectItem(newIndex);
         }
       }
-      else if (TouchUtil.pressed)
+      else if (TouchUtil.pressed || mobileBrowserMouseTap)
       {
         for (i in 0...members.length)
         {
@@ -239,12 +228,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           final touchCamera = (cameras != null && cameras.length > 0)
             ? cameras[0]
             : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
-          final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
+          final itemOverlaps:Bool = !_isMainMenuState && (mobileBrowserMouseTap ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
           final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
           final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
 
-          if (item.available && isTouchingItem && TouchUtil.justPressed)
+          if (item.available && isTouchingItem && (TouchUtil.justPressed || mobileBrowserMouseTap))
           {
             var prevIndex:Int = selectedIndex;
 
