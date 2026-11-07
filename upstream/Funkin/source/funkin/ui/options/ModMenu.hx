@@ -54,6 +54,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var statusText:FlxText;
   var helpText:FlxText;
   var emptyStateText:Null<FlxText>;
+  var listHeading:Null<FlxText>;
 
   public function new()
   {
@@ -62,7 +63,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     refreshModList();
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
+    if (usesTouchControls)
     {
       responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 18, FlxColor.WHITE, goBack, 1.0, true);
       responsiveBackButton.setPosition(FlxG.width - responsiveBackButton.width - 18, 18);
@@ -82,6 +83,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var height:Float = FlxG.height;
     portraitLayout = height > width * 1.12;
     usesTouchControls = DeviceUtil.isMobileBrowser;
+    #if mobile
+    usesTouchControls = true;
+    #end
     if (usesTouchControls)
     {
       buildMobileLayout(width, height);
@@ -144,6 +148,15 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       layoutTouchActions(rowX, listY + listH - touchButtonHeight - 8, rowWidth, touchButtonHeight);
   }
 
+  function mobileModActionsEnabled():Bool
+  {
+    #if web
+    return false;
+    #else
+    return true;
+    #end
+  }
+
   function buildMobileLayout(width:Float, height:Float):Void
   {
     portraitLayout = height > width * 1.12;
@@ -151,50 +164,99 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     heading = addLabel(margin, 10, width - margin * 2 - 94, 'MOD LIBRARY', portraitLayout ? 25 : 23, 0xFFFFFFFF);
     countText = addLabel(margin, 44, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 12, 0xFF48E7FF);
 
+    var showActions:Bool = mobileModActionsEnabled();
+    if (portraitLayout)
+    {
+      // Portrait gets one dedicated library workspace rather than two stacked
+      // desktop-style panes. Details live in a compact selection header and
+      // the installed-mod cards own the remaining vertical space.
+      var mainX:Float = margin;
+      var mainY:Float = 82;
+      var mainW:Float = width - margin * 2;
+      var mainH:Float = Math.max(220, height - 164);
+      addPanel(mainX, mainY, mainW, mainH);
+
+      var detailX:Float = mainX + 12;
+      var detailY:Float = mainY + 12;
+      var detailW:Float = mainW - 24;
+      var detailH:Float = 128;
+      addPanel(detailX, detailY, detailW, detailH);
+
+      detailTitle = addLabel(detailX + 14, detailY + 10, detailW - 28, 'SELECT A MOD', 18, 0xFFFFFFFF);
+      detailText = addLabel(detailX + 14, detailY + 40, detailW - 28,
+        'Tap a mod card below to see its details and status.',
+        12, 0xFFB5C6E4);
+      detailText.wordWrap = true;
+      detailText.autoSize = false;
+      detailText.fieldHeight = detailH - 66;
+      statusText = addLabel(detailX + 14, detailY + detailH - 22, detailW - 28, '', 9, 0xFF48E7FF);
+
+      rowX = mainX + 14;
+      rowWidth = mainW - 28;
+      rowHeight = 68;
+      listHeading = addLabel(rowX, detailY + detailH + 14, rowWidth, 'YOUR INSTALLED MODS', 11, 0xFF48E7FF);
+      rowY = detailY + detailH + 38;
+
+      var buttonHeight:Float = 42;
+      var buttonGap:Float = 8;
+      var actionBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
+      var actionY:Float = mainY + mainH - actionBlockHeight - 12;
+      var listBottom:Float = showActions ? actionY - 10 : mainY + mainH - 12;
+      visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+
+      if (showActions)
+        layoutMobileTouchActions(rowX, actionY, rowWidth, buttonHeight, buttonGap, true);
+
+      helpText = addLabel(margin, height - 22, width - margin * 2,
+        showActions
+          ? 'TAP A CARD TO INSPECT  •  USE THE ACTIONS BELOW'
+          : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE',
+        9, 0xFF8DA8D8);
+      return;
+    }
+
+    // Landscape phones keep a two-column layout, but the action area is only
+    // reserved when the target can actually manage a local mod directory.
     var listX:Float = margin;
     var listY:Float = 82;
-    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
-    var listH:Float = portraitLayout
-      ? Math.max(180, Math.min(height * 0.40, height - 360))
-      : Math.max(180, height - 150);
+    var listW:Float = width * 0.40;
+    var listH:Float = Math.max(180, height - 150);
     addPanel(listX, listY, listW, listH);
 
-    var detailX:Float = portraitLayout ? margin : listX + listW + 14;
-    var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
-    var detailW:Float = portraitLayout ? listW : width - detailX - margin;
-    var buttonHeight:Float = portraitLayout ? 52 : 50;
+    var detailX:Float = listX + listW + 14;
+    var detailY:Float = listY;
+    var detailW:Float = width - detailX - margin;
+    var buttonHeight:Float = 48;
     var buttonGap:Float = 8;
-    var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
-    var detailH:Float = portraitLayout
-      ? Math.max(100, height - detailY - buttonBlockHeight - 54)
-      : Math.max(150, listH - buttonBlockHeight - 18);
+    var buttonBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
+    var detailH:Float = Math.max(150, listH - buttonBlockHeight - (showActions ? 18 : 0));
     addPanel(detailX, detailY, detailW, detailH);
 
     var rowHeaderHeight:Float = 42;
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 76 : 72;
+    rowHeight = 68;
     visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
-    addLabel(listX + 12, listY + 12, listW - 24, 'INSTALLED MODS', 12, 0xFF48E7FF);
-
-    detailTitle = addLabel(detailX + 16, detailY + 14, detailW - 32, 'SELECT A MOD', 19, 0xFFFFFFFF);
+    listHeading = addLabel(listX + 12, listY + 12, listW - 24, 'YOUR INSTALLED MODS', 11, 0xFF48E7FF);
+    detailTitle = addLabel(detailX + 16, detailY + 14, detailW - 32, 'SELECT A MOD', 18, 0xFFFFFFFF);
     detailText = addLabel(detailX + 16, detailY + 46, detailW - 32,
       'Choose a mod above to view its information and manage it.',
-      portraitLayout ? 13 : 14, 0xFFB5C6E4);
+      13, 0xFFB5C6E4);
     detailText.wordWrap = true;
     detailText.autoSize = false;
     detailText.fieldHeight = Math.max(32, detailH - 82);
 
     statusText = addLabel(detailX + 16, detailY + detailH - 26, detailW - 32, '', 10, 0xFF48E7FF);
-    var actionX:Float = portraitLayout ? margin : detailX;
-    var actionWidth:Float = portraitLayout ? width - margin * 2 : detailW;
-    var actionY:Float = detailY + detailH + 10;
-    layoutMobileTouchActions(actionX, actionY, actionWidth, buttonHeight, buttonGap, portraitLayout);
+    if (showActions)
+      layoutMobileTouchActions(detailX, detailY + detailH + 10, detailW, buttonHeight, buttonGap, false);
 
     helpText = addLabel(margin, height - 18, width - margin * 2,
-      'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE', 9, 0xFF8DA8D8);
+      showActions
+        ? 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE'
+        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE',
+      9, 0xFF8DA8D8);
   }
 
   function layoutMobileTouchActions(x:Float, y:Float, width:Float, height:Float, gap:Float, portrait:Bool):Void
@@ -318,7 +380,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (detectedMods.length == 0)
     {
       #if web
-      emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
+      emptyStateText = addLabel(rowX, rowY + 8, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
       #else
       emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
       #end
@@ -640,73 +702,130 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     portraitLayout = height > width * 1.12;
     var margin:Float = 18;
+    var showActions:Bool = mobileModActionsEnabled();
     heading.setPosition(margin, 10);
     heading.fieldWidth = width - margin * 2 - 94;
     heading.size = portraitLayout ? 25 : 23;
     countText.setPosition(margin, 44);
     countText.fieldWidth = width - margin * 2;
 
-    var listX:Float = margin;
-    var listY:Float = 82;
-    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
-    var listH:Float = portraitLayout
-      ? Math.max(180, Math.min(height * 0.40, height - 360))
-      : Math.max(180, height - 150);
-    var detailX:Float = portraitLayout ? margin : listX + listW + 14;
-    var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
-    var detailW:Float = portraitLayout ? listW : width - detailX - margin;
-    var buttonHeight:Float = portraitLayout ? 52 : 50;
-    var buttonGap:Float = 8;
-    var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
-    var detailH:Float = portraitLayout
-      ? Math.max(100, height - detailY - buttonBlockHeight - 54)
-      : Math.max(150, listH - buttonBlockHeight - 18);
-
-    if (layoutPanels.length >= 4)
+    if (portraitLayout)
     {
-      layoutPanels[0].setPosition(listX, listY);
-      layoutPanels[0].makeGraphic(Std.int(listW), Std.int(listH), 0xFF4269B5);
-      layoutPanels[1].setPosition(listX + 2, listY + 2);
-      layoutPanels[1].makeGraphic(Std.int(listW - 4), Std.int(listH - 4), 0xF0061028);
-      layoutPanels[2].setPosition(detailX, detailY);
-      layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
-      layoutPanels[3].setPosition(detailX + 2, detailY + 2);
-      layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
+      var mainX:Float = margin;
+      var mainY:Float = 82;
+      var mainW:Float = width - margin * 2;
+      var mainH:Float = Math.max(220, height - 164);
+      var detailX:Float = mainX + 12;
+      var detailY:Float = mainY + 12;
+      var detailW:Float = mainW - 24;
+      var detailH:Float = 128;
+
+      if (layoutPanels.length >= 4)
+      {
+        layoutPanels[0].setPosition(mainX, mainY);
+        layoutPanels[0].makeGraphic(Std.int(mainW), Std.int(mainH), 0xFF4269B5);
+        layoutPanels[1].setPosition(mainX + 2, mainY + 2);
+        layoutPanels[1].makeGraphic(Std.int(mainW - 4), Std.int(mainH - 4), 0xF0061028);
+        layoutPanels[2].setPosition(detailX, detailY);
+        layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
+        layoutPanels[3].setPosition(detailX + 2, detailY + 2);
+        layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
+      }
+
+      detailTitle.setPosition(detailX + 14, detailY + 10);
+      detailTitle.fieldWidth = detailW - 28;
+      detailTitle.size = 18;
+      detailText.setPosition(detailX + 14, detailY + 40);
+      detailText.fieldWidth = detailW - 28;
+      detailText.fieldHeight = detailH - 66;
+      detailText.size = 12;
+      statusText.setPosition(detailX + 14, detailY + detailH - 22);
+      statusText.fieldWidth = detailW - 28;
+
+      rowX = mainX + 14;
+      rowWidth = mainW - 28;
+      rowHeight = 68;
+      listHeading.setPosition(rowX, detailY + detailH + 14);
+      listHeading.fieldWidth = rowWidth;
+      rowY = detailY + detailH + 38;
+
+      var buttonHeight:Float = 42;
+      var buttonGap:Float = 8;
+      var actionBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
+      var actionY:Float = mainY + mainH - actionBlockHeight - 12;
+      var listBottom:Float = showActions ? actionY - 10 : mainY + mainH - 12;
+      visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+      if (showActions)
+        layoutMobileTouchActions(rowX, actionY, rowWidth, buttonHeight, buttonGap, true);
+
+      helpText.setPosition(margin, height - 22);
+      helpText.fieldWidth = width - margin * 2;
+      helpText.size = 9;
+      helpText.text = showActions
+        ? 'TAP A CARD TO INSPECT  •  USE THE ACTIONS BELOW'
+        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE';
     }
+    else
+    {
+      var listX:Float = margin;
+      var listY:Float = 82;
+      var listW:Float = width * 0.40;
+      var listH:Float = Math.max(180, height - 150);
+      var detailX:Float = listX + listW + 14;
+      var detailY:Float = listY;
+      var detailW:Float = width - detailX - margin;
+      var buttonHeight:Float = 48;
+      var buttonGap:Float = 8;
+      var buttonBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
+      var detailH:Float = Math.max(150, listH - buttonBlockHeight - (showActions ? 18 : 0));
 
-    var rowHeaderHeight:Float = 42;
-    rowX = listX + 12;
-    rowY = listY + rowHeaderHeight;
-    rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 76 : 72;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
+      if (layoutPanels.length >= 4)
+      {
+        layoutPanels[0].setPosition(listX, listY);
+        layoutPanels[0].makeGraphic(Std.int(listW), Std.int(listH), 0xFF4269B5);
+        layoutPanels[1].setPosition(listX + 2, listY + 2);
+        layoutPanels[1].makeGraphic(Std.int(listW - 4), Std.int(listH - 4), 0xF0061028);
+        layoutPanels[2].setPosition(detailX, detailY);
+        layoutPanels[2].makeGraphic(Std.int(detailW), Std.int(detailH), 0xFF4269B5);
+        layoutPanels[3].setPosition(detailX + 2, detailY + 2);
+        layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
+      }
 
-    detailTitle.setPosition(detailX + 16, detailY + 14);
-    detailTitle.fieldWidth = detailW - 32;
-    detailTitle.size = 19;
-    detailText.setPosition(detailX + 16, detailY + 46);
-    detailText.fieldWidth = detailW - 32;
-    detailText.size = portraitLayout ? 13 : 14;
-    detailText.fieldHeight = Math.max(32, detailH - 82);
-    statusText.setPosition(detailX + 16, detailY + detailH - 26);
-    statusText.fieldWidth = detailW - 32;
+      rowX = listX + 12;
+      rowY = listY + 42;
+      rowWidth = listW - 24;
+      rowHeight = 68;
+      visibleRows = Std.int(Math.max(1, Math.floor((listH - 60) / rowHeight)));
+      listHeading.setPosition(listX + 12, listY + 12);
+      listHeading.fieldWidth = listW - 24;
 
-    var actionX:Float = portraitLayout ? margin : detailX;
-    var actionWidth:Float = portraitLayout ? width - margin * 2 : detailW;
-    var actionY:Float = detailY + detailH + 10;
-    layoutMobileTouchActions(actionX, actionY, actionWidth, buttonHeight, buttonGap, portraitLayout);
+      detailTitle.setPosition(detailX + 16, detailY + 14);
+      detailTitle.fieldWidth = detailW - 32;
+      detailTitle.size = 18;
+      detailText.setPosition(detailX + 16, detailY + 46);
+      detailText.fieldWidth = detailW - 32;
+      detailText.fieldHeight = Math.max(32, detailH - 82);
+      detailText.size = 13;
+      statusText.setPosition(detailX + 16, detailY + detailH - 26);
+      statusText.fieldWidth = detailW - 32;
 
-    helpText.setPosition(margin, height - 18);
-    helpText.fieldWidth = width - margin * 2;
-    helpText.size = 9;
-    helpText.text = 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE';
+      if (showActions)
+        layoutMobileTouchActions(detailX, detailY + detailH + 10, detailW, buttonHeight, buttonGap, false);
+
+      helpText.setPosition(margin, height - 18);
+      helpText.fieldWidth = width - margin * 2;
+      helpText.size = 9;
+      helpText.text = showActions
+        ? 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE'
+        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE';
+    }
 
     renderRows();
     renderDetails();
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (responsiveBackButton != null)
-      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, 12);
+      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, 18);
     #end
   }
 

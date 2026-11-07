@@ -31,6 +31,7 @@ class NovaBeatOptionsChrome
 
     var panel:FlxSprite = new FlxSprite(margin, panelTop);
     panel.makeGraphic(Std.int(panelWidth), Std.int(panelHeight), 0xC9091833);
+    panel.zIndex = -100;
     panel.scrollFactor.set();
     panel.cameras = [camera];
     group.add(panel);
@@ -38,6 +39,7 @@ class NovaBeatOptionsChrome
 
     var topLine:FlxSprite = new FlxSprite(margin, panelTop - 3);
     topLine.makeGraphic(Std.int(panelWidth), 3, 0xFF2879B5);
+    topLine.zIndex = -90;
     topLine.scrollFactor.set();
     topLine.cameras = [camera];
     group.add(topLine);
@@ -45,6 +47,7 @@ class NovaBeatOptionsChrome
 
     var leftAccent:FlxSprite = new FlxSprite(margin, panelTop);
     leftAccent.makeGraphic(3, Std.int(panelHeight), 0xFF48E7FF);
+    leftAccent.zIndex = -90;
     leftAccent.scrollFactor.set();
     leftAccent.cameras = [camera];
     group.add(leftAccent);
@@ -89,6 +92,7 @@ class NovaBeatOptionsChrome
 
     elements[0].setPosition(margin, panelTop);
     elements[0].makeGraphic(Std.int(panelWidth), Std.int(panelHeight), 0xC9091833);
+    elements[0].zIndex = -100;
     elements[1].setPosition(margin, panelTop - 3);
     elements[1].makeGraphic(Std.int(panelWidth), 3, 0xFF2879B5);
     elements[2].setPosition(margin, panelTop);

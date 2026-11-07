@@ -148,7 +148,9 @@ class LoadingState extends MusicBeatSubState
     }
 
     checkLibrary('shared');
-    checkLibrary('videos');
+    // HTML5 VideoCutscene streams its video URL directly through NetStream;
+    // it does not consume the OpenFL "videos" library. Avoid loading that
+    // whole library for every song.
     checkLibrary(stageDirectory);
 
     var fadeTime:Float = 0.5;

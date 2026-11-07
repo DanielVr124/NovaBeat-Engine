@@ -252,13 +252,17 @@ class NovaBeatMainMenuState extends MusicBeatState
     background.screenCenter();
     background.scrollFactor.set();
     background.cameras = [uiCamera];
+    background.zIndex = -100;
     backgroundSprite = background;
     add(background);
 
-    // The V4 reference keeps the background visible but subdued behind the UI.
+    // Explicit depth order keeps the artwork/dimmer/panels behind every
+    // interactive label and menu tile, including in portrait browser builds.
     backgroundDimmer = addSolid(0, 0, width, height, 0xFF050817);
+    backgroundDimmer.zIndex = -90;
     backgroundDimmer.alpha = backgroundDimmerAlpha();
-    addSolid(0, height * 0.72, width, height * 0.28, 0x3902081C);
+    var bottomShade:FlxSprite = addSolid(0, height * 0.72, width, height * 0.28, 0x3902081C);
+    bottomShade.zIndex = -80;
   }
 
   function buildTitleScreen():Void
@@ -836,6 +840,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     // Allocate a transparent buffer before drawing, preserving the rounded-corner shape.
     sprite.makeGraphic(Std.int(Math.max(1, Math.ceil(width))), Std.int(Math.max(1, Math.ceil(height))), FlxColor.TRANSPARENT);
     FlxSpriteUtil.drawRoundRect(sprite, 0, 0, width, height, radiusX, radiusY, color);
+    // All rounded panels/plates are backgrounds. Keep their render depth
+    // below labels, icons, and transparent menu hit targets.
+    sprite.zIndex = -10;
     sprite.scrollFactor.set();
     sprite.cameras = [uiCamera];
     add(sprite);

@@ -496,9 +496,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
       item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
-        item.lefthandText.text, 15);
-      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
+        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
+      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
       valueLabel.cameras = [menuCamera];
       novaBeatLabelLayer.add(valueLabel);
       novaBeatValueSources.push(item.lefthandText);
@@ -534,9 +534,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
       item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
-        item.lefthandText.text, 15);
-      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
+        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
+      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
       valueLabel.cameras = [menuCamera];
       novaBeatLabelLayer.add(valueLabel);
       novaBeatValueSources.push(item.lefthandText);
@@ -562,9 +562,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       var index:Int = items.length - 1;
       styleNovaBeatPreferenceItem(item, prefName, index);
       item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatRowX() + novaBeatRowWidth() - 210, novaBeatRowY(index) + 15, 180,
-        item.lefthandText.text, 15);
-      valueLabel.setFormat("Arial", 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
+      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
+        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
+      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
       valueLabel.cameras = [menuCamera];
       novaBeatLabelLayer.add(valueLabel);
       novaBeatValueSources.push(item.lefthandText);
@@ -581,6 +581,16 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   function novaBeatRowWidth():Float
   {
     return FlxG.width - Math.max(20, FlxG.width * 0.035) * 2 - 36;
+  }
+
+  function novaBeatValueX():Float
+  {
+    return novaBeatRowX() + novaBeatRowWidth() * 0.59;
+  }
+
+  function novaBeatValueWidth():Float
+  {
+    return Math.max(88, novaBeatRowWidth() * 0.36);
   }
 
   function novaBeatRowY(index:Int):Float
@@ -606,8 +616,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     novaBeatRowLayer.add(accent);
     novaBeatRowAccents.push(accent);
 
-    var label:FlxText = new FlxText(rowX + 18, rowY + 17, rowW - 230, prefName, 15);
-    label.setFormat("Arial", 16, 0xFFDCEBFF, FlxTextAlign.LEFT);
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var label:FlxText = new FlxText(rowX + 18, rowY + 17, Math.max(80, rowW * 0.55), prefName, portrait ? 13 : 16);
+    label.setFormat("Arial", portrait ? 13 : 16, 0xFFDCEBFF, FlxTextAlign.LEFT);
     label.cameras = [menuCamera];
     novaBeatLabelLayer.add(label);
     novaBeatRowLabels.push(label);
@@ -658,10 +669,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
         novaBeatRowAccents[index].setPosition(rowX, rowY + 6);
         novaBeatRowAccents[index].makeSolidColor(4, Std.int(Math.max(12, rowHeight - 12)), 0xFF48E7FF);
         novaBeatRowLabels[index].setPosition(rowX + 14, rowY + (rowHeight - novaBeatRowLabels[index].height) * 0.5);
-        novaBeatRowLabels[index].fieldWidth = Math.max(60, rowW - 220);
-        novaBeatRowLabels[index].size = portrait ? 12 : 15;
+        novaBeatRowLabels[index].fieldWidth = Math.max(80, rowW * 0.55);
+        novaBeatRowLabels[index].size = portrait ? 13 : 16;
         var item:TextMenuItem = items.members[index];
         item.setPosition(rowX + 7, rowY + 3);
+        item.cameras = [menuCamera];
         item.makeGraphic(Std.int(rowW - 14), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
         item.updateHitbox();
         item.atlasText.visible = false;
@@ -686,8 +698,9 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
           if (visualIndex >= 0)
           {
             var valueLabel:FlxText = novaBeatValueLabels[visualIndex];
-            valueLabel.setPosition(rowX + rowW - 210, rowY + (rowHeight - valueLabel.height) * 0.5);
-            valueLabel.fieldWidth = 180;
+            valueLabel.setPosition(novaBeatValueX(), rowY + (rowHeight - valueLabel.height) * 0.5);
+            valueLabel.fieldWidth = novaBeatValueWidth();
+            valueLabel.size = portrait ? 13 : 15;
           }
         }
       }
