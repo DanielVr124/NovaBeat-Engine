@@ -192,7 +192,26 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     else
     #end
     {
-      // Mobile browsers retain the original touch navigation behavior.
+      // Mobile browsers retain native touch input, but some browsers expose
+      // taps to Flixel as synthetic mouse events instead of FlxTouch events.
+      // Bridge those taps for NovaBeat menus only; the original FNF menu keeps
+      // its stock touch handling.
+      final novaBeatMouseTap:Bool = Preferences.menuStyle == "NovaBeat" && FlxG.mouse.justReleased;
+      if (novaBeatMouseTap)
+      {
+        for (i in 0...members.length)
+        {
+          final item = members[i];
+          final pointerCamera = (cameras != null && cameras.length > 0) ? cameras[0] : item.camera;
+          if (!item.available || !FlxG.mouse.overlaps(item, pointerCamera)) continue;
+
+          selectItem(i);
+          accept();
+          pointerAccepted = true;
+          break;
+        }
+      }
+
       if (TouchUtil.pressed)
       {
         touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
