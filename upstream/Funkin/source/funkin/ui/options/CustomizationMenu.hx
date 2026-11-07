@@ -83,7 +83,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     if (novaBeatStyle) styleNovaBeatCategory(performanceItem, 'PERFORMANCE');
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    var mobileItem:TextMenuItem = items.createItem(0, itemY + 224, 'MOBILE', AtlasFont.BOLD, function()
+    if (DeviceUtil.isMobileBrowser || novaBeatStyle)
+    {
+      var mobileItem:TextMenuItem = items.createItem(0, itemY + 224, 'MOBILE', AtlasFont.BOLD, function()
     {
       codex.switchPage(Mobile);
     });
@@ -91,6 +93,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     mobileItem.cameras = [menuCamera];
     categoryItems.push(mobileItem);
     if (novaBeatStyle) styleNovaBeatCategory(mobileItem, 'MOBILE');
+    }
     #end
 
     if (novaBeatStyle)
