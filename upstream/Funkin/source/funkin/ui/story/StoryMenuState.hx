@@ -29,6 +29,7 @@ import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.MathUtil;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
+import funkin.util.NovaBeatMenuInput;
 import funkin.util.DeviceUtil;
 import funkin.ui.FullScreenScaleMode;
 #if FEATURE_DISCORD_RPC
@@ -238,6 +239,9 @@ class StoryMenuState extends MusicBeatState
 
     #if FEATURE_TOUCH_CONTROLS
     FlxG.touches.swipeThreshold.y = 100;
+    #if web
+    if (Preferences.menuStyle == "NovaBeat") FlxG.mouse.swipeThreshold.set(100, 100);
+    #end
     #end
   }
 
@@ -451,6 +455,65 @@ class StoryMenuState extends MusicBeatState
     super.update(elapsed);
   }
 
+  inline function usesNovaBeatMenuInput():Bool
+  {
+    return Preferences.menuStyle == "NovaBeat";
+  }
+
+  inline function menuPointer():Dynamic
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pointer : TouchUtil.touch;
+  }
+
+  inline function menuSwipeUp():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeUp : SwipeUtil.swipeUp;
+  }
+
+  inline function menuSwipeDown():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeDown : SwipeUtil.swipeDown;
+  }
+
+  inline function menuSwipeLeft():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft;
+  }
+
+  inline function menuSwipeRight():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight;
+  }
+
+  inline function menuPointerPressed():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
+  }
+
+  inline function menuPointerJustReleased():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
+  }
+
+  inline function menuPointerJustSwipedAny():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justSwipedAny : SwipeUtil.justSwipedAny;
+  }
+
+  inline function menuPointerOver(sprite:FlxSprite):Bool
+  {
+    return usesNovaBeatMenuInput()
+      ? NovaBeatMenuInput.overlaps(sprite)
+      : TouchUtil.overlaps(sprite);
+  }
+
+  inline function menuPointerPressAction(sprite:FlxSprite):Bool
+  {
+    return usesNovaBeatMenuInput()
+      ? NovaBeatMenuInput.pressAction(sprite)
+      : TouchUtil.pressAction(sprite, null, false);
+  }
+
   function handleKeyPresses():Void
   {
     @:privateAccess
@@ -460,13 +523,13 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        if (controls.UI_UP_P || SwipeUtil.swipeUp)
+        if (controls.UI_UP_P || (DeviceUtil.isMobileBrowser && menuSwipeUp()))
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
+        if (controls.UI_DOWN_P || (DeviceUtil.isMobileBrowser && menuSwipeDown()))
         {
           changeLevel(1);
           changeDifficulty(0);
@@ -486,32 +549,32 @@ class StoryMenuState extends MusicBeatState
 
         // TODO: Querying UI_RIGHT_P (justPressed) after UI_RIGHT always returns false. Fix it!
         if (controls.UI_RIGHT_P #if FEATURE_TOUCH_CONTROLS
-          || (DeviceUtil.isMobileBrowser && SwipeUtil.swipeRight && TouchUtil.touch != null
-            && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
-          || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(rightDifficultyArrow, null, false)) #end)
+          || (DeviceUtil.isMobileBrowser && menuSwipeRight() && menuPointer() != null
+            && menuPointer().deltaViewY < 10 && menuPointer().deltaViewY > -10)
+          || (DeviceUtil.isMobileBrowser && menuPointerPressAction(rightDifficultyArrow)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && !usesNovaBeatMenuInput() && TouchUtil.touch != null
             && !TouchUtil.pressAction(rightDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(1);
         }
 
         if (controls.UI_LEFT_P #if FEATURE_TOUCH_CONTROLS
-          || (DeviceUtil.isMobileBrowser && SwipeUtil.swipeLeft && TouchUtil.touch != null
-            && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
-          || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(leftDifficultyArrow, null, false)) #end)
+          || (DeviceUtil.isMobileBrowser && menuSwipeLeft() && menuPointer() != null
+            && menuPointer().deltaViewY < 10 && menuPointer().deltaViewY > -10)
+          || (DeviceUtil.isMobileBrowser && menuPointerPressAction(leftDifficultyArrow)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && !usesNovaBeatMenuInput() && TouchUtil.touch != null
             && !TouchUtil.pressAction(leftDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(-1);
         }
 
-        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && TouchUtil.overlaps(rightDifficultyArrow)) #end)
+        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && menuPointerOver(rightDifficultyArrow)) #end)
         {
           rightDifficultyArrow.animation.play('press');
         }
@@ -520,7 +583,7 @@ class StoryMenuState extends MusicBeatState
           rightDifficultyArrow.animation.play('idle');
         }
 
-        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && TouchUtil.overlaps(leftDifficultyArrow)) #end)
+        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && menuPointerOver(leftDifficultyArrow)) #end)
         {
           leftDifficultyArrow.animation.play('press');
         }
@@ -536,8 +599,8 @@ class StoryMenuState extends MusicBeatState
       }
 
       #if FEATURE_TOUCH_CONTROLS
-      if (DeviceUtil.isMobileBrowser && !selectedLevel && TouchUtil.justReleased
-        && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
+      if (DeviceUtil.isMobileBrowser && !selectedLevel && menuPointerJustReleased()
+        && !menuPointerOver(leftDifficultyArrow) && !menuPointerJustSwipedAny())
       {
         for (i in 0...levelTitles.members.length)
         {
@@ -546,7 +609,7 @@ class StoryMenuState extends MusicBeatState
             levelList.indexOf(currentLevelId)
           ];
 
-          if (!TouchUtil.pressAction(item, null, false)) continue;
+          if (!menuPointerPressAction(item)) continue;
 
           (item == selectedItem) ? selectLevel() : changeLevel(i - levelList.indexOf(currentLevelId));
         }
