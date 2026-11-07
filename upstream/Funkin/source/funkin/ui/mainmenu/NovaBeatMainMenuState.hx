@@ -27,7 +27,8 @@ import funkin.ui.credits.CreditsState;
 import funkin.ui.options.OptionsState;
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
+import funkin.util.TouchUtil;
+import funkin.util.SwipeUtil;
 #if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.SwipeUtil;
 #end
@@ -625,10 +626,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
-      // TouchUtil prefers real browser touch contacts and falls back to
-      // synthesized mouse / Quest controller pointer events when needed.
+      // Use the same release-based mobile confirm used by the original FNF menus.
       #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (DeviceUtil.isMobileBrowser && NovaBeatMenuInput.justReleased && !NovaBeatMenuInput.justSwipedAny) pressed = true;
+      if (DeviceUtil.isMobileBrowser && TouchUtil.pressAction() && !SwipeUtil.justSwipedAny) pressed = true;
       #end
 
       if (pressed) beginMenuTransition();
@@ -684,14 +684,14 @@ class NovaBeatMainMenuState extends MusicBeatState
    */
   function handleHeaderPointerInput():Void
   {
-    if (homeOptionsHitbox != null && NovaBeatMenuInput.pressAction(homeOptionsHitbox, uiCamera))
+    if (homeOptionsHitbox != null && TouchUtil.pressAction(homeOptionsHitbox, uiCamera))
     {
       playSfx('confirm', 0.8);
       openOptions();
       return;
     }
 
-    if (homeAudioHitbox != null && NovaBeatMenuInput.pressAction(homeAudioHitbox, uiCamera))
+    if (homeAudioHitbox != null && TouchUtil.pressAction(homeAudioHitbox, uiCamera))
     {
       final music = FlxG.sound.music;
       if (music == null) return;
