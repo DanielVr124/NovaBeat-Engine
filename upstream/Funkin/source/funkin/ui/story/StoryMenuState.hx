@@ -465,25 +465,28 @@ class StoryMenuState extends MusicBeatState
     }
 
     super.update(elapsed);
-    updateNovaBeatWeekTitleFade();
+    updateNovaBeatWeekTitleClip();
   }
 
-  function updateNovaBeatWeekTitleFade():Void
+  /**
+   * Keep every scrolling week title and lock icon inside the black NovaBeat
+   * carousel panel. FNF retains its original unclipped Story Mode layout.
+   */
+  function updateNovaBeatWeekTitleClip():Void
   {
-    if (Preferences.menuStyle != "NovaBeat" || levelTitles == null) return;
+    if (levelTitles == null) return;
 
-    var height:Float = FlxG.height;
-    var fadeDistance:Float = Math.max(72, Math.min(150, height * 0.16));
-    var fadeStart:Float = height - fadeDistance;
-    var selectedIndex:Int = levelList.indexOf(currentLevelId);
-
-    for (index in 0...levelTitles.members.length)
+    if (Preferences.menuStyle == "NovaBeat" && novaBeatWeekPanel != null)
     {
-      var item:LevelTitle = levelTitles.members[index];
-      var baseAlpha:Float = index == selectedIndex ? 1.0 : 0.6;
-      var fadeRange:Float = fadeDistance + item.height;
-      var fadeAmount:Float = Math.max(0, Math.min(1, (item.y + item.height - fadeStart) / fadeRange));
-      item.alpha = baseAlpha * (1.0 - fadeAmount);
+      var panelTop:Float = novaBeatWeekPanel.y;
+      var panelBottom:Float = FlxG.height;
+      for (item in levelTitles.members)
+        item.clipToPanel(panelTop, panelBottom);
+    }
+    else
+    {
+      for (item in levelTitles.members)
+        item.clearPanelClip();
     }
   }
 
