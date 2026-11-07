@@ -297,7 +297,13 @@ class TitleState extends MusicBeatState
     #if mobile
     if (TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressedEnter = true;
     #elseif web
-    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased && !SwipeUtil.justSwipedAny) pressedEnter = true;
+    // Mobile browsers may deliver the release through FlxMouse's synthetic
+    // pointer rather than the FlxTouch list. Accept either event so a tap on
+    // the Press Enter screen always advances, while still ignoring swipes.
+    if (DeviceUtil.isMobileBrowser
+      && (TouchUtil.justReleased || FlxG.mouse.justReleased)
+      && !SwipeUtil.justSwipedAny)
+      pressedEnter = true;
     #end
 
     var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
