@@ -21,6 +21,7 @@ import funkin.util.MathUtil;
 import funkin.effects.RetroCameraFade;
 import flixel.math.FlxPoint;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 #if FEATURE_MOBILE_ADVERTISEMENTS
 import funkin.mobile.util.AdMobUtil;
 #end
@@ -34,6 +35,17 @@ import funkin.mobile.util.AdMobUtil;
 @:nullSafety
 class GameOverSubState extends MusicBeatSubState
 {
+  inline function isMobileTouchDevice():Bool
+  {
+    #if mobile
+    return true;
+    #elseif (web && FEATURE_TOUCH_CONTROLS)
+    return DeviceUtil.isMobileBrowser;
+    #else
+    return false;
+    #end
+  }
+
   /**
    * The currently active GameOverSubState.
    * There should be only one GameOverSubState in existence at a time, we can use a singleton.
@@ -180,8 +192,8 @@ class GameOverSubState extends MusicBeatSubState
     // The conductor now represents the BPM of the game over music.
     Conductor.instance.update(0);
 
-    #if mobile
-    addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice()) addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBack);
     #end
 
     HapticUtil.vibrate(0, Constants.DEFAULT_VIBRATION_DURATION);
@@ -268,8 +280,12 @@ class GameOverSubState extends MusicBeatSubState
     // Handle user inputs.
     //
 
-    // Restart the level when pressing the assigned key.
-    if ((controls.ACCEPT_P #if mobile || (TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput) #end)
+    // Restart the level when pressing the assigned key or the mobile touch surface.
+    var touchAccept:Bool = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice()) touchAccept = TouchUtil.pressAction() && !TouchUtil.overlaps(backButton) && canInput;
+    #end
+    if ((controls.ACCEPT_P || touchAccept)
       && blueballed
       && !mustNotExit)
     {
