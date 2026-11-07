@@ -43,6 +43,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var touchActionHitboxes:Array<FlxSprite> = [];
   var touchActionLabels:Array<FlxText> = [];
   var touchActionActions:Array<String> = [];
+  var mobileBackButton:Null<FlxSprite> = null;
+  var mobileBackLabel:Null<FlxText> = null;
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -62,14 +64,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     buildLayout();
     refreshModList();
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (usesTouchControls)
-    {
-      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 18, FlxColor.WHITE, goBack, 1.0, true);
-      responsiveBackButton.setPosition(FlxG.width - responsiveBackButton.width - 18, 18);
-      add(responsiveBackButton);
-    }
-    #end
+
   }
 
   function goBack():Void
@@ -159,104 +154,52 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function buildMobileLayout(width:Float, height:Float):Void
   {
+    // NovaBeat mobile uses a dedicated single-column library screen. It is
+    // intentionally not a scaled copy of the desktop two-pane manager.
     portraitLayout = height > width * 1.12;
-    var margin:Float = 18;
-    heading = addLabel(margin, 10, width - margin * 2 - 94, 'MOD LIBRARY', portraitLayout ? 25 : 23, 0xFFFFFFFF);
-    countText = addLabel(margin, 44, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 12, 0xFF48E7FF);
+    var margin:Float = 16;
+    heading = addLabel(margin, 14, width - 150, 'MOD LIBRARY', portraitLayout ? 25 : 23, 0xFFFFFFFF);
+    countText = addLabel(margin, 48, width - margin * 2, 'CHECKING YOUR MOD LIBRARY...', 11, 0xFF54DDF4);
 
-    var showActions:Bool = mobileModActionsEnabled();
-    if (portraitLayout)
-    {
-      // Portrait gets one dedicated library workspace rather than two stacked
-      // desktop-style panes. Details live in a compact selection header and
-      // the installed-mod cards own the remaining vertical space.
-      var mainX:Float = margin;
-      var mainY:Float = 82;
-      var mainW:Float = width - margin * 2;
-      var mainH:Float = Math.max(220, height - 164);
-      addPanel(mainX, mainY, mainW, mainH);
+    mobileBackButton = new FlxSprite(width - 126, 12);
+    mobileBackButton.makeGraphic(110, 42, 0xFF183B59);
+    mobileBackButton.scrollFactor.set();
+    add(mobileBackButton);
+    mobileBackLabel = new FlxText(width - 122, 25, 102, 'BACK', 13);
+    mobileBackLabel.setFormat(Paths.font('vcr.ttf'), 13, 0xFFFFFFFF, FlxTextAlign.CENTER);
+    mobileBackLabel.scrollFactor.set();
+    add(mobileBackLabel);
 
-      var detailX:Float = mainX + 12;
-      var detailY:Float = mainY + 12;
-      var detailW:Float = mainW - 24;
-      var detailH:Float = 128;
-      addPanel(detailX, detailY, detailW, detailH);
+    var panelY:Float = 82;
+    var panelHeight:Float = Math.max(180, height - 118);
+    addPanel(margin, panelY, width - margin * 2, panelHeight);
 
-      detailTitle = addLabel(detailX + 14, detailY + 10, detailW - 28, 'SELECT A MOD', 18, 0xFFFFFFFF);
-      detailText = addLabel(detailX + 14, detailY + 40, detailW - 28,
-        'Tap a mod card below to see its details and status.',
-        12, 0xFFB5C6E4);
-      detailText.wordWrap = true;
-      detailText.autoSize = false;
-      detailText.fieldHeight = detailH - 66;
-      statusText = addLabel(detailX + 14, detailY + detailH - 22, detailW - 28, '', 9, 0xFF48E7FF);
+    var innerX:Float = margin + 14;
+    var innerWidth:Float = width - margin * 2 - 28;
+    var summaryY:Float = panelY + 14;
+    var summaryHeight:Float = portraitLayout ? 112 : 92;
+    addPanel(innerX, summaryY, innerWidth, summaryHeight);
 
-      rowX = mainX + 14;
-      rowWidth = mainW - 28;
-      rowHeight = 68;
-      listHeading = addLabel(rowX, detailY + detailH + 14, rowWidth, 'YOUR INSTALLED MODS', 11, 0xFF48E7FF);
-      rowY = detailY + detailH + 38;
-
-      var buttonHeight:Float = 42;
-      var buttonGap:Float = 8;
-      var actionBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
-      var actionY:Float = mainY + mainH - actionBlockHeight - 12;
-      var listBottom:Float = showActions ? actionY - 10 : mainY + mainH - 12;
-      visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
-
-      if (showActions)
-        layoutMobileTouchActions(rowX, actionY, rowWidth, buttonHeight, buttonGap, true);
-
-      helpText = addLabel(margin, height - 22, width - margin * 2,
-        showActions
-          ? 'TAP A CARD TO INSPECT  •  USE THE ACTIONS BELOW'
-          : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE',
-        9, 0xFF8DA8D8);
-      return;
-    }
-
-    // Landscape phones keep a two-column layout, but the action area is only
-    // reserved when the target can actually manage a local mod directory.
-    var listX:Float = margin;
-    var listY:Float = 82;
-    var listW:Float = width * 0.40;
-    var listH:Float = Math.max(180, height - 150);
-    addPanel(listX, listY, listW, listH);
-
-    var detailX:Float = listX + listW + 14;
-    var detailY:Float = listY;
-    var detailW:Float = width - detailX - margin;
-    var buttonHeight:Float = 48;
-    var buttonGap:Float = 8;
-    var buttonBlockHeight:Float = showActions ? buttonHeight * 2 + buttonGap : 0;
-    var detailH:Float = Math.max(150, listH - buttonBlockHeight - (showActions ? 18 : 0));
-    addPanel(detailX, detailY, detailW, detailH);
-
-    var rowHeaderHeight:Float = 42;
-    rowX = listX + 12;
-    rowY = listY + rowHeaderHeight;
-    rowWidth = listW - 24;
-    rowHeight = 68;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
-
-    listHeading = addLabel(listX + 12, listY + 12, listW - 24, 'YOUR INSTALLED MODS', 11, 0xFF48E7FF);
-    detailTitle = addLabel(detailX + 16, detailY + 14, detailW - 32, 'SELECT A MOD', 18, 0xFFFFFFFF);
-    detailText = addLabel(detailX + 16, detailY + 46, detailW - 32,
-      'Choose a mod above to view its information and manage it.',
-      13, 0xFFB5C6E4);
+    detailTitle = addLabel(innerX + 14, summaryY + 12, innerWidth - 28, 'YOUR MOD LIBRARY', 16, 0xFFFFFFFF);
+    detailText = addLabel(innerX + 14, summaryY + 40, innerWidth - 28,
+      'Mods you install will appear here. You can review them and manage their load order.',
+      11, 0xFFB8CBE6);
     detailText.wordWrap = true;
     detailText.autoSize = false;
-    detailText.fieldHeight = Math.max(32, detailH - 82);
+    detailText.fieldHeight = summaryHeight - 46;
+    statusText = addLabel(innerX + 14, summaryY + summaryHeight - 20, innerWidth - 28, '', 9, 0xFF54DDF4);
 
-    statusText = addLabel(detailX + 16, detailY + detailH - 26, detailW - 32, '', 10, 0xFF48E7FF);
-    if (showActions)
-      layoutMobileTouchActions(detailX, detailY + detailH + 10, detailW, buttonHeight, buttonGap, false);
+    listHeading = addLabel(innerX + 2, summaryY + summaryHeight + 18, innerWidth - 4,
+      'INSTALLED MODS', 11, 0xFF54DDF4);
+    rowX = innerX;
+    rowY = summaryY + summaryHeight + 44;
+    rowWidth = innerWidth;
+    rowHeight = 74;
+    visibleRows = Std.int(Math.max(1, Math.floor((panelY + panelHeight - 18 - rowY) / rowHeight)));
 
-    helpText = addLabel(margin, height - 18, width - margin * 2,
-      showActions
-        ? 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE'
-        : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE',
-      9, 0xFF8DA8D8);
+    helpText = addLabel(margin, height - 22, width - margin * 2,
+      'SELECT A MOD TO VIEW DETAILS  •  BACK TO RETURN',
+      9, 0xFF91A9CC);
   }
 
   function layoutMobileTouchActions(x:Float, y:Float, width:Float, height:Float, gap:Float, portrait:Bool):Void
@@ -333,7 +276,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     detectedMods = [];
     selectedIndex = 0;
     countText.text = 'BROWSER BUILD • LOCAL MOD SCANNING UNAVAILABLE';
-    statusText.text = 'Use the Windows or Android build to detect and manage local mods. Press ESC to return.';
+    statusText.text = 'BROWSER BUILD  •  LOCAL MOD FOLDER ACCESS IS RESTRICTED';
     renderRows();
     renderDetails();
     return;
@@ -440,9 +383,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (detectedMods.length == 0)
     {
       #if web
-      detailTitle.text = usesTouchControls ? 'BROWSER LIMITATION' : 'BROWSER BUILD LIMITATION';
+      detailTitle.text = usesTouchControls ? 'NO MODS TO DISPLAY YET' : 'BROWSER BUILD LIMITATION';
       detailText.text = usesTouchControls
-        ? 'This browser cannot scan a local mods folder. Use a desktop or Android build to manage installed mods.'
+        ? 'This browser build cannot scan your device storage for mod folders. Your library will appear here when browser-based mod importing is supported. You can return to the main menu with the BACK button above.'
         : 'Web browsers cannot read the game\'s local mods folder. Use the Windows or Android build to detect, enable, and load installed mods.';
       #else
       detailTitle.text = 'NO MODS INSTALLED';
@@ -560,10 +503,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
     if (!enabled) return;
 
-    #if !mobile
-    // Page handles the configured BACK control; this fallback keeps Escape
-    // reliable even when keyboard bindings have been changed.
-    if ((FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE) && !controls.BACK_P)
+    // Always provide a keyboard exit in the browser, including mobile
+    // browsers where the HTML5 build is not compiled with the native mobile flag.
+    if (FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE)
+    {
+      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
+      onExit.dispatch();
+      return;
+    }
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (usesTouchControls && mobileBackButton != null && TouchUtil.pressAction(mobileBackButton))
     {
       FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
@@ -820,13 +770,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         : 'BROWSER LIMITATION  •  LOCAL MOD FOLDER ACCESS IS NOT AVAILABLE HERE';
     }
 
+    if (mobileBackButton != null)
+    {
+      mobileBackButton.setPosition(width - 126, 12);
+      mobileBackLabel.setPosition(width - 122, 25);
+    }
+
     renderRows();
     renderDetails();
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (responsiveBackButton != null)
-      responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, 18);
-    #end
   }
 
   function addPanel(x:Float, y:Float, width:Float, height:Float):Void
