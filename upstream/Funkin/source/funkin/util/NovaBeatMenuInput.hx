@@ -9,10 +9,11 @@ import flixel.input.touch.FlxTouch;
 #end
 
 /**
- * Touch/pointer input helpers used only by NovaBeat's custom menu presentation.
+ * Touch, pointer, drag, and flick helpers used only by NovaBeat's custom menus.
  *
- * The original FNF touch helpers remain untouched so the protected FNF menu
- * path keeps its existing input behavior.
+ * These helpers normalize mouse-backed browser pointers and real touch contacts
+ * without changing the upstream TouchUtil/SwipeUtil path used by Original FNF.
+ */
  */
 class NovaBeatMenuInput
 {
