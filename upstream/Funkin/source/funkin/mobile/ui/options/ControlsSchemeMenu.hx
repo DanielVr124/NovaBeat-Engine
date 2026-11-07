@@ -61,6 +61,16 @@ class ControlsSchemeMenu extends MusicBeatSubState
    */
   var isInDemo:Bool;
 
+  /** Called after a selection when this picker is embedded in Mobile customization. */
+  var onSchemeSelected:Null<Void->Void> = null;
+  var navigationBackButton:Null<SchemeMenuButton> = null;
+
+  public function new(?onSchemeSelected:Void->Void)
+  {
+    super();
+    this.onSchemeSelected = onSchemeSelected;
+  }
+
   /**
    * An array of every single scheme.
    */
@@ -128,6 +138,7 @@ class ControlsSchemeMenu extends MusicBeatSubState
     setupHitboxShowcases();
 
     createButton(false);
+    createNavigationBackButton();
   }
 
   /**
@@ -203,6 +214,24 @@ class ControlsSchemeMenu extends MusicBeatSubState
     add(currentButton);
   }
 
+  function createNavigationBackButton():Void
+  {
+    // Preserve the original standalone behavior; the embedded picker needs a
+    // visible way to return directly to Mobile customization.
+    if (onSchemeSelected == null) return;
+
+    navigationBackButton = new SchemeMenuButton(FlxG.width * 0.05, FlxG.height * 0.83, 'BACK', onSchemeMenuBack);
+    navigationBackButton.text.x -= 5;
+    add(navigationBackButton);
+  }
+
+  function onSchemeMenuBack():Void
+  {
+    if (onSchemeSelected == null) return;
+    close();
+    onSchemeSelected();
+  }
+
   /**
    * Called when current hitbox has been selected.
    */
@@ -211,6 +240,13 @@ class ControlsSchemeMenu extends MusicBeatSubState
     currentButton.busy = true;
 
     Preferences.controlsScheme = availableSchemes[currentIndex];
+
+    if (onSchemeSelected != null)
+    {
+      close();
+      onSchemeSelected();
+      return;
+    }
 
     FlxTransitionableState.skipNextTransIn = true;
     FlxTransitionableState.skipNextTransOut = true;
@@ -233,6 +269,7 @@ class ControlsSchemeMenu extends MusicBeatSubState
     });
 
     schemeNameText.visible = false;
+    if (navigationBackButton != null) navigationBackButton.visible = false;
 
     createButton(true);
 
@@ -261,6 +298,7 @@ class ControlsSchemeMenu extends MusicBeatSubState
     });
 
     schemeNameText.visible = true;
+    if (navigationBackButton != null) navigationBackButton.visible = true;
 
     createButton(false);
 
