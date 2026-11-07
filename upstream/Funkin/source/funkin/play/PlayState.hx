@@ -2298,7 +2298,9 @@ class PlayState extends MusicBeatSubState
     #if mobile
     return true;
     #elseif (web && FEATURE_TOUCH_CONTROLS)
-    return DeviceUtil.isMobileBrowser;
+    // Treat the HTML5 test build as a mobile-control preview even on desktop
+    // browsers, so all original FNF layouts can be tested with a mouse/touch.
+    return true;
     #else
     return false;
     #end
@@ -2312,11 +2314,9 @@ class PlayState extends MusicBeatSubState
     // selects the external-input layout.
     return !ControlsHandler.hasExternalInputDevice;
     #elseif (web && FEATURE_TOUCH_CONTROLS)
-    // Mobile browsers can expose headset/phone controllers as gamepads even
-    // while the user is tapping the screen. Keep the original mobile hitbox
-    // active alongside those browser devices; the browser pointer adapter
-    // handles ray/mouse-style taps.
-    return isMobileTouchDevice();
+    // The browser build deliberately previews the original mobile hitboxes
+    // on desktop too, allowing every control scheme to be tested without a phone.
+    return true;
     #else
     return false;
     #end
