@@ -29,7 +29,6 @@ import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.MathUtil;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
 import funkin.util.DeviceUtil;
 import funkin.ui.FullScreenScaleMode;
 #if FEATURE_DISCORD_RPC
@@ -455,64 +454,26 @@ class StoryMenuState extends MusicBeatState
     super.update(elapsed);
   }
 
-  inline function usesNovaBeatMenuInput():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat";
-  }
+  // Story Mode uses the upstream FNF mobile touch and swipe recognizers in both themes.
+  inline function menuPointer():Dynamic return TouchUtil.touch;
 
-  inline function menuPointer():Dynamic
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pointer : TouchUtil.touch;
-  }
+  inline function menuSwipeUp():Bool return SwipeUtil.swipeUp;
 
-  inline function menuSwipeUp():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeUp : SwipeUtil.swipeUp;
-  }
+  inline function menuSwipeDown():Bool return SwipeUtil.swipeDown;
 
-  inline function menuSwipeDown():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeDown : SwipeUtil.swipeDown;
-  }
+  inline function menuSwipeLeft():Bool return SwipeUtil.swipeLeft;
 
-  inline function menuSwipeLeft():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft;
-  }
+  inline function menuSwipeRight():Bool return SwipeUtil.swipeRight;
 
-  inline function menuSwipeRight():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight;
-  }
+  inline function menuPointerPressed():Bool return TouchUtil.pressed;
 
-  inline function menuPointerPressed():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
-  }
+  inline function menuPointerJustReleased():Bool return TouchUtil.justReleased;
 
-  inline function menuPointerJustReleased():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
-  }
+  inline function menuPointerJustSwipedAny():Bool return SwipeUtil.justSwipedAny;
 
-  inline function menuPointerJustSwipedAny():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justSwipedAny : SwipeUtil.justSwipedAny;
-  }
+  inline function menuPointerOver(sprite:FlxSprite):Bool return TouchUtil.overlaps(sprite);
 
-  inline function menuPointerOver(sprite:FlxSprite):Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.overlaps(sprite)
-      : TouchUtil.overlaps(sprite);
-  }
-
-  inline function menuPointerPressAction(sprite:FlxSprite):Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.pressAction(sprite)
-      : TouchUtil.pressAction(sprite, null, false);
-  }
+  inline function menuPointerPressAction(sprite:FlxSprite):Bool return TouchUtil.pressAction(sprite, null, false);
 
   function handleKeyPresses():Void
   {
@@ -555,7 +516,7 @@ class StoryMenuState extends MusicBeatState
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && !usesNovaBeatMenuInput() && TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
             && !TouchUtil.pressAction(rightDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(1);
@@ -568,7 +529,7 @@ class StoryMenuState extends MusicBeatState
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && !usesNovaBeatMenuInput() && TouchUtil.touch != null
+          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
             && !TouchUtil.pressAction(leftDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(-1);
