@@ -98,6 +98,11 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   {
     if (length == selectedIndex) item.select();
 
+    // Child rows must inherit the list's explicit camera. FlxBasic.camera
+    // otherwise falls back to FlxG.camera, which can differ from the camera
+    // the list is actually drawn through in NovaBeat's Options subpages.
+    if (Preferences.menuStyle == "NovaBeat" && cameras != null) item.cameras = cameras;
+
     byName[name] = item;
     return add(item);
   }
