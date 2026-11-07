@@ -241,7 +241,7 @@ jobs:
 
           index = Path(sys.argv[1])
           html = index.read_text(encoding="utf-8")
-          style = "<style>html,body,canvas,#openfl-content{cursor:none!important}</style>"
+          style = "<style>@media (hover: none) and (pointer: coarse) { html,body,canvas,#openfl-content{cursor:none!important} }</style>"
           if style not in html:
               if "</head>" in html:
                   html = html.replace("</head>", style + "</head>", 1)

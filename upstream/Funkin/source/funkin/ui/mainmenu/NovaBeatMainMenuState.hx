@@ -697,14 +697,42 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function handleHeaderPointerInput():Void
   {
-    if (homeOptionsHitbox != null && TouchUtil.pressAction(homeOptionsHitbox, uiCamera))
+    var optionsPressed:Bool = false;
+    if (homeOptionsHitbox != null)
+    {
+      #if mobile
+      optionsPressed = TouchUtil.pressAction(homeOptionsHitbox, uiCamera);
+      #elseif web
+      optionsPressed = DeviceUtil.isMobileBrowser
+        ? TouchUtil.pressAction(homeOptionsHitbox, uiCamera)
+        : (FlxG.mouse.justPressed && FlxG.mouse.overlaps(homeOptionsHitbox, uiCamera));
+      #else
+      optionsPressed = FlxG.mouse.justPressed && FlxG.mouse.overlaps(homeOptionsHitbox, uiCamera);
+      #end
+    }
+
+    if (optionsPressed)
     {
       playSfx('confirm', 0.8);
       openOptions();
       return;
     }
 
-    if (homeAudioHitbox != null && TouchUtil.pressAction(homeAudioHitbox, uiCamera))
+    var audioPressed:Bool = false;
+    if (homeAudioHitbox != null)
+    {
+      #if mobile
+      audioPressed = TouchUtil.pressAction(homeAudioHitbox, uiCamera);
+      #elseif web
+      audioPressed = DeviceUtil.isMobileBrowser
+        ? TouchUtil.pressAction(homeAudioHitbox, uiCamera)
+        : (FlxG.mouse.justPressed && FlxG.mouse.overlaps(homeAudioHitbox, uiCamera));
+      #else
+      audioPressed = FlxG.mouse.justPressed && FlxG.mouse.overlaps(homeAudioHitbox, uiCamera);
+      #end
+    }
+
+    if (audioPressed)
     {
       final music = FlxG.sound.music;
       if (music == null) return;

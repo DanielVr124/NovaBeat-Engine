@@ -19,6 +19,9 @@ import flixel.input.touch.FlxTouch;
 #end
 import flixel.input.mouse.FlxMouse;
 import flixel.math.FlxPoint;
+#if web
+import funkin.util.DeviceUtil;
+#end
 
 /**
  * Utility class for handling touch input within the FlxG context.
@@ -184,8 +187,11 @@ class TouchUtil
   @:noCompletion
   static function get_touch():FlxMouse
   {
-    // Browser pointer feedback is drawn by the in-game mobile dot; never show the OS cursor.
-    FlxG.mouse.visible = false;
+    // Only suppress the OS cursor when a mobile browser uses the in-game touch
+    // pointer. Desktop HTML5 users need the normal visible mouse cursor.
+    #if web
+    FlxG.mouse.visible = !DeviceUtil.isMobileBrowser;
+    #end
     return FlxG.mouse;
   }
   #end

@@ -7,6 +7,7 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.audio.FunkinSound;
 import funkin.util.TouchUtil;
+import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
 import funkin.Preferences;
 import funkin.ui.Page.PageName;
@@ -150,93 +151,134 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         navGrid(num, inputUp, inputDown, wrapY, inputLeft, inputRight, wrapX);
     };
 
-    #if FEATURE_TOUCH_CONTROLS
-    // Update touch position
-    if (TouchUtil.pressed)
-    {
-      touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
-    }
+    var pointerAccepted:Bool = false;
 
-    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
+    #if FEATURE_TOUCH_CONTROLS
+    #if web
+    // The HTML5 target includes touch support for phones, but desktop browsers
+    // must keep normal keyboard navigation and mouse-pointer behavior.
+    if (!DeviceUtil.isMobileBrowser)
     {
+      // Desktop mouse hover selects; a normal left click accepts immediately.
+      if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+      {
+        for (i in 0...members.length)
+        {
+          final item = members[i];
+          final pointerCamera = (cameras != null && cameras.length > 0) ? cameras[0] : item.camera;
+          if (!item.available || !FlxG.mouse.overlaps(item, pointerCamera)) continue;
+
+          if (selectedIndex != i)
+          {
+            FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+            selectItem(i);
+          }
+
+          if (FlxG.mouse.justPressed)
+          {
+            accept();
+            pointerAccepted = true;
+          }
+          break;
+        }
+      }
+
       if (newIndex != selectedIndex)
       {
         FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
         selectItem(newIndex);
       }
     }
-    else if (TouchUtil.pressed)
+    else
+    #end
     {
-      for (i in 0...members.length)
+      // Mobile browsers retain the original touch navigation behavior.
+      if (TouchUtil.pressed)
       {
-        final item = members[i];
-        final menuCamera = FlxG.cameras.list[1];
+        touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
+      }
 
-        // If this list declares a camera, use that exact viewport for hit-testing.
-        // This matters for added Options pages because they can own cameras other
-        // than the stock global camera at index 1. Unmodified FNF lists retain the
-        // original fallback, while NovaBeat rows use their assigned camera.
-        final touchCamera = (cameras != null && cameras.length > 0)
-          ? cameras[0]
-          : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
-        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
-        final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
-
-        final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
-
-        if (item.available && isTouchingItem && TouchUtil.justPressed)
+      if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
+      {
+        if (newIndex != selectedIndex)
         {
-          var prevIndex:Int = selectedIndex;
+          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+          selectItem(newIndex);
+        }
+      }
+      else if (TouchUtil.pressed)
+      {
+        for (i in 0...members.length)
+        {
+          final item = members[i];
+          final menuCamera = FlxG.cameras.list[1];
 
-          if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
-          {
-            newIndex = i;
-            break;
-          }
-          else
-          {
-            // Keep the tapped row as the current navigation index. Without
-            // this assignment, the pre-touch keyboard index can overwrite a
-            // first-tap selection at the end of this update.
-            if (!_isMainMenuState) newIndex = i;
-            FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
-            selectItem(i);
-          }
+          // If this list declares a camera, use that exact viewport for hit-testing.
+          // This matters for added Options pages because they can own cameras other
+          // than the stock global camera at index 1. Unmodified FNF lists retain the
+          // original fallback, while NovaBeat rows use their assigned camera.
+          final touchCamera = (cameras != null && cameras.length > 0)
+            ? cameras[0]
+            : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
+          final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
+          final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
-          if (_isMainMenuState)
+          final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
+
+          if (item.available && isTouchingItem && TouchUtil.justPressed)
           {
-            if (prevIndex == i)
+            var prevIndex:Int = selectedIndex;
+
+            if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
             {
-              FlxTween.cancelTweensOf(item);
-              item.scale.set(1.1, 1.1);
-              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-              HapticUtil.vibrate(0, 0.05, 1);
-              accept();
+              newIndex = i;
+              break;
             }
             else
             {
-              FlxTween.cancelTweensOf(item);
-              item.scale.set(0.94, 0.94);
-              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-              HapticUtil.vibrate(0, 0.01, 0.5);
+              // Keep the tapped row as the current navigation index. Without
+              // this assignment, the pre-touch keyboard index can overwrite a
+              // first-tap selection at the end of this update.
+              if (!_isMainMenuState) newIndex = i;
+              FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+              selectItem(i);
             }
-          }
-          else
-          {
-            accept();
-          }
 
-          break;
+            if (_isMainMenuState)
+            {
+              if (prevIndex == i)
+              {
+                FlxTween.cancelTweensOf(item);
+                item.scale.set(1.1, 1.1);
+                FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+
+                HapticUtil.vibrate(0, 0.05, 1);
+                accept();
+              }
+              else
+              {
+                FlxTween.cancelTweensOf(item);
+                item.scale.set(0.94, 0.94);
+                FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+
+                HapticUtil.vibrate(0, 0.01, 0.5);
+              }
+            }
+            else
+            {
+              accept();
+            }
+
+            break;
+          }
         }
       }
-    }
 
-    if (newIndex != selectedIndex && !_isMainMenuState)
-    {
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
-      selectItem(newIndex);
+      if (newIndex != selectedIndex && !_isMainMenuState)
+      {
+        FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        selectItem(newIndex);
+      }
     }
     #else
     if (newIndex != selectedIndex)
@@ -247,7 +289,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #end
 
     // Todo: bypass popup blocker on firefox
-    if (controls.ACCEPT_P) accept();
+    if (controls.ACCEPT_P && !pointerAccepted) accept();
 
     return;
   }
