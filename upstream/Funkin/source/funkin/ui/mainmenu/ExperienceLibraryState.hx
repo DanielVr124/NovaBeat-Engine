@@ -94,6 +94,100 @@ class ExperienceLibraryState extends MusicBeatState
 
   function buildLayout():Void
   {
+    // Keep the FNF-style selector unchanged. The redesigned library is only
+    // used by NovaBeat mode and does not replace or restyle the FNF menu.
+    if (Preferences.menuStyle == "NovaBeat")
+      buildNovaBeatLayout();
+    else
+      buildClassicLayout();
+  }
+
+  function buildNovaBeatLayout():Void
+  {
+    clearObjects(layoutObjects);
+    clearObjects(rowObjects);
+    rowHitboxes.resize(0);
+
+    var width:Float = FlxG.width;
+    var height:Float = FlxG.height;
+    var portrait:Bool = height > width * 1.12;
+    usesTouchControls = DeviceUtil.isMobileBrowser;
+    touchButtonHitboxes.resize(0);
+    touchButtonActions.resize(0);
+    touchGestureActive = false;
+
+    var margin:Float = usesTouchControls ? (portrait ? 14 : 22) : (portrait ? 22 : 42);
+
+    // Full-bleed NovaBeat artwork replaces the old flat grey selector.
+    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image("novabeat/menu-background"));
+    var backgroundScale:Float = Math.max(width / Math.max(1, background.width), height / Math.max(1, background.height)) * 1.08;
+    background.scale.set(backgroundScale, backgroundScale);
+    background.updateHitbox();
+    background.screenCenter();
+    background.scrollFactor.set();
+    background.alpha = 0.72;
+    addTracked(background, false);
+    addTracked(addSolid(0, 0, width, height, 0xB8050A1B), false);
+
+    var logo:FlxSprite = new FlxSprite(margin, 12).loadGraphic(Paths.image("novabeat/title-logo"));
+    logo.setGraphicSize(0, portrait ? 38 : 48);
+    logo.updateHitbox();
+    logo.scrollFactor.set();
+    addTracked(logo, false);
+
+    var titleY:Float = portrait ? 51 : 60;
+    addLabel(margin + 2, titleY, width - margin * 2, "GAME LIBRARY",
+      portrait ? 25 : 32, 0xFFF4F7FF, false);
+    addLabel(margin + 3, titleY + (portrait ? 30 : 38), width - margin * 2,
+      "CHOOSE AN EXPERIENCE TO PLAY", 9, 0xFF68DFF7, false);
+
+    var panelX:Float = margin;
+    var panelY:Float = portrait ? 106 : 122;
+    var panelWidth:Float = width - margin * 2;
+    var panelHeight:Float = height - panelY - (usesTouchControls ? 66 : 72);
+
+    addTracked(addRoundRect(panelX, panelY, panelWidth, panelHeight, 22, 22, 0xFF3B8FB4), false);
+    addTracked(addRoundRect(panelX + 2, panelY + 2, panelWidth - 4, panelHeight - 4, 20, 20, 0xE9081429), false);
+    addTracked(addRoundRect(panelX + 9, panelY + 9, panelWidth - 18, panelHeight - 18, 15, 15, 0x321D5B82), false);
+
+    var inset:Float = portrait ? 12 : 18;
+    listX = panelX + inset;
+    listY = panelY + 54;
+    listWidth = panelWidth - inset * 2;
+    var compactTouchLayout:Bool = usesTouchControls && !portrait && height < 500;
+    rowHeight = portrait ? 88 : (compactTouchLayout ? 58 : 82);
+    var rowGap:Float = 9;
+    listHeight = panelHeight - (usesTouchControls ? 174 : 88);
+    visibleRows = Std.int(Math.max(1, Math.floor((listHeight + rowGap) / (rowHeight + rowGap))));
+    firstVisibleIndex = 0;
+
+    addLabel(listX + 2, panelY + 19, listWidth * 0.65, "AVAILABLE EXPERIENCES",
+      10, 0xFF66DDF5, false);
+    addLabel(listX + listWidth * 0.65, panelY + 19, listWidth * 0.35,
+      Std.string(experiences.length) + (experiences.length == 1 ? " EXPERIENCE" : " EXPERIENCES"),
+      8, 0xFF9AAFD0, false);
+
+    var statusY:Float = panelY + panelHeight - (usesTouchControls ? 111 : 34);
+    statusText = addLabel(panelX + 16, statusY, panelWidth - 32, "",
+      usesTouchControls ? 9 : 10, 0xFF72DDF5, false);
+
+    if (usesTouchControls)
+      buildTouchControls(panelX, panelY, panelWidth, panelHeight);
+
+    var footer:String = usesTouchControls
+      ? "TAP A CARD TO SELECT  •  TAP AGAIN OR PLAY SELECTED"
+      : (portrait
+        ? "UP / DOWN SELECT     ENTER PLAY     E ENABLE     TAB TYPE     ESC ORIGINAL FNF"
+        : "UP / DOWN SELECT     ENTER PLAY     E ENABLE / DISABLE     TAB PACKAGE TYPE     T TARGET     R RESCAN     ESC ORIGINAL FNF");
+    addLabel(margin + 4, height - 22, width - margin * 2 - 8,
+      footer, 8, 0xFF9AAED0, false);
+
+    renderRows();
+    updateStatus();
+  }
+
+  function buildClassicLayout():Void
+  {
     clearObjects(layoutObjects);
     clearObjects(rowObjects);
 
@@ -147,21 +241,21 @@ class ExperienceLibraryState extends MusicBeatState
 
   function buildTouchControls(panelX:Float, panelY:Float, panelWidth:Float, panelHeight:Float):Void
   {
-    // Keep the primary and secondary hit targets inside the lower reserved
-    // panel area, with a small bottom inset for reliable edge taps.
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
-    var primaryHeight:Float = portrait ? 40 : 36;
-    var secondaryHeight:Float = portrait ? 36 : 30;
-    var primaryY:Float = panelY + panelHeight - (primaryHeight + secondaryHeight + 12);
-    var secondaryY:Float = panelY + panelHeight - secondaryHeight - 10;
+    var compact:Bool = !portrait && FlxG.height < 500;
+    var primaryHeight:Float = portrait ? 42 : (compact ? 34 : 40);
+    var secondaryHeight:Float = portrait ? 34 : (compact ? 28 : 32);
+    var primaryY:Float = panelY + panelHeight - (primaryHeight + secondaryHeight + 17);
+    var secondaryY:Float = panelY + panelHeight - secondaryHeight - 9;
     var gap:Float = 7;
     var launchWidth:Float = (listWidth - gap) * 0.62;
-    addTouchButton(listX, primaryY, launchWidth, primaryHeight, "LAUNCH SELECTED", "launch", true);
+
+    addTouchButton(listX, primaryY, launchWidth, primaryHeight, "PLAY SELECTED", "launch", true);
     addTouchButton(listX + launchWidth + gap, primaryY, listWidth - launchWidth - gap, primaryHeight, "ORIGINAL FNF", "official", false);
 
     var smallGap:Float = 5;
     var smallWidth:Float = (listWidth - smallGap * 3) / 4;
-    addTouchButton(listX, secondaryY, smallWidth, secondaryHeight, "TOGGLE", "toggle", false);
+    addTouchButton(listX, secondaryY, smallWidth, secondaryHeight, "ENABLE", "toggle", false);
     addTouchButton(listX + smallWidth + smallGap, secondaryY, smallWidth, secondaryHeight, "TYPE", "type", false);
     addTouchButton(listX + (smallWidth + smallGap) * 2, secondaryY, smallWidth, secondaryHeight, "TARGET", "target", false);
     addTouchButton(listX + (smallWidth + smallGap) * 3, secondaryY, smallWidth, secondaryHeight, "RESCAN", "rescan", false);
@@ -169,15 +263,21 @@ class ExperienceLibraryState extends MusicBeatState
 
   function addTouchButton(x:Float, y:Float, width:Float, height:Float, label:String, action:String, highlighted:Bool):Void
   {
-    var borderColor:FlxColor = highlighted ? 0xFF56D8F1 : 0xFF414955;
-    var fillColor:FlxColor = highlighted ? 0xFF172D38 : 0xFF20252D;
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
+    var borderColor:FlxColor = highlighted
+      ? (novaBeatStyle ? 0xFF55DDF5 : 0xFF56D8F1)
+      : (novaBeatStyle ? 0xFF355574 : 0xFF414955);
+    var fillColor:FlxColor = highlighted
+      ? (novaBeatStyle ? 0xFF123A55 : 0xFF172D38)
+      : (novaBeatStyle ? 0xFF111F36 : 0xFF20252D);
     var hitbox:FlxSprite = addRoundRect(x, y, width, height, 9, 9, borderColor);
     addTracked(hitbox, false);
     addTracked(addRoundRect(x + 1, y + 1, width - 2, height - 2, 8, 8, fillColor), false);
 
     var textSize:Int = height <= 30 ? 8 : 10;
-    var labelText:FlxText = new FlxText(x + 2, y + (height - textSize) / 2 - 1, width - 4, label, textSize);
-    labelText.setFormat(Paths.font("vcr.ttf"), textSize, 0xFFF1F5FA, FlxTextAlign.CENTER);
+    var labelText:FlxText = new FlxText(x + 2, y + (height - textSize) * 0.5 - 1, width - 4, label, textSize);
+    labelText.setFormat(Paths.font("vcr.ttf"), textSize,
+      novaBeatStyle ? 0xFFF1F7FF : 0xFFF1F5FA, FlxTextAlign.CENTER);
     labelText.scrollFactor.set();
     add(labelText);
     layoutObjects.push(labelText);
@@ -193,6 +293,7 @@ class ExperienceLibraryState extends MusicBeatState
     if (experiences.length == 0) return;
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
     adjustScrollWindow();
     var rowGap:Float = 9;
 
@@ -204,27 +305,39 @@ class ExperienceLibraryState extends MusicBeatState
       var info:ExperienceInfo = experiences[experienceIndex];
       var y:Float = listY + visibleIndex * (rowHeight + rowGap);
       var selected:Bool = experienceIndex == selectedIndex;
-      var borderColor:FlxColor = selected ? 0xFF56D8F1 : 0xFF343941;
+      var borderColor:FlxColor = selected
+        ? (novaBeatStyle ? 0xFF5ADDF5 : 0xFF56D8F1)
+        : (novaBeatStyle ? 0xFF263D5C : 0xFF343941);
 
       var rowHitbox:FlxSprite = addRoundRect(listX, y, listWidth, rowHeight, 16, 16, borderColor);
       addTracked(rowHitbox, true);
       rowHitboxes.push(rowHitbox);
-      addTracked(addRoundRect(listX + 2, y + 2, listWidth - 4, rowHeight - 4, 14, 14, selected ? 0xFF1A2731 : 0xFF191C21), true);
+      var cardFill:FlxColor = selected
+        ? (novaBeatStyle ? 0xFF172C47 : 0xFF1A2731)
+        : (novaBeatStyle ? 0xE90B172C : 0xFF191C21);
+      addTracked(addRoundRect(listX + 2, y + 2, listWidth - 4, rowHeight - 4, 14, 14, cardFill), true);
+
+      if (novaBeatStyle)
+        addTracked(addRoundRect(listX + 8, y + 12, 4, rowHeight - 24, 3, 3,
+          selected ? 0xFF5ADDF5 : 0xFF2C75AB), true);
 
       var compactTouchRow:Bool = usesTouchControls && !portrait && FlxG.height < 500;
       var iconSize:Float = compactTouchRow ? 40 : (portrait ? 58 : 56);
-      var iconX:Float = listX + 13;
+      var iconX:Float = listX + 15;
       var iconY:Float = y + (rowHeight - iconSize) / 2;
-      addTracked(addRoundRect(iconX, iconY, iconSize, iconSize, 11, 11, 0xFF303640), true);
+      var iconPlateColor:FlxColor = selected && novaBeatStyle ? 0xFF1D4D6C : 0xFF303640;
+      addTracked(addRoundRect(iconX, iconY, iconSize, iconSize, 11, 11, iconPlateColor), true);
       addExperienceIcon(info, iconX + 3, iconY + 3, iconSize - 6);
 
       var textX:Float = iconX + iconSize + 15;
       var textWidth:Float = listWidth - (textX - listX) - 18;
-      var detail:String = info.engineLabel + "  •  " + packageTypeLabel(info.packageType);
-      if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
+      var detail:String = info.isOfficial
+        ? "BASE GAME  •  DEFAULT EXPERIENCE  •  " + info.engineLabel
+        : info.engineLabel + "  •  " + packageTypeLabel(info.packageType);
+      if (!info.isOfficial && info.packageType == ExperienceManager.PACKAGE_EXTENSION)
         detail += "  →  " + ExperienceManager.experienceTitle(info.ownerId, experiences);
       if (!info.isOfficial) detail += info.enabled ? "  •  ENABLED" : "  •  DISABLED";
-      if (!info.launchable) detail += "  •  DETECTED, NOT YET SUPPORTED";
+      if (!info.launchable) detail += "  •  NOT YET SUPPORTED";
 
       if (compactTouchRow)
       {
@@ -234,9 +347,11 @@ class ExperienceLibraryState extends MusicBeatState
       }
       else
       {
-        addRowLabel(textX, y + 9, textWidth, info.title, portrait ? 14 : 16, selected ? 0xFFFFFFFF : 0xFFE1E5EC);
+        addRowLabel(textX, y + 9, textWidth, info.title, portrait ? 14 : 16,
+          selected ? 0xFFFFFFFF : 0xFFE1E5EC);
         addRowLabel(textX, y + 33, textWidth, shorten(info.description, 105), portrait ? 9 : 10, 0xFFB1B8C5);
-        addRowLabel(textX, y + 58, textWidth, detail, 8, info.launchable ? 0xFF70D9F0 : 0xFFFFB86B);
+        addRowLabel(textX, y + 58, textWidth, detail, 8,
+          info.launchable ? (novaBeatStyle ? 0xFF69DFF7 : 0xFF70D9F0) : 0xFFFFB86B);
       }
     }
   }
@@ -371,43 +486,62 @@ class ExperienceLibraryState extends MusicBeatState
     }
   }
 
-  // Use the original FNF pointer utility in both experience themes. HTML5
-  // mobile browsers can drop FlxTouch from the active list on release, so
-  // fall back to FlxMouse (which receives the browser's compatibility events).
-  inline function menuPointer():Dynamic
+  // Accept both FlxTouch and the HTML5 compatibility mouse pointer.
+  // Some mobile browsers emit the release on the mouse pointer even when the
+  // press began as a touch, so neither input stream is allowed to suppress the other.
+  function pointerOverAt(sprite:FlxSprite, pointer:Dynamic):Bool
   {
-    var touchPointer:Dynamic = TouchUtil.touch;
-    return touchPointer != null ? touchPointer : FlxG.mouse;
+    if (sprite == null || pointer == null) return false;
+    return pointer.overlaps(sprite, sprite.camera);
   }
 
-  function pointerOver(sprite:FlxSprite):Bool
+  function handleTapAt(pointer:Dynamic):Bool
   {
-    if (sprite == null) return false;
-    var pointer:Dynamic = menuPointer();
     if (pointer == null) return false;
-    return pointer.overlaps(sprite, sprite.camera);
+
+    for (index in 0...touchButtonHitboxes.length)
+    {
+      if (pointerOverAt(touchButtonHitboxes[index], pointer))
+      {
+        performTouchAction(touchButtonActions[index]);
+        return true;
+      }
+    }
+
+    for (index in 0...rowHitboxes.length)
+    {
+      if (pointerOverAt(rowHitboxes[index], pointer))
+      {
+        handleTouchRowTap(firstVisibleIndex + index);
+        return true;
+      }
+    }
+    return false;
   }
 
   function handleTouchInput():Void
   {
-    if (!usesTouchControls) return;
+    #if web
+    var pointerInputEnabled:Bool = true;
+    #else
+    var pointerInputEnabled:Bool = usesTouchControls;
+    #end
+    if (!pointerInputEnabled) return;
 
     var touchPointer:Dynamic = TouchUtil.touch;
-    var pointer:Dynamic = touchPointer != null ? touchPointer : FlxG.mouse;
-    if (pointer == null) return;
+    var touchJustPressed:Bool = TouchUtil.justPressed;
+    var touchPressed:Bool = TouchUtil.pressed;
+    var touchJustReleased:Bool = TouchUtil.justReleased;
+    var mouseJustPressed:Bool = FlxG.mouse.justPressed;
+    var mousePressed:Bool = FlxG.mouse.pressed;
+    var mouseJustReleased:Bool = FlxG.mouse.justReleased;
 
-    // Prefer the real finger when present. If the browser has already
-    // removed it from FlxG.touches.list, use the synthesized mouse event.
-    var justPressed:Bool = touchPointer != null ? TouchUtil.justPressed : FlxG.mouse.justPressed;
-    var pressed:Bool = touchPointer != null ? TouchUtil.pressed : FlxG.mouse.pressed;
-    var justReleased:Bool = touchPointer != null ? TouchUtil.justReleased : FlxG.mouse.justReleased;
-
-    if (justPressed)
+    if (touchJustPressed || mouseJustPressed)
     {
+      var pressPointer:Dynamic = touchJustPressed && touchPointer != null ? touchPointer : FlxG.mouse;
       touchGestureActive = true;
-      touchGestureStartX = pointer.x;
-      touchGestureStartY = pointer.y;
-      touchGestureLastY = touchGestureStartY;
+      touchGestureStartX = pressPointer.x;
+      touchGestureStartY = pressPointer.y;
       touchGestureStartSelected = selectedIndex;
       touchGestureStartedInList = touchGestureStartX >= listX
         && touchGestureStartX <= listX + listWidth
@@ -416,83 +550,41 @@ class ExperienceLibraryState extends MusicBeatState
       touchGestureDragged = false;
     }
 
-    if (touchGestureActive && pressed)
+    if (touchGestureActive && (touchPressed || mousePressed))
     {
-      var pointerX:Float = pointer.x;
-      var pointerY:Float = pointer.y;
-      if (Math.abs(pointerX - touchGestureStartX) > 24 || Math.abs(pointerY - touchGestureStartY) > 24)
+      var movePointer:Dynamic = touchPressed && touchPointer != null ? touchPointer : FlxG.mouse;
+      if (Math.abs(movePointer.x - touchGestureStartX) > 24
+        || Math.abs(movePointer.y - touchGestureStartY) > 24)
         touchGestureDragged = true;
-      touchGestureLastY = pointerY;
+      touchGestureLastY = movePointer.y;
     }
 
-    if (justReleased && !touchGestureActive)
+    if (!(touchJustReleased || mouseJustReleased)) return;
+
+    var releasePointer:Dynamic = touchJustReleased && touchPointer != null ? touchPointer : FlxG.mouse;
+    var releaseY:Float = releasePointer == null ? touchGestureStartY : releasePointer.y;
+    var deltaY:Float = releaseY - touchGestureStartY;
+
+    if (touchGestureActive && touchGestureStartedInList && Math.abs(deltaY) > 28)
     {
-      // Recover a browser tap whose touch-down event was swallowed by the
-      // address bar / pointer layer. A release directly over a visible action
-      // or row should still do something instead of appearing unresponsive.
-      var actionFound:Bool = false;
-      for (index in 0...touchButtonHitboxes.length)
-      {
-        if (pointerOver(touchButtonHitboxes[index]))
-        {
-          performTouchAction(touchButtonActions[index]);
-          actionFound = true;
-          break;
-        }
-      }
-
-      if (!actionFound)
-      {
-        for (index in 0...rowHitboxes.length)
-        {
-          if (pointerOver(rowHitboxes[index]))
-          {
-            handleTouchRowTap(firstVisibleIndex + index);
-            break;
-          }
-        }
-      }
-      return;
+      var rowsToMove:Int = Std.int(Math.max(1, Math.round(Math.abs(deltaY) / ((rowHeight + 9) * 0.72))));
+      selectExperience(touchGestureStartSelected + (deltaY < 0 ? rowsToMove : -rowsToMove));
     }
-
-    if (touchGestureActive && justReleased)
+    else if (!touchGestureActive || !touchGestureDragged)
     {
-      var releaseY:Float = pointer.y;
-      var deltaY:Float = releaseY - touchGestureStartY;
-      if (touchGestureStartedInList && Math.abs(deltaY) > 28)
-      {
-        var rowsToMove:Int = Std.int(Math.max(1, Math.round(Math.abs(deltaY) / ((rowHeight + 9) * 0.72))));
-        selectExperience(touchGestureStartSelected + (deltaY < 0 ? rowsToMove : -rowsToMove));
-      }
-      else if (!touchGestureDragged)
-      {
-        var actionFound:Bool = false;
-        for (index in 0...touchButtonHitboxes.length)
-        {
-          if (pointerOver(touchButtonHitboxes[index]))
-          {
-            performTouchAction(touchButtonActions[index]);
-            actionFound = true;
-            break;
-          }
-        }
-
-        if (!actionFound)
-        {
-          for (index in 0...rowHitboxes.length)
-          {
-            if (pointerOver(rowHitboxes[index]))
-            {
-              handleTouchRowTap(firstVisibleIndex + index);
-              break;
-            }
-          }
-        }
-      }
-
-      touchGestureActive = false;
-      touchGestureDragged = false;
+      var handled:Bool = false;
+      // Test both pointer locations: the browser's synthetic mouse release can
+      // land on a valid button even when the FlxTouch list has already emptied.
+      if (touchJustReleased && touchPointer != null)
+        handled = handleTapAt(touchPointer);
+      if (!handled && mouseJustReleased)
+        handled = handleTapAt(FlxG.mouse);
+      if (!handled && touchJustReleased && touchPointer == null)
+        handleTapAt(FlxG.mouse);
     }
+
+    touchGestureActive = false;
+    touchGestureDragged = false;
   }
 
   /**
