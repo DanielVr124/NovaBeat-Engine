@@ -414,6 +414,11 @@ class StoryMenuState extends MusicBeatState
 
       difficultySprite.x += (difficultySprites.get(Constants.DEFAULT_DIFFICULTY).width - difficultySprite.width) / 2;
     }
+
+    // Difficulty sprites are rebuilt when the user changes difficulty.
+    // Reapply the portrait NovaBeat center anchor here as well as on resize.
+    if (Preferences.menuStyle == "NovaBeat" && FlxG.height > FlxG.width * 1.12)
+      difficultySprite.x = (FlxG.width - difficultySprite.width) * 0.5;
     difficultySprite.alpha = 0;
 
     difficultySprite.y = leftDifficultyArrow.y - 15;
@@ -455,7 +460,11 @@ class StoryMenuState extends MusicBeatState
 
     levelTitleText.text = currentLevel.getTitle();
 
-    levelTitleText.x = FlxG.width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x)); // Right align.
+    // The portrait NovaBeat layout deliberately uses a full-width centered
+    // field. Preserve that anchor every frame instead of snapping it back to
+    // the desktop right edge. FNF keeps its stock right-aligned title.
+    if (Preferences.menuStyle != "NovaBeat" || FlxG.height <= FlxG.width * 1.12)
+      levelTitleText.x = FlxG.width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
 
     handleKeyPresses();
 
@@ -540,15 +549,16 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        // Keep keyboard navigation in its original direction. In NovaBeat's
-        // touch carousel, the list should move opposite the finger's drag.
-        if (controls.UI_UP_P || (Preferences.menuStyle == "NovaBeat" ? SwipeUtil.swipeDown : SwipeUtil.swipeUp))
+        // Keep the original FNF drag convention in both themes: dragging
+        // upward moves the carousel content downward, and vice versa.
+        // Do not invert the NovaBeat path a second time.
+        if (controls.UI_UP_P || menuSwipeUp())
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || (Preferences.menuStyle == "NovaBeat" ? SwipeUtil.swipeUp : SwipeUtil.swipeDown))
+        if (controls.UI_DOWN_P || menuSwipeDown())
         {
           changeLevel(1);
           changeDifficulty(0);
