@@ -709,7 +709,7 @@ class SongMenuItem extends FlxSpriteGroup
   }
 
   /**
-   * Preserve the original 2x PixelatedIcon size and anchor point. NovaBeat's
+   * [web-build] Preserve the original 2x PixelatedIcon size and anchor point. NovaBeat's
    * portrait capsule scaling is compensated here; stock FNF uses the exact
    * original child transform and does not scale the capsule group.
    */
