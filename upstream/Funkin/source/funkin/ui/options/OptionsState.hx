@@ -263,6 +263,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     if (novaBeatLayout) buildNovaBeatLayout();
 
     add(items = new TextMenuList());
+    items.acceptOnTouchSelection = novaBeatLayout;
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
     createItem('CUSTOMIZATION', function() codex.switchPage(Customization));
