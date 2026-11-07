@@ -1,6 +1,7 @@
 package funkin.ui.freeplay;
 
 import flixel.FlxCamera;
+import flixel.FlxBasic;
 import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.addons.transition.FlxTransitionableState;
@@ -1725,7 +1726,7 @@ class FreeplayState extends MusicBeatSubState
     if (uiStateMachine.canInteract())
     {
       if ((controls.FREEPLAY_CHAR_SELECT && !fromCharSelect #if FEATURE_TOUCH_CONTROLS
-        || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(djHitbox, funnyCam, false) && !SwipeUtil.swipeAny) #end)
+        || (DeviceUtil.isMobileBrowser && menuTouchPressAction(djHitbox, funnyCam, false) && !menuSwipeAny()) #end)
         && !FlxG.debugger.visible)
       {
         tryOpenCharSelect();
@@ -1744,6 +1745,99 @@ class FreeplayState extends MusicBeatSubState
 
     // If the allowPicoBulletsVibration is true, trigger vibration each update (for pico shooting bullets animation).
     if (allowPicoBulletsVibration) HapticUtil.vibrate(0, 0.01, (Constants.MAX_VIBRATION_AMPLITUDE / 3) * 2.5);
+  }
+
+
+  inline function usesNovaBeatMenuInput():Bool
+  {
+    return Preferences.menuStyle == "NovaBeat";
+  }
+
+  inline function menuPointer():Dynamic
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pointer : TouchUtil.touch;
+  }
+
+  inline function menuTouchJustPressed():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justPressed : TouchUtil.justPressed;
+  }
+
+  inline function menuTouchJustReleased():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
+  }
+
+  inline function menuTouchPressed():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
+  }
+
+  inline function menuTouchOverlaps(object:FlxBasic, ?camera:FlxCamera):Bool
+  {
+    return usesNovaBeatMenuInput()
+      ? NovaBeatMenuInput.overlaps(object, camera)
+      : TouchUtil.overlaps(object, camera);
+  }
+
+  inline function menuTouchOverlapsComplex(object:FlxObject, ?camera:FlxCamera):Bool
+  {
+    return usesNovaBeatMenuInput()
+      ? NovaBeatMenuInput.overlapsComplex(object, camera)
+      : TouchUtil.overlapsComplex(object, camera);
+  }
+
+  inline function menuTouchPressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
+  {
+    return usesNovaBeatMenuInput()
+      ? NovaBeatMenuInput.pressAction(object, camera)
+      : TouchUtil.pressAction(object, camera, useOverlapsComplex);
+  }
+
+  inline function menuSwipeAny():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeAny : SwipeUtil.swipeAny;
+  }
+
+  inline function menuSwipeLeft():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft;
+  }
+
+  inline function menuSwipeRight():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight;
+  }
+
+  inline function menuFlickManager():Dynamic
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickManager : SwipeUtil.flickManager;
+  }
+
+  inline function menuFlickLeft():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickLeft : SwipeUtil.flickLeft;
+  }
+
+  inline function menuFlickRight():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickRight : SwipeUtil.flickRight;
+  }
+
+  inline function menuFlickUp():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickUp : SwipeUtil.flickUp;
+  }
+
+  inline function menuFlickDown():Bool
+  {
+    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickDown : SwipeUtil.flickDown;
+  }
+
+  inline function menuResetSwipeVelocity():Void
+  {
+    if (usesNovaBeatMenuInput()) NovaBeatMenuInput.resetSwipeVelocity();
+    else SwipeUtil.resetSwipeVelocity();
   }
 
   function lerpScoreDisplays():Void
@@ -1822,13 +1916,13 @@ class FreeplayState extends MusicBeatSubState
     handleDebugKeys();
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser && TouchUtil.justReleased)
+    if (DeviceUtil.isMobileBrowser && menuTouchJustReleased())
     {
       _pressedOnSelected = false;
       _pressedOnCapsule = false;
     }
 
-    if (DeviceUtil.isMobileBrowser && !TouchUtil.pressed && !SwipeUtil.flickManager.initialized)
+    if (DeviceUtil.isMobileBrowser && !menuTouchPressed() && !menuFlickManager().initialized)
     {
       _flickEnded = true;
       draggingDifficulty = false;
@@ -1885,8 +1979,8 @@ class FreeplayState extends MusicBeatSubState
     if (!uiStateMachine.canInteract()) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    final leftPressed:Bool = controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(diffSelLeft, funnyCam, false));
-    final rightPressed:Bool = controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && TouchUtil.pressAction(diffSelRight, funnyCam, false));
+    final leftPressed:Bool = controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && menuTouchPressAction(diffSelLeft, funnyCam, false));
+    final rightPressed:Bool = controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && menuTouchPressAction(diffSelRight, funnyCam, false));
     #else
     final leftPressed:Bool = controls.UI_LEFT_P;
     final rightPressed:Bool = controls.UI_RIGHT_P;
@@ -2025,7 +2119,7 @@ class FreeplayState extends MusicBeatSubState
   private function handleTouchCapsuleClick():Void
   {
     if (diffSelRight == null) return;
-    if (TouchUtil.pressAction() && !TouchUtil.overlaps(diffSelRight, funnyCam) && !draggingDifficulty)
+    if (menuTouchPressAction() && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
     {
       curSelected = Math.round(curSelectedFloat);
 
@@ -2035,8 +2129,8 @@ class FreeplayState extends MusicBeatSubState
 
         if (capsule == null || !capsule.visible) continue;
         if (capsule.capsule == null || !capsule.capsule.visible) continue;
-        if (!TouchUtil.overlaps(capsule.theActualHitbox, funnyCam)) continue;
-        if (SwipeUtil.swipeAny) continue;
+        if (!menuTouchOverlaps(capsule.theActualHitbox, funnyCam)) continue;
+        if (menuSwipeAny()) continue;
 
         if (capsule.selected)
         {
@@ -2053,20 +2147,20 @@ class FreeplayState extends MusicBeatSubState
       }
     }
 
-    if (TouchUtil.justPressed)
+    if (menuTouchJustPressed())
     {
       final selected = currentCapsule.theActualHitbox;
-      _pressedOnSelected = selected != null && TouchUtil.overlaps(selected, funnyCam);
+      _pressedOnSelected = selected != null && menuTouchOverlaps(selected, funnyCam);
     }
   }
 
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
     if (!DeviceUtil.isMobileBrowser) return;
-    if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && TouchUtil.pressed))) return;
-    if (TouchUtil.pressAction(currentCapsule.theActualHitbox, funnyCam)) return;
+    if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && menuTouchPressed()))) return;
+    if (menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
-    if (TouchUtil.justPressed && TouchUtil.overlaps(capsuleHitbox, funnyCam))
+    if (menuTouchJustPressed() && menuTouchOverlaps(capsuleHitbox, funnyCam))
     {
       _pressedOnCapsule = true;
     }
@@ -2075,7 +2169,7 @@ class FreeplayState extends MusicBeatSubState
     #if web
     if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)
     {
-      final pointer = TouchUtil.touch;
+      final pointer = menuPointer();
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
       {
         #if web
@@ -2136,8 +2230,7 @@ class FreeplayState extends MusicBeatSubState
           updateSongsScroll();
         }
       }
-      else if (_moveLength > 0
-        && !(Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pressed : TouchUtil.pressed))
+      else if (_moveLength > 0 && !menuTouchPressed())
       {
         // A stale/released entry in FlxG.touches.list must not cancel a
         // different finger that is still dragging the song list.
@@ -2145,14 +2238,14 @@ class FreeplayState extends MusicBeatSubState
         changeSelection(0);
       }
     }
-    if (!TouchUtil.overlaps(capsuleHitbox, funnyCam) && TouchUtil.justReleased)
+    if (!menuTouchOverlaps(capsuleHitbox, funnyCam) && menuTouchJustReleased())
     {
-      SwipeUtil.flickManager.destroy();
+      menuFlickManager().destroy();
     }
 
-    if (SwipeUtil.flickManager.initialized)
+    if (menuFlickManager().initialized)
     {
-      var flickVelocity = SwipeUtil.flickManager.velocity.y * framerateMultiplier;
+      var flickVelocity = menuFlickManager().velocity.y * framerateMultiplier;
       if (Math.isFinite(flickVelocity))
       {
         _flickEnded = false;
@@ -2183,9 +2276,9 @@ class FreeplayState extends MusicBeatSubState
       grpCapsules.members[i].selected = (i == curSelected);
     }
 
-    if (!TouchUtil.pressed && (curSelected == 0 || curSelected == grpCapsules.countLiving() - 1) && SwipeUtil.flickManager.initialized)
+    if (!menuTouchPressed() && (curSelected == 0 || curSelected == grpCapsules.countLiving() - 1) && menuFlickManager().initialized)
     {
-      SwipeUtil.flickManager.destroy();
+      menuFlickManager().destroy();
       _flickEnded = true;
       if (_moveLength > 0)
       {
@@ -2201,24 +2294,24 @@ class FreeplayState extends MusicBeatSubState
 
     // Note: I was a bit evil, and used `draggingDifficulty` for the DifficultySprite dragging as well!
 
-    if ((TouchUtil.pressed || TouchUtil.justReleased))
+    if ((menuTouchPressed() || menuTouchJustReleased()))
     {
-      if (_pressedOnSelected && TouchUtil.touch != null)
+      if (_pressedOnSelected && menuPointer() != null)
       {
-        if (SwipeUtil.swipeLeft)
+        if (menuSwipeLeft())
         {
           draggingDifficulty = true;
           dj?.onPlayerAction(); // dj?.resetAFKTimer();
           changeDiff(-1, false, true);
           _pressedOnSelected = false;
-          SwipeUtil.flickManager.destroy();
+          menuFlickManager().destroy();
           _flickEnded = true;
 
           new FlxTimer().start(0.21, (afteranim) ->
           {
             currentCapsule.doLerp = true;
             generateSongList(currentFilter, true, false, true);
-            SwipeUtil.flickManager.destroy();
+            menuFlickManager().destroy();
           });
           new FlxTimer().start(0.3, (afteranim) ->
           {
@@ -2226,20 +2319,20 @@ class FreeplayState extends MusicBeatSubState
           });
           return;
         }
-        else if (SwipeUtil.swipeRight)
+        else if (menuSwipeRight())
         {
           draggingDifficulty = true;
           dj?.onPlayerAction(); // dj?.resetAFKTimer();
           changeDiff(1, false, true);
           _pressedOnSelected = false;
-          SwipeUtil.flickManager.destroy();
+          menuFlickManager().destroy();
           _flickEnded = true;
 
           new FlxTimer().start(0.21, (afteranim) ->
           {
             currentCapsule.doLerp = true;
             generateSongList(currentFilter, true, false, true);
-            SwipeUtil.flickManager.destroy();
+            menuFlickManager().destroy();
           });
           new FlxTimer().start(0.3, (afteranim) ->
           {
@@ -2248,7 +2341,7 @@ class FreeplayState extends MusicBeatSubState
           return;
         }
 
-        if (TouchUtil.touch.ticksDeltaSincePress >= 500)
+        if (menuPointer().ticksDeltaSincePress >= 500)
         {
           _pressedOnSelected = false;
           draggingDifficulty = false;
@@ -2264,7 +2357,7 @@ class FreeplayState extends MusicBeatSubState
       if (currentDifficultySprite == null) return;
 
       // If we press onto our difficulty, we want to "grab" it rather than simply check if we are overlapping
-      if (TouchUtil.overlapsComplex(currentDifficultySprite, funnyCam) && TouchUtil.justPressed && !draggingDifficulty)
+      if (menuTouchOverlapsComplex(currentDifficultySprite, funnyCam) && menuTouchJustPressed() && !draggingDifficulty)
       {
         HapticUtil.vibrate(0, 0.01, 0.375, 0.4);
         draggingDifficulty = true;
@@ -2272,30 +2365,30 @@ class FreeplayState extends MusicBeatSubState
 
       if (!draggingDifficulty) return;
 
-      if (_dragOffset == 0 && TouchUtil.pressed) _dragOffset = TouchUtil.touch.x;
-      currentDifficultySprite.offset.x = MathUtil.smoothLerpPrecision(currentDifficultySprite.offset.x, (TouchUtil.touch.x - _dragOffset) * -1, FlxG.elapsed,
+      if (_dragOffset == 0 && menuTouchPressed()) _dragOffset = menuPointer().x;
+      currentDifficultySprite.offset.x = MathUtil.smoothLerpPrecision(currentDifficultySprite.offset.x, (menuPointer().x - _dragOffset) * -1, FlxG.elapsed,
         0.2);
 
       var vibDist:Float = 5; // essentially how far the touch needs to be before it will trigger a tiny haptic feel
-      if (Std.int((TouchUtil.touch.x - _dragOffset) / vibDist) * vibDist != _prevRoundedDragOffset)
+      if (Std.int((menuPointer().x - _dragOffset) / vibDist) * vibDist != _prevRoundedDragOffset)
       {
         HapticUtil.vibrate(0, 0.01, 0.2, 0.8);
       }
-      _prevRoundedDragOffset = Std.int((TouchUtil.touch.x - _dragOffset) / vibDist) * vibDist;
+      _prevRoundedDragOffset = Std.int((menuPointer().x - _dragOffset) / vibDist) * vibDist;
 
-      if (TouchUtil.justReleased)
+      if (menuTouchJustReleased())
       {
-        SwipeUtil.flickManager.destroy();
+        menuFlickManager().destroy();
         handleDiffDragRelease(currentDifficultySprite);
         return;
       }
 
-      if (TouchUtil.touch.justMovedRight)
+      if (menuPointer().justMovedRight)
       {
         handleDiffBoundaryChange(1);
         return;
       }
-      if (TouchUtil.touch.justMovedLeft)
+      if (menuPointer().justMovedLeft)
       {
         handleDiffBoundaryChange(-1);
         return;
@@ -2309,8 +2402,8 @@ class FreeplayState extends MusicBeatSubState
       currentDifficultySprite.offset.x = MathUtil.smoothLerpPrecision(currentDifficultySprite.offset.x, 0, FlxG.elapsed, 0.4);
     }
 
-    diffSelRight.setPress(TouchUtil.overlaps(diffSelRight, funnyCam) && TouchUtil.justPressed);
-    diffSelLeft.setPress(TouchUtil.overlaps(diffSelLeft, funnyCam) && TouchUtil.justPressed);
+    diffSelRight.setPress(menuTouchOverlaps(diffSelRight, funnyCam) && menuTouchJustPressed());
+    diffSelLeft.setPress(menuTouchOverlaps(diffSelLeft, funnyCam) && menuTouchJustPressed());
   }
   #end
 
@@ -2597,7 +2690,7 @@ class FreeplayState extends MusicBeatSubState
         onComplete: function(_)
         {
           #if FEATURE_TOUCH_CONTROLS
-          SwipeUtil.flickManager.destroy();
+          menuFlickManager().destroy();
           _flickEnded = true;
           #end
         }
@@ -2650,8 +2743,8 @@ class FreeplayState extends MusicBeatSubState
   #if FEATURE_TOUCH_CONTROLS
   function handleDiffDragRelease(diff:FlxSprite):Void
   {
-    if (SwipeUtil.flickLeft) handleDiffBoundaryChange(1);
-    else if (SwipeUtil.flickRight) handleDiffBoundaryChange(-1);
+    if (menuFlickLeft()) handleDiffBoundaryChange(1);
+    else if (menuFlickRight()) handleDiffBoundaryChange(-1);
 
     draggingDifficulty = false;
     _dragOffset = 0;
@@ -2663,7 +2756,7 @@ class FreeplayState extends MusicBeatSubState
     dj?.onPlayerAction(); // dj?.resetAFKTimer();
     changeDiff(change);
     generateSongList(currentFilter, true, false);
-    SwipeUtil.flickManager.destroy();
+    menuFlickManager().destroy();
     _flickEnded = true;
     _dragOffset = 0;
     draggingDifficulty = false;
@@ -3212,8 +3305,8 @@ class FreeplayState extends MusicBeatSubState
     if (curSelected < 0)
     {
       #if FEATURE_TOUCH_CONTROLS
-      curSelected = (SwipeUtil.flickUp && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? 0 : grpCapsules.countLiving() - 1;
-      SwipeUtil.resetSwipeVelocity();
+      curSelected = (menuFlickUp() && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? 0 : grpCapsules.countLiving() - 1;
+      menuResetSwipeVelocity();
       #else
       curSelected = grpCapsules.countLiving() - 1;
       #end
@@ -3221,8 +3314,8 @@ class FreeplayState extends MusicBeatSubState
     if (curSelected >= grpCapsules.countLiving())
     {
       #if FEATURE_TOUCH_CONTROLS
-      curSelected = (SwipeUtil.flickDown && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? grpCapsules.countLiving() - 1 : 0;
-      SwipeUtil.resetSwipeVelocity();
+      curSelected = (menuFlickDown() && (!ControlsHandler.usingExternalInputDevice || DeviceUtil.isQuestBrowser)) ? grpCapsules.countLiving() - 1 : 0;
+      menuResetSwipeVelocity();
       #else
       curSelected = 0;
       #end
