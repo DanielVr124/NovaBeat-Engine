@@ -164,6 +164,18 @@ class StoryMenuState extends MusicBeatState
     add(levelTitles);
 
     updateBackground();
+
+    // Restore the original FNF black backing behind the week-background area.
+    // NovaBeat draws its own lower carousel panel instead.
+    if (Preferences.menuStyle != "NovaBeat")
+    {
+      var stockWeekPanel:FlxSprite = new FlxSprite(levelBackground.x, 0);
+      stockWeekPanel.makeGraphic(FlxG.width, Std.int(BACKGROUND_HEIGHT + levelBackground.y), FlxColor.BLACK);
+      stockWeekPanel.zIndex = levelBackground.zIndex - 1;
+      stockWeekPanel.scrollFactor.set();
+      add(stockWeekPanel);
+    }
+
     baseLevelBackgroundWidth = levelBackground.frameWidth;
     baseLevelBackgroundHeight = levelBackground.frameHeight;
     updateNovaBeatWeekPanel(FlxG.width, FlxG.height);
@@ -760,21 +772,71 @@ class StoryMenuState extends MusicBeatState
 
   function updateBackground(?previousLevelId:String = ''):Void
   {
-    // The Story Mode request is the original FNF screen with its yellow
-    // week background replaced by the current NovaBeat menu artwork. Do not
-    // swap back to per-week solid colours or images when the selected week
-    // changes; the week titles, song list, difficulty and props remain stock.
-    if (levelBackground != null) return;
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // NovaBeat keeps its own full-screen menu artwork while the selected
+      // week changes; the original FNF per-week background system stays below.
+      if (levelBackground != null) return;
 
-    levelBackground = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-    var backgroundScale:Float = Math.max(FlxG.width / levelBackground.width, FlxG.height / levelBackground.height);
-    levelBackground.scale.set(backgroundScale, backgroundScale);
-    levelBackground.updateHitbox();
-    levelBackground.screenCenter();
-    levelBackground.scrollFactor.set();
-    levelBackground.zIndex = -100;
-    levelBackground.alpha = 1.0;
-    add(levelBackground);
+      levelBackground = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
+      var backgroundScale:Float = Math.max(FlxG.width / levelBackground.width, FlxG.height / levelBackground.height);
+      levelBackground.scale.set(backgroundScale, backgroundScale);
+      levelBackground.updateHitbox();
+      levelBackground.screenCenter();
+      levelBackground.scrollFactor.set();
+      levelBackground.zIndex = -100;
+      levelBackground.alpha = 1.0;
+      add(levelBackground);
+      return;
+    }
+
+    // Original FNF Story Mode background behavior.
+    if (levelBackground == null || previousLevelId == '')
+    {
+      levelBackground = currentLevel.buildBackground();
+      levelBackground.x = 0;
+      levelBackground.y = BACKGROUND_Y;
+      levelBackground.zIndex = 100;
+      levelBackground.alpha = 1.0;
+      add(levelBackground);
+    }
+    else
+    {
+      var previousLevel = LevelRegistry.instance.fetchEntry(previousLevelId);
+
+      if (currentLevel.isBackgroundSimple() && previousLevel.isBackgroundSimple())
+      {
+        var previousColor:FlxColor = previousLevel.getBackgroundColor();
+        var currentColor:FlxColor = currentLevel.getBackgroundColor();
+        if (previousColor != currentColor)
+        {
+          FlxTween.cancelTweensOf(levelBackground);
+          FlxTween.color(levelBackground, 0.9, levelBackground.color, currentColor, {ease: FlxEase.quartOut});
+        }
+      }
+      else
+      {
+        var oldBackground:FlxSprite = levelBackground;
+        FlxTween.tween(oldBackground, {alpha: 0.0}, 0.6, {
+          ease: FlxEase.linear,
+          onComplete: function(_)
+          {
+            remove(oldBackground);
+          }
+        });
+
+        levelBackground = currentLevel.buildBackground();
+        levelBackground.x = 0;
+        levelBackground.y = BACKGROUND_Y;
+        levelBackground.alpha = 0.0;
+        levelBackground.zIndex = 100;
+        add(levelBackground);
+
+        FlxTween.tween(levelBackground, {alpha: 1.0}, 0.6, {
+          ease: FlxEase.linear
+        });
+      }
+    }
   }
 
   /**
