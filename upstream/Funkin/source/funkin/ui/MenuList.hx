@@ -166,9 +166,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final item = members[i];
         final menuCamera = FlxG.cameras.list[1];
 
-        // Original FNF uses its stock menu camera. NovaBeat rows are assigned
-        // their visible list camera when added, so keep drawing and hit-testing aligned.
-        final touchCamera = Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera;
+        // If this list declares a camera, use that exact viewport for hit-testing.
+        // This matters for added Options pages because they can own cameras other
+        // than the stock global camera at index 1. Unmodified FNF lists retain the
+        // original fallback, while NovaBeat rows use their assigned camera.
+        final touchCamera = (cameras != null && cameras.length > 0)
+          ? cameras[0]
+          : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
         final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
         final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
