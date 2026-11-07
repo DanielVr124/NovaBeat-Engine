@@ -17,6 +17,13 @@ import lime.media.AudioSource;
 import openfl.events.Event;
 import openfl.media.SoundChannel;
 import openfl.media.SoundMixer;
+#if web
+import flash.media.Sound;
+import openfl.Assets;
+#if (openfl >= "8.0.0")
+import openfl.utils.AssetType;
+#end
+#end
 
 /**
  * A FlxSound which adds additional functionality:
@@ -425,7 +432,7 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
    * @return A `FunkinSound` object, or `null` if the sound could not be loaded.
    */
   public static function load(embeddedSound:FlxSoundAsset, volume:Float = 1.0, looped:Bool = false, autoDestroy:Bool = false, autoPlay:Bool = false,
-      persist:Bool = false, ?onComplete:Void->Void, ?onLoad:Void->Void, important:Bool = false):Null<FunkinSound>
+      persist:Bool = false, ?onComplete:Void->Void, ?onLoad:Void->Void, important:Bool = false, streamed:Bool = false):Null<FunkinSound>
   {
     @:privateAccess
     if (SoundMixer.__soundChannels.length >= SoundMixer.MAX_ACTIVE_CHANNELS && !important)
@@ -436,9 +443,15 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
     var sound:FunkinSound = pool.recycle(construct);
 
-    // Load the sound.
+    // Load the sound. Browser gameplay music/vocals can use the stream
+    // path to avoid decoding and retaining every full song stem in memory.
     // Sets `exists = true` as a side effect.
-    sound.loadEmbedded(embeddedSound, looped, autoDestroy, onComplete);
+    #if web
+    if (streamed)
+      sound.loadStreamedEmbedded(embeddedSound, looped, autoDestroy, onComplete);
+    else
+    #end
+      sound.loadEmbedded(embeddedSound, looped, autoDestroy, onComplete);
 
     if (embeddedSound is String)
     {
@@ -466,6 +479,42 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
     return sound;
   }
+
+  #if web
+  /**
+   * Load a music asset through OpenFL's streaming music path instead of
+   * decoding it as a regular sound. Used only for full-length gameplay stems.
+   */
+  public function loadStreamedEmbedded(EmbeddedSound:Null<FlxSoundAsset>, Looped:Bool = false, AutoDestroy:Bool = false,
+      ?OnComplete:Void->Void):FunkinSound
+  {
+    if (EmbeddedSound == null) return this;
+
+    cleanup(true);
+
+    if ((EmbeddedSound is Sound))
+    {
+      _sound = EmbeddedSound;
+    }
+    else if ((EmbeddedSound is Class))
+    {
+      _sound = Type.createInstance(EmbeddedSound, []);
+    }
+    else if ((EmbeddedSound is String))
+    {
+      #if (openfl >= "8.0.0")
+      if (Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC))
+      #else
+      if (Assets.exists(EmbeddedSound))
+      #end
+        _sound = Assets.getMusic(EmbeddedSound);
+      else
+        FlxG.log.error('Could not find a streaming music asset with an ID of \'$EmbeddedSound\'.');
+    }
+
+    return cast init(Looped, AutoDestroy, OnComplete);
+  }
+  #end
 
   /**
    * Will load a section of a sound file, useful for Freeplay where we don't want to load all the bytes of a song

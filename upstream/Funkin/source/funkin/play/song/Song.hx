@@ -851,14 +851,19 @@ class SongDifficulty
 
   public function cacheInst(instrumental = ''):Void
   {
+    // Web gameplay uses streamed music assets; pre-decoding here would keep
+    // another full copy of the instrumental in browser memory.
+    #if !web
     funkin.FunkinMemory.cacheSound(getInstPath(instrumental));
+    #end
   }
 
   public function playInst(volume:Float = 1.0, instId:String = '', looped:Bool = false):Void
   {
     var suffix:String = (instId != '') ? '-$instId' : '';
 
-    FlxG.sound.music = FunkinSound.load(Paths.inst(this.song.id, suffix), volume, looped, false, true, false, null, null, true);
+    FlxG.sound.music = FunkinSound.load(Paths.inst(this.song.id, suffix), volume, looped, false, true, false, null, null, true,
+      #if web true #else false #end);
 
     // Workaround for a bug where FlxG.sound.music.update() was being called twice.
     FlxG.sound.list.remove(FlxG.sound.music);
@@ -870,11 +875,15 @@ class SongDifficulty
    */
   public function cacheVocals():Void
   {
+    // Do not decode/retain every full vocal stem on the HTML5 target. The
+    // streamed VoicesGroup loads these tracks when gameplay is created.
+    #if !web
     for (voice in buildVoiceList())
     {
       trace(' SONG '.bold().bg_note_down() + ' Caching vocal track "$voice" for song "${song.id}"');
       funkin.FunkinMemory.cacheSound(voice);
     }
+    #end
   }
 
   /**
@@ -1014,14 +1023,14 @@ class SongDifficulty
     for (playerVoice in playerVoiceList)
     {
       if (!Assets.exists(playerVoice)) continue;
-      result.addPlayerVoice(FunkinSound.load(playerVoice, 1.0, false, false, false, false, null, null, true));
+      result.addPlayerVoice(FunkinSound.load(playerVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
     }
 
     // Add opponent vocals.
     for (opponentVoice in opponentVoiceList)
     {
       if (!Assets.exists(opponentVoice)) continue;
-      result.addOpponentVoice(FunkinSound.load(opponentVoice, 1.0, false, false, false, false, null, null, true));
+      result.addOpponentVoice(FunkinSound.load(opponentVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
     }
 
     if (result.members.length == 0)
@@ -1031,7 +1040,7 @@ class SongDifficulty
       var legacyPath = Paths.voices(this.song.id, '$suffix');
       if (Assets.exists(legacyPath))
       {
-        result.addPlayerVoice(FunkinSound.load(legacyPath, 1.0, false, false, false, false, null, null, true));
+        result.addPlayerVoice(FunkinSound.load(legacyPath, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
       }
     }
 

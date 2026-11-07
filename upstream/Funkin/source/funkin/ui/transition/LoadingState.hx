@@ -139,12 +139,20 @@ class LoadingState extends MusicBeatSubState
       {
         throw 'Couldn\'t retrieve chart data for song "${playParams.targetSong.songName}" on difficulty "$difficulty" and variation "$variation"';
       }
+      #if web
+      // The browser service worker has already precached the original audio
+      // files. Load them as streams when PlayState starts instead of building
+      // decoded in-memory copies of the instrumental and every vocal track.
+      loadStatus = 'Song audio ready for streamed playback';
+      lastLoadActivityTime = haxe.Timer.stamp();
+      #else
       var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
       var voicesPaths:Array<String> = targetChart.buildVoiceList();
 
       var audioPaths:Array<String> = [instPath].concat(voicesPaths);
       var audioSequenceComplete:Void->Void = callbacks.add('songAudioSequence');
       loadSongAudioSequentially(audioPaths, 0, audioSequenceComplete);
+      #end
     }
 
     checkLibrary('shared');
