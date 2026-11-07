@@ -131,6 +131,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     items = new TextMenuList(NavControls.Vertical);
     // Draw and hit-test the visible NovaBeat rows through the same camera.
     items.cameras = [FlxG.camera];
+    items.acceptOnTouchSelection = novaBeatLayout;
 
     descriptions = [
       'Choose the primary NovaBeat highlight and selection colour.',
@@ -234,6 +235,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     // FNF-style customization uses a dedicated scrolling camera. Keep the
     // touch list and its hit targets on that same camera so taps map correctly.
     items.cameras = [menuCamera];
+    items.acceptOnTouchSelection = novaBeatLayout;
     add(items);
 
     descriptions = [
