@@ -449,11 +449,20 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     onAcceptPress.dispatch(menuItem);
 
-    if (menuItem.fireInstantly) menuItem.callback();
+    // NovaBeat rows render their own visible labels over transparent
+    // TextMenuItem hit targets. Flickering the invisible target for a full
+    // second makes clicks appear ignored and blocks the next interaction.
+    // Run NovaBeat actions immediately; retain the original FNF flicker flow.
+    if (menuItem.fireInstantly || Preferences.menuStyle == "NovaBeat")
+    {
+      if (!menuItem.fireInstantly && Preferences.menuStyle == "NovaBeat")
+        FunkinSound.playOnce(Paths.sound('novabeat/confirm'));
+      menuItem.callback();
+    }
     else
     {
       busy = true;
-      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == 'NovaBeat' ? 'novabeat/confirm' : 'confirmMenu'));
+      FunkinSound.playOnce(Paths.sound('confirmMenu'));
       FlxFlicker.flicker(menuItem, 1, 0.06, true, false, function(_)
       {
         busy = false;
