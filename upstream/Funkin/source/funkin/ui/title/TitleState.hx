@@ -612,7 +612,7 @@ class TitleState extends MusicBeatState
       if (credGroup != null) remove(credGroup);
       skippedIntro = true;
 
-      // After the shared black-screen credits, continue into NovaBeat's own
+      // [web-build] After the shared black-screen credits, continue into NovaBeat's own
       // V4 "Press Enter to Begin" title screen instead of the FNF title art.
       if (Preferences.menuStyle == "NovaBeat")
       {
