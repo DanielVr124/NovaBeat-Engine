@@ -290,7 +290,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       for (index in 0...categoryItems.length)
       {
         var item:TextMenuItem = categoryItems[index];
-        if (TouchUtil.pressAction(item, menuCamera, true) && !items.busy)
+        // NovaBeat category rows are transparent hit targets with separate visible labels.
+        // Use rectangle bounds instead of pixel-perfect alpha testing.
+        if (TouchUtil.pressAction(item, menuCamera, false) && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();
