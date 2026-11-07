@@ -184,7 +184,8 @@ class TouchUtil
   @:noCompletion
   static function get_touch():FlxMouse
   {
-    FlxG.mouse.visible = true;
+    // Browser pointer feedback is drawn by the in-game mobile dot; never show the OS cursor.
+    FlxG.mouse.visible = false;
     return FlxG.mouse;
   }
   #end
