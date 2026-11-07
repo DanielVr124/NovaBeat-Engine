@@ -1796,7 +1796,9 @@ class FreeplayState extends MusicBeatSubState
 
   inline function menuSwipeAny():Bool
   {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeAny : SwipeUtil.swipeAny;
+    return usesNovaBeatMenuInput()
+      ? (NovaBeatMenuInput.swipeAny || NovaBeatMenuInput.justSwipedAny)
+      : SwipeUtil.swipeAny;
   }
 
   inline function menuSwipeLeft():Bool
