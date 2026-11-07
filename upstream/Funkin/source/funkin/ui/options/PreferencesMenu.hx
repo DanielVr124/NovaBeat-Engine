@@ -81,6 +81,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     novaBeatRowLayer.cameras = [menuCamera];
     add(items = new TextMenuList());
     items.cameras = [menuCamera];
+    items.acceptOnTouchSelection = novaBeatStyle;
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
     preferenceItems.cameras = [menuCamera];
     add(novaBeatLabelLayer = new FlxTypedSpriteGroup<FlxSprite>());
