@@ -68,7 +68,8 @@ class ExperienceLibraryState extends MusicBeatState
     selectSavedExperience();
     buildLayout();
 
-    FunkinSound.playMusic("freakyMenu", {
+    FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? "novabeat-menu" : "freakyMenu", {
+      startingVolume: Preferences.menuStyle == "NovaBeat" ? 0.82 : 1.0,
       overrideExisting: true,
       restartTrack: false,
       persist: true,
