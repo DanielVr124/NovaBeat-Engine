@@ -468,14 +468,14 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.visible = false;
 
       // Use a shared badge so the menu symbols remain legible and aligned.
-      var iconPlateSize:Float = tileLayout ? (portraitLayout ? 42 : 36) : 46;
+      var iconPlateSize:Float = tileLayout ? (portraitLayout ? 46 : 38) : 46;
       var iconX:Float = itemX + (tileLayout ? 10 : 14);
       var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
       var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize, 12, 12, 0xFF142B49);
       iconPlate.alpha = 0.96;
       rowIconPlates.push(iconPlate);
 
-      var iconSize:Int = tileLayout ? 21 : 25;
+      var iconSize:Int = tileLayout ? (portraitLayout ? 23 : 21) : 25;
       var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[index], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
       icon.scrollFactor.set();
       icon.autoSize = false;
@@ -487,16 +487,16 @@ class NovaBeatMainMenuState extends MusicBeatState
       var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
       var title:String = ITEM_TITLES[index].split('\n').join(' ');
       var titleY:Float = itemY + 7;
-      var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? 13 : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
+      var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? (portraitLayout ? 15 : 14) : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
       label.autoSize = false;
       label.wordWrap = false;
       label.fieldWidth = labelWidth;
-      label.height = tileLayout ? 19 : 23;
+      label.height = tileLayout ? (portraitLayout ? 21 : 19) : 23;
       label.scrollFactor.set();
       rowLabels.push(label);
 
-      var kickerY:Float = itemY + (tileLayout ? 27 : 31);
-      var kicker:FlxText = addLabel(labelX, kickerY, labelWidth, ITEM_KICKERS[index], tileLayout ? 8 : 9, 0xFF48CDEB, FlxTextAlign.LEFT, 'Arial');
+      var kickerY:Float = itemY + (tileLayout ? (portraitLayout ? 31 : 28) : 31);
+      var kicker:FlxText = addLabel(labelX, kickerY, labelWidth, ITEM_KICKERS[index], tileLayout ? (portraitLayout ? 9 : 8) : 9, 0xFF48CDEB, FlxTextAlign.LEFT, 'Arial');
       kicker.autoSize = false;
       kicker.wordWrap = false;
       kicker.fieldWidth = labelWidth;
@@ -504,13 +504,13 @@ class NovaBeatMainMenuState extends MusicBeatState
       kicker.scrollFactor.set();
       rowKickers.push(kicker);
 
-      var descriptionY:Float = itemY + (tileLayout ? 42 : 47);
+      var descriptionY:Float = itemY + (tileLayout ? (portraitLayout ? 49 : 43) : 47);
       var description:String = tileLayout ? ITEM_SHORT_DESCRIPTIONS[index] : ITEM_DESCRIPTIONS[index];
-      var descriptionText:FlxText = addLabel(labelX, descriptionY, labelWidth, description, tileLayout ? 8 : 9, 0xFFAABBDD, FlxTextAlign.LEFT, 'Arial');
+      var descriptionText:FlxText = addLabel(labelX, descriptionY, labelWidth, description, tileLayout ? (portraitLayout ? 9 : 8) : 9, 0xFFAABBDD, FlxTextAlign.LEFT, 'Arial');
       descriptionText.autoSize = false;
       descriptionText.wordWrap = true;
       descriptionText.fieldWidth = labelWidth;
-      descriptionText.height = Math.max(12, buttonH - (tileLayout ? 46 : 48));
+      descriptionText.height = Math.max(12, buttonH - (tileLayout ? (portraitLayout ? 54 : 46) : 48));
       descriptionText.scrollFactor.set();
       rowDescriptions.push(descriptionText);
 
