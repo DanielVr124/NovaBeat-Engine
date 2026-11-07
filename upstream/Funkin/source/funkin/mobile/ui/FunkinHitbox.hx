@@ -388,7 +388,7 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
 
     // Preview hitboxes are decorative only. Registering every preview as a
     // live controls layer duplicates input bindings and can stall mobile UI.
-    if (registerControls) ControlsHandler.setupHitbox(PlayerSettings.player1.controls, this, trackedInputs);
+    if (registerControls == true) ControlsHandler.setupHitbox(PlayerSettings.player1.controls, this, trackedInputs);
   }
 
   public function getFirstHintByDirection(direction:NoteDirection):Null<FunkinHint>
