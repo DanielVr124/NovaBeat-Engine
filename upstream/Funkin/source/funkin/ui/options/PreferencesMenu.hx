@@ -230,8 +230,13 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       Preferences.downscroll = value;
     },
       Preferences.downscroll, #if (mobile || FEATURE_TOUCH_CONTROLS)
+      #if web
+      (!DeviceUtil.isMobileBrowser || Preferences.controlsScheme != FunkinHitboxControlSchemes.Arrows)
+      #else
       (!DeviceUtil.isMobileBrowser || ControlsHandler.hasExternalInputDevice
-      || Preferences.controlsScheme != FunkinHitboxControlSchemes.Arrows) #end);
+      || Preferences.controlsScheme != FunkinHitboxControlSchemes.Arrows)
+      #end
+      #end);
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
