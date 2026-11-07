@@ -644,12 +644,12 @@ class PlayState extends MusicBeatSubState
   /**
    * The pause button for the game, only appears in Mobile targets.
    */
-  var pauseButton:FunkinSprite;
+  var pauseButton:Null<FunkinSprite> = null;
 
   /**
    * The pause circle for the game, only appears in Mobile targets.
    */
-  var pauseCircle:FunkinSprite;
+  var pauseCircle:Null<FunkinSprite> = null;
   #end
 
   /**
@@ -1428,7 +1428,7 @@ class PlayState extends MusicBeatSubState
   function preparePauseUI():Void
   {
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (isMobileTouchDevice())
+    if (isMobileTouchDevice() && pauseButton != null && pauseCircle != null)
     {
       FlxTween.cancelTweensOf(pauseButton);
       FlxTween.cancelTweensOf(pauseCircle);
@@ -2348,9 +2348,14 @@ class PlayState extends MusicBeatSubState
 
   function initPauseSprites()
   {
-    pauseButton.animation.addByIndices('idle', 'back', [0], '', 24, false);
-    pauseButton.animation.addByIndices('hold', 'back', [5], '', 24, false);
-    pauseButton.animation.addByIndices('confirm', 'back', [
+    if (pauseButton == null || pauseCircle == null) return;
+
+    var button:FunkinSprite = pauseButton;
+    var circle:FunkinSprite = pauseCircle;
+
+    button.animation.addByIndices('idle', 'back', [0], '', 24, false);
+    button.animation.addByIndices('hold', 'back', [5], '', 24, false);
+    button.animation.addByIndices('confirm', 'back', [
       6,
       7,
       8,
@@ -2379,24 +2384,24 @@ class PlayState extends MusicBeatSubState
       31,
       32
     ], '', 24, false);
-    pauseButton.scale.set(0.8, 0.8);
-    pauseButton.updateHitbox();
-    pauseButton.animation.play('idle');
-    pauseButton.setPosition((FlxG.width - pauseButton.width) - 35, 35);
-    if (camControls != null) pauseButton.cameras = [camControls];
+    button.scale.set(0.8, 0.8);
+    button.updateHitbox();
+    button.animation.play('idle');
+    button.setPosition((FlxG.width - button.width) - 35, 35);
+    if (camControls != null) button.cameras = [camControls];
 
-    pauseCircle.scale.set(0.84, 0.8);
-    pauseCircle.updateHitbox();
-    if (camControls != null) pauseCircle.cameras = [camControls];
-    pauseCircle.x = ((pauseButton.x + (pauseButton.width / 2)) - (pauseCircle.width / 2));
-    pauseCircle.y = ((pauseButton.y + (pauseButton.height / 2)) - (pauseCircle.height / 2));
-    pauseCircle.alpha = 0.1;
+    circle.scale.set(0.84, 0.8);
+    circle.updateHitbox();
+    if (camControls != null) circle.cameras = [camControls];
+    circle.x = ((button.x + (button.width / 2)) - (circle.width / 2));
+    circle.y = ((button.y + (button.height / 2)) - (circle.height / 2));
+    circle.alpha = 0.1;
 
-    add(pauseCircle);
-    add(pauseButton);
+    add(circle);
+    add(button);
     hitbox?.forEachAlive(function(hint:FunkinHint)
     {
-      hint.deadZones.push(pauseButton);
+      hint.deadZones.push(button);
     });
 
     VideoCutscene.onVideoEnded.add(tweenPauseButtonIn);
@@ -2406,6 +2411,8 @@ class PlayState extends MusicBeatSubState
 
   function tweenPauseButtonIn():Void
   {
+    if (pauseButton == null || pauseCircle == null) return;
+
     FlxTween.cancelTweensOf(pauseButton);
     FlxTween.cancelTweensOf(pauseCircle);
 
