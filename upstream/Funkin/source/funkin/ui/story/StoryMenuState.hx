@@ -2,6 +2,7 @@ package funkin.ui.story;
 
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.FlxSprite;
+import funkin.graphics.FunkinSprite;
 import flixel.FlxG;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
@@ -165,16 +166,9 @@ class StoryMenuState extends MusicBeatState
 
     updateBackground();
 
-    // Restore the original FNF black backing behind the week-background area.
-    // NovaBeat draws its own lower carousel panel instead.
-    if (Preferences.menuStyle != "NovaBeat")
-    {
-      var stockWeekPanel:FlxSprite = new FlxSprite(levelBackground.x, 0);
-      stockWeekPanel.makeGraphic(FlxG.width, Std.int(BACKGROUND_HEIGHT + levelBackground.y), FlxColor.BLACK);
-      stockWeekPanel.zIndex = levelBackground.zIndex - 1;
-      stockWeekPanel.scrollFactor.set();
-      add(stockWeekPanel);
-    }
+    var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
+    black.zIndex = levelBackground.zIndex - 1;
+    add(black);
 
     baseLevelBackgroundWidth = levelBackground.frameWidth;
     baseLevelBackgroundHeight = levelBackground.frameHeight;
@@ -186,23 +180,26 @@ class StoryMenuState extends MusicBeatState
 
     updateProps();
 
-    // Preserve the original FNF track-list origin relative to the active week background.
-    tracklistText = new FlxText(0, levelBackground.y + levelBackground.height + 100, 0, 'Tracks', 32);
+    // Keep the track list origin used by the original FNF Story Mode.
+    var initialTracklistY:Float = Preferences.menuStyle == "NovaBeat"
+      ? levelBackground.y + levelBackground.height + 100
+      : levelBackground.x + levelBackground.height + 100;
+    tracklistText = new FlxText(0, initialTracklistY, 0, 'Tracks', 32);
     tracklistText.setFormat('VCR OSD Mono', 32);
     tracklistText.alignment = CENTER;
     tracklistText.color = 0xFFE55777;
-    tracklistText.zIndex = 20;
+    if (Preferences.menuStyle == "NovaBeat") tracklistText.zIndex = 20;
     add(tracklistText);
 
     scoreText = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 10), 10, 0, 'HIGH SCORE: 42069420');
     scoreText.setFormat('VCR OSD Mono', 32);
-    scoreText.zIndex = 30;
+    scoreText.zIndex = Preferences.menuStyle == "NovaBeat" ? 30 : 1000;
     add(scoreText);
 
     levelTitleText = new FlxText(Math.max((FlxG.width * 0.7), FlxG.width - FullScreenScaleMode.gameNotchSize.x), 10, 0, 'LEVEL 1');
     levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
     levelTitleText.alpha = 0.7;
-    levelTitleText.zIndex = 30;
+    levelTitleText.zIndex = Preferences.menuStyle == "NovaBeat" ? 30 : 1000;
     add(levelTitleText);
 
     buildLevelTitles();
@@ -213,7 +210,7 @@ class StoryMenuState extends MusicBeatState
     leftDifficultyArrow.animation.addByPrefix('idle', 'leftIdle0');
     leftDifficultyArrow.animation.addByPrefix('press', 'leftConfirm0');
     leftDifficultyArrow.animation.play('idle');
-    leftDifficultyArrow.zIndex = 30;
+    if (Preferences.menuStyle == "NovaBeat") leftDifficultyArrow.zIndex = 30;
     add(leftDifficultyArrow);
 
     buildDifficultySprite(Constants.DEFAULT_DIFFICULTY);
@@ -224,10 +221,10 @@ class StoryMenuState extends MusicBeatState
     rightDifficultyArrow.animation.addByPrefix('idle', 'rightIdle0');
     rightDifficultyArrow.animation.addByPrefix('press', 'rightConfirm0');
     rightDifficultyArrow.animation.play('idle');
-    rightDifficultyArrow.zIndex = 30;
+    if (Preferences.menuStyle == "NovaBeat") rightDifficultyArrow.zIndex = 30;
     add(rightDifficultyArrow);
 
-    difficultySprite.zIndex = 31;
+    if (Preferences.menuStyle == "NovaBeat") difficultySprite.zIndex = 31;
     add(difficultySprite);
 
     updateText();
@@ -424,7 +421,7 @@ class StoryMenuState extends MusicBeatState
     targetY -= (difficultySprite.height - difficultySprites.get(Constants.DEFAULT_DIFFICULTY).height) / 2;
     FlxTween.tween(difficultySprite, {y: targetY, alpha: 1}, 0.07);
 
-    difficultySprite.zIndex = 31;
+    if (Preferences.menuStyle == "NovaBeat") difficultySprite.zIndex = 31;
     add(difficultySprite);
   }
 
@@ -989,13 +986,16 @@ class StoryMenuState extends MusicBeatState
 
     levelTitles.members[currentIndex].targetY = targetY;
 
-    // Keep every week in the carousel. Only the selected week is emphasized;
-    // NovaBeat's lower-panel fade handles artwork as it scrolls out of view.
-    for (index in 0...levelTitles.members.length)
+    // The alpha treatment belongs only to NovaBeat. Stock FNF relies on
+    // its original LevelTitle behavior and does not rewrite every item's alpha.
+    if (Preferences.menuStyle == "NovaBeat")
     {
-      var item:LevelTitle = levelTitles.members[index];
-      item.alpha = index == currentIndex ? 1.0 : 0.6;
-      if (index == currentIndex) currentLevelTitle = item;
+      for (index in 0...levelTitles.members.length)
+      {
+        var item:LevelTitle = levelTitles.members[index];
+        item.alpha = index == currentIndex ? 1.0 : 0.6;
+        if (index == currentIndex) currentLevelTitle = item;
+      }
     }
 
     // Every item above it should be positioned in relation to the next item.
