@@ -2006,7 +2006,7 @@ class PlayState extends MusicBeatSubState
     final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
       && !ControlsHandler.hasExternalInputDevice)
       #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
+      ) || #end Preferences.downscroll;
 
     var healthBarYPos:Float = isDownscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
 
@@ -2047,7 +2047,7 @@ class PlayState extends MusicBeatSubState
       final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
       && !ControlsHandler.hasExternalInputDevice)
       #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
+      ) || #end Preferences.downscroll;
 
       final subtitlesAlignment:SubtitlesAlignment = isDownscroll ? SubtitlesAlignment.SUBTITLES_TOP : SubtitlesAlignment.SUBTITLES_BOTTOM;
       subtitles = new Subtitles(0, 139, subtitlesAlignment);
@@ -2307,8 +2307,16 @@ class PlayState extends MusicBeatSubState
   /** Whether this session should accept the original mobile hitboxes. */
   inline function shouldUseMobileHitbox():Bool
   {
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    return isMobileTouchDevice() && !ControlsHandler.hasExternalInputDevice;
+    #if mobile
+    // Preserve native Android/iOS behavior: an attached keyboard or gamepad
+    // selects the external-input layout.
+    return !ControlsHandler.hasExternalInputDevice;
+    #elseif (web && FEATURE_TOUCH_CONTROLS)
+    // Mobile browsers can expose headset/phone controllers as gamepads even
+    // while the user is tapping the screen. Keep the original mobile hitbox
+    // active alongside those browser devices; the browser pointer adapter
+    // handles ray/mouse-style taps.
+    return isMobileTouchDevice();
     #else
     return false;
     #end
