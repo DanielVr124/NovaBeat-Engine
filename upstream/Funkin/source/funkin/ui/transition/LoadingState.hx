@@ -6,6 +6,7 @@ import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxTimer;
+import flixel.text.FlxText;
 import flixel.util.typeLimit.NextState;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.ScreenWipeShader;
@@ -26,6 +27,9 @@ import openfl.utils.Assets as OpenFLAssets;
 class LoadingState extends MusicBeatSubState
 {
   inline static var MIN_TIME = 1.0;
+  static inline var LOAD_REQUEST_TIMEOUT_SECONDS:Float = 20.0;
+  static inline var MAX_RETRY_DELAY_SECONDS:Float = 30.0;
+  static inline var LOAD_STALL_SECONDS:Float = 12.0;
 
   var asSubState:Bool = false;
   var target:NextState;
@@ -35,6 +39,9 @@ class LoadingState extends MusicBeatSubState
   var danceLeft:Bool = false;
   var loadBar:FlxSprite;
   var funkay:FlxSprite;
+  var statusText:FlxText;
+  var loadStatus:String = 'Preparing song assets...';
+  var lastLoadActivityTime:Float = 0.0;
 
   function new(target:NextState, stopMusic:Bool, ?playParams:PlayStateParams)
   {
@@ -60,47 +67,183 @@ class LoadingState extends MusicBeatSubState
 
     add(loadBar);
 
-    initSongsManifest().onComplete(function(lib)
+    statusText = new FlxText(16, 16, FlxG.width - 32, 'Preparing song assets...');
+    statusText.size = 16;
+    statusText.scrollFactor.set();
+    add(statusText);
+
+    lastLoadActivityTime = haxe.Timer.stamp();
+    loadSongsManifest(1);
+  }
+
+
+  function loadSongsManifest(attempt:Int):Void
+  {
+    loadStatus = attempt == 1
+      ? 'Loading song asset manifest...'
+      : 'Retrying song asset manifest (attempt ' + attempt + ')...';
+    lastLoadActivityTime = haxe.Timer.stamp();
+
+    var settled:Bool = false;
+    var requestTimer = new FlxTimer();
+    requestTimer.start(LOAD_REQUEST_TIMEOUT_SECONDS, function(_)
     {
-      callbacks = new MultiCallback(onLoad);
-      var introComplete = callbacks.add('introComplete');
-
-      if (playParams != null)
+      if (settled) return;
+      settled = true;
+      scheduleRetry('song asset manifest', attempt + 1, function()
       {
-        // Load and cache the song's charts.
-        if (playParams.targetSong == null)
-        {
-          throw 'Invalid parameter: Target song should not be null';
-        }
+        loadSongsManifest(attempt + 1);
+      }, 'No response after ' + LOAD_REQUEST_TIMEOUT_SECONDS + ' seconds');
+    });
 
-        playParams.targetSong.cacheCharts(true);
+    initSongsManifest().onComplete(function(_lib)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      lastLoadActivityTime = haxe.Timer.stamp();
+      loadStatus = 'Song manifest loaded. Preparing song assets...';
+      onSongsManifestLoaded();
+    }).onError(function(error)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      scheduleRetry('song asset manifest', attempt + 1, function()
+      {
+        loadSongsManifest(attempt + 1);
+      }, error);
+    });
+  }
 
-        // Preload the song for the play state.
-        var difficulty:String = playParams.targetDifficulty ?? Constants.DEFAULT_DIFFICULTY;
-        var variation:String = playParams.targetVariation ?? Constants.DEFAULT_VARIATION;
-        var targetChart:Null<SongDifficulty> = playParams.targetSong.getDifficulty(difficulty, variation);
-        if (targetChart == null)
-        {
-          throw 'Couldn\'t retrieve chart data for song "${playParams.targetSong.songName}" on difficulty "$difficulty" and variation "$variation"';
-        }
-        var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
-        var voicesPaths:Array<String> = targetChart.buildVoiceList();
+  function onSongsManifestLoaded():Void
+  {
+    callbacks = new MultiCallback(onLoad);
+    var introComplete = callbacks.add('introComplete');
 
-        checkLoadSong(instPath);
-        for (voicePath in voicesPaths)
-        {
-          checkLoadSong(voicePath);
-        }
+    if (playParams != null)
+    {
+      // Load and cache the song's charts.
+      if (playParams.targetSong == null)
+      {
+        throw 'Invalid parameter: Target song should not be null';
       }
 
-      checkLibrary('shared');
-      checkLibrary('videos');
-      checkLibrary(stageDirectory);
-      checkLibrary('tutorial');
+      playParams.targetSong.cacheCharts(true);
 
-      var fadeTime:Float = 0.5;
-      FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
-      new FlxTimer().start(fadeTime + MIN_TIME, function(_) introComplete());
+      // Preload the song for the play state.
+      var difficulty:String = playParams.targetDifficulty ?? Constants.DEFAULT_DIFFICULTY;
+      var variation:String = playParams.targetVariation ?? Constants.DEFAULT_VARIATION;
+      var targetChart:Null<SongDifficulty> = playParams.targetSong.getDifficulty(difficulty, variation);
+      if (targetChart == null)
+      {
+        throw 'Couldn\'t retrieve chart data for song "${playParams.targetSong.songName}" on difficulty "$difficulty" and variation "$variation"';
+      }
+      var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
+      var voicesPaths:Array<String> = targetChart.buildVoiceList();
+
+      checkLoadSong(instPath);
+      for (voicePath in voicesPaths)
+      {
+        checkLoadSong(voicePath);
+      }
+    }
+
+    checkLibrary('shared');
+    checkLibrary('videos');
+    checkLibrary(stageDirectory);
+    checkLibrary('tutorial');
+
+    var fadeTime:Float = 0.5;
+    FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
+    new FlxTimer().start(fadeTime + MIN_TIME, function(_) introComplete());
+  }
+
+  function scheduleRetry(label:String, nextAttempt:Int, retry:Void->Void, error:Dynamic):Void
+  {
+    var delay:Float = Math.min(MAX_RETRY_DELAY_SECONDS, Math.pow(2, nextAttempt - 2));
+    loadStatus = 'Could not load ' + label + '. Retrying (attempt ' + nextAttempt + ') in ' + Math.ceil(delay) + 's...';
+    lastLoadActivityTime = haxe.Timer.stamp();
+    trace('Loading ' + label + ' failed. Retry attempt ' + nextAttempt + ' in ' + delay + 's. Details: ' + Std.string(error));
+
+    new FlxTimer().start(delay, function(_)
+    {
+      retry();
+    });
+  }
+
+  function loadSongWithRetry(path:String, callback:Void->Void, attempt:Int):Void
+  {
+    var assetName = Path.withoutDirectory(path);
+    loadStatus = attempt == 1 ? 'Loading audio: ' + assetName + '...' : 'Retrying audio: ' + assetName + ' (attempt ' + attempt + ')...';
+    lastLoadActivityTime = haxe.Timer.stamp();
+
+    var settled:Bool = false;
+    var requestTimer = new FlxTimer();
+    requestTimer.start(LOAD_REQUEST_TIMEOUT_SECONDS, function(_)
+    {
+      if (settled) return;
+      settled = true;
+      scheduleRetry('audio "' + assetName + '"', attempt + 1, function()
+      {
+        loadSongWithRetry(path, callback, attempt + 1);
+      }, 'No response after ' + LOAD_REQUEST_TIMEOUT_SECONDS + ' seconds');
+    });
+
+    Assets.loadSound(path).onComplete(function(_)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      lastLoadActivityTime = haxe.Timer.stamp();
+      loadStatus = (attempt == 1 ? 'Audio loaded: ' : 'Connection restored. Audio loaded: ') + assetName;
+      callback();
+    }).onError(function(error)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      scheduleRetry('audio "' + assetName + '"', attempt + 1, function()
+      {
+        loadSongWithRetry(path, callback, attempt + 1);
+      }, error);
+    });
+  }
+
+  function loadLibraryWithRetry(library:String, callback:Void->Void, attempt:Int):Void
+  {
+    loadStatus = attempt == 1 ? 'Loading asset library: ' + library + '...' : 'Retrying library: ' + library + ' (attempt ' + attempt + ')...';
+    lastLoadActivityTime = haxe.Timer.stamp();
+
+    var settled:Bool = false;
+    var requestTimer = new FlxTimer();
+    requestTimer.start(LOAD_REQUEST_TIMEOUT_SECONDS, function(_)
+    {
+      if (settled) return;
+      settled = true;
+      scheduleRetry('asset library "' + library + '"', attempt + 1, function()
+      {
+        loadLibraryWithRetry(library, callback, attempt + 1);
+      }, 'No response after ' + LOAD_REQUEST_TIMEOUT_SECONDS + ' seconds');
+    });
+
+    Assets.loadLibrary(library).onComplete(function(_)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      lastLoadActivityTime = haxe.Timer.stamp();
+      loadStatus = 'Asset library loaded: ' + library;
+      callback();
+    }).onError(function(error)
+    {
+      if (settled) return;
+      settled = true;
+      requestTimer.cancel();
+      scheduleRetry('asset library "' + library + '"', attempt + 1, function()
+      {
+        loadLibraryWithRetry(library, callback, attempt + 1);
+      }, error);
     });
   }
 
@@ -115,10 +258,7 @@ class LoadingState extends MusicBeatSubState
       // @:privateAccess
       // library.pathGroups.set(symbolPath, [library.__cacheBreak(symbolPath)]);
       var callback = callbacks?.add('song:' + path);
-      Assets.loadSound(path).onComplete(function(_)
-      {
-        if (callback != null) callback();
-      });
+      if (callback != null) loadSongWithRetry(path, callback, 1);
     }
   }
 
@@ -131,10 +271,7 @@ class LoadingState extends MusicBeatSubState
       if (!LimeAssets.libraryPaths.exists(library)) throw 'Missing library: ' + library;
 
       var callback = callbacks?.add('library:' + library);
-      Assets.loadLibrary(library).onComplete(function(_)
-      {
-        if (callback != null) callback();
-      });
+      if (callback != null) loadLibraryWithRetry(library, callback, 1);
     }
   }
 
@@ -181,12 +318,35 @@ class LoadingState extends MusicBeatSubState
         loadBar.setGraphicSize(lerpWidth, loadBar.height);
         loadBar.updateHitbox();
       }
+
+      var loadedAssets:Int = callbacks.length - callbacks.numRemaining;
+      var waitingSeconds:Float = haxe.Timer.stamp() - lastLoadActivityTime;
+      if (callbacks.numRemaining > 0 && waitingSeconds >= LOAD_STALL_SECONDS)
+      {
+        statusText.text = loadStatus + '\nNo asset response for ' + Math.floor(waitingSeconds)
+          + 's. Waiting/retrying... (' + loadedAssets + '/' + callbacks.length + ' ready)';
+      }
+      else
+      {
+        statusText.text = loadStatus + '\n' + loadedAssets + '/' + callbacks.length + ' assets ready';
+      }
+
       FlxG.watch.addQuick('percentage?', callbacks.numRemaining / callbacks.length);
+    }
+    else if (statusText != null)
+    {
+      var waitingSeconds:Float = haxe.Timer.stamp() - lastLoadActivityTime;
+      statusText.text = waitingSeconds >= LOAD_STALL_SECONDS
+        ? loadStatus + '\nNo response from the song manifest. Waiting/retrying...'
+        : loadStatus;
     }
   }
 
   function onLoad():Void
   {
+    loadStatus = 'Assets loaded. Starting song...';
+    if (statusText != null) statusText.text = loadStatus;
+
     // Stop the instrumental.
     @:nullSafety(Off)
     if (stopMusic && FlxG.sound.music != null)
