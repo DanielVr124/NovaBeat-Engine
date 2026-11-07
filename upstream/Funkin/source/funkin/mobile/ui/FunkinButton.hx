@@ -235,10 +235,16 @@ class FunkinButton extends FunkinSprite implements IFlxInput
       {
         final worldPos:FlxPoint = touch.getWorldPosition(camera, _point);
 
+        var blockedByDeadZone:Bool = false;
         for (zone in deadZones)
         {
-          if (zone != null && zone.overlapsPoint(worldPos, true, camera)) return false;
+          if (zone != null && zone.overlapsPoint(worldPos, true, camera))
+          {
+            blockedByDeadZone = true;
+            break;
+          }
         }
+        if (blockedByDeadZone) continue;
 
         function updateTouchID():Void
         {
