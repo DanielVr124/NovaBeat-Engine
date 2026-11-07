@@ -1771,7 +1771,8 @@ class FreeplayState extends MusicBeatSubState
 
   inline function menuSwipeRight():Bool return SwipeUtil.swipeRight;
 
-  inline function menuFlickManager():Dynamic return SwipeUtil.flickManager;
+  // Match upstream Freeplay: scroll inertia is driven by the touch flick manager.
+  inline function menuFlickManager():Dynamic return FlxG.touches.flickManager;
 
   inline function menuFlickLeft():Bool return SwipeUtil.flickLeft;
 
@@ -1781,7 +1782,7 @@ class FreeplayState extends MusicBeatSubState
 
   inline function menuFlickDown():Bool return SwipeUtil.flickDown;
 
-  inline function menuResetSwipeVelocity():Void SwipeUtil.resetSwipeVelocity();
+  inline function menuResetSwipeVelocity():Void FlxG.touches.flickManager.destroy();
 
   function lerpScoreDisplays():Void
   {
