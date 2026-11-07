@@ -55,6 +55,16 @@ class FunkinPreloader extends FlxBasePreloader
   // private var downloadingAssetsStartTime:Float = -1;
   var downloadingAssetsPercent:Float = -1;
   var downloadingAssetsComplete:Bool = false;
+
+  // The HTML5 preloader owns the initial asset requests, so we can observe
+  // progress here but cannot resume an individual request by byte.
+  static final DOWNLOAD_STALL_SECONDS:Float = 12.0;
+  var lastDownloadProgress:Float = -1.0;
+  var lastDownloadProgressTime:Float = 0.0;
+  var downloadWasStalled:Bool = false;
+  var downloadWasOffline:Bool = false;
+  var downloadStatusMessage:Null<String>;
+  var downloadStatusMessageUntil:Float = 0.0;
   var preloadingPlayAssetsPercent:Float = -1;
   var preloadingPlayAssetsStartTime:Float = -1;
   var preloadingPlayAssetsComplete:Bool = false;
@@ -274,11 +284,79 @@ class FunkinPreloader extends FlxBasePreloader
     vfdShader.update(elapsed * 100);
 
     downloadingAssetsPercent = percent;
+    #if js
+    if (currentState == FunkinPreloaderState.NotStarted || currentState == FunkinPreloaderState.DownloadingAssets)
+    {
+      updateDownloadConnectionStatus(percent, elapsed);
+    }
+    #end
     var loadPercent:Float = updateState(percent, elapsed);
     updateGraphics(loadPercent, elapsed);
 
     lastElapsed = elapsed;
   }
+
+  #if js
+  /**
+   * Reports browser connectivity and stalled startup downloads.
+   * navigator.onLine is only a browser connectivity hint; a stalled progress
+   * value is reported separately because it does not prove the server is down.
+   */
+  function updateDownloadConnectionStatus(percent:Float, elapsed:Float):Void
+  {
+    if (!js.Browser.navigator.onLine)
+    {
+      if (!downloadWasOffline)
+      {
+        trace(' PRELOADER '.bold().bg_note_left() + ' Browser reports that the network is offline.');
+      }
+      downloadWasOffline = true;
+      downloadStatusMessage = 'No network connection detected. Waiting for reconnection...';
+      downloadStatusMessageUntil = 0.0;
+      if (lastDownloadProgressTime <= 0.0) lastDownloadProgressTime = elapsed;
+      return;
+    }
+
+    if (downloadWasOffline)
+    {
+      downloadWasOffline = false;
+      downloadStatusMessage = 'Connection detected again. Checking the download...';
+      downloadStatusMessageUntil = elapsed + 4.0;
+      lastDownloadProgressTime = elapsed;
+      trace(' PRELOADER '.bold().bg_note_left() + ' Browser network connection returned.');
+    }
+
+    if (lastDownloadProgress < 0.0 || percent > lastDownloadProgress + 0.0001)
+    {
+      if (downloadWasStalled)
+      {
+        downloadStatusMessage = 'Download progress resumed. Continuing...';
+        downloadStatusMessageUntil = elapsed + 4.0;
+        trace(' PRELOADER '.bold().bg_note_left() + ' Startup asset download progress resumed.');
+      }
+
+      lastDownloadProgress = percent;
+      lastDownloadProgressTime = elapsed;
+      downloadWasStalled = false;
+    }
+    else if (percent < 1.0 && elapsed - lastDownloadProgressTime >= DOWNLOAD_STALL_SECONDS)
+    {
+      if (!downloadWasStalled)
+      {
+        trace(' PRELOADER '.bold().bg_note_left() + ' Startup download has made no progress for ' + DOWNLOAD_STALL_SECONDS + ' seconds.');
+      }
+      downloadWasStalled = true;
+      downloadStatusMessage = 'Download has stopped progressing. Waiting for the asset server...';
+      downloadStatusMessageUntil = 0.0;
+    }
+
+    if (downloadStatusMessage != null && downloadStatusMessageUntil > 0.0 && elapsed >= downloadStatusMessageUntil)
+    {
+      downloadStatusMessage = null;
+      downloadStatusMessageUntil = 0.0;
+    }
+  }
+  #end
 
   function updateState(percent:Float, elapsed:Float):Float
   {
@@ -871,8 +949,17 @@ class FunkinPreloader extends FlxBasePreloader
     var ellipsis:String = '';
     for (_ in 0...ellipsisCount) ellipsis += '.';
 
-    // Render status text
-    updateProgressLeftText(currentState.getProgressLeftText(TOTAL_STEPS, ellipsis));
+    // Render status text. During the initial HTML5 download, replace the
+    // normal phase label with an explicit connectivity/stall message when needed.
+    var progressMessage = currentState.getProgressLeftText(TOTAL_STEPS, ellipsis);
+    #if js
+    if (downloadStatusMessage != null
+      && (currentState == FunkinPreloaderState.NotStarted || currentState == FunkinPreloaderState.DownloadingAssets))
+    {
+      progressMessage = downloadStatusMessage + '\n' + Math.floor(percent * 100) + '% downloaded';
+    }
+    #end
+    updateProgressLeftText(progressMessage);
 
     // Render percent text
     var percentage:Int = Math.floor(percent * 100);
@@ -995,6 +1082,7 @@ class FunkinPreloader extends FlxBasePreloader
     // We need to wait for the other steps, then the display to fade out.
     _loaded = false;
     downloadingAssetsComplete = true;
+    downloadStatusMessage = null;
   }
 }
 
