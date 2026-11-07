@@ -68,12 +68,15 @@ import funkin.ui.transition.LoadingState;
 import funkin.util.SerializerUtil;
 import funkin.util.HapticUtil;
 import funkin.util.GRhythmUtil;
+import funkin.util.DeviceUtil;
 import haxe.Int64;
-#if mobile
+#if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.util.TouchUtil;
 import funkin.mobile.ui.FunkinHitbox;
 import funkin.mobile.input.ControlsHandler;
 import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
+#end
+#if mobile
 #if FEATURE_MOBILE_ADVERTISEMENTS
 import funkin.mobile.util.AdMobUtil;
 #end
@@ -637,7 +640,7 @@ class PlayState extends MusicBeatSubState
 
   public var isSongEnd:Bool = false;
 
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
   /**
    * The pause button for the game, only appears in Mobile targets.
    */
@@ -815,9 +818,12 @@ class PlayState extends MusicBeatSubState
     comboPopUps = new PopUpStuff(noteStyle);
 
     // Pause sprites
-    #if mobile
-    pauseButton = FunkinSprite.createSparrow(0, 0, "pauseButton");
-    pauseCircle = FunkinSprite.create(0, 0, 'pauseCircle');
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice())
+    {
+      pauseButton = FunkinSprite.createSparrow(0, 0, "pauseButton");
+      pauseCircle = FunkinSprite.create(0, 0, 'pauseCircle');
+    }
     #end
 
     // Don't do anything else here! Wait until create() when we attach to the camera.
@@ -897,27 +903,26 @@ class PlayState extends MusicBeatSubState
     initStrumlines();
     initPopups();
 
-    #if mobile
-    if (!ControlsHandler.hasExternalInputDevice)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (shouldUseMobileHitbox())
     {
-      // Initialize the hitbox for mobile controls
+      // Use the original FNF hitbox implementation on native Android and on
+      // mobile browsers. Browser input is adapted at the pointer layer; the
+      // layout and action bindings remain the same as the native game.
       addHitbox(false);
       if (hitbox != null)
       {
         hitbox.isPixel = currentChart.noteStyle == 'pixel';
-
         if (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
         {
           for (direction in Strumline.DIRECTIONS)
-          {
             hitbox.getFirstHintByDirection(direction).follow(playerStrumline.getByDirection(direction));
-          }
         }
       }
     }
-    else
+    else if (isMobileTouchDevice())
     {
-      // The camera is still needed for the pause button!
+      // The camera is still needed for the pause button when a gamepad is used.
       camControls = new FunkinCamera('camControls');
       FlxG.cameras.add(camControls, false);
       camControls.bgColor = 0x0;
@@ -949,8 +954,8 @@ class PlayState extends MusicBeatSubState
     startCountdown();
 
     // Create the pause button.
-    #if mobile
-    initPauseSprites();
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice()) initPauseSprites();
     #end
 
     // Do this last to prevent beatHit from being called before create() is done.
@@ -977,9 +982,12 @@ class PlayState extends MusicBeatSubState
 
   public function togglePauseButton(visible:Bool = false):Void
   {
-    #if mobile
-    pauseCircle.alpha = visible ? 0.1 : 0;
-    pauseButton.alpha = visible ? 1 : 0;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && pauseButton != null && pauseCircle != null)
+    {
+      pauseCircle.alpha = visible ? 0.1 : 0;
+      pauseButton.alpha = visible ? 1 : 0;
+    }
     #end
   }
 
@@ -1192,8 +1200,8 @@ class PlayState extends MusicBeatSubState
     var pauseButtonCheck:Bool = false;
     var androidPause:Bool = false;
     // So the player wouldn't miss when pressing the pause button
-    #if mobile
-    pauseButtonCheck = TouchUtil.pressAction(pauseButton);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && pauseButton != null) pauseButtonCheck = TouchUtil.pressAction(pauseButton);
     #end
 
     #if android
@@ -1203,8 +1211,8 @@ class PlayState extends MusicBeatSubState
     // Attempt to pause the game.
     if ((controls.PAUSE_P || androidPause || pauseButtonCheck)) pause();
 
-    #if mobile
-    if (justUnpaused)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && justUnpaused)
     {
       tweenPauseButtonIn();
       if (!startingSong && hitbox != null) hitbox.visible = true;
@@ -1332,9 +1340,12 @@ class PlayState extends MusicBeatSubState
     // Moving notes into position is now done by Strumline.update().
     if (!isInCutscene) processNotes(elapsed);
 
-    #if mobile
-    if ((VideoCutscene.isPlaying() || isInCutscene) && !pauseButton.visible) pauseButton.visible = true;
-    pauseCircle.visible = pauseButton.visible;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && pauseButton != null && pauseCircle != null)
+    {
+      if ((VideoCutscene.isPlaying() || isInCutscene) && !pauseButton.visible) pauseButton.visible = true;
+      pauseCircle.visible = pauseButton.visible;
+    }
     #end
 
     justUnpaused = false;
@@ -1416,12 +1427,15 @@ class PlayState extends MusicBeatSubState
 
   function preparePauseUI():Void
   {
-    #if mobile
-    FlxTween.cancelTweensOf(pauseButton);
-    FlxTween.cancelTweensOf(pauseCircle);
-    pauseButton.alpha = 0;
-    pauseCircle.alpha = 0;
-    if (hitbox != null) hitbox.visible = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice())
+    {
+      FlxTween.cancelTweensOf(pauseButton);
+      FlxTween.cancelTweensOf(pauseCircle);
+      pauseButton.alpha = 0;
+      pauseCircle.alpha = 0;
+      if (hitbox != null) hitbox.visible = false;
+    }
     #end
   }
 
@@ -2264,8 +2278,8 @@ class PlayState extends MusicBeatSubState
     opponentStrumline.zIndex = 1000;
     opponentStrumline.cameras = [camHUD];
 
-    #if mobile
-    if (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && !ControlsHandler.hasExternalInputDevice)
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (shouldUseMobileHitbox() && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
     {
       initNoteHitbox();
     }
@@ -2278,7 +2292,29 @@ class PlayState extends MusicBeatSubState
   /**
      * Configures the position of strumline for the default control scheme
      */
-  #if mobile
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  /** True for native mobile and phone/tablet browser builds. */
+  inline function isMobileTouchDevice():Bool
+  {
+    #if mobile
+    return true;
+    #elseif (web && FEATURE_TOUCH_CONTROLS)
+    return DeviceUtil.isMobileBrowser;
+    #else
+    return false;
+    #end
+  }
+
+  /** Whether this session should accept the original mobile hitboxes. */
+  inline function shouldUseMobileHitbox():Bool
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    return isMobileTouchDevice() && !ControlsHandler.hasExternalInputDevice;
+    #else
+    return false;
+    #end
+  }
+
   function initNoteHitbox()
   {
     final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
@@ -2636,8 +2672,8 @@ class PlayState extends MusicBeatSubState
   {
     startingSong = false;
 
-    #if mobile
-    if (hitbox != null) hitbox.visible = true;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && hitbox != null) hitbox.visible = true;
     #end
 
     if (!overrideMusic && !isGamePaused && currentChart != null)
@@ -3397,14 +3433,14 @@ class PlayState extends MusicBeatSubState
     androidPause = FlxG.android.justPressed.BACK;
     #end
 
-    #if mobile
-    pauseButtonCheck = TouchUtil.overlapsComplex(pauseButton);
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice() && pauseButton != null) pauseButtonCheck = TouchUtil.overlapsComplex(pauseButton);
     #end
 
     if (currentConversation != null)
     {
       // Pause/unpause may conflict with advancing the conversation!
-      if ((controls.CUTSCENE_ADVANCE #if mobile || (!pauseButtonCheck && TouchUtil.justPressed) #end) && !justUnpaused)
+      if ((controls.CUTSCENE_ADVANCE #if (mobile || FEATURE_TOUCH_CONTROLS) || (isMobileTouchDevice() && !pauseButtonCheck && TouchUtil.justPressed) #end) && !justUnpaused)
       {
         currentConversation.advanceConversation();
       }
@@ -3448,11 +3484,14 @@ class PlayState extends MusicBeatSubState
     // Prevent ghost misses while the song is ending.
     disableKeys = true;
 
-    #if mobile
-    // Hide the buttons while the song is ending.
-    if (hitbox != null) hitbox.visible = false;
-    pauseButton.visible = false;
-    pauseCircle.visible = false;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (isMobileTouchDevice())
+    {
+      // Hide touch controls while the song is ending.
+      if (hitbox != null) hitbox.visible = false;
+      if (pauseButton != null) pauseButton.visible = false;
+      if (pauseCircle != null) pauseCircle.visible = false;
+    }
     #end
 
     // Check if any events want to prevent the song from ending.
