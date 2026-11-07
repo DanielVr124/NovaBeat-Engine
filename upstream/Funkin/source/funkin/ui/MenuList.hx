@@ -259,9 +259,15 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   inline function overlapsMenuPointer(item:T):Bool
   {
-    return Preferences.menuStyle == "NovaBeat"
-      ? NovaBeatMenuInput.overlaps(item, item.camera)
-      : TouchUtil.overlaps(item, item.camera);
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // Some Options pages assign a camera to the TextMenuList group rather
+      // than to every child row. Hit-test in the same camera the group draws
+      // through, falling back to an explicit row camera when one is present.
+      return NovaBeatMenuInput.overlaps(item, item.camera ?? camera);
+    }
+
+    return TouchUtil.overlaps(item, item.camera);
   }
 
   /**
@@ -352,7 +358,14 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       {
         final item:T = members[i];
         if (!item.available) continue;
-        if (FlxG.mouse.overlaps(item, item.camera)) return i;
+        if (Preferences.menuStyle == "NovaBeat")
+        {
+          if (FlxG.mouse.overlaps(item, item.camera ?? camera)) return i;
+        }
+        else if (FlxG.mouse.overlaps(item, item.camera))
+        {
+          return i;
+        }
       }
     }
     #end
