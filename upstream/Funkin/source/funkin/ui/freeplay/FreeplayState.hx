@@ -2100,7 +2100,14 @@ class FreeplayState extends MusicBeatSubState
     {
       if (touch.pressed && _pressedOnCapsule)
       {
-        final delta = touch.deltaViewY * framerateMultiplier;
+        // deltaViewY is already a per-frame pixel delta. Browser touch input
+        // must not be divided by the target frame rate again; doing so made
+        // Freeplay scrolling dozens of times weaker than a normal finger drag.
+        #if web
+        final delta:Float = touch.deltaViewY;
+        #else
+        final delta:Float = touch.deltaViewY * framerateMultiplier;
+        #end
         if (!Math.isFinite(delta)) continue;
         if (Math.abs(delta) >= 2)
         {
@@ -2108,14 +2115,20 @@ class FreeplayState extends MusicBeatSubState
 
           dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
 
-          var moveLength = delta / FlxG.updateFramerate / dpiScale;
+          #if web
+          var moveLength:Float = delta / dpiScale;
+          #else
+          var moveLength:Float = delta / FlxG.updateFramerate / dpiScale;
+          #end
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
         }
       }
-      else if (_moveLength > 0)
+      else if (_moveLength > 0 && !TouchUtil.pressed)
       {
+        // A stale/released entry in FlxG.touches.list must not cancel a
+        // different finger that is still dragging the song list.
         _moveLength = 0.0;
         changeSelection(0);
       }
