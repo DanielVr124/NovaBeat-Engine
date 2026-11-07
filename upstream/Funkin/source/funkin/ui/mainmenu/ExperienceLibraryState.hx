@@ -13,7 +13,6 @@ import funkin.audio.FunkinSound;
 import funkin.graphics.FunkinCamera;
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
 import funkin.Preferences;
 import funkin.modding.ExperienceManager;
 import funkin.modding.ExperienceManager.ExperienceInfo;
@@ -364,30 +363,14 @@ class ExperienceLibraryState extends MusicBeatState
     }
   }
 
-  inline function usesNovaBeatMenuInput():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat";
-  }
-
-  inline function menuPointer():Dynamic
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pointer : TouchUtil.touch;
-  }
+  // Use the original FNF pointer utility in both experience themes.
+  inline function menuPointer():Dynamic return TouchUtil.touch;
 
   function pointerOver(sprite:FlxSprite):Bool
   {
     if (sprite == null) return false;
-
-    if (usesNovaBeatMenuInput()) return NovaBeatMenuInput.overlaps(sprite, sprite.camera);
-
-    // Preserve the original FNF-style startup selector pointer checks.
-    var touchOver:Bool = TouchUtil.overlaps(sprite, sprite.camera)
+    return TouchUtil.overlaps(sprite, sprite.camera)
       || TouchUtil.overlapsComplex(sprite, sprite.camera);
-    #if web
-    return touchOver || FlxG.mouse.overlaps(sprite, sprite.camera);
-    #else
-    return touchOver;
-    #end
   }
 
   function handleTouchInput():Void
@@ -395,31 +378,11 @@ class ExperienceLibraryState extends MusicBeatState
     if (!usesTouchControls) return;
 
     var pointer:Dynamic = menuPointer();
-    // On HTML5, some browsers expose only the synthesized mouse stream.
-    // The NovaBeat adapter selects real contacts first and uses mouse as fallback.
-    #if web
-    if (!usesNovaBeatMenuInput())
-    {
-      var touchContactActive:Bool = pointer != null
-        && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased);
-      var browserMouseEvent:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
-      if (!touchContactActive && browserMouseEvent) pointer = FlxG.mouse;
-    }
-    #end
     if (pointer == null) return;
 
-    // Treat browser touch and synthesized mouse events as the same gesture.
-    // NovaBeat's helper keeps the multi-contact input path together, while the
-    // stock FNF selector retains its existing combined touch/mouse checks.
-    var justPressed:Bool = usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.justPressed
-      : (TouchUtil.justPressed || FlxG.mouse.justPressed);
-    var pressed:Bool = usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.pressed
-      : (TouchUtil.pressed || FlxG.mouse.pressed);
-    var justReleased:Bool = usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.justReleased
-      : (TouchUtil.justReleased || FlxG.mouse.justReleased);
+    var justPressed:Bool = TouchUtil.justPressed;
+    var pressed:Bool = TouchUtil.pressed;
+    var justReleased:Bool = TouchUtil.justReleased;
 
     if (justPressed)
     {
