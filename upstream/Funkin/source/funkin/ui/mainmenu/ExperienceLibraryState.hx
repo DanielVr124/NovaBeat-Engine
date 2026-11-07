@@ -94,12 +94,9 @@ class ExperienceLibraryState extends MusicBeatState
 
   function buildLayout():Void
   {
-    // Keep the FNF-style selector unchanged. The redesigned library is only
-    // used by NovaBeat mode and does not replace or restyle the FNF menu.
-    if (Preferences.menuStyle == "NovaBeat")
-      buildNovaBeatLayout();
-    else
-      buildClassicLayout();
+    // The Game Library is its own NovaBeat screen regardless of the
+    // selected gameplay/menu theme. This does not modify the FNF main menu.
+    buildNovaBeatLayout();
   }
 
   function buildNovaBeatLayout():Void
