@@ -172,15 +172,14 @@ class Strumline extends FlxSpriteGroup
 
   final inArrowControlSchemeMode:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
     && !ControlsHandler.hasExternalInputDevice) #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser
-    && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && !ControlsHandler.hasExternalInputDevice) #else false #end;
+    && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows) #else false #end;
 
   /**
    * Whether the strumline is downscroll.
    */
   public var isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
     && !ControlsHandler.hasExternalInputDevice)
-    #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-    && !ControlsHandler.hasExternalInputDevice) || #end Preferences.downscroll;
+    #elseif (web && FEATURE_TOUCH_CONTROLS) (DeviceUtil.isMobileBrowser && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows) || #end Preferences.downscroll;
 
   /**
    * The note data for the song. Should NOT be altered after the song starts (but we alter it in OffsetState :DDD),
