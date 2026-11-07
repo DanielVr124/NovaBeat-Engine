@@ -191,8 +191,8 @@ class TouchUtil
   @:noCompletion
   static function get_touch():Dynamic
   {
-    // HTML5 touch-enabled builds also run on desktop. Use the real touch list
-    // on phones/tablets, but leave mouse-driven navigation on FlxG.mouse.
+    // Use actual finger touches on mobile/Quest browsers. Desktop HTML5
+    // continues to expose its normal mouse pointer.
     if (DeviceUtil.isMobileBrowser)
     {
       for (touch in FlxG.touches.list)

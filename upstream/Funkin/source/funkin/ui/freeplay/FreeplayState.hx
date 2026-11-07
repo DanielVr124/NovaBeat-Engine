@@ -2103,8 +2103,8 @@ class FreeplayState extends MusicBeatSubState
     }
 
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
-    // The previous NovaBeat path interpreted each screen pixel as a song
-    // index. Convert pixels to a fraction of a row so scrolling is controlled.
+    // Scale the drag against a song row rather than treating each screen pixel
+    // as a complete song selection.
     final scrollPixelsPerSong:Float = Math.max(96, FlxG.height * 0.18);
     #if web
     if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)

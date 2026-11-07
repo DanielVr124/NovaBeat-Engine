@@ -142,18 +142,15 @@ class LoadingState extends MusicBeatSubState
       var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
       var voicesPaths:Array<String> = targetChart.buildVoiceList();
 
-      checkLoadSong(instPath);
-      for (voicePath in voicesPaths)
-      {
-        checkLoadSong(voicePath);
-      }
+      var audioPaths:Array<String> = [instPath].concat(voicesPaths);
+      var audioSequenceComplete:Void->Void = callbacks.add('songAudioSequence');
+      loadSongAudioSequentially(audioPaths, 0, audioSequenceComplete);
     }
 
     checkLibrary('shared');
     checkLibrary('videos');
-    // The selected stage directory already loads this when Tutorial is chosen.
-    // Do not load the tutorial library for every other song.
     checkLibrary(stageDirectory);
+    checkLibrary('tutorial');
 
     var fadeTime:Float = 0.5;
     FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
@@ -252,19 +249,29 @@ class LoadingState extends MusicBeatSubState
     });
   }
 
-  function checkLoadSong(path:String):Void
+  /**
+   * Load one audio stem at a time so multiple MP3 decoders do not allocate
+   * their peak memory simultaneously on mobile browsers.
+   */
+  function loadSongAudioSequentially(paths:Array<String>, index:Int, onComplete:Void->Void):Void
   {
-    if (!OpenFLAssets.cache.hasSound(path))
+    if (index >= paths.length)
     {
-      var library = Assets.getLibrary('songs');
-      var symbolPath = path.split(':').pop();
-      // @:privateAccess
-      // library.types.set(symbolPath, SOUND);
-      // @:privateAccess
-      // library.pathGroups.set(symbolPath, [library.__cacheBreak(symbolPath)]);
-      var callback = callbacks?.add('song:' + path);
-      if (callback != null) loadSongWithRetry(path, callback, 1);
+      onComplete();
+      return;
     }
+
+    var path:String = paths[index];
+    if (OpenFLAssets.cache.hasSound(path))
+    {
+      loadSongAudioSequentially(paths, index + 1, onComplete);
+      return;
+    }
+
+    loadSongWithRetry(path, function():Void
+    {
+      loadSongAudioSequentially(paths, index + 1, onComplete);
+    }, 1);
   }
 
   function checkLibrary(library:String):Void

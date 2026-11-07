@@ -273,23 +273,6 @@ jobs:
           root = Path(sys.argv[1])
           version = sys.argv[2]
 
-          # Cache the final HTML document, including this registration script.
-          # Insert it before hashing ASSETS so offline navigation never restores
-          # an index.html that cannot register/update its service worker.
-          index = root / "index.html"
-          html = index.read_text(encoding="utf-8")
-          registration = """<script>
-          if ("serviceWorker" in navigator && location.protocol !== "file:") {
-            window.addEventListener("load", () => {
-              navigator.serviceWorker.register("./service-worker.js", {scope: "./", updateViaCache: "none"})
-                .catch(error => console.warn("NovaBeat offline cache unavailable:", error));
-            }, {once: true});
-          }
-          </script>"""
-          if "service-worker.js" not in html:
-              html = html.replace("</body>", registration + "</body>") if "</body>" in html else html + registration
-              index.write_text(html, encoding="utf-8")
-
           def digest_file(path: Path) -> str:
               digest = sha256()
               with path.open("rb") as source:

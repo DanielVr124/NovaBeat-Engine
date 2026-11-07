@@ -124,7 +124,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     listW = width - margin * 2 - 24;
     var availableTop:Float = panelTop + 20;
     var availableHeight:Float = Math.max(120, height - availableTop - 74);
-    rowHeight = Math.max(16, Math.min(48, availableHeight / LABELS.length));
+    rowHeight = Math.max(34, Math.min(56, availableHeight / LABELS.length));
     var settingsHeight:Float = rowHeight * LABELS.length;
     listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
     valueColumnX = listX + listW * 0.72;
@@ -173,7 +173,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       item.atlasText.visible = false;
       optionRows.push(item);
 
-      var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
+      var fontSize:Int = Std.int(Math.max(12, Math.min(17, rowHeight * 0.32)));
       var label:FlxText = makeLabel(listX + 13, y + 5, listW * 0.69, LABELS[index], fontSize, 0xFFB9C8E3);
       add(label);
       rowLabels.push(label);
@@ -463,7 +463,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       listW = width - margin * 2 - 24;
       var availableTop:Float = panelTop + 20;
       var availableHeight:Float = Math.max(120, height - availableTop - 74);
-      rowHeight = Math.max(16, Math.min(48, availableHeight / LABELS.length));
+      rowHeight = Math.max(34, Math.min(56, availableHeight / LABELS.length));
       var settingsHeight:Float = rowHeight * LABELS.length;
       listY = availableTop + Math.max(0, (availableHeight - settingsHeight) * 0.5);
       valueColumnX = listX + listW * 0.71;
@@ -479,7 +479,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         item.makeGraphic(Std.int(listW - 10), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
         item.updateHitbox();
         item.atlasText.visible = false;
-        var fontSize:Int = Std.int(Math.max(9, Math.min(14, rowHeight * 0.34)));
+        var fontSize:Int = Std.int(Math.max(12, Math.min(17, rowHeight * 0.32)));
         rowLabels[index].setPosition(listX + 13, y + 5);
         rowLabels[index].fieldWidth = listW * 0.67;
         rowLabels[index].setFormat(novaBeatLayout ? "Arial" : Paths.font('vcr.ttf'), fontSize,

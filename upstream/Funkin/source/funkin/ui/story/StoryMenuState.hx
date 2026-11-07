@@ -549,8 +549,8 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        // On NovaBeat/mobile, dragging the list follows the finger: swiping
-        // upward advances to the next level. Keep FNF's original mapping intact.
+        // NovaBeat mobile scrolling follows normal list direction: dragging
+        // upward advances to the next level. Preserve FNF's original mapping.
         final invertNovaBeatTouchSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
         if (controls.UI_UP_P || (invertNovaBeatTouchSwipe ? menuSwipeDown() : menuSwipeUp()))
         {
