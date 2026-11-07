@@ -554,8 +554,11 @@ class StoryMenuState extends MusicBeatState
         // so a long drag cannot advance several weeks in consecutive frames.
         // Leave the original FNF per-frame gesture path unchanged.
         final novaBeatMobileSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
-        final swipeToPrevious:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedUp : menuSwipeUp();
-        final swipeToNext:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedDown : menuSwipeDown();
+        // FlxSwipe's positive 90 degrees is physically downward, while the
+        // legacy helper names use the opposite labels. Map a finger-up gesture
+        // to the previous week so the carousel content moves down under it.
+        final swipeToPrevious:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedDown : menuSwipeUp();
+        final swipeToNext:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedUp : menuSwipeDown();
         if (controls.UI_UP_P || swipeToPrevious)
         {
           changeLevel(-1);
