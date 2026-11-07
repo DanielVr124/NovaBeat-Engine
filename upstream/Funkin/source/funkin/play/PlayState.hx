@@ -2291,9 +2291,6 @@ class PlayState extends MusicBeatSubState
     opponentStrumline.fadeInArrows();
   }
 
-  /**
-     * Configures the position of strumline for the default control scheme
-     */
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   /** True for native mobile and phone/tablet browser builds. */
   inline function isMobileTouchDevice():Bool
@@ -2317,6 +2314,9 @@ class PlayState extends MusicBeatSubState
     #end
   }
 
+  /**
+   * Configures the position of the strumline for the original Arrows touch scheme.
+   */
   function initNoteHitbox()
   {
     final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
