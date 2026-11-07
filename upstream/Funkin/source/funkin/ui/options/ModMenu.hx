@@ -512,27 +512,27 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       return;
     }
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    // Do not use pressAction here: its 200ms tap-age filter can discard
-    // ordinary mobile back-button taps. A release-overlap is reliable for
-    // both quick taps and slightly longer presses.
+    // HTML5 mobile browsers are detected at runtime, so this must not be
+    // hidden behind the native mobile compile flags. Otherwise the visible
+    // BACK target is drawn but can never receive a tap in the web build.
+    // Use release-overlap directly; pressAction has a 200ms age filter.
     if (usesTouchControls && mobileBackButton != null && TouchUtil.justReleased && TouchUtil.overlaps(mobileBackButton))
     {
       FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
       return;
     }
-    #end
 
     if (FlxG.keys.justPressed.R) refreshModList();
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    // Runtime-detected HTML5 touch devices need the same pointer handling
+    // as native mobile builds. Keep this outside compile-time mobile flags.
     if (usesTouchControls)
     {
       var touchActionHandled:Bool = false;
       for (index in 0...touchActionHitboxes.length)
       {
-        if (TouchUtil.pressAction(touchActionHitboxes[index]))
+        if (TouchUtil.justReleased && TouchUtil.overlaps(touchActionHitboxes[index]))
         {
           performTouchAction(touchActionActions[index]);
           touchActionHandled = true;
@@ -545,7 +545,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         for (index in 0...rowBackgrounds.length)
         {
           // The whole card is the tap target, not just the line of text.
-          if (TouchUtil.pressAction(rowBackgrounds[index]))
+          if (TouchUtil.justReleased && TouchUtil.overlaps(rowBackgrounds[index]))
           {
             selectMod(firstVisibleIndex + index, false);
             break;
@@ -553,7 +553,6 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         }
       }
     }
-    #end
 
     if (detectedMods.length > 0)
     {
