@@ -432,7 +432,7 @@ jobs:
           async function makeRangeResponse(fullResponse, rangeHeader) {
             // FlxPartialSound sends single byte ranges for Freeplay previews.
             // Multiple ranges are intentionally left to the network fallback.
-            const match = /^bytes=(\\d*)-(\\d*)$/i.exec(rangeHeader.trim());
+            const match = /^bytes=([0-9]*)-([0-9]*)$/i.exec(rangeHeader.trim());
             if (!match) return null;
 
             const blob = await fullResponse.clone().blob();
