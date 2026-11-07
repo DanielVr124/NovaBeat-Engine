@@ -232,6 +232,22 @@ jobs:
 
           web_root="$(dirname "$index_file")"
           test -s "$index_file"
+          # The game draws its own mobile-dot pointer. Hide the browser's OS
+          # cursor across the entire HTML5 page, including menus and gameplay.
+          python3 - "$index_file" <<'PY'
+          from pathlib import Path
+          import sys
+
+          index = Path(sys.argv[1])
+          html = index.read_text(encoding="utf-8")
+          style = "<style>html,body,canvas,#openfl-content{cursor:none!important}</style>"
+          if style not in html:
+              if "</head>" in html:
+                  html = html.replace("</head>", style + "</head>", 1)
+              else:
+                  html = style + html
+              index.write_text(html, encoding="utf-8")
+          PY
           touch "$web_root/.nojekyll"
           echo "web_root=$web_root" >> "$GITHUB_OUTPUT"
 
