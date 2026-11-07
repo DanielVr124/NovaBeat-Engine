@@ -554,7 +554,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     if (!enabled || optionRows.length == 0) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    if (novaBeatLayout && DeviceUtil.isMobileBrowser)
+    if (novaBeatLayout)
     {
       for (index in 0...optionRows.length)
       {
