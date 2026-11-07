@@ -156,8 +156,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (showTitleOnCreate)
     {
-      playMenuTheme(true, 0.0);
-      if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(4.0, 0.0, 0.82);
+      // Continue the NovaBeat theme from the experience selector when it is
+      // already playing. If another style's track is active, replace it now.
+      playMenuTheme(false, 0.82);
       buildBackdrop();
       buildTitleScreen();
     }
@@ -261,13 +262,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    var maxLogoWidth:Float = width * 0.82 * interfaceScale();
-    var maxLogoHeight:Float = height * (height > width * 1.12 ? 0.34 : 0.50) * interfaceScale();
-    var logoFit:Float = Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height);
+    var portraitLayout:Bool = height > width * 1.12;
+    // Give the wide NovaBeat wordmark more room while keeping it clear of the
+    // screen edges. Portrait viewports use a slightly shorter title footprint.
+    var maxLogoWidth:Float = width * (portraitLayout ? 0.86 : 0.88) * interfaceScale();
+    var maxLogoHeight:Float = height * (portraitLayout ? 0.30 : 0.48) * interfaceScale();
+    var logoFit:Float = Math.max(0.01, Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height));
     logo.setGraphicSize(Std.int(logo.width * logoFit), Std.int(logo.height * logoFit));
     logo.updateHitbox();
-    logo.x = (width - logo.width) * 0.5;
-    logo.y = height * 0.43 - logo.height * 0.5;
+    logo.x = Math.round((width - logo.width) * 0.5);
+    logo.y = height * (portraitLayout ? 0.40 : 0.43) - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
     titleLogo = logo;
@@ -843,16 +847,16 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     // Paths.music selects MP3 on web and OGG on native targets.
     // Browser builds generate MP3 variants from the source OGG files.
-    if (restart || FlxG.sound.music == null || !FlxG.sound.music.playing)
-    {
-      FunkinSound.playMusic('novabeat-menu', {
-        startingVolume: startingVolume,
-        overrideExisting: true,
-        restartTrack: restart,
-        persist: true,
-        mapTimeChanges: false
-      });
-    }
+    // FunkinSound detects an already-playing matching asset and leaves it
+    // alone; a different active track is replaced. This avoids both silence
+    // during the title handoff and unnecessary music restarts.
+    FunkinSound.playMusic('novabeat-menu', {
+      startingVolume: startingVolume,
+      overrideExisting: true,
+      restartTrack: restart,
+      persist: true,
+      mapTimeChanges: false
+    });
   }
 
   function playSfx(name:String, volume:Float):Void
