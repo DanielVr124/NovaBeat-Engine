@@ -186,12 +186,8 @@ class StoryMenuState extends MusicBeatState
 
     updateProps();
 
-    // The original FNF track list sits below the stock week area. NovaBeat
-    // uses a bottom-anchored position for its full-screen menu composition.
-    var initialTracklistY:Float = Preferences.menuStyle == "NovaBeat"
-      ? levelBackground.y + levelBackground.height + 100
-      : BACKGROUND_Y + BACKGROUND_HEIGHT + 100;
-    tracklistText = new FlxText(0, initialTracklistY, 0, 'Tracks', 32);
+    // Preserve the original FNF track-list origin relative to the active week background.
+    tracklistText = new FlxText(0, levelBackground.y + levelBackground.height + 100, 0, 'Tracks', 32);
     tracklistText.setFormat('VCR OSD Mono', 32);
     tracklistText.alignment = CENTER;
     tracklistText.color = 0xFFE55777;
@@ -259,6 +255,9 @@ class StoryMenuState extends MusicBeatState
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
+    // FNF keeps its original fixed Story Mode composition. The responsive
+    // full-screen layout below belongs only to the NovaBeat presentation.
+    if (Preferences.menuStyle != "NovaBeat") return;
     if (width <= 0 || height <= 0 || levelBackground == null || levelTitleText == null || scoreText == null || tracklistText == null) return;
 
     var portrait:Bool = height > width * 1.12;
@@ -361,12 +360,24 @@ class StoryMenuState extends MusicBeatState
 
   function playMenuMusic():Void
   {
-    FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
-      overrideExisting: true,
-      restartTrack: false,
-      persist: true,
-      mapTimeChanges: false
-    });
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      FunkinSound.playMusic('novabeat-menu', {
+        overrideExisting: true,
+        restartTrack: false,
+        persist: true,
+        mapTimeChanges: false
+      });
+    }
+    else
+    {
+      // Keep the stock FNF music parameters unchanged.
+      FunkinSound.playMusic('freakyMenu', {
+        overrideExisting: true,
+        restartTrack: false,
+        persist: true
+      });
+    }
   }
 
   function playNavigationSound():Void
@@ -395,8 +406,7 @@ class StoryMenuState extends MusicBeatState
       {
         difficultySprite.frames = Paths.getSparrowAtlas('storymenu/difficulties/${diff}');
         difficultySprite.animation.addByPrefix('idle', 'idle0', 24, true);
-        // Difficulty artwork is animated independently of the flashing-lights preference.
-        difficultySprite.animation.play('idle');
+        if (Preferences.flashingLights) difficultySprite.animation.play('idle');
       }
       else
       {
@@ -430,13 +440,7 @@ class StoryMenuState extends MusicBeatState
 
       // TODO: Readd lock icon if unlocked is false.
 
-      // The original FNF carousel starts just below its 400px week area even
-      // though the replacement artwork itself is full-screen. NovaBeat keeps
-      // its own full-screen carousel entrance.
-      var titleStartY:Float = Preferences.menuStyle == "NovaBeat"
-        ? levelBackground.y + levelBackground.height + 10
-        : BACKGROUND_Y + BACKGROUND_HEIGHT + 10;
-      var levelTitleItem:LevelTitle = new LevelTitle(0, Std.int(titleStartY), level);
+      var levelTitleItem:LevelTitle = new LevelTitle(0, Std.int(levelBackground.y + levelBackground.height + 10), level);
       levelTitleItem.targetY = ((levelTitleItem.height + 20) * levelIndex);
       levelTitleItem.screenCenter(X);
       levelTitles.add(levelTitleItem);
@@ -516,13 +520,13 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        if (controls.UI_UP_P || (DeviceUtil.isMobileBrowser && menuSwipeUp()))
+        if (controls.UI_UP_P || SwipeUtil.swipeUp)
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || (DeviceUtil.isMobileBrowser && menuSwipeDown()))
+        if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
         {
           changeLevel(1);
           changeDifficulty(0);
@@ -540,34 +544,39 @@ class StoryMenuState extends MusicBeatState
           changeDifficulty(0);
         }
 
+        final wheelAmount:Int = Math.round(FlxMath.bound(FlxG.mouse.deltaWheel.y, -1, 1));
+
+        if (wheelAmount != 0)
+        {
+          changeLevel(-wheelAmount);
+        }
+
         // TODO: Querying UI_RIGHT_P (justPressed) after UI_RIGHT always returns false. Fix it!
         if (controls.UI_RIGHT_P #if FEATURE_TOUCH_CONTROLS
-          || (DeviceUtil.isMobileBrowser && menuSwipeRight() && menuPointer() != null
-            && menuPointer().deltaViewY < 10 && menuPointer().deltaViewY > -10)
-          || (DeviceUtil.isMobileBrowser && menuPointerPressAction(rightDifficultyArrow)) #end)
+          || (SwipeUtil.swipeRight && TouchUtil.touch != null && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
+          || (TouchUtil.pressAction(rightDifficultyArrow, null, false)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
+          if (TouchUtil.touch != null
             && !TouchUtil.pressAction(rightDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(1);
         }
 
         if (controls.UI_LEFT_P #if FEATURE_TOUCH_CONTROLS
-          || (DeviceUtil.isMobileBrowser && menuSwipeLeft() && menuPointer() != null
-            && menuPointer().deltaViewY < 10 && menuPointer().deltaViewY > -10)
-          || (DeviceUtil.isMobileBrowser && menuPointerPressAction(leftDifficultyArrow)) #end)
+          || (SwipeUtil.swipeLeft && TouchUtil.touch != null && TouchUtil.touch.deltaViewY < 10 && TouchUtil.touch.deltaViewY > -10)
+          || (TouchUtil.pressAction(leftDifficultyArrow, null, false)) #end)
         {
           #if FEATURE_TOUCH_CONTROLS
           @:privateAccess
-          if (DeviceUtil.isMobileBrowser && TouchUtil.touch != null
+          if (TouchUtil.touch != null
             && !TouchUtil.pressAction(leftDifficultyArrow, null, false)) TouchUtil.touch._startY = TouchUtil.touch.viewY;
           #end
           changeDifficulty(-1);
         }
 
-        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && menuPointerOver(rightDifficultyArrow)) #end)
+        if (controls.UI_RIGHT #if FEATURE_TOUCH_CONTROLS || TouchUtil.overlaps(rightDifficultyArrow) #end)
         {
           rightDifficultyArrow.animation.play('press');
         }
@@ -576,7 +585,7 @@ class StoryMenuState extends MusicBeatState
           rightDifficultyArrow.animation.play('idle');
         }
 
-        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || (DeviceUtil.isMobileBrowser && menuPointerOver(leftDifficultyArrow)) #end)
+        if (controls.UI_LEFT #if FEATURE_TOUCH_CONTROLS || TouchUtil.overlaps(leftDifficultyArrow) #end)
         {
           leftDifficultyArrow.animation.play('press');
         }
@@ -592,8 +601,7 @@ class StoryMenuState extends MusicBeatState
       }
 
       #if FEATURE_TOUCH_CONTROLS
-      if (DeviceUtil.isMobileBrowser && !selectedLevel && menuPointerJustReleased()
-        && !menuPointerOver(leftDifficultyArrow) && !menuPointerJustSwipedAny())
+      if (!selectedLevel && TouchUtil.justReleased && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
       {
         for (i in 0...levelTitles.members.length)
         {
@@ -602,7 +610,7 @@ class StoryMenuState extends MusicBeatState
             levelList.indexOf(currentLevelId)
           ];
 
-          if (!menuPointerPressAction(item)) continue;
+          if (!TouchUtil.pressAction(item, null, false)) continue;
 
           (item == selectedItem) ? selectLevel() : changeLevel(i - levelList.indexOf(currentLevelId));
         }
@@ -625,18 +633,11 @@ class StoryMenuState extends MusicBeatState
     currentIndex += change;
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser)
-    {
-      // Don't wrap around when mobile touch navigation is active.
-      if (currentIndex < 0) currentIndex = 0;
-      if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
-    }
-    else
-    {
-      if (currentIndex < 0) currentIndex = levelList.length - 1;
-      if (currentIndex >= levelList.length) currentIndex = 0;
-    }
+    // Dont wrap around w/ touch.
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
     #else
+    // Wrap around
     if (currentIndex < 0) currentIndex = levelList.length - 1;
     if (currentIndex >= levelList.length) currentIndex = 0;
     #end
@@ -646,6 +647,21 @@ class StoryMenuState extends MusicBeatState
     rememberedLevelId = currentLevelId;
 
     updateData();
+
+    for (index in 0...levelTitles.members.length)
+    {
+      var item:LevelTitle = levelTitles.members[index];
+
+      if (index == currentIndex)
+      {
+        currentLevelTitle = item;
+        item.alpha = 1.0;
+      }
+      else
+      {
+        item.alpha = 0.6;
+      }
+    }
 
     if (currentIndex != prevIndex) playNavigationSound();
 
@@ -911,25 +927,30 @@ class StoryMenuState extends MusicBeatState
     tracklistText.text = 'TRACKS\n\n';
     tracklistText.text += currentLevel.getSongDisplayNames(currentDifficultyId).join('\n');
 
-    if (FlxG.height > FlxG.width * 1.12)
+    if (Preferences.menuStyle == "NovaBeat")
     {
-      // Keep the portrait track list inside the viewport after week changes.
-      var margin:Float = Math.max(18, FlxG.width * 0.045);
-      tracklistText.fieldWidth = FlxG.width - margin * 2;
-      tracklistText.alignment = CENTER;
-      tracklistText.x = margin;
-      tracklistText.y = FlxG.height * 0.76;
+      if (FlxG.height > FlxG.width * 1.12)
+      {
+        var margin:Float = Math.max(18, FlxG.width * 0.045);
+        tracklistText.fieldWidth = FlxG.width - margin * 2;
+        tracklistText.alignment = CENTER;
+        tracklistText.x = margin;
+        tracklistText.y = FlxG.height * 0.76;
+      }
+      else
+      {
+        tracklistText.fieldWidth = FlxG.width * 0.55;
+        tracklistText.alignment = CENTER;
+        tracklistText.screenCenter(X);
+        tracklistText.x -= (FlxG.width * 0.33);
+        tracklistText.y = FlxG.height * 0.76;
+      }
     }
     else
     {
-      tracklistText.fieldWidth = Preferences.menuStyle == "NovaBeat" ? FlxG.width * 0.55 : 0;
+      // Original FNF track-list placement and sizing.
       tracklistText.screenCenter(X);
       tracklistText.x -= (FlxG.width * 0.33);
-      // Keep the FNF track list at its stock position; only NovaBeat uses
-      // the bottom-anchored full-screen composition.
-      tracklistText.y = Preferences.menuStyle == "NovaBeat"
-        ? FlxG.height * 0.76
-        : Math.min(BACKGROUND_Y + BACKGROUND_HEIGHT + 100, Math.max(0, FlxG.height - tracklistText.height));
     }
 
     var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
@@ -962,24 +983,17 @@ class StoryMenuState extends MusicBeatState
     if (currentIndex < 0 || currentIndex >= levelTitles.members.length) return;
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
-    var landscapeTargetY:Float = Preferences.menuStyle == "NovaBeat"
-      ? Math.min(480, FlxG.height * 0.67)
-      : 480;
-    levelTitles.members[currentIndex].targetY = portrait ? FlxG.height * 0.36 : landscapeTargetY;
+    var targetY:Float = 480;
+    if (Preferences.menuStyle == "NovaBeat")
+      targetY = portrait ? FlxG.height * 0.36 : Math.min(480, FlxG.height * 0.67);
 
-    // Hide every week title/artwork above the selected week. This is
-    // recalculated after each selection change so the hidden range follows
-    // the player as they scroll through the carousel.
+    levelTitles.members[currentIndex].targetY = targetY;
+
+    // Keep every week in the carousel. Only the selected week is emphasized;
+    // NovaBeat's lower-panel fade handles artwork as it scrolls out of view.
     for (index in 0...levelTitles.members.length)
     {
       var item:LevelTitle = levelTitles.members[index];
-      var isAboveSelectedWeek:Bool = index < currentIndex;
-      // Do not toggle FlxSpriteGroup.visible here. That propagates visibility
-      // to every child sprite and can accidentally reveal the hidden lock art
-      // when the week is shown again.
-      item.setDisplayVisible(!isAboveSelectedWeek);
-      // Keep the group alpha above zero so its child alpha values are not
-      // reset when a hidden week returns to the carousel.
       item.alpha = index == currentIndex ? 1.0 : 0.6;
       if (index == currentIndex) currentLevelTitle = item;
     }

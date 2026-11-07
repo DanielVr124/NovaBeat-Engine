@@ -5,6 +5,7 @@ import flixel.FlxSprite;
 import funkin.graphics.FunkinCamera;
 import funkin.Preferences;
 import funkin.graphics.shaders.HSVShader;
+import funkin.audio.FunkinSound;
 import funkin.input.Cursor;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatState;
@@ -51,12 +52,32 @@ class NovaBeatModsMenuState extends MusicBeatState
     dimmer.scrollFactor.set();
     add(dimmer);
 
+    FunkinSound.stopAllAudio(true, true);
+    silenceMenuMusic();
     Cursor.hide();
-    if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
     modPage = new ModMenu();
     modPage.onExit.add(goBack);
     add(modPage);
+    silenceMenuMusic();
+  }
+
+  override function update(elapsed:Float):Void
+  {
+    super.update(elapsed);
+    // The previous menu theme can finish loading after the state switch.
+    // Keep the music channel empty for the lifetime of this screen.
+    silenceMenuMusic();
+    Cursor.hide();
+    FlxG.mouse.visible = false;
+  }
+
+  function silenceMenuMusic():Void
+  {
+    if (FlxG.sound.music == null) return;
+    FlxG.sound.music.stop();
+    FlxG.sound.music.kill();
+    FlxG.sound.music = null;
   }
 
   override public function onViewportResize(width:Int, height:Int):Void

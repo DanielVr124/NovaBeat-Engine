@@ -856,10 +856,6 @@ class FreeplayState extends MusicBeatSubState
       bs.cameras = [funnyCam];
     });
 
-    // The NovaBeat-only header must be created explicitly; defining its
-    // builder is not enough to put the panel and title on the screen.
-    if (Preferences.menuStyle == "NovaBeat") buildNovaBeatFreeplayHeader();
-
     rankCamera.bgColor = FlxColor.TRANSPARENT;
     FlxG.cameras.add(rankCamera, false);
     rankBg.cameras = [rankCamera];

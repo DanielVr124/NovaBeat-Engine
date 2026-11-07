@@ -147,58 +147,64 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function buildMobileLayout(width:Float, height:Float):Void
   {
     portraitLayout = height > width * 1.12;
-    var margin:Float = 16;
-    heading = addLabel(margin, 10, width - margin * 2 - 78, 'MOD LIBRARY', portraitLayout ? 23 : 21, 0xFFFFFFFF);
-    countText = addLabel(margin, 42, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 11, 0xFF48E7FF);
+    var margin:Float = 18;
+    heading = addLabel(margin, 10, width - margin * 2 - 94, 'MOD LIBRARY', portraitLayout ? 25 : 23, 0xFFFFFFFF);
+    countText = addLabel(margin, 44, width - margin * 2, 'SCANNING LOCAL LIBRARY...', 12, 0xFF48E7FF);
 
     var listX:Float = margin;
-    var listY:Float = 72;
-    var listW:Float = width - margin * 2;
-    var listH:Float = Math.max(128, Math.min(height * 0.44, height - 194));
+    var listY:Float = 82;
+    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
+    var listH:Float = portraitLayout
+      ? Math.max(160, Math.min(height * 0.34, height - 360))
+      : Math.max(180, height - 150);
     addPanel(listX, listY, listW, listH);
 
-    var rowHeaderHeight:Float = 38;
+    var detailX:Float = portraitLayout ? margin : listX + listW + 14;
+    var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
+    var detailW:Float = portraitLayout ? listW : width - detailX - margin;
+    var buttonHeight:Float = portraitLayout ? 48 : 50;
+    var buttonGap:Float = 8;
+    var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
+    var detailH:Float = portraitLayout
+      ? Math.max(100, height - detailY - buttonBlockHeight - 54)
+      : Math.max(150, listH - buttonBlockHeight - 18);
+    addPanel(detailX, detailY, detailW, detailH);
+
+    var rowHeaderHeight:Float = 42;
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 62 : 52;
-    var buttonHeight:Float = portraitLayout ? 46 : 44;
-    var buttonGap:Float = 7;
-    var buttonBlockHeight:Float = portraitLayout ? buttonHeight * 2 + buttonGap : buttonHeight;
-    var reservedRowsHeight:Float = rowHeaderHeight + buttonBlockHeight + 24;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - reservedRowsHeight) / rowHeight)));
+    rowHeight = portraitLayout ? 62 : 66;
+    visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
-    addLabel(listX + 12, listY + 10, listW - 24, 'YOUR MODS', 11, 0xFF48E7FF);
+    addLabel(listX + 12, listY + 12, listW - 24, 'INSTALLED MODS', 12, 0xFF48E7FF);
 
-    var detailX:Float = margin;
-    var detailY:Float = listY + listH + 10;
-    var detailW:Float = listW;
-    var detailH:Float = Math.max(86, height - detailY - 20);
-    addPanel(detailX, detailY, detailW, detailH);
-
-    detailTitle = addLabel(detailX + 14, detailY + 10, detailW - 28, 'SELECT A MOD', 16, 0xFFFFFFFF);
-    detailText = addLabel(detailX + 14, detailY + 36, detailW - 28,
-      'Tap a mod above to view details and manage its enabled state.',
-      portraitLayout ? 12 : 11, 0xFFB5C6E4);
+    detailTitle = addLabel(detailX + 16, detailY + 14, detailW - 32, 'SELECT A MOD', 19, 0xFFFFFFFF);
+    detailText = addLabel(detailX + 16, detailY + 46, detailW - 32,
+      'Choose a mod above to view its information and manage it.',
+      portraitLayout ? 13 : 14, 0xFFB5C6E4);
     detailText.wordWrap = true;
     detailText.autoSize = false;
-    detailText.fieldHeight = Math.max(32, detailH - 68);
+    detailText.fieldHeight = Math.max(32, detailH - 82);
 
-    statusText = addLabel(detailX + 14, detailY + detailH - 22, detailW - 28, '', 9, 0xFF48E7FF);
+    statusText = addLabel(detailX + 16, detailY + detailH - 26, detailW - 32, '', 10, 0xFF48E7FF);
+    var actionX:Float = portraitLayout ? margin : detailX;
+    var actionWidth:Float = portraitLayout ? width - margin * 2 : detailW;
+    var actionY:Float = detailY + detailH + 10;
+    layoutMobileTouchActions(actionX, actionY, actionWidth, buttonHeight, buttonGap, portraitLayout);
+
     helpText = addLabel(margin, height - 18, width - margin * 2,
-      'TAP A MOD TO SELECT  •  SWIPE TO SCROLL', 9, 0xFF8DA8D8);
-
-    layoutMobileTouchActions(rowX, listY + listH - buttonBlockHeight - 8,
-      rowWidth, buttonHeight, buttonGap, portraitLayout);
+      'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE', 9, 0xFF8DA8D8);
   }
 
   function layoutMobileTouchActions(x:Float, y:Float, width:Float, height:Float, gap:Float, portrait:Bool):Void
   {
-    var labels:Array<String> = ['ENABLE / DISABLE', 'ORDER UP', 'ORDER DOWN', 'RESCAN'];
+    var labels:Array<String> = ['ENABLE / DISABLE', 'MOVE UP', 'MOVE DOWN', 'RESCAN'];
     var actions:Array<String> = ['toggle', 'priorityUp', 'priorityDown', 'rescan'];
-    var columns:Int = portrait ? 2 : 4;
-    var buttonWidth:Float = (width - gap * (columns - 1)) / columns;
-    var labelSize:Int = portrait ? 11 : 10;
+    // Two broad columns in every mobile orientation keep the controls thumb-sized.
+    var columns:Int = 2;
+    var labelSize:Int = 12;
+    var buttonWidth:Float = (width - gap) / columns;
 
     for (index in 0...labels.length)
     {
@@ -216,7 +222,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         add(button);
         touchActionHitboxes.push(button);
 
-        label = new FlxText(buttonX + 4, buttonY + (height - labelSize) * 0.5, buttonWidth - 8, labels[index], labelSize);
+        label = new FlxText(buttonX + 6, buttonY + (height - labelSize) * 0.5, buttonWidth - 12, labels[index], labelSize);
         label.setFormat(Paths.font('vcr.ttf'), labelSize, 0xFFEAF6FF, FlxTextAlign.CENTER);
         label.scrollFactor.set();
         add(label);
@@ -229,8 +235,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         label = touchActionLabels[index];
         button.setPosition(buttonX, buttonY);
         button.makeGraphic(Std.int(buttonWidth), Std.int(height), 0xFF183D5A);
-        label.setPosition(buttonX + 4, buttonY + (height - labelSize) * 0.5);
-        label.fieldWidth = buttonWidth - 8;
+        label.setPosition(buttonX + 6, buttonY + (height - labelSize) * 0.5);
+        label.fieldWidth = buttonWidth - 12;
         label.text = labels[index];
         label.setFormat(Paths.font('vcr.ttf'), labelSize, 0xFFEAF6FF, FlxTextAlign.CENTER);
       }
@@ -337,7 +343,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       rowBackgrounds.push(bg);
 
       var marker:String = enabled ? '[ON]  ' : '[OFF] ';
-      var rowFontSize:Int = usesTouchControls ? (portraitLayout ? 15 : 14) : (portraitLayout ? 13 : 16);
+      var rowFontSize:Int = usesTouchControls ? (portraitLayout ? 16 : 15) : (portraitLayout ? 13 : 16);
       var row:ModMenuItem = new ModMenuItem(rowX + 12, y + (rowHeight - rowFontSize - 4) * 0.5,
         rowWidth - 24, marker + mod.title, rowFontSize, modIndex);
       row.setFormat(Paths.font('vcr.ttf'), rowFontSize, modIndex == selectedIndex ? 0xFF48E7FF : 0xFFD5E1F6, FlxTextAlign.LEFT);
@@ -500,11 +506,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
       if (!touchActionHandled)
       {
-        for (row in rows)
+        for (index in 0...rowBackgrounds.length)
         {
-          if (TouchUtil.pressAction(row))
+          // The whole card is the tap target, not just the line of text.
+          if (TouchUtil.pressAction(rowBackgrounds[index]))
           {
-            selectMod(row.modIndex, false);
+            selectMod(firstVisibleIndex + index, false);
             break;
           }
         }
@@ -611,21 +618,28 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function layoutMobileViewport(width:Int, height:Int):Void
   {
     portraitLayout = height > width * 1.12;
-    var margin:Float = 16;
+    var margin:Float = 18;
     heading.setPosition(margin, 10);
-    heading.fieldWidth = width - margin * 2 - 78;
-    heading.size = portraitLayout ? 23 : 21;
-    countText.setPosition(margin, 42);
+    heading.fieldWidth = width - margin * 2 - 94;
+    heading.size = portraitLayout ? 25 : 23;
+    countText.setPosition(margin, 44);
     countText.fieldWidth = width - margin * 2;
 
     var listX:Float = margin;
-    var listY:Float = 72;
-    var listW:Float = width - margin * 2;
-    var listH:Float = Math.max(128, Math.min(height * 0.44, height - 194));
-    var detailX:Float = margin;
-    var detailY:Float = listY + listH + 10;
-    var detailW:Float = listW;
-    var detailH:Float = Math.max(86, height - detailY - 20);
+    var listY:Float = 82;
+    var listW:Float = portraitLayout ? width - margin * 2 : width * 0.40;
+    var listH:Float = portraitLayout
+      ? Math.max(160, Math.min(height * 0.34, height - 360))
+      : Math.max(180, height - 150);
+    var detailX:Float = portraitLayout ? margin : listX + listW + 14;
+    var detailY:Float = portraitLayout ? listY + listH + 10 : listY;
+    var detailW:Float = portraitLayout ? listW : width - detailX - margin;
+    var buttonHeight:Float = portraitLayout ? 48 : 50;
+    var buttonGap:Float = 8;
+    var buttonBlockHeight:Float = buttonHeight * 2 + buttonGap;
+    var detailH:Float = portraitLayout
+      ? Math.max(100, height - detailY - buttonBlockHeight - 54)
+      : Math.max(150, listH - buttonBlockHeight - 18);
 
     if (layoutPanels.length >= 4)
     {
@@ -639,33 +653,33 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       layoutPanels[3].makeGraphic(Std.int(detailW - 4), Std.int(detailH - 4), 0xF0061028);
     }
 
-    var rowHeaderHeight:Float = 38;
+    var rowHeaderHeight:Float = 42;
     rowX = listX + 12;
     rowY = listY + rowHeaderHeight;
     rowWidth = listW - 24;
-    rowHeight = portraitLayout ? 62 : 52;
-    var buttonHeight:Float = portraitLayout ? 46 : 44;
-    var buttonGap:Float = 7;
-    var buttonBlockHeight:Float = portraitLayout ? buttonHeight * 2 + buttonGap : buttonHeight;
-    var reservedRowsHeight:Float = rowHeaderHeight + buttonBlockHeight + 24;
-    visibleRows = Std.int(Math.max(1, Math.floor((listH - reservedRowsHeight) / rowHeight)));
+    rowHeight = portraitLayout ? 62 : 66;
+    visibleRows = Std.int(Math.max(1, Math.floor((listH - rowHeaderHeight - 18) / rowHeight)));
 
-    detailTitle.setPosition(detailX + 14, detailY + 10);
-    detailTitle.fieldWidth = detailW - 28;
-    detailTitle.size = 16;
-    detailText.setPosition(detailX + 14, detailY + 36);
-    detailText.fieldWidth = detailW - 28;
-    detailText.size = portraitLayout ? 12 : 11;
-    detailText.fieldHeight = Math.max(32, detailH - 68);
-    statusText.setPosition(detailX + 14, detailY + detailH - 22);
-    statusText.fieldWidth = detailW - 28;
+    detailTitle.setPosition(detailX + 16, detailY + 14);
+    detailTitle.fieldWidth = detailW - 32;
+    detailTitle.size = 19;
+    detailText.setPosition(detailX + 16, detailY + 46);
+    detailText.fieldWidth = detailW - 32;
+    detailText.size = portraitLayout ? 13 : 14;
+    detailText.fieldHeight = Math.max(32, detailH - 82);
+    statusText.setPosition(detailX + 16, detailY + detailH - 26);
+    statusText.fieldWidth = detailW - 32;
+
+    var actionX:Float = portraitLayout ? margin : detailX;
+    var actionWidth:Float = portraitLayout ? width - margin * 2 : detailW;
+    var actionY:Float = detailY + detailH + 10;
+    layoutMobileTouchActions(actionX, actionY, actionWidth, buttonHeight, buttonGap, portraitLayout);
+
     helpText.setPosition(margin, height - 18);
     helpText.fieldWidth = width - margin * 2;
     helpText.size = 9;
-    helpText.text = 'TAP A MOD TO SELECT  •  SWIPE TO SCROLL';
+    helpText.text = 'TAP A MOD TO SELECT  •  USE THE LARGE ACTION BUTTONS  •  SWIPE TO BROWSE';
 
-    layoutMobileTouchActions(rowX, listY + listH - buttonBlockHeight - 8,
-      rowWidth, buttonHeight, buttonGap, portraitLayout);
     renderRows();
     renderDetails();
 

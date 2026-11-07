@@ -518,8 +518,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
       for (index in 0...optionRows.length)
       {
         var item:TextMenuItem = optionRows[index];
-        var touchCamera:FlxCamera = FlxG.camera;
-        if (!TouchUtil.overlaps(item, touchCamera) && TouchUtil.pressAction(item, touchCamera, true))
+        if (TouchUtil.pressAction(item, null, true) && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();
