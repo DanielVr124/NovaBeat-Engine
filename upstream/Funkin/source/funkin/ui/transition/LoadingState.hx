@@ -155,6 +155,11 @@ class LoadingState extends MusicBeatSubState
       #end
     }
 
+    #if web
+    // Song stems are streamed when PlayState is created; load the songs
+    // library manifest first so Assets.getMusic can resolve their paths.
+    checkLibrary('songs');
+    #end
     checkLibrary('shared');
     // HTML5 VideoCutscene streams its video URL directly through NetStream;
     // it does not consume the OpenFL "videos" library. Avoid loading that
