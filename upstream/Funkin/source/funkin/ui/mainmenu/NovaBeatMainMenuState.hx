@@ -167,6 +167,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     {
       playMenuTheme(false, 0.82);
       buildInterface();
+      addNovaBeatMobileBackButton();
     }
   }
 
@@ -232,6 +233,7 @@ class NovaBeatMainMenuState extends MusicBeatState
         menuItems.selectItem(Std.int(Math.max(0, Math.min(selectedIndex, menuItems.length - 1))));
         updateSelection(menuItems.selectedIndex);
       }
+      addNovaBeatMobileBackButton();
     }
   }
 
@@ -671,17 +673,28 @@ class NovaBeatMainMenuState extends MusicBeatState
       }
     }
 
-    if (controls.BACK_P)
-    {
-      playSfx('back', 0.7);
-      FlxG.switchState(() -> new TitleState());
-    }
+    if (controls.BACK_P) goBackToTitle();
   }
 
   /**
    * Handles the two large header actions on the NovaBeat menu. Their hitboxes
    * cover the full icon plates so a finger does not have to hit the glyph.
    */
+  function addNovaBeatMobileBackButton():Void
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser)
+      addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBackToTitle, 1.0);
+    #end
+  }
+
+  function goBackToTitle():Void
+  {
+    if (transitioning) return;
+    playSfx('back', 0.7);
+    FlxG.switchState(() -> new TitleState());
+  }
+
   function handleHeaderPointerInput():Void
   {
     if (homeOptionsHitbox != null && TouchUtil.pressAction(homeOptionsHitbox, uiCamera))
