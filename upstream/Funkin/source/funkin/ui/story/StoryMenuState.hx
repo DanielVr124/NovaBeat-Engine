@@ -517,13 +517,15 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        if (controls.UI_UP_P || SwipeUtil.swipeUp)
+        // Keep keyboard navigation in its original direction. In NovaBeat's
+        // touch carousel, the list should move opposite the finger's drag.
+        if (controls.UI_UP_P || (Preferences.menuStyle == "NovaBeat" ? SwipeUtil.swipeDown : SwipeUtil.swipeUp))
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
+        if (controls.UI_DOWN_P || (Preferences.menuStyle == "NovaBeat" ? SwipeUtil.swipeUp : SwipeUtil.swipeDown))
         {
           changeLevel(1);
           changeDifficulty(0);
