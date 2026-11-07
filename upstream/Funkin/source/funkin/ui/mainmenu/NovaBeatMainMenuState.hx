@@ -147,7 +147,6 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     interfaceLayer = new FlxTypedGroup<FlxBasic>();
     interfaceLayer.cameras = [uiCamera];
-    interfaceLayer.scrollFactor.set(0, 0);
     super.add(interfaceLayer);
     routeInterfaceObjects = true;
 
