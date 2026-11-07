@@ -352,6 +352,7 @@ class ExperienceLibraryState extends MusicBeatState
     // The Mod Library is the game's startup entry point. The stock title
     // intro normally runs only once per process, so clear its session flag
     // here to ensure the randomized black-screen intro plays after launch.
+    // [web-build] Verify this startup handoff in the HTML5 browser build.
     TitleState.initialized = false;
     FlxG.switchState(() -> new TitleState());
   }
