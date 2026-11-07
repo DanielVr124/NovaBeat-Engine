@@ -108,6 +108,10 @@ class NovaBeatMainMenuState extends MusicBeatState
   var titleTapHint:Null<FlxText>;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
+  var homeAudioHitbox:Null<FlxSprite>;
+  var homeOptionsHitbox:Null<FlxSprite>;
+  var menuAudioMuted:Bool = false;
+  var previousMenuMusicVolume:Float = 0.82;
   var featureKicker:Null<FlxText> = null;
   var featureTitle:Null<FlxText> = null;
   var featureDescription:Null<FlxText> = null;
@@ -197,6 +201,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     titleTapHint = null;
     homeAudioButton = null;
     homeOptionsButton = null;
+    homeAudioHitbox = null;
+    homeOptionsHitbox = null;
     menuItems = null;
     rowBackgrounds = [];
     rowIconPlates = [];
@@ -361,7 +367,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     {
       buildMenuList(navX, listTop, navW, listBottom - listTop, true);
       var menuHint:String = DeviceUtil.isMobileBrowser
-        ? 'TAP A TILE TO SELECT   •   TAP AGAIN TO OPEN'
+        ? 'TAP A TILE TO OPEN'
         : 'TAP A TILE TO SELECT   •   ENTER TO OPEN';
       addLabel(navX, frameY + frameH - 26, navW, menuHint, 9, 0xFF8DA8D8, FlxTextAlign.LEFT, 'Arial');
     }
@@ -387,9 +393,14 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     addRoundRect(audioX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
     addRoundRect(optionsX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
+    // The icons have matching full-size invisible hit areas; the text glyph
+    // itself is too short to be a comfortable mobile target.
+    homeAudioHitbox = addSolid(audioX, buttonY - 3, buttonSize, buttonSize, 0x00000000);
+    homeOptionsHitbox = addSolid(optionsX, buttonY - 3, buttonSize, buttonSize, 0x00000000);
     // Draw the glyphs after their button plates so they stay on top.
     bringToFront(homeAudioButton);
     bringToFront(homeOptionsButton);
+    homeAudioButton.text = menuAudioMuted ? '♪' : '♫';
   }
 
   function bringToFront(sprite:FlxSprite):Void
@@ -619,6 +630,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       return;
     }
 
+    handleHeaderPointerInput();
+
     #if !mobile
     // Fallback to raw desktop keys when a custom binding is absent.
     // Avoid double movement if the standard control binding fired too.
@@ -657,6 +670,41 @@ class NovaBeatMainMenuState extends MusicBeatState
     {
       playSfx('back', 0.7);
       FlxG.switchState(() -> new TitleState());
+    }
+  }
+
+  /**
+   * Handles the two large header actions on the NovaBeat menu. Their hitboxes
+   * cover the full icon plates so a finger does not have to hit the glyph.
+   */
+  function handleHeaderPointerInput():Void
+  {
+    if (homeOptionsHitbox != null && TouchUtil.pressAction(homeOptionsHitbox, uiCamera, false))
+    {
+      playSfx('confirm', 0.8);
+      openOptions();
+      return;
+    }
+
+    if (homeAudioHitbox != null && TouchUtil.pressAction(homeAudioHitbox, uiCamera, false))
+    {
+      final music = FlxG.sound.music;
+      if (music == null) return;
+
+      if (menuAudioMuted)
+      {
+        music.volume = previousMenuMusicVolume;
+        menuAudioMuted = false;
+      }
+      else
+      {
+        previousMenuMusicVolume = music.volume;
+        music.volume = 0.0;
+        menuAudioMuted = true;
+      }
+
+      if (homeAudioButton != null) homeAudioButton.text = menuAudioMuted ? '♪' : '♫';
+      playSfx('select', 0.45);
     }
   }
 
