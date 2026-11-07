@@ -10,8 +10,8 @@ import funkin.audio.FunkinSound;
 import funkin.Preferences;
 import funkin.util.TouchUtil;
 import funkin.util.DeviceUtil;
-import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
+import funkin.util.NovaBeatMenuInput;
 import funkin.ui.Page.PageName;
 import flixel.tweens.FlxEase;
 import funkin.util.HapticUtil;
@@ -129,11 +129,17 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     var newIndex = 0;
 
-    // Define unified input handlers
-    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState && SwipeUtil.swipeUp);
-    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState && SwipeUtil.swipeDown);
-    final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState && SwipeUtil.swipeLeft);
-    final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState && SwipeUtil.swipeRight);
+    // NovaBeat uses its own mobile pointer adapter. The original FNF menu
+    // continues to use the upstream touch/swipe path unchanged.
+    final novaBeatTouchMenu:Bool = Preferences.menuStyle == "NovaBeat";
+    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState
+      && (novaBeatTouchMenu ? NovaBeatMenuInput.swipeUp : SwipeUtil.swipeUp));
+    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState
+      && (novaBeatTouchMenu ? NovaBeatMenuInput.swipeDown : SwipeUtil.swipeDown));
+    final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState
+      && (novaBeatTouchMenu ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft));
+    final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState
+      && (novaBeatTouchMenu ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight));
 
     // Keepin' these for keyboard/controller support on mobile platforms
     newIndex = switch (navControls)
@@ -168,11 +174,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     {
       // Keep controller navigation available, but let an actual tap/click take
       // priority even when a controller is connected (common on Quest).
-      final pointerEvent:Bool = (TouchUtil.touch != null
-        && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased))
-        #if web
-        || FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased
-        #end;
+      final pointerEvent:Bool = novaBeatTouchMenu
+        ? NovaBeatMenuInput.pointerEvent
+        : (TouchUtil.touch != null
+          && (TouchUtil.pressed || TouchUtil.justPressed || TouchUtil.justReleased)
+          #if web
+          || FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased
+          #end);
 
       if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !pointerEvent)
       {
@@ -184,8 +192,14 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       }
       else
       {
-        if (TouchUtil.justPressed #if web || FlxG.mouse.justPressed #end) beginPointerTap();
-        if (TouchUtil.justReleased #if web || FlxG.mouse.justReleased #end) finishPointerTap();
+        final pointerJustPressed:Bool = novaBeatTouchMenu
+          ? NovaBeatMenuInput.justPressed
+          : (TouchUtil.justPressed #if web || FlxG.mouse.justPressed #end);
+        final pointerJustReleased:Bool = novaBeatTouchMenu
+          ? NovaBeatMenuInput.justReleased
+          : (TouchUtil.justReleased #if web || FlxG.mouse.justReleased #end);
+        if (pointerJustPressed) beginPointerTap();
+        if (pointerJustReleased) finishPointerTap();
       }
 
       // Swipes continue to navigate lists; they are not treated as clicks.
@@ -221,12 +235,25 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   function beginPointerTap():Void
   {
-    if (TouchUtil.touch == null) return;
+    final pointer:Dynamic = activeMenuPointer();
+    if (pointer == null) return;
 
     pointerTapActive = true;
-    pointerTapStartX = TouchUtil.touch.x;
-    pointerTapStartY = TouchUtil.touch.y;
+    pointerTapStartX = pointer.x;
+    pointerTapStartY = pointer.y;
     pointerTapItem = findPointerItem();
+  }
+
+  inline function activeMenuPointer():Dynamic
+  {
+    return Preferences.menuStyle == "NovaBeat" ? NovaBeatMenuInput.pointer : TouchUtil.touch;
+  }
+
+  inline function overlapsMenuPointer(item:T):Bool
+  {
+    return Preferences.menuStyle == "NovaBeat"
+      ? NovaBeatMenuInput.overlaps(item, item.camera)
+      : TouchUtil.overlaps(item, item.camera);
   }
 
   /**
@@ -235,7 +262,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   function finishPointerTap():Void
   {
-    if (TouchUtil.touch == null)
+    final pointer:Dynamic = activeMenuPointer();
+    if (pointer == null)
     {
       clearPointerTap();
       return;
@@ -251,8 +279,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       return;
     }
 
-    final deltaX:Float = TouchUtil.touch.x - pointerTapStartX;
-    final deltaY:Float = TouchUtil.touch.y - pointerTapStartY;
+    final deltaX:Float = pointer.x - pointerTapStartX;
+    final deltaY:Float = pointer.y - pointerTapStartY;
     final movedDistance:Float = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
     if (movedDistance <= POINTER_TAP_MAX_DISTANCE
@@ -293,9 +321,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   /** Returns the item directly under the current pointer, or -1. */
   function findPointerItem():Int
   {
-    if (TouchUtil.touch == null) return -1;
+    final pointer:Dynamic = activeMenuPointer();
+    if (pointer == null) return -1;
 
-    touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
+    touchBuddy.setPosition(pointer.x, pointer.y);
 
     // Prefer the active touch / pointer contact. The explicit camera matters
     // for custom menus that render their hit targets on a separate UI camera.
@@ -303,7 +332,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     {
       final item:T = members[i];
       if (!item.available) continue;
-      if (TouchUtil.overlaps(item, item.camera)) return i;
+      if (overlapsMenuPointer(item)) return i;
     }
 
     #if web
@@ -392,6 +421,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   public function accept():Void
   {
+    if (members.length == 0 || selectedIndex < 0 || selectedIndex >= members.length) return;
     var menuItem:T = members[selectedIndex];
 
     if (!menuItem.available) return;
