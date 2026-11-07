@@ -195,6 +195,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           }
           else
           {
+            // Keep the tapped row as the current navigation index. Without
+            // this assignment, the pre-touch keyboard index can overwrite a
+            // first-tap selection at the end of this update.
+            if (!_isMainMenuState) newIndex = i;
             FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
             selectItem(i);
           }
