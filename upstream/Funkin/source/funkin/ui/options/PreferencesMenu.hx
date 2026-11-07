@@ -239,21 +239,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       #end
       #end);
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser)
-    {
-      createPrefItemEnum('Mobile Controls Layout', 'Choose how the on-screen rhythm controls are arranged. Changes apply the next time a song starts.', [
-        "Arrows" => FunkinHitboxControlSchemes.Arrows,
-        "Four Lanes" => FunkinHitboxControlSchemes.FourLanes,
-        "Double Thumb Triangle" => FunkinHitboxControlSchemes.DoubleThumbTriangle,
-        "Double Thumb Square" => FunkinHitboxControlSchemes.DoubleThumbSquare,
-        "Double Thumb DPad" => FunkinHitboxControlSchemes.DoubleThumbDPad
-      ], function(key:String, value:String):Void
-      {
-        Preferences.controlsScheme = value;
-      }, Preferences.controlsScheme);
-    }
-    #end
     createPrefItemPercentage('Strumline Background', 'Show a semi-transparent background behind the strumline.', function(value:Int):Void
     {
       Preferences.strumlineBackgroundOpacity = value;

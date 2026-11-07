@@ -15,7 +15,6 @@ class CharSelectGF extends FunkinSprite implements IBPMSyncedScriptedClass
   var analyzerLevelsCache:Array<Bar> = new Array<Bar>();
   var currentGFPath:String = "";
   var enableVisualizer:Bool = false;
-  var danceEvery:Int = 2;
 
   public function new(x:Float, y:Float)
   {
@@ -31,16 +30,9 @@ class CharSelectGF extends FunkinSprite implements IBPMSyncedScriptedClass
 
   public function onBeatHit(event:SongTimeScriptEvent):Void
   {
-    // TODO: There's a minor visual bug where there's a little stutter.
-    // This happens because the animation is getting restarted while it's already playing.
-    // I tried make this not interrupt an existing idle,
-    // but isAnimationFinished() and isLoopComplete() both don't work! What the hell?
-    // danceEvery isn't necessary if that gets fixed.
-    if (getCurrentAnimation() == "idle" && (event.beat % danceEvery == 0))
-    {
-      anim.play("idle", true);
-    }
-  };
+    // The SWF idle timeline already loops. Restarting it on every other beat
+    // resets the current frame and creates a visible stutter while GF is idling.
+  }
 
   override public function draw()
   {

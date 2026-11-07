@@ -2,7 +2,6 @@ package funkin.ui.mainmenu;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
-import funkin.audio.FunkinSound;
 import funkin.graphics.FunkinCamera;
 import funkin.Preferences;
 import funkin.graphics.shaders.HSVShader;
@@ -52,13 +51,8 @@ class NovaBeatModsMenuState extends MusicBeatState
     dimmer.scrollFactor.set();
     add(dimmer);
 
-    if (!novaBeatStyle) Cursor.show();
-    FunkinSound.playMusic(novaBeatStyle ? 'novabeat-menu' : 'freakyMenu', {
-      overrideExisting: true,
-      restartTrack: false,
-      persist: true,
-      mapTimeChanges: false
-    });
+    Cursor.hide();
+    if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
     modPage = new ModMenu();
     modPage.onExit.add(goBack);

@@ -3065,19 +3065,6 @@ class FreeplayState extends MusicBeatSubState
     add(accent);
     novaBeatHeaderObjects.push(accent);
 
-    var brand:FlxText = new FlxText(42, 26, 280, 'NOVABEAT ENGINE', 10);
-    brand.setFormat(Paths.font('vcr.ttf'), 10, 0xFF48E7FF);
-    brand.scrollFactor.set();
-    brand.cameras = [funnyCam];
-    add(brand);
-    novaBeatHeaderObjects.push(brand);
-
-    var title:FlxText = new FlxText(42, 42, 280, 'FREEPLAY', 20);
-    title.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE);
-    title.scrollFactor.set();
-    title.cameras = [funnyCam];
-    add(title);
-    novaBeatHeaderObjects.push(title);
   }
 
   function layoutFreeplayCapsules():Void
@@ -3187,12 +3174,10 @@ class FreeplayState extends MusicBeatSubState
       if (fpScoreDisplay != null) fpScoreDisplay.setPosition(width - fpScoreDisplay.width - 22, 64);
       if (txtCompletion != null) txtCompletion.x = width - txtCompletion.width - 22;
 
-      if (novaBeatHeaderObjects.length >= 4)
+      if (novaBeatHeaderObjects.length >= 2)
       {
         novaBeatHeaderObjects[0].setPosition(16, 16);
         novaBeatHeaderObjects[1].setPosition(16, 16);
-        novaBeatHeaderObjects[2].setPosition(34, 22);
-        novaBeatHeaderObjects[3].setPosition(34, 38);
       }
     }
     else
@@ -3209,12 +3194,10 @@ class FreeplayState extends MusicBeatSubState
       diffSelRight.setPosition((CUTOUT_WIDTH * DJ_POS_MULTI) + 325, grpDifficulties.y - 10);
       if (letterSort != null) letterSort.setPosition((CUTOUT_WIDTH * SONGS_POS_MULTI) + 400, 75);
       if (albumRoll != null) albumRoll.layoutViewport(width, height, false);
-      if (novaBeatHeaderObjects.length >= 4)
+      if (novaBeatHeaderObjects.length >= 2)
       {
         novaBeatHeaderObjects[0].setPosition(24, 20);
         novaBeatHeaderObjects[1].setPosition(24, 20);
-        novaBeatHeaderObjects[2].setPosition(42, 26);
-        novaBeatHeaderObjects[3].setPosition(42, 42);
       }
       if (freeplayTitleText != null)
       {

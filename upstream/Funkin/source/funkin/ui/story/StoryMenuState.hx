@@ -464,6 +464,26 @@ class StoryMenuState extends MusicBeatState
     }
 
     super.update(elapsed);
+    updateNovaBeatWeekTitleFade();
+  }
+
+  function updateNovaBeatWeekTitleFade():Void
+  {
+    if (Preferences.menuStyle != "NovaBeat" || levelTitles == null) return;
+
+    var height:Float = FlxG.height;
+    var fadeDistance:Float = Math.max(72, Math.min(150, height * 0.16));
+    var fadeStart:Float = height - fadeDistance;
+    var selectedIndex:Int = levelList.indexOf(currentLevelId);
+
+    for (index in 0...levelTitles.members.length)
+    {
+      var item:LevelTitle = levelTitles.members[index];
+      var baseAlpha:Float = index == selectedIndex ? 1.0 : 0.6;
+      var fadeRange:Float = fadeDistance + item.height;
+      var fadeAmount:Float = Math.max(0, Math.min(1, (item.y + item.height - fadeStart) / fadeRange));
+      item.alpha = baseAlpha * (1.0 - fadeAmount);
+    }
   }
 
   // Story Mode uses the upstream FNF mobile touch and swipe recognizers in both themes.

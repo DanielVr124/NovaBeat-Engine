@@ -184,7 +184,6 @@ class TouchUtil
   @:noCompletion
   static function get_touch():FlxMouse
   {
-    FlxG.mouse.visible = true;
     return FlxG.mouse;
   }
   #end

@@ -19,6 +19,7 @@ import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MenuList.NavControls;
 import funkin.util.SwipeUtil;
 import funkin.util.DeviceUtil;
+import funkin.util.TouchUtil;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -551,6 +552,23 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
 
     if (!enabled || optionRows.length == 0) return;
+
+    #if FEATURE_TOUCH_CONTROLS
+    if (novaBeatLayout && DeviceUtil.isMobileBrowser)
+    {
+      for (index in 0...optionRows.length)
+      {
+        var item:TextMenuItem = optionRows[index];
+        var touchCamera:FlxCamera = FlxG.camera;
+        if (!TouchUtil.overlaps(item, touchCamera) && TouchUtil.pressAction(item, touchCamera, true))
+        {
+          if (items.selectedIndex != index) items.selectItem(index);
+          items.accept();
+          break;
+        }
+      }
+    }
+    #end
 
     if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
     if (controls.UI_RIGHT_P || SwipeUtil.swipeRight) adjustSelected(1);

@@ -10,6 +10,7 @@ import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
 import funkin.Preferences;
 import funkin.util.DeviceUtil;
+import funkin.util.TouchUtil;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.ui.TextMenuList;
@@ -282,6 +283,23 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    #if FEATURE_TOUCH_CONTROLS
+    if (novaBeatStyle && DeviceUtil.isMobileBrowser && items != null)
+    {
+      for (index in 0...categoryItems.length)
+      {
+        var item:TextMenuItem = categoryItems[index];
+        if (!TouchUtil.overlaps(item, menuCamera) && TouchUtil.pressAction(item, menuCamera, true))
+        {
+          if (items.selectedIndex != index) items.selectItem(index);
+          items.accept();
+          break;
+        }
+      }
+    }
+    #end
+
     if (novaBeatStyle && camFollow != null && items != null && items.selectedItem != null)
       camFollow.y = items.selectedItem.y;
     else if (!novaBeatStyle)
