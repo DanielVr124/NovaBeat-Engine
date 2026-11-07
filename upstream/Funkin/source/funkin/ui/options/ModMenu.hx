@@ -54,7 +54,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var statusText:FlxText;
   var helpText:FlxText;
   var emptyStateText:Null<FlxText>;
-  var listHeading:Null<FlxText>;
+  var listHeading:FlxText;
 
   public function new()
   {

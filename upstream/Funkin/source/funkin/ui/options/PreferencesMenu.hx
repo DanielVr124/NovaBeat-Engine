@@ -585,12 +585,12 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function novaBeatValueX():Float
   {
-    return novaBeatRowX() + novaBeatRowWidth() * 0.59;
+    return novaBeatRowX() + novaBeatRowWidth() * 0.62;
   }
 
   function novaBeatValueWidth():Float
   {
-    return Math.max(88, novaBeatRowWidth() * 0.36);
+    return Math.max(88, novaBeatRowWidth() * 0.33);
   }
 
   function novaBeatRowY(index:Int):Float
@@ -617,7 +617,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     novaBeatRowAccents.push(accent);
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
-    var label:FlxText = new FlxText(rowX + 18, rowY + 17, Math.max(80, rowW * 0.55), prefName, portrait ? 13 : 16);
+    var label:FlxText = new FlxText(rowX + 18, rowY + 17, Math.max(80, rowW * 0.53), prefName, portrait ? 13 : 16);
     label.setFormat("Arial", portrait ? 13 : 16, 0xFFDCEBFF, FlxTextAlign.LEFT);
     label.cameras = [menuCamera];
     novaBeatLabelLayer.add(label);
@@ -625,6 +625,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     item.x = rowX + 8;
     item.y = rowY + 5;
+    item.cameras = [menuCamera];
     item.makeGraphic(Std.int(rowW - 16), 44, FlxColor.TRANSPARENT);
     item.updateHitbox();
     item.atlasText.visible = false;
@@ -669,7 +670,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
         novaBeatRowAccents[index].setPosition(rowX, rowY + 6);
         novaBeatRowAccents[index].makeSolidColor(4, Std.int(Math.max(12, rowHeight - 12)), 0xFF48E7FF);
         novaBeatRowLabels[index].setPosition(rowX + 14, rowY + (rowHeight - novaBeatRowLabels[index].height) * 0.5);
-        novaBeatRowLabels[index].fieldWidth = Math.max(80, rowW * 0.55);
+        novaBeatRowLabels[index].fieldWidth = Math.max(80, rowW * 0.53);
         novaBeatRowLabels[index].size = portrait ? 13 : 16;
         var item:TextMenuItem = items.members[index];
         item.setPosition(rowX + 7, rowY + 3);
