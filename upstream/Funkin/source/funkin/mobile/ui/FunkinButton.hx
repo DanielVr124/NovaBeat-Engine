@@ -185,7 +185,15 @@ class FunkinButton extends FunkinSprite implements IFlxInput
     {
       #if web
       final browserMouseGesture:Bool = FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased;
-      final useBrowserMousePointer:Bool = DeviceUtil.isMobileBrowser && (FlxG.touches.list.length == 0 || browserMouseGesture);
+      // A synthesized mouse event can accompany a real DOM touch. Prefer the
+      // real contacts whenever one is active so two thumbs remain independent.
+      final hasRealTouchContact:Bool = FlxG.touches.list.exists(function(touch:FlxTouch):Bool
+      {
+        return touch.pressed || touch.justPressed || touch.justReleased;
+      });
+      // Use the mouse pointer only on mobile browsers that expose no real touch
+      // contact (for example, controller rays in Quest Browser).
+      final useBrowserMousePointer:Bool = DeviceUtil.isMobileBrowser && browserMouseGesture && !hasRealTouchContact;
       #else
       final useBrowserMousePointer:Bool = false;
       #end
