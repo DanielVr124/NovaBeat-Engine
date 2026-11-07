@@ -24,9 +24,9 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   static final CONTROL_SCHEMES:Array<String> = [
     FunkinHitboxControlSchemes.Arrows,
     FunkinHitboxControlSchemes.FourLanes,
+    FunkinHitboxControlSchemes.DoubleThumbDPad,
     FunkinHitboxControlSchemes.DoubleThumbTriangle,
-    FunkinHitboxControlSchemes.DoubleThumbSquare,
-    FunkinHitboxControlSchemes.DoubleThumbDPad
+    FunkinHitboxControlSchemes.DoubleThumbSquare
   ];
 
   var items:TextMenuList;
