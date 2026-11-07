@@ -71,7 +71,6 @@ import funkin.api.discord.DiscordClient;
 #end
 #if FEATURE_TOUCH_CONTROLS
 import funkin.util.TouchUtil;
-import funkin.util.NovaBeatMenuInput;
 import funkin.util.SwipeUtil;
 import funkin.mobile.input.ControlsHandler;
 import funkin.util.DeviceUtil;
@@ -1748,99 +1747,41 @@ class FreeplayState extends MusicBeatSubState
   }
 
 
-  inline function usesNovaBeatMenuInput():Bool
-  {
-    return Preferences.menuStyle == "NovaBeat";
-  }
+  // Freeplay uses the original FNF touch/swipe helpers in both menu themes.
+  inline function menuPointer():Dynamic return TouchUtil.touch;
 
-  inline function menuPointer():Dynamic
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pointer : TouchUtil.touch;
-  }
+  inline function menuTouchJustPressed():Bool return TouchUtil.justPressed;
 
-  inline function menuTouchJustPressed():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justPressed : TouchUtil.justPressed;
-  }
+  inline function menuTouchJustReleased():Bool return TouchUtil.justReleased;
 
-  inline function menuTouchJustReleased():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.justReleased : TouchUtil.justReleased;
-  }
-
-  inline function menuTouchPressed():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.pressed : TouchUtil.pressed;
-  }
+  inline function menuTouchPressed():Bool return TouchUtil.pressed;
 
   inline function menuTouchOverlaps(object:FlxBasic, ?camera:FlxCamera):Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.overlaps(object, camera)
-      : TouchUtil.overlaps(object, camera);
-  }
+    return TouchUtil.overlaps(object, camera);
 
   inline function menuTouchOverlapsComplex(object:FlxObject, ?camera:FlxCamera):Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.overlapsComplex(object, camera)
-      : TouchUtil.overlapsComplex(object, camera);
-  }
+    return TouchUtil.overlapsComplex(object, camera);
 
   inline function menuTouchPressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? NovaBeatMenuInput.pressAction(object, camera)
-      : TouchUtil.pressAction(object, camera, useOverlapsComplex);
-  }
+    return TouchUtil.pressAction(object, camera, useOverlapsComplex);
 
-  inline function menuSwipeAny():Bool
-  {
-    return usesNovaBeatMenuInput()
-      ? (NovaBeatMenuInput.swipeAny || NovaBeatMenuInput.justSwipedAny)
-      : SwipeUtil.swipeAny;
-  }
+  inline function menuSwipeAny():Bool return SwipeUtil.swipeAny;
 
-  inline function menuSwipeLeft():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeLeft : SwipeUtil.swipeLeft;
-  }
+  inline function menuSwipeLeft():Bool return SwipeUtil.swipeLeft;
 
-  inline function menuSwipeRight():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.swipeRight : SwipeUtil.swipeRight;
-  }
+  inline function menuSwipeRight():Bool return SwipeUtil.swipeRight;
 
-  inline function menuFlickManager():Dynamic
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickManager : SwipeUtil.flickManager;
-  }
+  inline function menuFlickManager():Dynamic return SwipeUtil.flickManager;
 
-  inline function menuFlickLeft():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickLeft : SwipeUtil.flickLeft;
-  }
+  inline function menuFlickLeft():Bool return SwipeUtil.flickLeft;
 
-  inline function menuFlickRight():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickRight : SwipeUtil.flickRight;
-  }
+  inline function menuFlickRight():Bool return SwipeUtil.flickRight;
 
-  inline function menuFlickUp():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickUp : SwipeUtil.flickUp;
-  }
+  inline function menuFlickUp():Bool return SwipeUtil.flickUp;
 
-  inline function menuFlickDown():Bool
-  {
-    return usesNovaBeatMenuInput() ? NovaBeatMenuInput.flickDown : SwipeUtil.flickDown;
-  }
+  inline function menuFlickDown():Bool return SwipeUtil.flickDown;
 
-  inline function menuResetSwipeVelocity():Void
-  {
-    if (usesNovaBeatMenuInput()) NovaBeatMenuInput.resetSwipeVelocity();
-    else SwipeUtil.resetSwipeVelocity();
-  }
+  inline function menuResetSwipeVelocity():Void SwipeUtil.resetSwipeVelocity();
 
   function lerpScoreDisplays():Void
   {
