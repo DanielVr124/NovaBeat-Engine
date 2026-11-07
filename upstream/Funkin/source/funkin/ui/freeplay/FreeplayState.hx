@@ -862,11 +862,8 @@ class FreeplayState extends MusicBeatSubState
     rankBg.alpha = 0;
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser)
-    {
-      addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
-      FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
-    }
+    addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
+    FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
     #end
 
     // Keep the stock FREEPLAY label in both styles. The old NovaBeat-only
@@ -1580,7 +1577,7 @@ class FreeplayState extends MusicBeatSubState
     fadeDots(false);
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser && backButton != null)
+    if (backButton != null)
     {
       backTransitioning = true;
       FlxTween.tween(backButton, {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
@@ -1725,7 +1722,7 @@ class FreeplayState extends MusicBeatSubState
     if (uiStateMachine.canInteract())
     {
       if ((controls.FREEPLAY_CHAR_SELECT && !fromCharSelect #if FEATURE_TOUCH_CONTROLS
-        || (DeviceUtil.isMobileBrowser && menuTouchPressAction(djHitbox, funnyCam, false) && !menuSwipeAny()) #end)
+        || (menuTouchPressAction(djHitbox, funnyCam, false) && !menuSwipeAny()) #end)
         && !FlxG.debugger.visible)
       {
         tryOpenCharSelect();
@@ -1834,12 +1831,9 @@ class FreeplayState extends MusicBeatSubState
     if (!uiStateMachine.canInteract() || (stickerSubState?.switchingState ?? false)) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser)
-    {
-      handleTouchCapsuleClick();
-      handleTouchFavoritesAndDifficulties();
-      handleTouchSelectionScroll(elapsed);
-    }
+    handleTouchCapsuleClick();
+    handleTouchFavoritesAndDifficulties();
+    handleTouchSelectionScroll(elapsed);
     #end
 
     updateFreeplayHintText();
@@ -1860,13 +1854,13 @@ class FreeplayState extends MusicBeatSubState
     handleDebugKeys();
 
     #if FEATURE_TOUCH_CONTROLS
-    if (DeviceUtil.isMobileBrowser && menuTouchJustReleased())
+    if (menuTouchJustReleased())
     {
       _pressedOnSelected = false;
       _pressedOnCapsule = false;
     }
 
-    if (DeviceUtil.isMobileBrowser && !menuTouchPressed() && !menuFlickManager().initialized)
+    if (!menuTouchPressed() && !menuFlickManager().initialized)
     {
       _flickEnded = true;
       draggingDifficulty = false;
@@ -1923,8 +1917,8 @@ class FreeplayState extends MusicBeatSubState
     if (!uiStateMachine.canInteract()) return;
 
     #if FEATURE_TOUCH_CONTROLS
-    final leftPressed:Bool = controls.UI_LEFT_P || (DeviceUtil.isMobileBrowser && menuTouchPressAction(diffSelLeft, funnyCam, false));
-    final rightPressed:Bool = controls.UI_RIGHT_P || (DeviceUtil.isMobileBrowser && menuTouchPressAction(diffSelRight, funnyCam, false));
+    final leftPressed:Bool = controls.UI_LEFT_P || menuTouchPressAction(diffSelLeft, funnyCam, false);
+    final rightPressed:Bool = controls.UI_RIGHT_P || menuTouchPressAction(diffSelRight, funnyCam, false);
     #else
     final leftPressed:Bool = controls.UI_LEFT_P;
     final rightPressed:Bool = controls.UI_RIGHT_P;
@@ -2100,7 +2094,6 @@ class FreeplayState extends MusicBeatSubState
 
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
-    if (!DeviceUtil.isMobileBrowser) return;
     if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && menuTouchPressed()))) return;
     if (menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
@@ -2234,8 +2227,6 @@ class FreeplayState extends MusicBeatSubState
 
   function handleTouchFavoritesAndDifficulties()
   {
-    if (!DeviceUtil.isMobileBrowser) return;
-
     // Note: I was a bit evil, and used `draggingDifficulty` for the DifficultySprite dragging as well!
 
     if ((menuTouchPressed() || menuTouchJustReleased()))
