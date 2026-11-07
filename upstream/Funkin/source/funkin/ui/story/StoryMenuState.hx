@@ -549,16 +549,20 @@ class StoryMenuState extends MusicBeatState
     {
       if (!selectedLevel)
       {
-        // NovaBeat mobile scrolling follows normal list direction: dragging
-        // upward advances to the next level. Preserve FNF's original mapping.
-        final invertNovaBeatTouchSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
-        if (controls.UI_UP_P || (invertNovaBeatTouchSwipe ? menuSwipeDown() : menuSwipeUp()))
+        // A completed finger swipe should move the week carousel opposite to
+        // the finger's travel. Use the one-shot swipe event on NovaBeat mobile
+        // so a long drag cannot advance several weeks in consecutive frames.
+        // Leave the original FNF per-frame gesture path unchanged.
+        final novaBeatMobileSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
+        final swipeToPrevious:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedUp : menuSwipeUp();
+        final swipeToNext:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedDown : menuSwipeDown();
+        if (controls.UI_UP_P || swipeToPrevious)
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || (invertNovaBeatTouchSwipe ? menuSwipeUp() : menuSwipeDown()))
+        if (controls.UI_DOWN_P || swipeToNext)
         {
           changeLevel(1);
           changeDifficulty(0);
