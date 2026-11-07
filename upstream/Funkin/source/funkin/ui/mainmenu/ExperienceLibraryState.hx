@@ -250,7 +250,7 @@ class ExperienceLibraryState extends MusicBeatState
     var gap:Float = 7;
     var launchWidth:Float = (listWidth - gap) * 0.62;
 
-    addTouchButton(listX, primaryY, launchWidth, primaryHeight, "PLAY SELECTED", "launch", true);
+    addTouchButton(listX, primaryY, launchWidth, primaryHeight, "LAUNCH SELECTED", "launch", true);
     addTouchButton(listX + launchWidth + gap, primaryY, listWidth - launchWidth - gap, primaryHeight, "ORIGINAL FNF", "official", false);
 
     var smallGap:Float = 5;
