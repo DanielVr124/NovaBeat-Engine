@@ -63,17 +63,19 @@ class ExperienceLibraryState extends MusicBeatState
     FlxG.cameras.reset(new FunkinCamera("experienceLibrary"));
     super.create();
 
+    // The experience library is a launcher, not the boot sequence.
+    // Keep menu music silent here; TitleState starts the selected theme when
+    // the randomized startup text sequence begins.
+    if (FlxG.sound.music != null)
+    {
+      FlxG.sound.music.stop();
+      FlxG.sound.music.kill();
+      FlxG.sound.music = null;
+    }
+
     experiences = ExperienceManager.scanInstalled();
     selectSavedExperience();
     buildLayout();
-
-    FunkinSound.playMusic(Preferences.menuStyle == "NovaBeat" ? "novabeat-menu" : "freakyMenu", {
-      startingVolume: Preferences.menuStyle == "NovaBeat" ? 0.82 : 1.0,
-      overrideExisting: true,
-      restartTrack: false,
-      persist: true,
-      mapTimeChanges: false
-    });
   }
 
   function selectSavedExperience():Void
