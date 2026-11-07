@@ -55,10 +55,11 @@ class TouchUtil
    * The first touch in the FlxG.touches list.
    */
   public static var touch(get, never):FlxTouch;
-  #elseif web
-  /** The active browser touch or the mouse pointer when no touch is active. */
-  public static var touch(get, never):Dynamic;
   #else
+
+  /**
+   * The first touch in the FlxG.touches list.
+   */
   public static var touch(get, never):FlxMouse;
   #end
 
@@ -136,7 +137,7 @@ class TouchUtil
    */
   public static function pressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
   {
-    if (TouchUtil.touch == null) return false;
+    if (TouchUtil.touch == null || (TouchUtil.touch != null && TouchUtil.touch.ticksDeltaSincePress > 200)) return false;
 
     if (object == null && camera == null)
     {
@@ -163,23 +164,7 @@ class TouchUtil
   static inline function get_justPressed():Bool return touch != null && touch.justPressed;
 
   @:noCompletion
-  static function get_justReleased():Bool
-  {
-    #if web
-    // A mobile browser can emit a real touch release, a synthesized mouse
-    // release, or both. Check every touch before falling back to the mouse so
-    // one input stream cannot hide the release from the other.
-    #if FLX_TOUCH
-    for (touch in FlxG.touches.list)
-    {
-      if (touch != null && touch.justReleased) return true;
-    }
-    #end
-    return FlxG.mouse.justReleased;
-    #else
-    return touch != null && touch.justReleased;
-    #end
-  }
+  static inline function get_justReleased():Bool return touch != null && touch.justReleased;
 
   @:noCompletion
   static function get_released():Bool return touch != null && touch.released;
@@ -194,38 +179,6 @@ class TouchUtil
     }
 
     return FlxG.touches.getFirst();
-  }
-  #elseif web
-  @:noCompletion
-  static function get_touch():Dynamic
-  {
-    // On phones and Quest, the mouse is a browser pointer transport rather
-    // than a desktop cursor. Keep the native mouse cursor hidden regardless
-    // of which input source is active.
-    if (DeviceUtil.isMobileBrowser) FlxG.mouse.visible = false;
-
-    #if FLX_TOUCH
-    // Prefer the actual touch contact when the browser supplies both touch
-    // and synthesized mouse events for the same tap. Choosing the mouse first
-    // can make the title/menu listen to a different release than the visible
-    // touch pointer, so the tap appears to do nothing.
-    //
-    // A released contact is retained for its release frame, but an actively
-    // held finger always takes priority for multi-touch correctness.
-    var releasedTouch:Null<FlxTouch> = null;
-    for (touch in FlxG.touches.list)
-    {
-      if (touch == null) continue;
-      if (touch.pressed || touch.justPressed) return touch;
-      if (releasedTouch == null && touch.justReleased) releasedTouch = touch;
-    }
-
-    if (releasedTouch != null) return releasedTouch;
-    #end
-
-    // Quest controller/ray clicks and browsers that only expose mouse events
-    // still work through the mouse fallback when no touch contact is active.
-    return FlxG.mouse;
   }
   #else
   @:noCompletion
