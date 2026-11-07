@@ -47,14 +47,8 @@ class TitleState extends MusicBeatState
   {
     super.create();
 
-    // The NovaBeat presentation owns its own V4 title screen. Do not render
-    // the upstream FNF title logo or GF dance when this style is selected.
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      FlxG.switchState(() -> new NovaBeatMainMenuState(true));
-      return;
-    }
-
+    // Both menu styles share the original randomized black-screen intro.
+    // NovaBeat branches to its own V4 title screen only after the intro ends.
     swagShader = new ColorSwap();
 
     curWacky = FlxG.random.getObject(getIntroTextShit());
@@ -289,6 +283,19 @@ class TitleState extends MusicBeatState
 
   function playMenuMusic():Void
   {
+    if (Preferences.menuStyle == "NovaBeat")
+    {
+      // Keep the NovaBeat soundtrack running under the shared startup intro.
+      FunkinSound.playMusic('novabeat-menu', {
+        startingVolume: 0.82,
+        overrideExisting: true,
+        restartTrack: false,
+        persist: true,
+        mapTimeChanges: false
+      });
+      return;
+    }
+
     var shouldFadeIn:Bool = (FlxG.sound.music == null);
     // Load music. Includes logic to handle BPM changes.
     FunkinSound.playMusic('freakyMenu', {
@@ -322,15 +329,8 @@ class TitleState extends MusicBeatState
 
   override function update(elapsed:Float):Void
   {
-    // NovaBeat redirects away from this upstream FNF title state during create().
-    // Its title/menu flow does not initialize swagShader or the FNF title widgets,
-    // so skip the remainder of this state's update while NovaBeat is selected.
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      super.update(elapsed);
-      return;
-    }
-
+    // The original title-state update drives the shared randomized intro
+    // for both FNF and NovaBeat before either style reaches its own title UI.
     FlxG.bitmapLog.add(FlxG.camera.buffer);
 
     #if (desktop || android)
@@ -611,6 +611,13 @@ class TitleState extends MusicBeatState
 
       if (credGroup != null) remove(credGroup);
       skippedIntro = true;
+
+      // After the shared black-screen credits, continue into NovaBeat's own
+      // V4 "Press Enter to Begin" title screen instead of the FNF title art.
+      if (Preferences.menuStyle == "NovaBeat")
+      {
+        FlxG.switchState(() -> new NovaBeatMainMenuState(true));
+      }
     }
   }
 }
