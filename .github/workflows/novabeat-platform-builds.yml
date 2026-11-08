@@ -574,6 +574,10 @@ jobs:
       - name: Build Android debug APK
         shell: bash
         working-directory: upstream/Funkin
+        env:
+          # Avoid concurrent NDK clang worker crashes while compiling the
+          # generated HScript/Lua support objects on the Android runner.
+          HXCPP_COMPILE_THREADS: "1"
         run: |
           set -euo pipefail
           haxelib run lime build android -v -debug -DGITHUB_BUILD
