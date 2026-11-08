@@ -95,7 +95,7 @@ class PsychModRuntime
       supportedSongCount: supportedSongs,
       explanation: hasBasicScripts
         ? "Experimental Psych scripting compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with global scripts and song-local Lua/HScript callbacks, basic property access, and basic Lua sprite helpers. Custom events, note types, stages, characters, custom substates, and many advanced Psych APIs are not supported yet. Native builds only."
-        : "Limited native Psych chart compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with NovaBeat's built-in characters and default stage. Lua/HScript song and global script loading is available for this basic compatibility tier. Custom events, note types, stages, characters, and custom substates remain unsupported.";
+        : "Limited native Psych chart compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with NovaBeat's built-in characters and default stage. Lua/HScript song and global script loading is available for this basic compatibility tier. Custom events, note types, stages, characters, and custom substates remain unsupported."
     };
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
