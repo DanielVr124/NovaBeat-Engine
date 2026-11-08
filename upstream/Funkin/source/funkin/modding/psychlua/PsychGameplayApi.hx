@@ -422,10 +422,10 @@ class PsychGameplayApi
         var matches:Array<String> = [];
         for (songId in PsychModRuntime.collectSongIds(ExperienceManager.getActivePsychModDirs()))
         {
-          if (psychSongSlug(songId) == normalizedName || StringTools.endsWith(psychSongSlug(songId), "-" + normalizedName))
+          if ((psychSongSlug(songId) == normalizedName || StringTools.endsWith(psychSongSlug(songId), "-" + normalizedName))
+            && !matches.contains(songId))
             matches.push(songId);
         }
-        matches = matches.filter((id) -> id != null).distinct();
         if (matches.length != 1)
         {
           trace('[Psych API] loadSong could not resolve an unambiguous active Psych song: ' + name);
@@ -1134,7 +1134,7 @@ class PsychGameplayApi
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
-      "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong",
+      "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong", "loadSong", "startVideo",
       "addCharacterToList", "precacheImage", "precacheSound", "precacheMusic", "setHealthBarColors",
       "addAnimationByIndicesLoop", "characterPlayAnim", "luaSpriteMakeGraphic",
       "luaSpriteAddAnimationByPrefix", "luaSpriteAddAnimationByIndices", "luaSpritePlayAnimation",
