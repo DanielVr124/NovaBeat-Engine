@@ -71,6 +71,12 @@ preset classes listed above plus the explicit runtime API.
 ## Not supported yet
 
 The current tier deliberately keeps these package types unavailable:
+- Non-default Psych chart character assignments (`player1`, `player2`,
+  `player3`, or `gfVersion`) and non-default stage assignments
+  (`stage` / `stageDefault`)
+- Non-empty Psych chart event payloads, custom note-type strings, non-standard
+  note lanes, alternate section types, and GF-specific sections
+- Custom arrow/splash skins or note-style metadata
 - Custom Psych event scripts (`custom_events/`)
 - Custom note types/notes (`custom_notetypes/`, `custom_notes/`)
 - Custom substates (`custom_substates/`)
