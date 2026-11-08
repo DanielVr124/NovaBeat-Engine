@@ -967,6 +967,10 @@ class PlayState extends MusicBeatSubState
     // Reset the camera's zoom and force it to focus on the camera follow point.
     resetCamera();
 
+    // Psych's post-create callback runs after the stage, chart, and note lanes
+    // exist, but before countdown callbacks begin.
+    PsychScriptRuntime.dispatch("onCreatePost", []);
+
     // Call a script event to start the countdown.
     // Songs with cutscenes should call event.cancel().
     // As long as they call `PlayState.instance.startCountdown()` later, the countdown will start.
