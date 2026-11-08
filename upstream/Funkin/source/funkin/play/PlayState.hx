@@ -1552,13 +1552,20 @@ class PlayState extends MusicBeatSubState
     }
   }
 
+  /** Dispatch Psych's game-over screen entry callback once the substate exists. */
+  public function dispatchPsychGameOverStart():Void
+  {
+    PsychScriptRuntime.dispatch("onGameOverStart", []);
+  }
+
   /**
    * Dispatch Psych's game-over confirmation callback from the actual
-   * GameOverSubState confirmation path, not from generic song retries.
+   * GameOverSubState input path, not from generic song retries.
+   * @param retry True when retrying; false when returning to the menu.
    */
-  public function dispatchPsychGameOverConfirm():Void
+  public function dispatchPsychGameOverConfirm(retry:Bool):Void
   {
-    PsychScriptRuntime.dispatch("onGameOverConfirm", []);
+    PsychScriptRuntime.dispatch("onGameOverConfirm", [retry]);
   }
 
   override public function dispatchEvent(event:ScriptEvent):Void
@@ -1637,7 +1644,11 @@ class PlayState extends MusicBeatSubState
       }
       else if (event.type == "SONG_END")
       {
-        if (PsychScriptRuntime.dispatchStop("onSongEnd", []))
+        // Psych's official callback is onEndSong. Retain the earlier
+        // onSongEnd spelling as a fallback for scripts already written for
+        // NovaBeat's first compatibility pass.
+        var callback:String = PsychScriptRuntime.hasCallback("onEndSong") ? "onEndSong" : "onSongEnd";
+        if (PsychScriptRuntime.dispatchStop(callback, []))
           event.cancel();
       }
       else if (event.type == "GAME_OVER")
@@ -2815,6 +2826,9 @@ class PlayState extends MusicBeatSubState
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
     if (!result) return;
+
+    // Runs only after the countdown accepted the start request and is active.
+    PsychScriptRuntime.dispatch("onCountdownStarted", []);
 
     isInCutscene = false;
 
