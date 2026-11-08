@@ -1,6 +1,8 @@
 package funkin.modding.psychlua;
 
 import flixel.FlxG;
+import flixel.addons.transition.FlxTransitionableState;
+import funkin.ui.freeplay.FreeplayState;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxObject;
@@ -393,6 +395,17 @@ class PsychGameplayApi
     {
       // PlayState preserves its launch parameters for a state reset.
       FlxG.resetState();
+      return true;
+    });
+    vars.set("exitSong", function(?skipTransition:Bool = false):Bool
+    {
+      if (skipTransition)
+      {
+        FlxTransitionableState.skipNextTransIn = true;
+        FlxTransitionableState.skipNextTransOut = true;
+      }
+      FlxG.sound.playMusic(Paths.music("freakyMenu"), 1, true);
+      FlxG.switchState(() -> new FreeplayState());
       return true;
     });
     vars.set("setRatingPercent", function(value:Float):Void PsychScriptRuntime.setGlobal("ratingPercent", value));
