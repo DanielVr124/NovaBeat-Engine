@@ -24,9 +24,9 @@ import vm.lua.Lua;
 /**
  * Owns one isolated Psych HScript or Lua interpreter.
  *
- * This is the interpreter layer only. Psych gameplay APIs are intentionally
- * injected by the runtime bridge in later compatibility work; this class
- * never exposes the host filesystem, process APIs, or native loaders.
+ * The runtime injects the supported gameplay globals and helper API.
+ * HScript is instruction/time-bounded; Lua has an instruction hook and has
+ * host filesystem, process, package, debug, and dynamic-loader globals removed.
  */
 @:nullSafety(Off)
 class PsychScriptInstance
