@@ -1,43 +1,73 @@
-# Psych Script Runtime Foundation
+# Psych Lua and HScript compatibility status
 
-This branch now carries separate interpreter adapters for Psych-style HScript
-(`.hx`) and Lua (`.lua`) source files.
+NovaBeat now has an early native Psych scripting tier for classic Psych song
+packages. This is a limited compatibility layer, not a full replacement for
+Psych Engine and not yet compatible with every Psych mod.
 
-## Implemented in the interpreter foundation
+## Implemented
 
-- A separately owned interpreter instance per source file.
-- HScript execution through SScript, the dialect used by Psych Engine's
-  HScript integration.
-- Lua execution through hxvm-lua: native Lua on C++ targets and Fengari on
-  JavaScript targets.
-- Shared compatibility constants and a callback dispatcher that preserves
-  callback return values for later Psych stop/continue semantics.
-- HScript instruction/time budgets and a Lua instruction hook.
-- Removal of Lua's filesystem, OS, package-loading and debug globals.
-- A debug-console smoke test named `testPsychScriptRuntimes` that verifies
-  each runtime can load a function and call it.
+### Interpreters and loading
+- Separate Lua and HScript interpreter instances per script file.
+- Lua uses hxvm-lua with native Lua on C++ targets; the HTML5 build includes
+  Fengari. The mod-folder loader itself is currently native-only.
+- HScript uses SScript, with a bounded instruction/time budget and a small,
+  explicit set of common Psych HScript globals (FlxG, FlxSprite, FlxTween,
+  FlxTimer, FlxColor, Paths, Conductor, PlayState, Character, and Note).
+- Global scripts load from each selected Psych package's `scripts/` folder;
+  matching song scripts load from `data/<song>/`. Global scripts load before
+  song-local scripts.
+- Script errors are isolated and traced with their source path; an individual
+  script that fails to load is not treated as a successful load.
 
-## Deliberately not enabled yet
+### Callback bridge
+Supported callbacks currently include:
+- `onCreate`, `onCreatePost`
+- `onUpdate`, `onUpdatePost`
+- `onStepHit`, `onBeatHit`
+- `onStartCountdown`, `onSongStart`, `onSongEnd`
+- `onPause`, `onDestroy`
+- `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `onSpawnNote`
 
-This is **not full Psych Engine compatibility** and does not yet make
-script-dependent mods launchable. The interpreter does not yet expose the
-Psych APIs or connect mod files to gameplay. Missing pieces include:
+Callback return values support the basic Psych stop codes, including
+language-specific stop behavior. Note callbacks receive direction, note kind,
+sustain state, and a live note-group index.
 
-- Loading global, song, stage, character, event and note-type scripts in
-  Psych's established order and scope.
-- Psych globals such as `setProperty`, `getProperty`, `triggerEvent`,
-  `makeLuaSprite`, `addLuaSprite`, `runHaxeCode`, and class accessors.
-- The complete lifecycle/callback map, including countdown, update, beat,
-  step, note hit/miss, event, pause/retry and destroy behavior.
-- Script-to-script globals and Lua/HScript cross-calls with Psych's exact
-  return-value/stop semantics.
-- Compatibility coverage for version-specific Psych APIs and extensions.
+### Initial gameplay API surface
+- `getProperty`, `setProperty`
+- `getPropertyFromClass`, `setPropertyFromClass` for a small class allowlist
+- `getPropertyFromGroup`, `setPropertyFromGroup`
+- `getVar`, `setVar`, `removeVar`
+- `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
+- Basic sprite creation, animation, visibility/camera, scale, scroll-factor,
+  size, add/remove, and draw-order helpers
+- Basic `triggerEvent` handling for camera zoom, screen shake, and set-property
 
-The chart-only launch gate in `PsychModRuntime.inspectPackage` remains
-unchanged. A package containing scripts must not be marked launchable until
-the required runtime/API behavior is implemented and tested against real mods.
+The Lua VM removes its filesystem, OS, package-loading, debug, and garbage
+collector globals. HScript execution is sandboxed and receives only the common
+preset classes listed above plus the explicit runtime API.
 
-## Smoke-test usage
+## Not supported yet
+
+The current tier deliberately keeps these package types unavailable:
+- Custom Psych event scripts (`custom_events/`)
+- Custom note types/notes (`custom_notetypes/`, `custom_notes/`)
+- Custom substates (`custom_substates/`)
+- Stage scripts (`stages/`) and custom character scripts (`characters/`)
+- Custom stage JSON, character JSON/atlases, and Psych-specific stage/character
+  lifecycle behavior
+- `runHaxeCode` / `runHaxeFunction`, full Lua↔HScript cross-calls, and exact
+  Psych global-sharing behavior between script instances
+- Full timers, tweens, sound, shader, input, dialogue, cutscene, save-data, and
+  mod-setting APIs
+- Every version-specific legacy API and extension used by arbitrary mods
+- HTML5 local-mod discovery and launching
+
+The code must not mark a package compatible merely because an interpreter can
+parse its script files. Mods using unsupported script roots remain blocked.
+The supported APIs are an initial subset; a real mod can still depend on
+functions NovaBeat has not implemented.
+
+## Debug smoke test
 
 On a debug build, open the existing developer console while in gameplay and
 run:
@@ -46,5 +76,15 @@ run:
 testPsychScriptRuntimes
 ```
 
-A passing result verifies the HScript and Lua interpreter adapters only; it
-does not prove gameplay compatibility with a Psych mod.
+A passing result verifies that the HScript and Lua adapters can load a simple
+function and call it. It does not prove that a representative Psych mod plays
+correctly. The next validation step is to test real, script-light Psych song
+packages with their actual scripts and audio.
+
+## Platform note
+
+The interpreter dependencies are configured for native C++ and HTML5 builds.
+However, current Psych folder discovery reads installed mod folders through
+native filesystem access, so the script-enabled Psych mod path is not yet
+available in the browser. Android and Windows require successful native build
+and gameplay validation before the feature is considered tested.

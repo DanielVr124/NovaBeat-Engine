@@ -8,6 +8,8 @@ import flixel.util.FlxColor;
 import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
+import funkin.play.notes.NoteSprite;
+import funkin.play.character.BaseCharacter;
 
 /**
  * Deliberately bounded Psych API surface for the first script-enabled tier.
@@ -261,12 +263,17 @@ class PsychGameplayApi
     }
   }
 
-  static function getStageCharacter(state:PlayState, getter:String):Dynamic
+  static function getStageCharacter(state:PlayState, getter:String):Null<BaseCharacter>
   {
-    var stage:Dynamic = Reflect.getProperty(state, "currentStage");
+    var stage = state.currentStage;
     if (stage == null) return null;
-    var method:Dynamic = Reflect.field(stage, getter);
-    return method == null ? null : Reflect.callMethod(stage, method, []);
+    return switch (getter)
+    {
+      case "getBoyfriend": stage.getBoyfriend();
+      case "getDad": stage.getDad();
+      case "getGirlfriend": stage.getGirlfriend();
+      default: null;
+    }
   }
 
   static function getSegment(object:Dynamic, segment:String, allowMaps:Bool):Dynamic
@@ -385,8 +392,10 @@ class PsychGameplayApi
   static function getPropertyFromGroup(state:PlayState, group:String, index:Int, path:String, allowMaps:Bool):Dynamic
   {
     var collection:Dynamic = resolveRoot(state, group);
-    if (collection == null) return null;
+    if (collection == null || index < 0) return null;
     var members:Dynamic = Reflect.field(collection, "members");
+    var count:Int = members != null ? members.length : collection.length;
+    if (index >= count) return null;
     var item:Dynamic = members != null ? members[index] : collection[index];
     return getFromObject(item, path, allowMaps);
   }
@@ -394,8 +403,10 @@ class PsychGameplayApi
   static function setPropertyFromGroup(state:PlayState, group:String, index:Int, path:String, value:Dynamic, allowMaps:Bool):Dynamic
   {
     var collection:Dynamic = resolveRoot(state, group);
-    if (collection == null) return null;
+    if (collection == null || index < 0) return null;
     var members:Dynamic = Reflect.field(collection, "members");
+    var count:Int = members != null ? members.length : collection.length;
+    if (index >= count) return null;
     var item:Dynamic = members != null ? members[index] : collection[index];
     return setOnObject(item, path, value, allowMaps);
   }
