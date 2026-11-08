@@ -43,6 +43,7 @@ import funkin.modding.events.ScriptEvent.GhostMissNoteScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.ExperienceManager;
+import funkin.modding.PsychModRuntime;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.modding.psychlua.PsychGameplayApi;
 import funkin.play.character.BaseCharacter;
