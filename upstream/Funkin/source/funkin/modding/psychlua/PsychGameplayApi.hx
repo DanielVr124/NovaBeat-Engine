@@ -30,6 +30,7 @@ import funkin.Paths;
 import funkin.play.PlayState;
 import funkin.Highscore;
 import funkin.Preferences;
+import funkin.util.Constants;
 import funkin.play.notes.NoteSprite;
 import funkin.play.notes.SustainTrail;
 import funkin.play.character.BaseCharacter;
@@ -1255,6 +1256,55 @@ class PsychGameplayApi
     PsychScriptRuntime.setGlobal("rating", Highscore.tallies.totalNotes <= 0
       ? 0.0
       : Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes);
+
+    // Psych 0.7.3 startup globals which have direct NovaBeat equivalents.
+    // Campaign-only values stay at explicit neutral defaults because this
+    // engine launches imported Psych songs from Freeplay rather than Psych weeks.
+    PsychScriptRuntime.setGlobal("difficultyPath", psychSongSlug(state.currentDifficulty));
+    PsychScriptRuntime.setGlobal("weekRaw", null);
+    PsychScriptRuntime.setGlobal("week", 0);
+    PsychScriptRuntime.setGlobal("seenCutscene", false);
+    PsychScriptRuntime.setGlobal("version", Constants.VERSION);
+    PsychScriptRuntime.setGlobal("mustHitSection", false);
+    PsychScriptRuntime.setGlobal("altAnim", false);
+    PsychScriptRuntime.setGlobal("gfSection", false);
+    PsychScriptRuntime.setGlobal("healthGainMult", 1.0);
+    PsychScriptRuntime.setGlobal("healthLossMult", 1.0);
+    PsychScriptRuntime.setGlobal("guitarHeroSustains", false);
+    PsychScriptRuntime.setGlobal("instakillOnMiss", false);
+    PsychScriptRuntime.setGlobal("middlescroll", false);
+    PsychScriptRuntime.setGlobal("ghostTapping", true);
+    PsychScriptRuntime.setGlobal("hideHud", state.isMinimalMode);
+    PsychScriptRuntime.setGlobal("scoreZoom", true);
+    PsychScriptRuntime.setGlobal("healthBarAlpha", state.healthBar == null ? 1.0 : state.healthBar.alpha);
+    PsychScriptRuntime.setGlobal("noResetButton", false);
+    PsychScriptRuntime.setGlobal("lowQuality", false);
+    PsychScriptRuntime.setGlobal("shadersEnabled", Preferences.performanceStageShaders);
+    PsychScriptRuntime.setGlobal("noteSkin", state.currentChart?.noteStyle ?? Constants.DEFAULT_NOTE_STYLE);
+    PsychScriptRuntime.setGlobal("noteSkinPostfix", "");
+    PsychScriptRuntime.setGlobal("splashSkin", state.currentChart?.noteStyle ?? Constants.DEFAULT_NOTE_STYLE);
+    PsychScriptRuntime.setGlobal("splashSkinPostfix", "");
+    PsychScriptRuntime.setGlobal("splashAlpha", 1.0);
+    PsychScriptRuntime.setGlobal("ratingName", "");
+    PsychScriptRuntime.setGlobal("ratingFC", "");
+    PsychScriptRuntime.setGlobal("difficultyPath", psychSongSlug(state.currentDifficulty));
+    PsychScriptRuntime.setGlobal("inChartEditor", state.isChartingMode);
+
+    #if html5
+    PsychScriptRuntime.setGlobal("buildTarget", "web");
+    #elseif windows
+    PsychScriptRuntime.setGlobal("buildTarget", "windows");
+    #elseif linux
+    PsychScriptRuntime.setGlobal("buildTarget", "linux");
+    #elseif mac
+    PsychScriptRuntime.setGlobal("buildTarget", "mac");
+    #elseif android
+    PsychScriptRuntime.setGlobal("buildTarget", "android");
+    #elseif ios
+    PsychScriptRuntime.setGlobal("buildTarget", "ios");
+    #else
+    PsychScriptRuntime.setGlobal("buildTarget", "native");
+    #end
   }
 
   public static function hideDefaultStageProps(state:PlayState):Void
