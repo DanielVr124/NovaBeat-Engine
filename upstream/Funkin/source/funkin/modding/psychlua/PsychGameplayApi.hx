@@ -507,23 +507,39 @@ class PsychGameplayApi
         ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
     {
       var sprite:Null<PsychAnimateSprite> = getPsychAnimateSprite(state, tag);
-      if (sprite == null || !sprite.anim.hasAnimateAtlas || name == null || symbol == null) return false;
-      sprite.anim.addBySymbol(name, symbol, framerate, loop);
-      sprite.addOffset(name, matX, matY);
-      if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
-      return true;
+      if (sprite == null || !sprite.psychAtlasLoaded || name == null || symbol == null) return false;
+      try
+      {
+        sprite.anim.addBySymbol(name, symbol, framerate, loop);
+        sprite.addOffset(name, matX, matY);
+        if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] addAnimationBySymbol(' + tag + ', ' + symbol + ') failed: ' + Std.string(error));
+        return false;
+      }
     });
     vars.set("addAnimationBySymbolIndices", function(tag:String, name:String, symbol:String, ?indices:Dynamic = null,
         ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
     {
       var sprite:Null<PsychAnimateSprite> = getPsychAnimateSprite(state, tag);
-      if (sprite == null || !sprite.anim.hasAnimateAtlas || name == null || symbol == null) return false;
+      if (sprite == null || !sprite.psychAtlasLoaded || name == null || symbol == null) return false;
       var parsedIndices:Array<Int> = parsePsychAnimateIndices(indices);
       if (parsedIndices.length == 0) parsedIndices = [0];
-      sprite.anim.addBySymbolIndices(name, symbol, parsedIndices, framerate, loop);
-      sprite.addOffset(name, matX, matY);
-      if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
-      return true;
+      try
+      {
+        sprite.anim.addBySymbolIndices(name, symbol, parsedIndices, framerate, loop);
+        sprite.addOffset(name, matX, matY);
+        if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] addAnimationBySymbolIndices(' + tag + ', ' + symbol + ') failed: ' + Std.string(error));
+        return false;
+      }
     });
     vars.set("getMidpointX", function(variable:String):Float
     {
@@ -2926,7 +2942,7 @@ class PsychGameplayApi
    * Psych's separate JSON override overload is rejected explicitly; the
    * supported atlas folder must contain Animation.json and its spritemaps.
    */
-  static function loadPsychAnimateAtlas(sprite:FunkinSprite, folderOrImg:Dynamic,
+  static function loadPsychAnimateAtlas(sprite:PsychAnimateSprite, folderOrImg:Dynamic,
       ?spriteJson:Dynamic = null, ?animationJson:Dynamic = null):Bool
   {
     if (sprite == null || folderOrImg == null || !Std.isOfType(folderOrImg, String)) return false;
@@ -2947,7 +2963,8 @@ class PsychGameplayApi
     try
     {
       sprite.loadTextureAtlas(folder);
-      return sprite.anim.hasAnimateAtlas;
+      sprite.psychAtlasLoaded = true;
+      return true;
     }
     catch (error:Dynamic)
     {
@@ -3139,6 +3156,7 @@ class PsychGameplayApi
 @:nullSafety(Off)
 class PsychAnimateSprite extends FunkinSprite
 {
+  public var psychAtlasLoaded:Bool = false;
   final psychAnimOffsets:Map<String, Array<Float>> = [];
 
   public function new(x:Float = 0, y:Float = 0)
