@@ -399,6 +399,113 @@ class PsychScriptRuntime
     return [for (script in scripts) script.sourcePath];
   }
 
+  static function normalizeScriptPath(value:String):String
+  {
+    if (value == null) return "";
+    var result:String = StringTools.replace(StringTools.trim(value), "\\", "/").toLowerCase();
+    while (StringTools.startsWith(result, "./")) result = result.substr(2);
+    while (StringTools.startsWith(result, "/")) result = result.substr(1);
+    return result;
+  }
+
+  static function findScript(scriptPath:String, ?language:String):Null<PsychScriptInstance>
+  {
+    var requested:String = normalizeScriptPath(scriptPath);
+    if (requested.length == 0) return null;
+    var requestedBase:String = requested.split("/").pop();
+    for (script in scripts)
+    {
+      if (script == inlineHScriptBridge || script == inlineLuaBridge) continue;
+      if (language != null && script.language != language) continue;
+      var loaded:String = normalizeScriptPath(script.sourcePath);
+      var loadedBase:String = loaded.split("/").pop();
+      if (loaded == requested || StringTools.endsWith(loaded, "/" + requested)
+        || loadedBase == requested || loadedBase == requestedBase)
+        return script;
+    }
+    return null;
+  }
+
+  public static function isScriptRunning(scriptPath:String, ?language:String):Bool
+  {
+    return findScript(scriptPath, language) != null;
+  }
+
+  public static function addScript(scriptPath:String, language:String, ?ignoreAlreadyRunning:Bool = false):Bool
+  {
+    if (scriptPath == null || language == null) return false;
+    var extension:String = language == "hscript" ? "hx" : "lua";
+    var requested:String = StringTools.trim(scriptPath);
+    var lower:String = normalizeScriptPath(requested);
+    if (!StringTools.endsWith(lower, ".lua") && !StringTools.endsWith(lower, ".hx")
+      && !StringTools.endsWith(lower, ".hscript"))
+      requested += "." + extension;
+
+    var existing:Null<PsychScriptInstance> = findScript(requested, language);
+    if (existing != null)
+    {
+      if (ignoreAlreadyRunning) return false;
+      removeScript(requested, language);
+    }
+
+    var source:Null<PsychScriptSource> = PsychModRuntime.getScriptSource(activeModDirs, requested);
+    if (source == null) return false;
+    var sourceExtension:String = normalizeScriptPath(source.path);
+    if (language == "lua" && !StringTools.endsWith(sourceExtension, ".lua")) return false;
+    if (language == "hscript" && !StringTools.endsWith(sourceExtension, ".hx")
+      && !StringTools.endsWith(sourceExtension, ".hscript")) return false;
+    return loadSource(source.path, source.source, activeGlobals) != null;
+  }
+
+  public static function removeScript(scriptPath:String, ?language:String):Bool
+  {
+    var script:Null<PsychScriptInstance> = findScript(scriptPath, language);
+    if (script == null) return false;
+    script.call("onDestroy", []);
+    scripts.remove(script);
+    customSubstateScripts.remove(script);
+    script.destroy();
+    return true;
+  }
+
+  public static function callScript(scriptPath:String, callback:String, ?args:Array<Dynamic>):Dynamic
+  {
+    var script:Null<PsychScriptInstance> = findScript(scriptPath);
+    if (script == null || callback == null || callback.length == 0) return null;
+    updateTimingGlobals();
+    var result:Dynamic = script.call(callback, args == null ? [] : args);
+    if (script.lastError != null)
+      trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
+    return result;
+  }
+
+  public static function getGlobalFromScript(scriptPath:String, name:String):Dynamic
+  {
+    var script:Null<PsychScriptInstance> = findScript(scriptPath);
+    return script == null ? null : script.getVariable(name);
+  }
+
+  public static function setGlobalFromScript(scriptPath:String, name:String, value:Dynamic):Bool
+  {
+    var script:Null<PsychScriptInstance> = findScript(scriptPath);
+    if (script == null || name == null || name.length == 0) return false;
+    script.setVariable(name, value);
+    return true;
+  }
+
+  /**
+   * Returns a snapshot of the values NovaBeat injected into the selected
+   * script. Interpreter-private locals and functions are intentionally omitted.
+   */
+  public static function getScriptGlobals(scriptPath:String):Dynamic
+  {
+    if (findScript(scriptPath) == null) return null;
+    var result:Dynamic = {};
+    for (name => value in activeGlobals)
+      Reflect.setField(result, name, value);
+    return result;
+  }
+
   /**
    * Creates and registers a script from source text supplied by the mod loader.
    * File access is kept outside the interpreter so browser and native targets
@@ -412,6 +519,11 @@ class PsychScriptRuntime
     if (variables != null)
       for (name => value in variables)
         initial.set(name, value);
+    var sourceName:String = sourcePath.split("/").pop();
+    if (sourceName == null) sourceName = sourcePath;
+    var extensionIndex:Int = sourceName.lastIndexOf(".");
+    if (extensionIndex > 0) sourceName = sourceName.substr(0, extensionIndex);
+    initial.set("scriptName", sourceName);
 
     try
     {
