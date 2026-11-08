@@ -95,6 +95,9 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   public function new()
   {
     super();
+    // Entering Controls from another menu must not reuse the press that
+    // opened this page as a request to bind the currently selected key.
+    MenuTypedList.inputHandoffBlocked = true;
 
     novaBeatStyle = Preferences.menuStyle == "NovaBeat";
     menuCamera = new FunkinCamera('controlsMenu');
@@ -310,8 +313,24 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
       if (novaBeatStyle) updateNovaBeatControlSelection();
     });
-    if (novaBeatStyle && deviceList == null) updateNovaBeatControlSelection();
-    if (novaBeatStyle) add(novaBeatTextLayer);
+    if (novaBeatStyle)
+    {
+      // Keep every upstream bitmap label hidden in the NovaBeat layout,
+      // including when the keyboard/gamepad chooser is present.
+      for (label in labels.members)
+      {
+        if (label == null) continue;
+        label.visible = false;
+        label.alpha = 0;
+      }
+      for (header in headersLayer.members)
+      {
+        if (header == null) continue;
+        header.visible = false;
+      }
+      updateNovaBeatControlSelection();
+      add(novaBeatTextLayer);
+    }
 
     prompt = new Prompt("\nPress any key to rebind\n\n\nBackspace to unbind\n    Escape to cancel", None);
     prompt.create();
