@@ -2,6 +2,7 @@ package funkin.modding;
 
 import funkin.Assets;
 import flixel.FlxG;
+import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongMetadata;
@@ -235,7 +236,7 @@ class PsychModRuntime
     if (saveTag == null || StringTools.trim(saveTag).length == 0) return null;
     #if sys
     var directory:String = modName == null || StringTools.trim(modName).length == 0
-      ? PsychScriptRuntime.getActiveModDirectory()
+      ? PsychScriptRuntime.getExecutingScriptModDirectory()
       : StringTools.trim(modName);
     if (directory.length == 0 || directory.indexOf("/") >= 0 || directory.indexOf("\\") >= 0
       || directory == "." || directory == "..") return null;
@@ -255,9 +256,11 @@ class PsychModRuntime
       Reflect.setField(FlxG.save.data, "modSettings", allSettings);
     }
     var settings:Map<String, Dynamic> = cast allSettings.get(directory);
-    if (settings == null)
+    if (settings == null) settings = new Map<String, Dynamic>();
+    // Refresh only when this key is not already stored. This preserves user
+    // preferences while allowing a mod update to introduce additional settings.
+    if (!settings.exists(saveTag))
     {
-      settings = new Map<String, Dynamic>();
       try
       {
         var parsed:Dynamic = Json.parse(File.getContent(settingsPath));
@@ -271,18 +274,11 @@ class PsychModRuntime
             var keyName:String = Std.string(key);
             if (keyName.length == 0 || settings.exists(keyName)) continue;
             var kind:Dynamic = Reflect.field(entry, "type");
-            if (kind == "keybind" || kind == "key")
-            {
-              settings.set(keyName, {
-                keyboard: Reflect.field(entry, "keyboard") ?? "NONE",
-                gamepad: Reflect.field(entry, "gamepad") ?? "NONE"
-              });
-            }
-            else
-            {
-              var defaultValue:Dynamic = Reflect.field(entry, "value");
-              if (defaultValue != null) settings.set(keyName, defaultValue);
-            }
+            // Psych's keybind entries are handled by its separate controls UI,
+            // not by getModSetting's value return path.
+            if (kind == "keybind" || kind == "key") continue;
+            var defaultValue:Dynamic = Reflect.field(entry, "value");
+            if (defaultValue != null) settings.set(keyName, defaultValue);
           }
         }
       }
