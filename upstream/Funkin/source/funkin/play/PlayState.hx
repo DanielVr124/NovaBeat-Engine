@@ -39,6 +39,7 @@ import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.ExperienceManager;
 import funkin.modding.psychlua.PsychScriptRuntime;
+import funkin.modding.psychlua.PsychGameplayApi;
 import funkin.play.character.BaseCharacter;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.play.components.HealthIcon;
