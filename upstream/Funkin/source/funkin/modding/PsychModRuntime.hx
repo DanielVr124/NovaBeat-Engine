@@ -278,13 +278,18 @@ class PsychModRuntime
 
       for (difficulty in importedChart.notes.keys())
       {
-        combinedNotes.set(difficulty, importedChart.notes.get(difficulty));
+        combinedNotes.set(difficulty, importedChart.getNotes(difficulty));
         combinedSpeeds.set(difficulty, importedChart.getScrollSpeed(difficulty));
       }
 
-      for (event in importedChart.events)
+      // Legacy events are synthesized from section ownership by the importer.
+      // They are difficulty-independent in this limited compatibility tier.
+      if (combinedEvents.length == 0)
       {
-        combinedEvents.push(event);
+        for (event in importedChart.events)
+        {
+          combinedEvents.push(event);
+        }
       }
     }
 
