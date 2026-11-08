@@ -870,6 +870,49 @@ class PsychGameplayApi
    * These values must not be frozen at script-load time: mods read score,
    * health, character names, camera position and preferences throughout play.
    */
+  /**
+   * Debug smoke test for the public Psych callback surface. This validates
+   * that the expected functions are registered and callable values exist;
+   * it intentionally does not execute them or mutate gameplay state.
+   */
+  public static function runApiSmokeTests(state:PlayState):Bool
+  {
+    if (state == null) return false;
+    var globals:Map<String, Dynamic> = createGlobals(state);
+    var required:Array<String> = [
+      "getProperty", "setProperty", "getPropertyFromClass", "setPropertyFromClass",
+      "getPropertyFromGroup", "setPropertyFromGroup", "setVar", "getVar", "removeVar",
+      "getHealth", "setHealth", "addHealth", "getSongPosition", "getSongName",
+      "getDifficulty", "getSongLength", "getScore", "getMisses", "getHits",
+      "callScript", "callOnScripts", "callOnLuas", "callOnHScript",
+      "getGlobalFromScript", "setGlobalFromScript", "getGlobals", "isRunning",
+      "addLuaScript", "addHScript", "removeLuaScript", "removeHScript",
+      "makeLuaSprite", "makeAnimatedLuaSprite", "makeLuaText", "makeGraphic",
+      "addLuaSprite", "removeLuaSprite", "addLuaText", "objectPlayAnimation",
+      "addAnimationByPrefix", "addAnimationByIndices", "doTweenX", "startTween",
+      "noteTweenX", "noteTweenDirection", "runTimer", "cancelTimer", "cancelTween",
+      "playSound", "playMusic", "stopSound", "pauseSound", "resumeSound",
+      "getSoundVolume", "getSoundTime", "setSoundTime", "getSoundPitch", "setSoundPitch",
+      "soundFadeIn", "soundFadeOut", "soundFadeCancel",
+      "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
+      "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
+      "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
+      "cameraSetTarget", "startCountdown", "endSong",
+      "precacheImage", "precacheSound", "precacheMusic", "setHealthBarColors"
+    ];
+
+    var missing:Array<String> = [];
+    for (name in required)
+      if (!globals.exists(name) || globals.get(name) == null) missing.push(name);
+
+    if (missing.length > 0)
+    {
+      trace('[Psych API Smoke Test] Missing registrations: ' + missing.join(", "));
+      return false;
+    }
+    return true;
+  }
+
   public static function updateGlobals(state:PlayState):Void
   {
     if (state == null) return;
