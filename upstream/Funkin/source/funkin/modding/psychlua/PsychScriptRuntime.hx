@@ -325,9 +325,8 @@ class PsychScriptRuntime
     for (script in scripts)
       if (script.hasFunction(callback)) return true;
 
-    if (inlineLuaBridge != null && inlineLuaBridge.hasFunction(callback)) return true;
-    if (inlineHScriptBridge != null && inlineHScriptBridge.hasFunction(callback)) return true;
-
+    // Inline runLuaCode/runHaxeCode bridges are callable snippets, not members
+    // of the lifecycle dispatch list, so they must not affect alias detection.
     return false;
   }
 
