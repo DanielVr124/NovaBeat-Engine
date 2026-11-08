@@ -415,7 +415,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
     menuItems.cameras = [uiCamera];
     // Use MenuTypedList's normal FNF selection/accept rules on every platform.
-    menuItems.acceptOnTouchSelection = false;
 
     for (index in 0...visibleItemIndexes.length)
     {
