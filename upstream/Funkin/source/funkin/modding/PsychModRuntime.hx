@@ -463,7 +463,11 @@ class PsychModRuntime
         if (values.length > 3 && values[3] != null)
         {
           var noteType:Dynamic = values[3];
-          if (Std.isOfType(noteType, Bool)) continue; // Legacy Alt Animation flag.
+          if (Std.isOfType(noteType, Bool))
+          {
+            if (noteType == true) return "alternate-animation note types";
+            continue;
+          }
           if (Std.isOfType(noteType, String) && StringTools.trim(cast noteType).length == 0) continue;
           return "custom Psych note types";
         }
