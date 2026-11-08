@@ -271,7 +271,7 @@ class PsychDialoguePortrait extends FlxSprite
         x = (FlxG.width - width) / 2;
         y = FlxG.height - 206 - height + 16;
       case "right":
-        x = FlxG.width - width + 100;
+        x = FlxG.width - width - 100;
         y = 58;
       default:
         x = -60;
