@@ -3,6 +3,7 @@ package funkin.modding.psychlua;
 import flixel.FlxG;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
+import flixel.FlxObject;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.math.FlxPoint;
 import flixel.FlxSprite;
@@ -48,6 +49,18 @@ class PsychGameplayApi
 
     vars.set("getProperty", function(path:String, ?allowMaps:Bool = false):Dynamic return getProperty(state, path, allowMaps));
     vars.set("setProperty", function(path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic return setProperty(state, path, value, allowMaps));
+    // Psych exposes explicit helpers for objects created by makeLuaSprite /
+    // makeLuaText. These use the same tag table as getProperty/setProperty.
+    vars.set("getPropertyLuaSprite", function(tag:String, property:String):Dynamic
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      return sprite == null ? null : getFromObject(sprite, property, false);
+    });
+    vars.set("setPropertyLuaSprite", function(tag:String, property:String, value:Dynamic):Dynamic
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      return sprite == null ? null : setOnObject(sprite, property, value, false);
+    });
     vars.set("getPropertyFromClass", function(className:String, path:String, ?allowMaps:Bool = false):Dynamic
       return getPropertyFromClass(className, path, allowMaps));
     vars.set("setPropertyFromClass", function(className:String, path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic
@@ -117,6 +130,48 @@ class PsychGameplayApi
     vars.set("getMouseX", function(?camera:String = "game"):Float return getMousePosition(state, camera).x);
     vars.set("getMouseY", function(?camera:String = "game"):Float return getMousePosition(state, camera).y);
     vars.set("getMouseWheel", function():Int return FlxG.mouse.wheel);
+    vars.set("getMidpointX", function(variable:String):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxObject)) return 0.0;
+      var midpoint:FlxPoint = (cast object:FlxObject).getMidpoint();
+      return midpoint.x;
+    });
+    vars.set("getMidpointY", function(variable:String):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxObject)) return 0.0;
+      var midpoint:FlxPoint = (cast object:FlxObject).getMidpoint();
+      return midpoint.y;
+    });
+    vars.set("getGraphicMidpointX", function(variable:String):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxSprite)) return 0.0;
+      var midpoint:FlxPoint = (cast object:FlxSprite).getGraphicMidpoint();
+      return midpoint.x;
+    });
+    vars.set("getGraphicMidpointY", function(variable:String):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxSprite)) return 0.0;
+      var midpoint:FlxPoint = (cast object:FlxSprite).getGraphicMidpoint();
+      return midpoint.y;
+    });
+    vars.set("getScreenPositionX", function(variable:String, ?camera:String = "game"):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxObject)) return 0.0;
+      var position:FlxPoint = (cast object:FlxObject).getScreenPosition(resolveCamera(state, camera));
+      return position.x;
+    });
+    vars.set("getScreenPositionY", function(variable:String, ?camera:String = "game"):Float
+    {
+      var object:Dynamic = getProperty(state, variable);
+      if (!Std.isOfType(object, FlxObject)) return 0.0;
+      var position:FlxPoint = (cast object:FlxObject).getScreenPosition(resolveCamera(state, camera));
+      return position.y;
+    });
     vars.set("getColorFromHex", function(color:String):Int return parsePsychColor(color));
     vars.set("addScore", function(value:Int):Void setProperty(state, "score", state.songScore + value));
     vars.set("setScore", function(value:Int):Void setProperty(state, "score", value));
@@ -726,11 +781,17 @@ class PsychGameplayApi
     }
   }
 
+  static function resolveCamera(state:PlayState, camera:String):FlxCamera
+  {
+    var normalized:String = camera == null ? "game" : StringTools.trim(camera).toLowerCase();
+    return normalized == "hud" || normalized == "camhud" ? state.camHUD : state.camGame;
+  }
+
   static function getMousePosition(state:PlayState, camera:String):FlxPoint
   {
-    var targetCamera:FlxCamera = state.camGame;
-    if (camera != null && camera.toLowerCase() == "hud") targetCamera = state.camHUD;
-    return FlxG.mouse.getWorldPosition(targetCamera);
+    // Psych's getMouseX/Y helpers return camera screen coordinates, not
+    // world coordinates. Keep the coordinate space consistent with mods.
+    return FlxG.mouse.getScreenPosition(resolveCamera(state, camera));
   }
 
   /**
