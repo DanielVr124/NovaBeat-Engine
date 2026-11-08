@@ -424,6 +424,27 @@ class PsychScriptRuntime
     return dispatchSplitInternal(callback, luaArgs, hscriptArgs, ignoreStops).value == FUNCTION_STOP;
   }
 
+  /**
+   * Psych's note callbacks are not identical to generic callOnScripts:
+   * Lua gets chart index/direction/type values, while HScript gets the Note
+   * object. Psych still invokes HScript when Lua returned Function_StopLua,
+   * but not for Stop, StopHScript, or StopAll.
+   */
+  public static function dispatchPsychNoteCallback(callback:String, luaArgs:Array<Dynamic>,
+      hscriptArgs:Array<Dynamic>):Void
+  {
+    var luaResult:Dynamic = callOnLuas(callback, luaArgs);
+    if (luaResult != FUNCTION_STOP && luaResult != FUNCTION_STOP_HSCRIPT && luaResult != FUNCTION_STOP_ALL)
+      callOnHScript(callback, hscriptArgs);
+  }
+
+  /** Some Psych hooks (notably onSpawnNote) invoke both language arrays independently. */
+  public static function dispatchSeparate(callback:String, luaArgs:Array<Dynamic>, hscriptArgs:Array<Dynamic>):Void
+  {
+    callOnLuas(callback, luaArgs);
+    callOnHScript(callback, hscriptArgs);
+  }
+
   static function dispatchInternal(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):PsychDispatchResult
   {
     return dispatchSplitInternal(callback, args, args, ignoreStops);
