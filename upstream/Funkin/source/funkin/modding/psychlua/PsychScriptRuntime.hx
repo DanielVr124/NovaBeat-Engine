@@ -307,6 +307,8 @@ class PsychScriptRuntime
     setGlobal("crochet", Conductor.instance.beatLengthMs);
     setGlobal("stepCrochet", Conductor.instance.stepLengthMs);
     setGlobal("songLength", PlayState.instance?.currentSongLengthMs ?? 0);
+    var state:Null<PlayState> = PlayState.instance;
+    if (state != null) PsychGameplayApi.updateGlobals(state);
   }
 
   public static function updateFrame(elapsed:Float):Void
@@ -392,6 +394,11 @@ class PsychScriptRuntime
     }
 
     return { results: results, value: value };
+  }
+
+  public static function getActiveModDirectory():String
+  {
+    return activeModDirs.length == 0 ? "" : activeModDirs[0];
   }
 
   public static function getScriptPaths():Array<String>
