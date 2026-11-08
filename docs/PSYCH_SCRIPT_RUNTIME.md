@@ -59,6 +59,7 @@ The inline Haxe/Lua helper interpreters are separate from loaded mod scripts: th
 ### Sprites, animation, text, and geometry
 - Basic sprite creation, animation, visibility/camera, scale, scroll-factor, size, add/remove, and draw-order helpers.
 - Animation helpers: `addAnimation`, `addAnimationByPrefix`, `addAnimationByIndices`, `objectPlayAnimation`, and deprecated aliases.
+- FlxAnimate: `makeFlxAnimateSprite`, `loadAnimateAtlas`, `addAnimationBySymbol`, and `addAnimationBySymbolIndices` create a `FunkinSprite` backed by NovaBeat's installed Adobe Animate atlas renderer. The standard folder must contain `Animation.json` and the referenced spritemap assets; `images/` prefixes are accepted and traversal/absolute paths are rejected.
 - Sprite helpers: `makeGraphic`, `loadGraphic`, `loadFrames` (Sparrow/Packer), `updateHitbox`, `updateHitboxFromGroup`, `screenCenter`, `setBlendMode`, `objectsOverlap`, `getPixelColor`, `luaSpriteExists`, `luaTextExists`.
 - Text helpers: `makeLuaText`, `addLuaText`, `setTextString`, `setTextSize`, `setTextColor`, `setTextFont`, `setTextAlignment`, and `setTextBorder`.
 - Geometry: `getMidpointX/Y`, `getGraphicMidpointX/Y`, `getScreenPositionX/Y`.
@@ -71,7 +72,7 @@ The inline Haxe/Lua helper interpreters are separate from loaded mod scripts: th
 - Song and cutscene flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), `startDialogue` (reads the active song's `data/<song>/` JSON, supports typed text, basic Sparrow portrait metadata, optional music, and the cutscene-advance input), and `startVideo` (uses the platform's existing video player with the default start-cutscene flow; Psych's optional mid-song/loop/skip controls are not mapped).
 - HUD: `setTimeBarColors` controls a separate live time bar shown only for imported Psych songs. The exposed `timeBar` and `timeTxt` are NovaBeat-backed compatibility objects; the time bar uses two color segments rather than Psych's exact gradient widget.
 
-The standard Psych 0.7.3 Lua callback comparison covers **123 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The extended helper audit also registers the names found across the 0.7.3 `psychlua` helper modules. This is API-surface coverage, not perfect semantic parity: the optional FlxAnimate functions are present as feature-detection stubs that return `false`, runtime shaders are available only on native `sys` targets, and reflection calls are deliberately constrained to approved classes and methods.
+The standard Psych 0.7.3 Lua callback comparison covers **123 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The extended helper audit also registers the names found across the 0.7.3 `psychlua` helper modules. An automated registration smoke check pins the complete official callback list. This is API-surface coverage, not perfect semantic parity: FlxAnimate supports the normal atlas-folder workflow through NovaBeat's `FunkinSprite` renderer, but Psych's separate JSON override overload is not mapped; runtime shaders are available only on native `sys` targets, and reflection calls are deliberately constrained to approved classes and methods.
 
 ## Not supported yet
 
@@ -82,7 +83,7 @@ The standard Psych 0.7.3 Lua callback comparison covers **123 of 123** registere
 - All Psych character formats and class implementations. The adapter converts common Sparrow character JSON; Packer, AnimateAtlas, multi-atlas, custom class, and advanced character formats remain gated. Active character replacement is not yet implemented.
 - Every detail of the Psych HScript preset and exact private-global sharing semantics.
 - Full parity for Psych's mod settings UI. `getModSetting` reads the owning mod's `data/settings.json` defaults and the per-mod values stored in the active game save; `initSaveData`, `getDataFromSave`, `setDataFromSave`, `flushSaveData`, and `eraseSaveData` provide mod-namespaced save slots.
-- FlxAnimate's atlas renderer is not bundled. Its four callback names are exposed for feature detection, but `makeFlxAnimateSprite`, `loadAnimateAtlas`, `addAnimationBySymbol`, and `addAnimationBySymbolIndices` return `false` until that optional dependency is integrated.
+- The FlxAnimate adapter currently supports the standard atlas-folder format through NovaBeat's existing renderer. Psych's separate `spriteJson` / `animationJson` override arguments and non-folder image-only inputs are not mapped; atlases must use the normal folder layout.
 - Full unrestricted reflection. `callMethod`, `callMethodFromClass`, and `createInstance` use explicit class/method allowlists rather than Psych's arbitrary `Type.resolveClass` behavior.
 - Filesystem access is mod-scoped: file read/write/delete/list helpers operate only inside the currently executing mod folder. Absolute paths and traversal are rejected; Lua's general `io` and `os` libraries stay disabled.
 - Every version-specific legacy extension or fork beyond the audited 0.7.3 surface.
