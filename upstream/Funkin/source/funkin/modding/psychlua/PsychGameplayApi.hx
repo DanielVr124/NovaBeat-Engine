@@ -1260,7 +1260,6 @@ class PsychGameplayApi
     // Psych 0.7.3 startup globals which have direct NovaBeat equivalents.
     // Campaign-only values stay at explicit neutral defaults because this
     // engine launches imported Psych songs from Freeplay rather than Psych weeks.
-    PsychScriptRuntime.setGlobal("difficultyPath", psychSongSlug(state.currentDifficulty));
     PsychScriptRuntime.setGlobal("weekRaw", null);
     PsychScriptRuntime.setGlobal("week", 0);
     PsychScriptRuntime.setGlobal("seenCutscene", false);
