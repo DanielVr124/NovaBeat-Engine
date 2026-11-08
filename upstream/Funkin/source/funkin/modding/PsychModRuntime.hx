@@ -275,11 +275,18 @@ class PsychModRuntime
             var keyName:String = Std.string(key);
             if (keyName.length == 0 || settings.exists(keyName)) continue;
             var kind:Dynamic = Reflect.field(entry, "type");
-            // Psych's keybind entries are handled by its separate controls UI,
-            // not by getModSetting's value return path.
-            if (kind == "keybind" || kind == "key") continue;
-            var defaultValue:Dynamic = Reflect.field(entry, "value");
-            if (defaultValue != null) settings.set(keyName, defaultValue);
+            if (kind == "keybind" || kind == "key")
+            {
+              settings.set(keyName, {
+                keyboard: Reflect.field(entry, "keyboard") ?? "NONE",
+                gamepad: Reflect.field(entry, "gamepad") ?? "NONE"
+              });
+            }
+            else
+            {
+              var defaultValue:Dynamic = Reflect.field(entry, "value");
+              if (defaultValue != null) settings.set(keyName, defaultValue);
+            }
           }
         }
       }
