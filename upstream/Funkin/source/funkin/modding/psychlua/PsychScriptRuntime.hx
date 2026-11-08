@@ -1,6 +1,7 @@
 package funkin.modding.psychlua;
 
 import haxe.Exception;
+import flixel.FlxG;
 import funkin.Conductor;
 import funkin.modding.PsychModRuntime;
 import funkin.modding.PsychModRuntime.PsychScriptSource;
