@@ -70,7 +70,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   var labels:FlxTypedGroup<AtlasText>;
   var currentDevice:Device = Keys;
   var deviceListSelected:Bool = false;
-  var controlsPageWasActive:Bool = false;
   var actionPrevented:Bool = false;
   var novaBeatStyle:Bool = false;
   var novaBeatRows:FlxTypedGroup<FunkinSprite>;
@@ -511,19 +510,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
   override function update(elapsed:Float):Void
   {
-    // Arm the handoff gate when the page becomes visible, not when OptionsState
-    // constructs every Codex page up front. This prevents the Enter/tap that
-    // opens Controls from immediately becoming a key-binding request.
-    if (exists && visible && !controlsPageWasActive)
-    {
-      controlsPageWasActive = true;
-      MenuTypedList.inputHandoffBlocked = true;
-    }
-    else if (!exists || !visible)
-    {
-      controlsPageWasActive = false;
-    }
-
     super.update(elapsed);
 
     var controls = PlayerSettings.player1.controls;
