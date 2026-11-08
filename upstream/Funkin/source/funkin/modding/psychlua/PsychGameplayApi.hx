@@ -1481,6 +1481,17 @@ class PsychGameplayApi
       trace('[Psych API Smoke Test] Missing registrations: ' + missing.join(", "));
       return false;
     }
+
+    var sandboxPassed:Bool = isSafeSaveIdentifier("psych_mod-save")
+      && !isSafeSaveIdentifier("../outside")
+      && resolveSafePsychClass("flixel.FlxSprite") != null
+      && resolveSafePsychClass("sys.io.File") == null
+      && resolveSafePsychClass("openfl.net.URLLoader") == null;
+    if (!sandboxPassed)
+    {
+      trace('[Psych API Smoke Test] A sandbox path or class allowlist check failed.');
+      return false;
+    }
     return true;
   }
 
