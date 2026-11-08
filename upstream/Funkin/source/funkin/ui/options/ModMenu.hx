@@ -511,6 +511,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     }
   }
 
+  inline function mobilePointerOverlaps(sprite:FlxSprite):Bool
+  {
+    if (TouchUtil.overlaps(sprite)) return true;
+    #if web
+    if (DeviceUtil.isMobileBrowser
+      && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
+      return FlxG.mouse.overlaps(sprite);
+    #end
+    return false;
+  }
+
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
@@ -529,7 +540,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // hidden behind the native mobile compile flags. Otherwise the visible
     // BACK target is drawn but can never receive a tap in the web build.
     // Use release-overlap directly; pressAction has a 200ms age filter.
-    if (usesTouchControls && mobileBackButton != null && TouchUtil.justReleased && TouchUtil.overlaps(mobileBackButton))
+    final mobilePointerReleased:Bool = TouchUtil.justReleased
+      || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased);
+    final mobileBackTapped:Bool = mobileBackButton != null
+      && ((TouchUtil.justReleased && TouchUtil.overlaps(mobileBackButton))
+        || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased && FlxG.mouse.overlaps(mobileBackButton)));
+
+    if (usesTouchControls && mobilePointerReleased && mobileBackTapped)
     {
       FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
@@ -544,14 +561,18 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (usesTouchControls)
     {
       var pointer:Dynamic = TouchUtil.touch;
-      if (TouchUtil.justPressed && pointer != null)
+      final mobilePointerPressed:Bool = TouchUtil.justPressed
+        || (DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed);
+      final mobilePointerDown:Bool = TouchUtil.pressed
+        || (DeviceUtil.isMobileBrowser && FlxG.mouse.pressed);
+      if (mobilePointerPressed && pointer != null)
       {
         mobileListDragActive = false;
         mobileListDragMoved = false;
         mobileListDragAccumulator = 0;
         for (background in rowBackgrounds)
         {
-          if (TouchUtil.overlaps(background))
+          if (mobilePointerOverlaps(background))
           {
             mobileListDragActive = true;
             break;
@@ -559,7 +580,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         }
       }
 
-      if (mobileListDragActive && TouchUtil.pressed && pointer != null)
+      if (mobileListDragActive && mobilePointerDown && pointer != null)
       {
         var deltaY:Float = pointer.deltaViewY;
         if (Math.isFinite(deltaY) && Math.abs(deltaY) > 1)
@@ -580,7 +601,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         }
       }
 
-      if (TouchUtil.justReleased && mobileListDragActive)
+      if (mobilePointerReleased && mobileListDragActive)
       {
         listDragReleased = mobileListDragMoved;
         mobileListDragActive = false;
@@ -593,7 +614,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         for (index in 0...touchActionHitboxes.length)
         {
-          if (TouchUtil.justReleased && TouchUtil.overlaps(touchActionHitboxes[index]))
+          if (mobilePointerReleased && mobilePointerOverlaps(touchActionHitboxes[index]))
           {
             performTouchAction(touchActionActions[index]);
             touchActionHandled = true;
@@ -606,7 +627,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         for (index in 0...rowBackgrounds.length)
         {
-          if (TouchUtil.justReleased && TouchUtil.overlaps(rowBackgrounds[index]))
+          if (mobilePointerReleased && mobilePointerOverlaps(rowBackgrounds[index]))
           {
             selectMod(firstVisibleIndex + index, false);
             break;
