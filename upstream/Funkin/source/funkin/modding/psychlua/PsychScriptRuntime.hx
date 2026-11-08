@@ -425,18 +425,22 @@ class PsychScriptRuntime
   {
     var requested:String = normalizeScriptPath(scriptPath);
     if (requested.length == 0) return null;
-    var requestedBase:String = requested.split("/").pop();
+    var matches:Array<PsychScriptInstance> = [];
+    var requestedHasDirectory:Bool = requested.indexOf("/") >= 0;
     for (script in scripts)
     {
       if (script == inlineHScriptBridge || script == inlineLuaBridge) continue;
       if (language != null && script.language != language) continue;
       var loaded:String = normalizeScriptPath(script.sourcePath);
-      var loadedBase:String = loaded.split("/").pop();
-      if (loaded == requested || StringTools.endsWith(loaded, "/" + requested)
-        || loadedBase == requested || loadedBase == requestedBase)
+      if (loaded == requested || StringTools.endsWith(loaded, "/" + requested))
         return script;
+
+      // A bare filename is accepted for Psych's common cross-script helpers,
+      // but only when it identifies exactly one script across enabled mods.
+      if (!requestedHasDirectory && loaded.split("/").pop() == requested)
+        matches.push(script);
     }
-    return null;
+    return matches.length == 1 ? matches[0] : null;
   }
 
   public static function isScriptRunning(scriptPath:String, ?language:String):Bool
