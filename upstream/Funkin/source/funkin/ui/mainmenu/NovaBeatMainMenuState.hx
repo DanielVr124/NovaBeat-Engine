@@ -439,7 +439,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     // Installed-but-inactive Psych packages do not add a menu entry.
     visibleItemIndexes = [0, 1];
-    if (ExperienceManager.getActivePsychSongIds().length > 0)
+    if (ExperienceManager.hasActivePsychSongs())
       visibleItemIndexes.push(2);
     visibleItemIndexes = visibleItemIndexes.concat([3, 4, 5]);
 
@@ -798,7 +798,7 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 2:
           // Re-check at activation time so a stale Psych context cannot open
           // an empty Psych-only playlist.
-          if (ExperienceManager.getActivePsychSongIds().length == 0) return;
+          if (!ExperienceManager.hasActivePsychSongs()) return;
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,
             psychOnly: true

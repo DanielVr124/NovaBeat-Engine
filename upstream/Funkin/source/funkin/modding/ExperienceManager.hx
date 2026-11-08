@@ -129,6 +129,12 @@ class ExperienceManager
 
   public static function getActivePsychSongIds():Array<String> return activePsychSongIds.copy();
 
+  /**
+   * True only when the active experience has at least one imported, launchable
+   * Psych song. Installed or merely enabled packages do not count.
+   */
+  public static function hasActivePsychSongs():Bool return activePsychSongIds.length > 0;
+
   public static function getActivePsychModDirs():Array<String> return activePsychModDirs.copy();
 
   public static function isPsychSong(songId:String):Bool return activePsychSongIds.indexOf(songId) >= 0;
