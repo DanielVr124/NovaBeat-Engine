@@ -121,27 +121,27 @@ class PsychGameplayApi
       return initSaveData(name, folder));
     vars.set("flushSaveData", function(name:String):Bool
     {
-      var save:Null<FlxSave> = activeSaves.get(name);
+      var save:Null<FlxSave> = activeSaves.get(getSaveDataKey(name));
       if (save == null) return false;
       save.flush();
       return true;
     });
     vars.set("getDataFromSave", function(name:String, field:String, ?defaultValue:Dynamic = null):Dynamic
     {
-      var save:Null<FlxSave> = activeSaves.get(name);
+      var save:Null<FlxSave> = activeSaves.get(getSaveDataKey(name));
       if (save == null || field == null || field.length == 0) return defaultValue;
       return Reflect.hasField(save.data, field) ? Reflect.field(save.data, field) : defaultValue;
     });
     vars.set("setDataFromSave", function(name:String, field:String, value:Dynamic):Bool
     {
-      var save:Null<FlxSave> = activeSaves.get(name);
+      var save:Null<FlxSave> = activeSaves.get(getSaveDataKey(name));
       if (save == null || field == null || field.length == 0) return false;
       Reflect.setField(save.data, field, value);
       return true;
     });
     vars.set("eraseSaveData", function(name:String):Bool
     {
-      var save:Null<FlxSave> = activeSaves.get(name);
+      var save:Null<FlxSave> = activeSaves.get(getSaveDataKey(name));
       if (save == null) return false;
       save.erase();
       activeSaves.remove(name);
@@ -2515,18 +2515,24 @@ class PsychGameplayApi
   }
 
   #if (!flash && sys)
+  static function shaderCacheKey(name:String):String
+  {
+    return PsychScriptRuntime.getExecutingScriptModDirectory() + "::" + name;
+  }
+
   static function initLuaShader(name:String, glslVersion:Int):Bool
   {
     if (name == null || StringTools.trim(name).length == 0 || !Preferences.performanceStageShaders) return false;
     var shaderName:String = StringTools.trim(name);
     if (StringTools.endsWith(shaderName.toLowerCase(), ".frag")) shaderName = shaderName.substr(0, shaderName.length - 5);
     if (StringTools.endsWith(shaderName.toLowerCase(), ".vert")) shaderName = shaderName.substr(0, shaderName.length - 5);
-    if (runtimeShaderSources.exists(shaderName)) return true;
+    var key:String = shaderCacheKey(shaderName);
+    if (runtimeShaderSources.exists(key)) return true;
 
     var fragment:Null<PsychScriptSource> = PsychModRuntime.getModFile("shaders/" + shaderName + ".frag");
     if (fragment == null) return false;
     var vertex:Null<PsychScriptSource> = PsychModRuntime.getModFile("shaders/" + shaderName + ".vert");
-    runtimeShaderSources.set(shaderName, [fragment.source, vertex == null ? null : vertex.source]);
+    runtimeShaderSources.set(key, [fragment.source, vertex == null ? null : vertex.source]);
     return true;
   }
 
@@ -2542,11 +2548,12 @@ class PsychGameplayApi
   static function setSpriteShader(state:PlayState, objectPath:String, shaderName:String):Bool
   {
     if (shaderName == null || shaderName.length == 0) return false;
-    if (!runtimeShaderSources.exists(shaderName) && !initLuaShader(shaderName, 120)) return false;
+    var key:String = shaderCacheKey(shaderName);
+    if (!runtimeShaderSources.exists(key) && !initLuaShader(shaderName, 120)) return false;
     var object:Dynamic = getProperty(state, objectPath);
     if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, objectPath);
     if (!Std.isOfType(object, FlxSprite)) return false;
-    var source:Array<String> = runtimeShaderSources.get(shaderName);
+    var source:Array<String> = runtimeShaderSources.get(key);
     try
     {
       (cast object:FlxSprite).shader = new FlxRuntimeShader(source[0], source[1]);
@@ -2572,13 +2579,21 @@ class PsychGameplayApi
     return true;
   }
 
+  static function getSaveDataKey(name:String):String
+  {
+    return PsychScriptRuntime.getExecutingScriptModDirectory() + "::" + name;
+  }
+
   static function initSaveData(name:String, folder:String):Bool
   {
-    if (!isSafeSaveIdentifier(name) || !isSafeSaveIdentifier(folder) || activeSaves.exists(name)) return false;
+    var directory:String = PsychScriptRuntime.getExecutingScriptModDirectory();
+    if (directory.length == 0 || !isSafeSaveIdentifier(name) || !isSafeSaveIdentifier(folder)) return false;
+    var key:String = directory + "::" + name;
+    if (activeSaves.exists(key)) return true;
     var save:FlxSave = new FlxSave();
-    var savePath:String = Constants.SAVE_PATH + "/" + folder;
+    var savePath:String = Constants.SAVE_PATH + "/" + folder + "/" + directory;
     if (!save.bind(name, savePath)) return false;
-    activeSaves.set(name, save);
+    activeSaves.set(key, save);
     return true;
   }
 
