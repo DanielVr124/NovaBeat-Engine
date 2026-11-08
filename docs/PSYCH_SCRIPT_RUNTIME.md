@@ -25,6 +25,7 @@ Supported callbacks currently include:
 - `onUpdate`, `onUpdatePost`
 - `onStepHit`, `onBeatHit`
 - `onCountdownTick`, `onCountdownFinished`
+- `onSongLoaded`, `onEvent`, `onSoundFinished`
 - `onStartCountdown`, `onSongStart`, `onSongEnd`
 - `onPause`, `onResume`, `onGameOver`, `onDestroy`
 - `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onSpawnNote`,
@@ -43,6 +44,8 @@ sustain state, and a live note-group index.
 - `getProperty`, `setProperty`
 - `getPropertyFromClass`, `setPropertyFromClass` for a small class allowlist
 - `getPropertyFromGroup`, `setPropertyFromGroup`
+- `score`, `misses`, `hits`, `combo`, `rating`, and `ratingPercent` map to the
+  live song score/tallies
 - `getVar`, `setVar`, `removeVar`
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
 - `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist
