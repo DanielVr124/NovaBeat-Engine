@@ -104,6 +104,7 @@ sustain state, and a live note-group index.
 - Basic sound playback/control: `playSound`, tagged stop/pause/resume/volume,
   `playMusic`, and `stopMusic` (no arbitrary streaming or external file access)
 - Basic `triggerEvent` handling for camera zoom, screen shake, and set-property
+- Direct camera effects: `cameraShake`, `cameraFlash`, and `cameraFade`
 
 The Lua VM removes its filesystem, OS, package-loading, debug, and garbage
 collector globals. It also provides compatibility aliases for commonly used
