@@ -4,8 +4,11 @@ import haxe.Exception;
 import haxe.io.Path;
 import hscript.SScript;
 import flixel.FlxG;
+import flixel.FlxBasic;
 import flixel.FlxCamera;
+import flixel.FlxObject;
 import flixel.FlxSprite;
+import flixel.math.FlxPoint;
 import flixel.FlxSubState;
 import flixel.text.FlxText;
 import flixel.math.FlxMath;
@@ -106,7 +109,10 @@ class PsychScriptInstance
     // These are the commonly used Psych HScript preset classes. They are
     // bound directly rather than making arbitrary class resolution available.
     runtime.set("FlxG", FlxG);
+    runtime.set("FlxBasic", FlxBasic);
     runtime.set("FlxCamera", FlxCamera);
+    runtime.set("FlxObject", FlxObject);
+    runtime.set("FlxPoint", FlxPoint);
     runtime.set("FlxSprite", FlxSprite);
     runtime.set("FlxText", FlxText);
     runtime.set("FlxSubState", FlxSubState);
