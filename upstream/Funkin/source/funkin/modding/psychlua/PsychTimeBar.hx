@@ -94,7 +94,7 @@ class PsychTimeBar extends FlxSpriteGroup
   {
     if (owner != null)
     {
-      var length:Float = owner.currentSongLengthMs;
+      var length:Float = FlxG.sound.music == null ? 0 : FlxG.sound.music.length;
       var position:Float = Conductor.instance == null ? 0 : Conductor.instance.songPosition;
       percent = length <= 0 ? 0 : Math.max(0, Math.min(1, position / length));
 
