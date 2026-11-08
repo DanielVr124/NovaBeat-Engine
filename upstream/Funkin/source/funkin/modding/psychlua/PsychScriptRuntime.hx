@@ -23,6 +23,7 @@ class PsychScriptRuntime
   static var activeGlobals:Map<String, Dynamic> = [];
   static var inlineHScriptBridge:Null<PsychScriptInstance> = null;
   static var inlineLuaBridge:Null<PsychScriptInstance> = null;
+  static var executingScript:Null<PsychScriptInstance> = null;
   static inline final FUNCTION_STOP:String = "##PSYCHLUA_FUNCTIONSTOP";
   static inline final FUNCTION_CONTINUE:String = "##PSYCHLUA_FUNCTIONCONTINUE";
   static inline final FUNCTION_STOP_LUA:String = "##PSYCHLUA_FUNCTIONSTOPLUA";
@@ -113,6 +114,54 @@ class PsychScriptRuntime
     if (resolved == null) return false;
     setHScriptGlobal(name, resolved);
     return true;
+  }
+
+  /** Close the currently executing mod script, matching Psych's close() helper. */
+  public static function closeCurrentScript():Bool
+  {
+    return executingScript != null && executingScript.close();
+  }
+
+  /** Invoke a script with a scoped current-script context for close/ignoreSelf helpers. */
+  static function callScriptInstance(script:PsychScriptInstance, callback:String, args:Array<Dynamic>):Dynamic
+  {
+    if (script == null || script.closed) return null;
+    var previous:Null<PsychScriptInstance> = executingScript;
+    executingScript = script;
+    var result:Dynamic = callScriptInstance(script, callback, args == null ? [] : args);
+    executingScript = previous;
+    if (script.closed)
+    {
+      scripts.remove(script);
+      customSubstateScripts.remove(script);
+      script.destroy();
+    }
+    return result;
+  }
+
+  static function isExcludedScript(script:PsychScriptInstance, exclusions:Array<String>):Bool
+  {
+    if (exclusions == null || exclusions.length == 0) return false;
+    var path:String = normalizeScriptPath(script.sourcePath);
+    var base:String = path.split("/").pop();
+    for (exclusion in exclusions)
+    {
+      var candidate:String = normalizeScriptPath(exclusion);
+      if (candidate.length == 0) continue;
+      if (candidate == path || StringTools.endsWith(path, "/" + candidate)
+        || (candidate.indexOf("/") < 0 && candidate == base)) return true;
+    }
+    return false;
+  }
+
+  static function isExcludedValue(value:Dynamic, exclusions:Array<Dynamic>):Bool
+  {
+    return exclusions != null && exclusions.indexOf(value) >= 0;
+  }
+
+  public static function getExecutingScriptPath():String
+  {
+    return executingScript == null ? "" : executingScript.sourcePath;
   }
 
   public static function getGlobal(name:String):Dynamic
@@ -371,7 +420,7 @@ class PsychScriptRuntime
     for (script in scripts.copy())
     {
       if (script.language != "lua") continue;
-      var result:Dynamic = script.call(callback, callArgs);
+      var result:Dynamic = callScriptInstance(script, callback, callArgs);
       if (script.lastError != null)
         trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
       results.push(result);
@@ -392,7 +441,7 @@ class PsychScriptRuntime
       for (script in scripts.copy())
       {
         if (script.language != "hscript") continue;
-        var result:Dynamic = script.call(callback, callArgs);
+        var result:Dynamic = callScriptInstance(script, callback, callArgs);
         if (script.lastError != null)
           trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
         results.push(result);
@@ -484,7 +533,7 @@ class PsychScriptRuntime
   {
     var script:Null<PsychScriptInstance> = findScript(scriptPath, language);
     if (script == null) return false;
-    script.call("onDestroy", []);
+    callScriptInstance(script, "onDestroy", []);
     scripts.remove(script);
     customSubstateScripts.remove(script);
     script.destroy();
@@ -496,7 +545,7 @@ class PsychScriptRuntime
     var script:Null<PsychScriptInstance> = findScript(scriptPath);
     if (script == null || callback == null || callback.length == 0) return null;
     updateTimingGlobals();
-    var result:Dynamic = script.call(callback, args == null ? [] : args);
+    var result:Dynamic = callScriptInstance(script, callback, args == null ? [] : args);
     if (script.lastError != null)
       trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
     return result;
@@ -571,68 +620,74 @@ class PsychScriptRuntime
     return dispatchInternal(callback, args).results;
   }
 
-  public static function callOnLuas(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+  public static function callOnLuas(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+      ?exclusions:Array<String>, ?excludeValues:Array<Dynamic>):Dynamic
   {
     updateTimingGlobals();
-    var results:Array<Dynamic> = [];
     var value:Dynamic = FUNCTION_CONTINUE;
+    var resultExclusions:Array<Dynamic> = excludeValues == null ? [FUNCTION_CONTINUE] : excludeValues;
     for (script in scripts.copy())
     {
-      if (script.language != "lua") continue;
-      var result:Dynamic = script.call(callback, args == null ? [] : args);
-      results.push(result);
-      if (result != null && result != FUNCTION_CONTINUE) value = result;
-      if (!ignoreStops && (result == FUNCTION_STOP_LUA || result == FUNCTION_STOP_ALL)) break;
+      if (script.language != "lua" || isExcludedScript(script, exclusions)) continue;
+      var result:Dynamic = callScriptInstance(script, callback, args == null ? [] : args);
+      var excluded:Bool = isExcludedValue(result, resultExclusions);
+      if (result != null && !excluded) value = result;
+      if (!ignoreStops && !excluded && (result == FUNCTION_STOP_LUA || result == FUNCTION_STOP_ALL)) break;
     }
     return value;
   }
 
-  public static function callOnHScript(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+  public static function callOnHScript(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+      ?exclusions:Array<String>, ?excludeValues:Array<Dynamic>):Dynamic
   {
     updateTimingGlobals();
     var value:Dynamic = FUNCTION_CONTINUE;
+    var resultExclusions:Array<Dynamic> = excludeValues == null ? [FUNCTION_CONTINUE] : excludeValues;
     for (script in scripts.copy())
     {
-      if (script.language != "hscript") continue;
-      var result:Dynamic = script.call(callback, args == null ? [] : args);
-      if (result != null && result != FUNCTION_CONTINUE) value = result;
-      if (!ignoreStops && (result == FUNCTION_STOP_HSCRIPT || result == FUNCTION_STOP_ALL)) break;
+      if (script.language != "hscript" || isExcludedScript(script, exclusions)) continue;
+      var result:Dynamic = callScriptInstance(script, callback, args == null ? [] : args);
+      var excluded:Bool = isExcludedValue(result, resultExclusions);
+      if (result != null && !excluded) value = result;
+      if (!ignoreStops && !excluded && (result == FUNCTION_STOP_HSCRIPT || result == FUNCTION_STOP_ALL)) break;
     }
     return value;
   }
 
-  public static function callOnScripts(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+  public static function callOnScripts(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+      ?exclusions:Array<String>, ?excludeValues:Array<Dynamic>):Dynamic
   {
-    var luaResult:Dynamic = callOnLuas(callback, args, ignoreStops);
+    var luaResult:Dynamic = callOnLuas(callback, args, ignoreStops, exclusions, excludeValues);
     if (luaResult == null || luaResult == FUNCTION_CONTINUE)
-      return callOnHScript(callback, args, ignoreStops);
+      return callOnHScript(callback, args, ignoreStops, exclusions, excludeValues);
     return luaResult;
   }
 
-  public static function setOnScripts(name:String, value:Dynamic):Void
+  public static function setOnScripts(name:String, value:Dynamic, ?exclusions:Array<String>):Void
   {
     // setOnScripts updates only the currently loaded interpreters. It must not
     // promote transient script variables into the persistent runtime globals.
-    setOnLuas(name, value);
-    setOnHScript(name, value);
+    setOnLuas(name, value, exclusions);
+    setOnHScript(name, value, exclusions);
   }
 
-  public static function setOnLuas(name:String, value:Dynamic):Void
+  public static function setOnLuas(name:String, value:Dynamic, ?exclusions:Array<String>):Void
   {
-    for (script in scripts)
-      if (script.language == "lua") script.setVariable(name, value);
+    for (script in scripts.copy())
+      if (script.language == "lua" && !isExcludedScript(script, exclusions)) script.setVariable(name, value);
     if (inlineLuaBridge != null) inlineLuaBridge.setVariable(name, value);
   }
 
-  public static function setOnHScript(name:String, value:Dynamic):Void
+  public static function setOnHScript(name:String, value:Dynamic, ?exclusions:Array<String>):Void
   {
-    for (script in scripts)
-      if (script.language == "hscript") script.setVariable(name, value);
+    for (script in scripts.copy())
+      if (script.language == "hscript" && !isExcludedScript(script, exclusions)) script.setVariable(name, value);
     if (inlineHScriptBridge != null) inlineHScriptBridge.setVariable(name, value);
   }
 
   public static function clear():Void
   {
+    executingScript = null;
     for (script in scripts)
       script.destroy();
     scripts.resize(0);
