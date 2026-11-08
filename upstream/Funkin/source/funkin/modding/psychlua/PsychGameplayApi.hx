@@ -2436,11 +2436,12 @@ class PsychGameplayApi
       return ["shake", "flash", "fade", "follow", "focusOn"].contains(methodName);
     if (Std.isOfType(target, FlxTimer)) return ["start", "cancel"].contains(methodName);
     if (Std.isOfType(target, FlxTween)) return ["cancel"].contains(methodName);
-    if (Std.isOfType(target, FlxBasic)) return ["kill", "destroy", "reset"].contains(methodName);
     if (Std.isOfType(target, PlayState))
       return ["startCountdown", "endSong", "pause", "resume", "triggerEvent"].contains(methodName);
+    // FlxTypedGroup is a FlxBasic, so its group operations must be checked first.
     if (Reflect.field(target, "members") != null)
       return ["add", "remove", "insert", "clear"].contains(methodName);
+    if (Std.isOfType(target, FlxBasic)) return ["kill", "destroy", "reset"].contains(methodName);
     return false;
   }
 
