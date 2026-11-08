@@ -355,6 +355,60 @@ class PsychModRuntime
     return result;
   }
 
+  /**
+   * Resolve one additional script requested at runtime by Psych's addLuaScript /
+   * addHScript helpers. Only files inside an enabled Psych package are eligible;
+   * path traversal and absolute paths are rejected.
+   */
+  public static function getScriptSource(modDirs:Array<String>, requestedPath:String):Null<PsychScriptSource>
+  {
+    if (requestedPath == null || StringTools.trim(requestedPath).length == 0) return null;
+    #if sys
+    var relative:String = StringTools.replace(StringTools.trim(requestedPath), "\\", "/");
+    while (StringTools.startsWith(relative, "/")) relative = relative.substr(1);
+    if (StringTools.startsWith(relative.toLowerCase(), "mods/"))
+    {
+      var parts:Array<String> = relative.split("/");
+      if (parts.length > 2) relative = parts.slice(2).join("/");
+    }
+    for (part in relative.split("/"))
+      if (part == ".." || part == ".") return null;
+
+    var candidates:Array<String> = [];
+    if (StringTools.startsWith(relative.toLowerCase(), "scripts/"))
+      candidates.push(relative);
+    else
+      candidates.push(Path.join(["scripts", relative]));
+
+    var root:String = PolymodHandler.getModRoot();
+    for (directory in (modDirs == null ? [] : modDirs))
+    {
+      var modPath:String = Path.normalize(Path.join([root, directory]));
+      if (!isPsychDirectory(modPath)) continue;
+      for (candidate in candidates)
+      {
+        var filePath:String = Path.normalize(Path.join([modPath, candidate]));
+        var prefix:String = modPath;
+        if (!StringTools.endsWith(prefix, "/")) prefix += "/";
+        if (!StringTools.startsWith(filePath, prefix)) continue;
+        if (!FileSystem.exists(filePath) || FileSystem.isDirectory(filePath)) continue;
+        var extension:String = Path.extension(filePath).toLowerCase();
+        if (extension != "lua" && extension != "hx" && extension != "hscript") continue;
+        try
+        {
+          return {path: filePath, source: File.getContent(filePath)};
+        }
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not read requested script ' + filePath + ': ' + Std.string(error));
+          return null;
+        }
+      }
+    }
+    #end
+    return null;
+  }
+
   public static function prepareSongCharacters(modDirs:Array<String>, songId:String,
       characters:Null<SongCharacterData>):Void
   {
