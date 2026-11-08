@@ -23,7 +23,7 @@ Psych Engine and not yet compatible with every Psych mod.
 Supported callbacks currently include:
 - `onCreate`, `onCreatePost`
 - `onUpdate`, `onUpdatePost`
-- `onStepHit`, `onBeatHit`
+- `onStepHit`, `onBeatHit`, `onSectionHit`
 - `onCountdownTick`, `onCountdownFinished`
 - `onSongLoaded`, `onEvent`, `onSoundFinished`
 - `onStartCountdown`, `onSongStart`, `onSongEnd`

@@ -233,6 +233,7 @@ class PsychScriptRuntime
     setGlobal("songPosition", Conductor.instance.songPosition);
     setGlobal("curDecStep", Conductor.instance.currentStepTime);
     setGlobal("curDecBeat", Conductor.instance.currentBeatTime);
+    setGlobal("curSection", Std.int(Math.floor(Conductor.instance.currentStep / 16)));
     setGlobal("curBpm", Conductor.instance.bpm);
     setGlobal("bpm", Conductor.instance.bpm);
     setGlobal("crochet", Conductor.instance.beatLengthMs);

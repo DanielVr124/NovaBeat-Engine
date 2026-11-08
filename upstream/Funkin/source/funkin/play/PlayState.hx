@@ -2022,6 +2022,8 @@ class PlayState extends MusicBeatSubState
     playerStrumline.noteVibrations.tryHoldNoteVibration();
 
     PsychScriptRuntime.dispatch("onStepHit", []);
+    if (Conductor.instance.currentStep % 16 == 0)
+      PsychScriptRuntime.dispatch("onSectionHit", [Std.int(Conductor.instance.currentStep / 16)]);
     return true;
   }
 
