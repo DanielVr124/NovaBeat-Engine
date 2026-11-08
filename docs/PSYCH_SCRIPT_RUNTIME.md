@@ -11,8 +11,9 @@ Psych Engine and not yet compatible with every Psych mod.
 - Lua uses hxvm-lua with native Lua on C++ targets; the HTML5 build includes
   Fengari. The mod-folder loader itself is currently native-only.
 - HScript uses SScript, with a bounded instruction/time budget and a small,
-  explicit set of common Psych HScript globals (FlxG, FlxSprite, FlxTween,
-  FlxTimer, FlxColor, Paths, Conductor, PlayState, Character, and Note).
+  explicit set of common Psych HScript globals (FlxG, FlxSprite, FlxText,
+  FlxSubState, FlxTween, FlxTimer, FlxColor, Paths, Conductor, PlayState,
+  Character, and Note).
 - Global scripts load from each selected Psych package's `scripts/` folder.
   Matching chart-referenced stage scripts (`stages/<stage>`), character scripts
   (`characters/<id>`), custom-event scripts (`custom_events/<event>`), and
@@ -58,6 +59,9 @@ sustain state, and a live note-group index.
   live song score/tallies
 - `getVar`, `setVar`, `removeVar`
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
+- Basic keyboard and mouse state/position queries: `keyboardJustPressed`,
+  `keyboardPressed`, `keyboardReleased`, `mouseClicked`, `mousePressed`,
+  `mouseReleased`, `getMouseX`, and `getMouseY`
 - `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
   for basic cross-language code and function calls
@@ -102,8 +106,8 @@ The current tier still does not support:
 - The complete Psych HScript preset/class registry and exact global-sharing
   semantics between every version of Lua and HScript.
 - Advanced sound features (voice channels, audio time/volume queries, sound
-  fading/filters), shader, input, dialogue, cutscene, save-data, and
-  mod-setting APIs.
+  fading/filters), shaders, gamepad/action bindings, dialogue, cutscene,
+  save-data, and mod-setting APIs.
 - Every version-specific legacy API and extension used by arbitrary mods.
 - HTML5 local-mod discovery and launching.
 
