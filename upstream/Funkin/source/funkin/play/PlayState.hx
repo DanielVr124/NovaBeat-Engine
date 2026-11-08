@@ -959,10 +959,12 @@ class PlayState extends MusicBeatSubState
     // Load Psych scripts before note/event generation. This lets
     // eventEarlyTrigger and onEventPushed run while chart events are built.
     var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
-    PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this);
+    PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this, true);
 
-    // Read the song's note data and pass it to the strumlines.
+    // Read the song's note data and pass it to the strumlines. Psych chart-event
+    // hooks run during this step, after all matching scripts have been loaded.
     generateSong();
+    PsychScriptRuntime.dispatchLoadedCallbacks();
 
     // Reset the camera's zoom and force it to focus on the camera follow point.
     resetCamera();
