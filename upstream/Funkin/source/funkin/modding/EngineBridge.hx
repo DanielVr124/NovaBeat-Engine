@@ -12,6 +12,9 @@ import sys.io.File;
  *
  * NovaBeat is V-Slice-based, so V-Slice content uses the native runtime.
  * There is deliberately no second V-Slice adapter.
+ *
+ * Psych package identification is version-agnostic. Exact version labels are
+ * shown only when a package explicitly declares its Psych Engine version.
  */
 class EngineBridge
 {
