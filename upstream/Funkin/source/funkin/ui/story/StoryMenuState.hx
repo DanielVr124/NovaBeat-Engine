@@ -161,7 +161,9 @@ class StoryMenuState extends MusicBeatState
     updateData();
 
     levelTitles = new FlxTypedGroup<LevelTitle>();
-    levelTitles.zIndex = 15;
+    // The original FNF black panel sits at zIndex 99. Keep its week artwork
+    // above the panel in FNF mode, while preserving NovaBeat's own layering.
+    levelTitles.zIndex = Preferences.menuStyle == "NovaBeat" ? 15 : 101;
     add(levelTitles);
 
     updateBackground();
