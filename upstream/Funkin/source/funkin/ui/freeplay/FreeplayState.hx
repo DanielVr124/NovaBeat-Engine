@@ -1780,20 +1780,61 @@ class FreeplayState extends MusicBeatSubState
   // Freeplay uses the original FNF touch/swipe helpers in both menu themes.
   inline function menuPointer():Dynamic return TouchUtil.touch;
 
-  inline function menuTouchJustPressed():Bool return TouchUtil.justPressed;
+  inline function menuTouchJustPressed():Bool
+  {
+    #if web
+    return TouchUtil.justPressed || (DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed);
+    #else
+    return TouchUtil.justPressed;
+    #end
+  }
 
-  inline function menuTouchJustReleased():Bool return TouchUtil.justReleased;
+  inline function menuTouchJustReleased():Bool
+  {
+    #if web
+    return TouchUtil.justReleased || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased);
+    #else
+    return TouchUtil.justReleased;
+    #end
+  }
 
-  inline function menuTouchPressed():Bool return TouchUtil.pressed;
+  inline function menuTouchPressed():Bool
+  {
+    #if web
+    return TouchUtil.pressed || (DeviceUtil.isMobileBrowser && FlxG.mouse.pressed);
+    #else
+    return TouchUtil.pressed;
+    #end
+  }
 
   inline function menuTouchOverlaps(object:FlxBasic, ?camera:FlxCamera):Bool
-    return TouchUtil.overlaps(object, camera);
+  {
+    if (TouchUtil.overlaps(object, camera)) return true;
+    #if web
+    if (DeviceUtil.isMobileBrowser
+      && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
+      return FlxG.mouse.overlaps(cast object, camera);
+    #end
+    return false;
+  }
 
   inline function menuTouchOverlapsComplex(object:FlxObject, ?camera:FlxCamera):Bool
     return TouchUtil.overlapsComplex(object, camera);
 
   inline function menuTouchPressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
-    return TouchUtil.pressAction(object, camera, useOverlapsComplex);
+  {
+    if (TouchUtil.pressAction(object, camera, useOverlapsComplex)) return true;
+    #if web
+    // A few mobile browsers deliver the release only through FlxMouse after
+    // removing the FlxTouch object. Preserve taps on the same mobile hitboxes.
+    if (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased)
+    {
+      if (object == null) return true;
+      return FlxG.mouse.overlaps(cast object, camera);
+    }
+    #end
+    return false;
+  }
 
   inline function menuSwipeAny():Bool return SwipeUtil.swipeAny;
 
@@ -2107,7 +2148,10 @@ class FreeplayState extends MusicBeatSubState
     if (diffSelRight == null) return;
     if (menuTouchPressAction() && _moveLength <= 0
       && (menuPointer()?.ticksDeltaSincePress ?? 0) < 500
-      && !menuPointerJustSwipedAny() && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
+      && !menuPointerJustSwipedAny()
+      && !menuTouchOverlaps(diffSelLeft, funnyCam)
+      && !menuTouchOverlaps(diffSelRight, funnyCam)
+      && !draggingDifficulty)
     {
       curSelected = Math.round(curSelectedFloat);
 
@@ -2173,7 +2217,7 @@ class FreeplayState extends MusicBeatSubState
     // as a complete song selection.
     final scrollPixelsPerSong:Float = Math.max(128, FlxG.height * 0.30);
     #if web
-    if (DeviceUtil.isMobileBrowser && FlxG.touches.list.length == 0)
+    if (DeviceUtil.isMobileBrowser)
     {
       final pointer = menuPointer();
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
@@ -2207,6 +2251,9 @@ class FreeplayState extends MusicBeatSubState
 
     for (touch in FlxG.touches.list)
     {
+      #if web
+      if (DeviceUtil.isMobileBrowser) break;
+      #end
       if (touch.pressed && _pressedOnCapsule)
       {
         // deltaViewY is already a per-frame pixel delta. Browser touch input
