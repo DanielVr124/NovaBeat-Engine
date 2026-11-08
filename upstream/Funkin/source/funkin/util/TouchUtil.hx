@@ -144,7 +144,11 @@ class TouchUtil
    */
   public static function pressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
   {
-    if (TouchUtil.touch == null || (TouchUtil.touch != null && TouchUtil.touch.ticksDeltaSincePress > 200)) return false;
+    // A touch is a click when it is released over the target. Do not impose
+    // a 200 ms press limit here: slow mobile frames and accessibility taps can
+    // exceed that duration even when the gesture is not a drag. Scroll/swipe
+    // callers already reject completed swipe gestures at their own boundaries.
+    if (TouchUtil.touch == null) return false;
 
     if (object == null && camera == null)
     {
