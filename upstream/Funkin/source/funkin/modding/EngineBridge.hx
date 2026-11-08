@@ -286,7 +286,12 @@ class EngineBridge
       if (containsPsychScript(Path.join([root, folder]), 4)) return true;
     }
 
-    return hasPsychChartMarkers(root);
+    // Asset-only packages can still be recognized from Psych's distinctive
+    // week, character, and stage JSON schemas even without any scripts/charts.
+    return hasPsychChartMarkers(root)
+      || hasPsychWeekMarkers(root)
+      || hasPsychCharacterMarkers(root)
+      || hasPsychStageMarkers(root);
   }
 
   /**
@@ -344,6 +349,98 @@ class EngineBridge
       }
     }
 
+    return false;
+  }
+
+
+  /**
+   * Psych week files have a distinctive schema containing songs,
+   * weekCharacters, and weekName.
+   */
+  static function hasPsychWeekMarkers(root:String):Bool
+  {
+    var path:String = Path.join([root, "weeks"]);
+    if (!FileSystem.exists(path) || !FileSystem.isDirectory(path)) return false;
+
+    for (fileName in FileSystem.readDirectory(path))
+    {
+      if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+      try
+      {
+        var parsed:Dynamic = Json.parse(File.getContent(Path.join([path, fileName])));
+        var songs:Dynamic = Reflect.field(parsed, "songs");
+        var weekCharacters:Dynamic = Reflect.field(parsed, "weekCharacters");
+        var weekName:Dynamic = Reflect.field(parsed, "weekName");
+        if (Std.isOfType(songs, Array) && Std.isOfType(weekCharacters, Array)
+          && weekName != null && Std.isOfType(weekName, String))
+          return true;
+      }
+      catch (error:Dynamic)
+      {
+        // Ignore malformed or unrelated JSON files.
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Psych character JSONs use animations, image, healthicon, and
+   * healthbar_colors fields. Requiring the combination avoids matching
+   * ordinary character metadata from other engines.
+   */
+  static function hasPsychCharacterMarkers(root:String):Bool
+  {
+    var path:String = Path.join([root, "characters"]);
+    if (!FileSystem.exists(path) || !FileSystem.isDirectory(path)) return false;
+
+    for (fileName in FileSystem.readDirectory(path))
+    {
+      if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+      try
+      {
+        var parsed:Dynamic = Json.parse(File.getContent(Path.join([path, fileName])));
+        var animations:Dynamic = Reflect.field(parsed, "animations");
+        var image:Dynamic = Reflect.field(parsed, "image");
+        var healthIcon:Dynamic = Reflect.field(parsed, "healthicon");
+        var healthColors:Dynamic = Reflect.field(parsed, "healthbar_colors");
+        if (Std.isOfType(animations, Array) && image != null && Std.isOfType(image, String)
+          && healthIcon != null && Std.isOfType(healthIcon, String)
+          && Std.isOfType(healthColors, Array))
+          return true;
+      }
+      catch (error:Dynamic)
+      {
+        // Ignore malformed or unrelated JSON files.
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Psych stage JSONs use defaultZoom and character spawn-position arrays.
+   */
+  static function hasPsychStageMarkers(root:String):Bool
+  {
+    var path:String = Path.join([root, "stages"]);
+    if (!FileSystem.exists(path) || !FileSystem.isDirectory(path)) return false;
+
+    for (fileName in FileSystem.readDirectory(path))
+    {
+      if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+      try
+      {
+        var parsed:Dynamic = Json.parse(File.getContent(Path.join([path, fileName])));
+        var defaultZoom:Dynamic = Reflect.field(parsed, "defaultZoom");
+        var boyfriend:Dynamic = Reflect.field(parsed, "boyfriend");
+        var opponent:Dynamic = Reflect.field(parsed, "opponent");
+        if (defaultZoom != null && Std.isOfType(boyfriend, Array) && Std.isOfType(opponent, Array))
+          return true;
+      }
+      catch (error:Dynamic)
+      {
+        // Ignore malformed or unrelated JSON files.
+      }
+    }
     return false;
   }
 
