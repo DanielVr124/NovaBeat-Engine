@@ -68,7 +68,7 @@ The inline Haxe/Lua helper interpreters are separate from loaded mod scripts: th
 - Named custom substate helpers: `openCustomSubstate`, `closeCustomSubstate`, `insertToCustomSubstate`.
 - Audio: `playSound`, tagged stop/pause/resume/volume, `playMusic`, `stopMusic`, `getSoundVolume/Time/Pitch`, `setSoundTime/Pitch`, `soundFadeIn/Out/Cancel`, `musicFadeIn/Out`, and `luaSoundExists`.
 - Asset helpers: `precacheImage`, `precacheSound`, `precacheMusic`.
-- Song flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), and `startVideo` (uses the platform's existing video player).
+- Song flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), and `startVideo` (uses the platform's existing video player with the default start-cutscene flow; Psych's optional mid-song/loop/skip controls are not mapped).
 
 The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The two unimplemented standard callbacks are `startDialogue` (Psych's legacy dialogue JSON/renderer) and `setTimeBarColors` (NovaBeat's current gameplay HUD has no Psych-style time bar). This callback count is a registration comparison, not a claim of perfect semantic parity.
 
@@ -85,7 +85,7 @@ The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123**
 
 The Lua VM removes filesystem, OS, package-loading, debug, and garbage-collector entry points. Common Lua 5.1/LuaJIT aliases (`unpack`, `loadstring`, `string.gfind`, `math.mod`, `math.atan2`, and `table.maxn`) are supplied where missing. This does not make Fengari a complete LuaJIT replacement.
 
-A successful script parse, API registration smoke test, or compile does not prove that a representative mod plays correctly. Real-mod validation is still required.
+A successful script parse, API registration smoke test, or compile does not prove that a representative mod plays correctly. Real-mod validation is still required. The API comparison does not measure signature parity, event ordering for every edge case, asset compatibility, or whether a mod-specific chart behaves identically to Psych.
 
 ## Debug smoke test
 
