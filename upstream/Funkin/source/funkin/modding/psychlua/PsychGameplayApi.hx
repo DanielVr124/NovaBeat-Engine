@@ -3,6 +3,7 @@ package funkin.modding.psychlua;
 import flixel.FlxG;
 import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
+import funkin.play.cutscene.VideoCutscene;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxObject;
@@ -407,6 +408,20 @@ class PsychGameplayApi
       FlxG.sound.playMusic(Paths.music("freakyMenu"), 1, true);
       FlxG.switchState(() -> new FreeplayState());
       return true;
+    });
+    vars.set("startVideo", function(videoFile:String):Bool
+    {
+      if (videoFile == null || StringTools.trim(videoFile).length == 0) return false;
+      try
+      {
+        VideoCutscene.play(Paths.videos(StringTools.trim(videoFile)));
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] startVideo(' + videoFile + ') failed: ' + Std.string(error));
+        return false;
+      }
     });
     vars.set("setRatingPercent", function(value:Float):Void PsychScriptRuntime.setGlobal("ratingPercent", value));
     vars.set("setRatingName", function(value:String):Void PsychScriptRuntime.setGlobal("ratingName", value));
