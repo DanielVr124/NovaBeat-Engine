@@ -456,9 +456,11 @@ class StoryMenuState extends MusicBeatState
     highScoreLerp = Std.int(MathUtil.snap(MathUtil.smoothLerpPrecision(highScoreLerp, highScore, elapsed, 0.307), highScore, 1));
 
     var commaSeparated:Bool = true;
-    scoreText.text = 'LEVEL SCORE: ${FlxStringUtil.formatMoney(highScoreLerp, false, commaSeparated)}';
+    var scoreTextValue:String = 'LEVEL SCORE: ${FlxStringUtil.formatMoney(highScoreLerp, false, commaSeparated)}';
+    if (scoreText.text != scoreTextValue) scoreText.text = scoreTextValue;
 
-    levelTitleText.text = currentLevel.getTitle();
+    var levelTitleValue:String = currentLevel.getTitle();
+    if (levelTitleText.text != levelTitleValue) levelTitleText.text = levelTitleValue;
 
     // The portrait NovaBeat layout deliberately uses a full-width centered
     // field. Preserve that anchor every frame instead of snapping it back to
