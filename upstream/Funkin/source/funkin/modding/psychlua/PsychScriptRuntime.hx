@@ -760,11 +760,12 @@ class PsychScriptRuntime
     {
       closeScript = new PsychScriptInstance(
         "novabeat-close-smoke-test.hx",
-        "function closeAndReturn() { close(); return 23; }",
+        "function closeAndReturn() { close(); return 23; } function shouldNotRun() { return 99; }",
         ["close" => function():Bool return PsychScriptRuntime.closeCurrentScript()]
       );
       var closeResult:Dynamic = callScriptInstance(closeScript, "closeAndReturn", []);
-      closePassed = closeResult == 23 && closeScript.closed && closeScript.lastError == null;
+      closePassed = closeResult == 23 && closeScript.closed
+        && closeScript.call("shouldNotRun", []) == null && closeScript.lastError == null;
       if (!closePassed)
         trace('[Psych Script Runtime] close() smoke test did not close the current script after its callback returned.');
     }
