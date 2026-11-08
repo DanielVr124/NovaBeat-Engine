@@ -40,7 +40,7 @@ class EngineBridge
     // A version-only field is treated as a Psych declaration only when its
     // key explicitly names Psych. Generic "version" fields describe the mod,
     // not necessarily the engine, and must not be mistaken for engine versions.
-    var psychVersion:Null<String> = findPsychVersion(engineValue, [novaBeatMetadata, polymodMetadata, packageMetadata]);
+    var psychVersion:Null<String> = findPsychVersion(engineValue, [novaBeatMetadata, polymodMetadata, packageMetadata], explicitlyPsych);
     var isPsych:Bool = explicitlyPsych || psychVersion != null || hasPsychMarkers(modPath);
 
     if (isPsych)
@@ -137,35 +137,46 @@ class EngineBridge
     return null;
   }
 
-  static function findPsychVersion(engineValue:Dynamic, metadataSources:Array<Dynamic>):Null<String>
+  static function findPsychVersion(
+    engineValue:Dynamic,
+    metadataSources:Array<Dynamic>,
+    explicitlyPsych:Bool
+  ):Null<String>
   {
-    // Structured engine declarations can carry their own version.
+    var psychVersionFields:Array<String> = [
+      "psychEngineVersion",
+      "psych_engine_version",
+      "psychVersion",
+      "psych_version"
+    ];
+    var generalVersionFields:Array<String> = ["version", "engineVersion", "engine_version"];
+
+    // A structured engine declaration may use a generic version field, but
+    // only when its ID/name explicitly identifies Psych Engine.
     if (engineValue != null && !Std.isOfType(engineValue, String))
     {
-      var nestedVersion:Null<String> = firstString(engineValue, ["version", "engineVersion", "engine_version", "psychEngineVersion", "psych_engine_version"]);
+      var nestedId:Null<String> = firstString(engineValue, ["id", "name", "engineId", "engine_id"]);
+      var nestedIsPsych:Bool = explicitlyPsych || (nestedId != null && nestedId.toLowerCase().indexOf("psych") >= 0);
+      var nestedVersion:Null<String> = firstString(engineValue,
+        nestedIsPsych ? generalVersionFields.concat(psychVersionFields) : psychVersionFields);
       if (nestedVersion != null) return normalizeVersion(nestedVersion);
     }
 
     // String declarations may include a version, e.g. "Psych Engine v0.7.3".
     var engineText:Null<String> = asString(engineValue);
-    if (engineText != null)
+    if (engineText != null && (explicitlyPsych || engineText.toLowerCase().indexOf("psych") >= 0))
     {
       var parsedEngineVersion:Null<String> = extractVersion(engineText);
       if (parsedEngineVersion != null) return parsedEngineVersion;
     }
 
-    // Accept explicit Psych-specific version keys from common package
-    // metadata files. Do not consume a generic "version" (usually mod version).
-    var versionFields:Array<String> = [
-      "psychEngineVersion",
-      "psych_engine_version",
-      "psychVersion",
-      "psych_version",
-    ];
     for (source in metadataSources)
     {
       if (source == null) continue;
-      var direct:Null<String> = firstString(source, versionFields);
+
+      // Explicit Psych-specific version keys are safe even when a separate
+      // engine declaration is absent.
+      var direct:Null<String> = firstString(source, psychVersionFields);
       if (direct != null)
       {
         var parsed:Null<String> = extractVersion(direct);
@@ -175,13 +186,24 @@ class EngineBridge
       var engine:Dynamic = Reflect.field(source, "engine");
       if (engine != null && !Std.isOfType(engine, String))
       {
-        var nested:Null<String> = firstString(engine, ["version", "engineVersion", "engine_version", "psychEngineVersion", "psych_engine_version"]);
+        var nestedId:Null<String> = firstString(engine, ["id", "name", "engineId", "engine_id"]);
+        var nestedIsPsych:Bool = explicitlyPsych || (nestedId != null && nestedId.toLowerCase().indexOf("psych") >= 0);
+        var nested:Null<String> = firstString(engine,
+          nestedIsPsych ? generalVersionFields.concat(psychVersionFields) : psychVersionFields);
         if (nested != null) return normalizeVersion(nested);
       }
+
+      // Some manifests declare "engine": "Psych Engine" and place the
+      // corresponding version beside it as "engineVersion".
+      if (explicitlyPsych)
+      {
+        var declaredEngineVersion:Null<String> = firstString(source, ["engineVersion", "engine_version"]);
+        if (declaredEngineVersion != null) return normalizeVersion(declaredEngineVersion);
+      }
     }
+
     return null;
   }
-
   static function normalizeVersion(value:String):String
   {
     var parsed:Null<String> = extractVersion(value);
