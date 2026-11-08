@@ -213,12 +213,16 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function cycleControlScheme(direction:Int):Void
   {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     var currentIndex:Int = CONTROL_SCHEMES.indexOf(Preferences.controlsScheme);
     if (currentIndex < 0) currentIndex = 0;
     var nextIndex:Int = (currentIndex + direction + CONTROL_SCHEMES.length) % CONTROL_SCHEMES.length;
     Preferences.controlsScheme = CONTROL_SCHEMES[nextIndex];
     updateValues();
     statusText.text = "CONTROL LAYOUT SAVED • APPLIES WHEN THE NEXT SONG STARTS";
+    #else
+    statusText.text = "MOBILE CONTROL LAYOUTS ARE UNAVAILABLE IN THIS BUILD";
+    #end
   }
 
   function toggleOrientationLock():Void
@@ -246,9 +250,15 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function updateValues():Void
   {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     var schemeIndex:Int = CONTROL_SCHEMES.indexOf(Preferences.controlsScheme);
     if (schemeIndex < 0) schemeIndex = 0;
     valueLabels[0].text = CONTROL_SCHEMES[schemeIndex].toUpperCase();
+    valueLabels[0].color = novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE;
+    #else
+    valueLabels[0].text = "MOBILE ONLY";
+    valueLabels[0].color = FlxColor.GRAY;
+    #end
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     var enabled:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
