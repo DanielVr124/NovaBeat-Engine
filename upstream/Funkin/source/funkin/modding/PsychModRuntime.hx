@@ -296,6 +296,129 @@ class PsychModRuntime
   }
 
   /**
+   * Resolve a relative path inside one enabled Psych mod folder. Absolute
+   * paths, traversal segments, and paths escaping the package root are rejected.
+   */
+  #if sys
+  static function resolvePsychModPath(modDirectory:String, relativePath:String):Null<String>
+  {
+    if (modDirectory == null || modDirectory.length == 0 || relativePath == null || relativePath.length == 0)
+      return null;
+    if (modDirectory.indexOf("/") >= 0 || modDirectory.indexOf("\\") >= 0
+      || modDirectory == "." || modDirectory == "..") return null;
+
+    var relative:String = StringTools.replace(StringTools.trim(relativePath), "\\", "/");
+    if (StringTools.startsWith(relative, "/") || (relative.length > 1 && relative.charAt(1) == ":")) return null;
+    for (part in relative.split("/"))
+      if (part == "." || part == ".." || part.length == 0) return null;
+
+    var base:String = Path.normalize(Path.join([PolymodHandler.getModRoot(), modDirectory]));
+    var prefix:String = StringTools.endsWith(base, "/") ? base : base + "/";
+    var resolved:String = Path.normalize(Path.join([base, relative]));
+    return StringTools.startsWith(resolved, prefix) ? resolved : null;
+  }
+
+  static function createPsychDirectory(path:String):Bool
+  {
+    if (FileSystem.exists(path)) return FileSystem.isDirectory(path);
+    var parent:String = Path.directory(path);
+    if (parent != null && parent != path && parent.length > 0 && !createPsychDirectory(parent)) return false;
+    try
+    {
+      FileSystem.createDirectory(path);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      return false;
+    }
+  }
+  #end
+
+  /** Read a file only from the currently executing script's owning mod. */
+  public static function getModFile(relativePath:String):Null<PsychScriptSource>
+  {
+    #if sys
+    var directory:String = PsychScriptRuntime.getExecutingScriptModDirectory();
+    var path:Null<String> = resolvePsychModPath(directory, relativePath);
+    if (path == null || !FileSystem.exists(path) || FileSystem.isDirectory(path)) return null;
+    try return {path: path, source: File.getContent(path)} catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not read mod file ' + path + ': ' + Std.string(error));
+      return null;
+    }
+    #else
+    return null;
+    #end
+  }
+
+  /** Write only within the active Psych mod package; never to absolute paths. */
+  public static function saveModFile(relativePath:String, content:String):Bool
+  {
+    #if sys
+    var path:Null<String> = resolvePsychModPath(PsychScriptRuntime.getExecutingScriptModDirectory(), relativePath);
+    if (path == null || content == null) return false;
+    try
+    {
+      var parent:String = Path.directory(path);
+      if (!createPsychDirectory(parent)) return false;
+      File.saveContent(path, content);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not save mod file ' + relativePath + ': ' + Std.string(error));
+      return false;
+    }
+    #else
+    return false;
+    #end
+  }
+
+  /** Delete only a relative file inside the active Psych mod package. */
+  public static function deleteModFile(relativePath:String):Bool
+  {
+    #if sys
+    var path:Null<String> = resolvePsychModPath(PsychScriptRuntime.getExecutingScriptModDirectory(), relativePath);
+    if (path == null || !FileSystem.exists(path) || FileSystem.isDirectory(path)) return false;
+    try
+    {
+      FileSystem.deleteFile(path);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not delete mod file ' + relativePath + ': ' + Std.string(error));
+      return false;
+    }
+    #else
+    return false;
+    #end
+  }
+
+  /** List immediate entries of a relative directory inside the active mod. */
+  public static function listModDirectory(relativePath:String):Array<String>
+  {
+    #if sys
+    var requested:String = relativePath == null || StringTools.trim(relativePath).length == 0 ? "data" : relativePath;
+    var directory:Null<String> = resolvePsychModPath(PsychScriptRuntime.getExecutingScriptModDirectory(), requested);
+    if (directory == null || !FileSystem.exists(directory) || !FileSystem.isDirectory(directory)) return [];
+    try
+    {
+      var result:Array<String> = FileSystem.readDirectory(directory);
+      result.sort(Reflect.compare);
+      return result;
+    }
+    catch (error:Dynamic)
+    {
+      return [];
+    }
+    #else
+    return [];
+    #end
+  }
+
+  /**
    * Resolve a file from the owning Psych package (for example
    * images/dialogue/bf.json). It does not search outside that package.
    */
