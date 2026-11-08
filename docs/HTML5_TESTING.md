@@ -43,3 +43,9 @@ When reporting results, include:
 - Which control scheme was selected.
 - Whether the problem happens before a song, during countdown, or after notes/characters start moving.
 - Any browser console error or crash message, if available.
+
+## Matching native-build source snapshot
+
+- The HTML5 companion build is requested against the same NovaBeat engine source snapshot as Windows commit `6269ee8c1c50bb4d805010c510245d5dd041dbed`.
+- The build-trigger commit changes this checklist only; no engine or asset source is changed by the trigger.
+- The Windows build remains the required target for testing locally installed Psych mods because browser security prevents local mod-folder discovery.
