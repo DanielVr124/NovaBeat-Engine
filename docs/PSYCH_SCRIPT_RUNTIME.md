@@ -85,7 +85,7 @@ sustain state, and a live note-group index.
   `setTextString`, `setTextSize`, `setTextColor`, `setTextFont`,
   `setTextAlignment`, and `setTextBorder`
 - Named custom substate helpers: `openCustomSubstate`, `closeCustomSubstate`,
-  and `insertToCustomSubstate`
+  and `insertToCustomSubstate`; transferred sprite tags are released when the substate closes
 - Basic sound playback/control: `playSound`, tagged stop/pause/resume/volume,
   `playMusic`, and `stopMusic` (no arbitrary streaming or external file access)
 - Basic `triggerEvent` handling for camera zoom, screen shake, and set-property

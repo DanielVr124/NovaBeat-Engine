@@ -35,6 +35,9 @@ class PsychGameplayApi
   static final activeTweens:Map<String, FlxTween> = [];
   static final activeTimers:Map<String, FlxTimer> = [];
   static final scriptVariables:Map<String, Dynamic> = [];
+  // Keep tags for objects transferred into a custom substate so their stale
+  // script-variable references can be released when that substate closes.
+  static final customSubstateObjects:Map<String, FlxSprite> = [];
   static final activeSounds:Map<String, FlxSound> = [];
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
@@ -633,21 +636,35 @@ class PsychGameplayApi
     if (activeCustomSubstate == null) return false;
     var object:Null<FlxSprite> = getSprite(state, tag);
     if (object == null) return false;
+
+    // A sprite should belong to either the main PlayState or the custom
+    // substate, never both. Remove it from both groups before reinserting so
+    // repeated calls cannot leave duplicate members behind.
+    state.remove(object, false);
+    activeCustomSubstate.remove(object, false);
     if (position < 0 || position >= activeCustomSubstate.members.length)
       activeCustomSubstate.add(object);
     else
       activeCustomSubstate.insert(position, object);
+    customSubstateObjects.set(tag, object);
     return true;
   }
 
   public static function finishCustomSubstate(subState:PsychCustomSubState):Void
   {
     if (activeCustomSubstate == subState) activeCustomSubstate = null;
+
+    // The FlxSubState owns and destroys transferred sprites. Drop only the
+    // compatibility tag references here; do not destroy the objects twice.
+    for (tag => object in customSubstateObjects)
+      if (scriptVariables.get(tag) == object) scriptVariables.remove(tag);
+    customSubstateObjects.clear();
   }
 
   public static function clear():Void
   {
     activeCustomSubstate = null;
+    customSubstateObjects.clear();
     for (tween in activeTweens)
       tween.cancel();
     for (timer in activeTimers)
