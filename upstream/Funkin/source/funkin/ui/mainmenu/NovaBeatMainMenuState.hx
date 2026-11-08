@@ -47,18 +47,16 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_NAMES:Array<String> = [
     'STORY MODE',
     'FREEPLAY',
-    'PSYCH FREEPLAY',
     'MODS',
     'OPTIONS',
     'CREDITS'
   ];
 
-  static final ITEM_ICONS:Array<String> = ['▤', '♫', 'Ψ', '✣', '⚙', '★'];
+  static final ITEM_ICONS:Array<String> = ['▤', '♫', '✣', '⚙', '★'];
 
   static final ITEM_TITLES:Array<String> = [
     'STORY\nMODE',
     'FREEPLAY',
-    'PSYCH FREEPLAY',
     'MODS',
     'OPTIONS',
     'CREDITS'
@@ -67,7 +65,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_KICKERS:Array<String> = [
     'CAMPAIGN',
     'SINGLE SONG',
-    'PSYCH MOD SONGS',
     'LOCAL MODS',
     'GAME PREFERENCES',
     'ABOUT THIS BUILD'
@@ -76,7 +73,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_DESCRIPTIONS:Array<String> = [
     "Jump into the original Friday Night Funkin' story, keep your progress, and take on every week at your own pace.",
     'Search the song library, choose a difficulty, and jump straight into a track.',
-    'Browse only the songs supplied by the currently active Psych Engine experience.',
     'Browse local mods, inspect their information, enable or disable them, and arrange load priority.',
     'Adjust your game preferences, controls, accessibility, and the menu presentation.',
     "View the people and projects behind Friday Night Funkin' and NovaBeat Engine."
@@ -85,7 +81,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_SHORT_DESCRIPTIONS:Array<String> = [
     'Choose a week and continue the campaign.',
     'Pick a song and difficulty.',
-    'Play songs from the active Psych Engine mod.',
     'Manage installed mods and load order.',
     'Change settings and customize the menus.',
     'Meet the people behind the engine.'
@@ -94,7 +89,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_META:Array<Array<String>> = [
     ['CAMPAIGN', 'WEEK SELECT', 'DIFFICULTY'],
     ['SONG LIBRARY', 'DIFFICULTY', 'FAVORITES'],
-    ['PSYCH MODS', 'SONG DATA', 'DIFFICULTY'],
     ['INSTALLED', 'LOCAL LIBRARY', 'LOAD ORDER'],
     ['AUDIO', 'GAMEPLAY', 'CUSTOMIZATION'],
     ['ENGINE', 'FOUNDATION', 'CREDITS']
@@ -104,8 +98,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   var interfaceLayer:FlxTypedGroup<FlxBasic>;
   var routeInterfaceObjects:Bool = false;
   var menuItems:TextMenuList;
-  // Indexes into the menu content arrays. Psych Freeplay is inserted only
-  // while a launchable Psych experience is active.
+  // Indexes into the menu content arrays, kept separate for callback mapping.
   var visibleItemIndexes:Array<Int> = [];
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
@@ -437,11 +430,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     var gap:Float = (tileLayout ? Math.max(8, FlxG.width * 0.018) : Math.max(9, FlxG.height * 0.018));
     gap *= densityMultiplier() * 1.06;
 
-    // Installed-but-inactive Psych packages do not add a menu entry.
-    visibleItemIndexes = [0, 1];
-    if (ExperienceManager.hasActivePsychSongs())
-      visibleItemIndexes.push(2);
-    visibleItemIndexes = visibleItemIndexes.concat([3, 4, 5]);
+    // The active experience changes which songs this single Freeplay route loads.
+    visibleItemIndexes = [0, 1, 2, 3, 4];
 
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
     var columns:Int = tileLayout ? (portraitLayout ? 1 : 2) : 1;
@@ -791,24 +781,18 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 0:
           FlxG.switchState(() -> new StoryMenuState());
         case 1:
+          // Keep one Freeplay slot. When a Psych experience is active, its
+          // imported songs replace the normal song list in this same screen.
           openSubState(new FreeplayState({
-            character: FreeplayState.rememberedCharacterId
+            character: FreeplayState.rememberedCharacterId,
+            psychOnly: ExperienceManager.hasActivePsychSongs()
           }));
           persistentUpdate = false;
         case 2:
-          // Re-check at activation time so a stale Psych context cannot open
-          // an empty Psych-only playlist.
-          if (!ExperienceManager.hasActivePsychSongs()) return;
-          openSubState(new FreeplayState({
-            character: FreeplayState.rememberedCharacterId,
-            psychOnly: true
-          }));
-          persistentUpdate = false;
-        case 3:
           FlxG.switchState(() -> new NovaBeatModsMenuState());
-        case 4:
+        case 3:
           openOptions();
-        case 5:
+        case 4:
           FlxG.switchState(() -> new CreditsState());
         default:
       }
