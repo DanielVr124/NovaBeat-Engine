@@ -1567,7 +1567,7 @@ class PlayState extends MusicBeatSubState
         if (values.length > 0 && values[0] != null) value1 = Std.string(values[0]);
         if (values.length > 1 && values[1] != null) value2 = Std.string(values[1]);
       }
-      else if (Std.isOfType(rawValue, Object))
+      else if (Reflect.isObject(rawValue))
       {
         var originalName:Dynamic = Reflect.field(rawValue, "name");
         if (eventData.eventKind == "PsychCompatibilityEvent" && originalName != null)
