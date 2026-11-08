@@ -176,7 +176,7 @@ class EngineBridge
 
   static function extractVersion(value:String):Null<String>
   {
-    var pattern:EReg = ~/([0-9]+(?:\\.[0-9A-Za-z]+){1,3}(?:[-+][0-9A-Za-z.-]+)?)/;
+    var pattern:EReg = ~/([0-9]+(?:\.[0-9A-Za-z]+){1,3}(?:[-+][0-9A-Za-z.-]+)?)/;
     if (pattern.match(value)) return pattern.matched(1);
     return null;
   }
