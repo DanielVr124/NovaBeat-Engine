@@ -144,7 +144,7 @@ class PsychGameplayApi
       var save:Null<FlxSave> = activeSaves.get(getSaveDataKey(name));
       if (save == null) return false;
       save.erase();
-      activeSaves.remove(name);
+      activeSaves.remove(getSaveDataKey(name));
       return true;
     });
     vars.set("getModSetting", function(saveTag:String, ?modName:String = null):Dynamic
