@@ -3,6 +3,8 @@ package funkin.modding.psychlua;
 import flixel.FlxG;
 import flixel.FlxBasic;
 import flixel.FlxSprite;
+import flixel.FlxSubState;
+import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
@@ -31,6 +33,7 @@ class PsychGameplayApi
   static final activeTimers:Map<String, FlxTimer> = [];
   static final scriptVariables:Map<String, Dynamic> = [];
   static final activeSounds:Map<String, FlxSound> = [];
+  static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
@@ -119,6 +122,14 @@ class PsychGameplayApi
     vars.set("runTimer", function(tag:String, time:Float, ?loops:Int = 1):Bool return runTimer(tag, time, loops));
     vars.set("cancelTimer", function(tag:String):Bool return cancelTimer(tag));
 
+    vars.set("openCustomSubstate", function(name:String, ?pauseGame:Bool = false):Bool
+      return PsychScriptRuntime.openCustomSubstate(state, name, pauseGame));
+    vars.set("closeCustomSubstate", function():Void PsychScriptRuntime.closeCustomSubstate(state));
+    vars.set("insertToCustomSubstate", function(tag:String, ?position:Int = -1):Bool
+      return insertToCustomSubstate(state, tag, position));
+    vars.set("customSubstate", null);
+    vars.set("customSubstateName", "");
+
     vars.set("makeLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
     {
       var sprite = new FlxSprite(x, y);
@@ -135,6 +146,78 @@ class PsychGameplayApi
         trace('[Psych API] makeLuaSprite(' + tag + ') failed: ' + Std.string(error));
         return false;
       }
+    });
+
+    vars.set("makeGraphic", function(tag:String, width:Int, height:Int, ?color:Dynamic = null):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null)
+      {
+        sprite = new FlxSprite();
+        scriptVariables.set(tag, sprite);
+      }
+      sprite.makeGraphic(width, height, parsePsychColor(color));
+      return true;
+    });
+
+    vars.set("makeLuaText", function(tag:String, text:String, width:Float, ?x:Float = 0, ?y:Float = 0, ?size:Int = 16):Bool
+    {
+      var object:FlxText = new FlxText(x, y, width, text == null ? "" : text, size);
+      scriptVariables.set(tag, object);
+      return true;
+    });
+    vars.set("addLuaText", function(tag:String, ?inFront:Bool = false):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || !Std.isOfType(sprite, FlxText)) return false;
+      if (inFront) state.add(sprite);
+      else state.insert(0, sprite);
+      return true;
+    });
+    vars.set("setTextString", function(tag:String, value:String):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).text = value == null ? "" : value;
+      return true;
+    });
+    vars.set("setTextSize", function(tag:String, value:Int):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).size = value;
+      return true;
+    });
+    vars.set("setTextColor", function(tag:String, value:Dynamic):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      object.color = parsePsychColor(value);
+      return true;
+    });
+    vars.set("setTextFont", function(tag:String, value:String):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).font = value;
+      return true;
+    });
+    vars.set("setTextAlignment", function(tag:String, value:String):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).alignment = cast value;
+      return true;
+    });
+    vars.set("setTextBorder", function(tag:String, borderSize:Float, ?borderColor:Dynamic = null, ?borderStyle:String = "outline"):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      var textObject:FlxText = cast object;
+      textObject.borderSize = borderSize;
+      textObject.borderColor = parsePsychColor(borderColor);
+      textObject.borderStyle = cast borderStyle;
+      return true;
     });
 
     vars.set("makeAnimatedLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
@@ -492,8 +575,41 @@ class PsychGameplayApi
     return true;
   }
 
+  public static function hasActiveCustomSubstate():Bool
+  {
+    return activeCustomSubstate != null;
+  }
+
+  public static function openCustomSubstate(state:PlayState, subState:PsychCustomSubState, pauseGame:Bool):Bool
+  {
+    if (state == null || subState == null || activeCustomSubstate != null) return false;
+    activeCustomSubstate = subState;
+    state.persistentUpdate = !pauseGame;
+    state.shouldSubstatePause = pauseGame;
+    state.openSubState(subState);
+    return true;
+  }
+
+  public static function insertToCustomSubstate(state:PlayState, tag:String, position:Int = -1):Bool
+  {
+    if (activeCustomSubstate == null) return false;
+    var object:Null<FlxSprite> = getSprite(state, tag);
+    if (object == null) return false;
+    if (position < 0 || position >= activeCustomSubstate.members.length)
+      activeCustomSubstate.add(object);
+    else
+      activeCustomSubstate.insert(position, object);
+    return true;
+  }
+
+  public static function finishCustomSubstate(subState:PsychCustomSubState):Void
+  {
+    if (activeCustomSubstate == subState) activeCustomSubstate = null;
+  }
+
   public static function clear():Void
   {
+    activeCustomSubstate = null;
     for (tween in activeTweens)
       tween.cancel();
     for (timer in activeTimers)
@@ -504,6 +620,16 @@ class PsychGameplayApi
       if (sound != null) sound.stop();
     activeSounds.clear();
     scriptVariables.clear();
+  }
+
+  static function parsePsychColor(value:Dynamic):FlxColor
+  {
+    if (value == null) return FlxColor.WHITE;
+    if (Std.isOfType(value, Int)) return cast value;
+    var colorText:String = StringTools.trim(Std.string(value));
+    if (colorText.length == 0) return FlxColor.WHITE;
+    var parsed:FlxColor = FlxColor.fromString(colorText);
+    return parsed;
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>

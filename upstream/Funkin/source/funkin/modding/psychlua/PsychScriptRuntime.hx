@@ -17,6 +17,8 @@ import funkin.play.PlayState;
 class PsychScriptRuntime
 {
   static final scripts:Array<PsychScriptInstance> = [];
+  static final customSubstateScripts:Array<PsychScriptInstance> = [];
+  static var activeModDirs:Array<String> = [];
   static var activeGlobals:Map<String, Dynamic> = [];
   static var inlineHScriptBridge:Null<PsychScriptInstance> = null;
   static var inlineLuaBridge:Null<PsychScriptInstance> = null;
@@ -106,6 +108,7 @@ class PsychScriptRuntime
   public static function loadForSong(modDirs:Array<String>, songId:String, playState:PlayState):Int
   {
     clear();
+    activeModDirs = modDirs == null ? [] : modDirs.copy();
     var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
     globals.set("songName", playState.currentSong == null ? "" : playState.currentSong.songName);
     globals.set("bpm", Conductor.instance.bpm);
@@ -137,6 +140,48 @@ class PsychScriptRuntime
       dispatch("onSongLoaded", []);
     }
     return loaded;
+  }
+
+  public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
+  {
+    if (playState == null || name == null || StringTools.trim(name).length == 0
+      || PsychGameplayApi.hasActiveCustomSubstate()) return false;
+
+    var normalizedName:String = StringTools.trim(name);
+    var sources:Array<PsychScriptSource> = PsychModRuntime.getCustomSubstateScriptSources(activeModDirs, normalizedName);
+    for (source in sources)
+    {
+      var script:Null<PsychScriptInstance> = loadSource(source.path, source.source, activeGlobals);
+      if (script != null) customSubstateScripts.push(script);
+    }
+
+    var subState:PsychCustomSubState = new PsychCustomSubState(normalizedName, playState);
+    setOnScripts("customSubstate", subState);
+    setOnScripts("customSubstateName", normalizedName);
+
+    if (!PsychGameplayApi.openCustomSubstate(playState, subState, pauseGame))
+    {
+      unloadCustomSubstateScripts();
+      return false;
+    }
+    return true;
+  }
+
+  public static function closeCustomSubstate(playState:PlayState):Void
+  {
+    if (playState == null || !PsychGameplayApi.hasActiveCustomSubstate()) return;
+    playState.closeSubState();
+    playState.persistentUpdate = true;
+  }
+
+  public static function unloadCustomSubstateScripts():Void
+  {
+    for (script in customSubstateScripts.copy())
+    {
+      scripts.remove(script);
+      script.destroy();
+    }
+    customSubstateScripts.resize(0);
   }
 
   static function buildBridgeGlobals(?extraVariables:Dynamic):Map<String, Dynamic>
@@ -409,6 +454,8 @@ class PsychScriptRuntime
     for (script in scripts)
       script.destroy();
     scripts.resize(0);
+    customSubstateScripts.resize(0);
+    activeModDirs = [];
     inlineHScriptBridge = null;
     inlineLuaBridge = null;
     activeGlobals = new Map<String, Dynamic>();

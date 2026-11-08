@@ -339,6 +339,22 @@ class PsychModRuntime
       .concat(customEventSources).concat(customNoteSources).concat(songSources);
   }
 
+  public static function getCustomSubstateScriptSources(modDirs:Array<String>, name:String):Array<PsychScriptSource>
+  {
+    var result:Array<PsychScriptSource> = [];
+    if (name == null || StringTools.trim(name).length == 0) return result;
+    #if sys
+    var root:String = PolymodHandler.getModRoot();
+    for (directory in modDirs)
+    {
+      var modPath:String = Path.join([root, directory]);
+      if (!isPsychDirectory(modPath)) continue;
+      result = result.concat(readNamedScriptSources(Path.join([modPath, "custom_substates"]), [name]));
+    }
+    #end
+    return result;
+  }
+
   public static function prepareSongCharacters(modDirs:Array<String>, songId:String,
       characters:Null<SongCharacterData>):Void
   {
@@ -1104,8 +1120,7 @@ class PsychModRuntime
     // The remaining Psych script roots still require unsupported state/asset
     // lifecycle adapters and are deliberately rejected.
     var roots:Array<String> = [
-      "custom_notes",
-      "custom_substates"
+      "custom_notes"
     ];
     var count:Int = 0;
     for (folder in roots)
