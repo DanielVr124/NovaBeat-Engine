@@ -8,6 +8,7 @@ name: NovaBeat platform build checks
 on:
   workflow_dispatch:
     inputs:
+# Psych compatibility testing requires native filesystem access to discover installed mods; use the Windows target for real-mod validation.
       build_target:
         description: Which native platform(s) to build
         required: true
