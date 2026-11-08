@@ -4,7 +4,7 @@ import funkin.Assets;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongMetadata;
-import funkin.data.character.CharacterDataParser;
+import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.data.character.CharacterData.CharacterData;
 import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongRegistry;
