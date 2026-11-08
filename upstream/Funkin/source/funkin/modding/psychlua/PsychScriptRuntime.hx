@@ -62,6 +62,13 @@ class PsychScriptRuntime
   {
     clear();
     var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
+    globals.set("songName", playState.currentSong == null ? "" : playState.currentSong.songName);
+    globals.set("bpm", Conductor.instance.bpm);
+    globals.set("curBpm", Conductor.instance.bpm);
+    globals.set("crochet", Conductor.instance.beatLengthMs);
+    globals.set("stepCrochet", Conductor.instance.stepLengthMs);
+    globals.set("scrollSpeed", playState.currentChart == null ? 1.0 : playState.currentChart.scrollSpeed);
+    globals.set("difficulty", playState.currentDifficulty);
     activeGlobals = new Map<String, Dynamic>();
     for (name => value in globals)
       activeGlobals.set(name, value);
@@ -176,8 +183,12 @@ class PsychScriptRuntime
     setGlobal("curStep", Conductor.instance.currentStep);
     setGlobal("curBeat", Conductor.instance.currentBeat);
     setGlobal("songPosition", Conductor.instance.songPosition);
-    setGlobal("curDecStep", Conductor.instance.currentStep);
-    setGlobal("curDecBeat", Conductor.instance.currentBeat);
+    setGlobal("curDecStep", Conductor.instance.currentStepTime);
+    setGlobal("curDecBeat", Conductor.instance.currentBeatTime);
+    setGlobal("curBpm", Conductor.instance.bpm);
+    setGlobal("bpm", Conductor.instance.bpm);
+    setGlobal("crochet", Conductor.instance.beatLengthMs);
+    setGlobal("stepCrochet", Conductor.instance.stepLengthMs);
     dispatch("onUpdate", [elapsed]);
   }
 

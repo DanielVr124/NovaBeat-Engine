@@ -248,7 +248,7 @@ class PsychGameplayApi
       onComplete: function(_:FlxTween):Void
       {
         activeTweens.remove(tag);
-        PsychScriptRuntime.dispatch("onTweenCompleted", [tag]);
+        PsychScriptRuntime.dispatch("onTweenCompleted", [tag, values]);
       }
     });
     activeTweens.set(tag, tween);
@@ -270,7 +270,7 @@ class PsychGameplayApi
       onComplete: function(_:FlxTween):Void
       {
         activeTweens.remove(tag);
-        PsychScriptRuntime.dispatch("onTweenCompleted", [tag]);
+        PsychScriptRuntime.dispatch("onTweenCompleted", [tag, {color: color}]);
       }
     });
     activeTweens.set(tag, tween);

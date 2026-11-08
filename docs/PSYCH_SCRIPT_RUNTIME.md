@@ -25,8 +25,11 @@ Supported callbacks currently include:
 - `onUpdate`, `onUpdatePost`
 - `onStepHit`, `onBeatHit`
 - `onStartCountdown`, `onSongStart`, `onSongEnd`
-- `onPause`, `onDestroy`
+- `onPause`, `onResume`, `onGameOver`, `onDestroy`
 - `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `onSpawnNote`
+
+Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
+`curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`.
 
 Callback return values use Psych 0.7.3's official string sentinel values and
 preserve Lua-first/HScript-second ordering. `Function_Stop` cancels the

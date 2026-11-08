@@ -1580,6 +1580,15 @@ class PlayState extends MusicBeatSubState
         if (PsychScriptRuntime.dispatchStop("onSongEnd", []))
           event.cancel();
       }
+      else if (event.type == "GAME_OVER")
+      {
+        if (PsychScriptRuntime.dispatchStop("onGameOver", []))
+          event.cancel();
+      }
+      else if (event.type == "RESUME")
+      {
+        PsychScriptRuntime.dispatch("onResume", []);
+      }
     }
 
     // Dispatch event to song script.
