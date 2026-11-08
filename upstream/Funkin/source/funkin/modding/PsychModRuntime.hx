@@ -8,6 +8,7 @@ import funkin.data.song.SongRegistry;
 import funkin.data.song.importer.FNFLegacyData;
 import funkin.data.song.importer.FNFLegacyImporter;
 import funkin.play.song.Song;
+import haxe.Json;
 import openfl.utils.AssetType;
 
 #if sys
@@ -41,6 +42,21 @@ class PsychModRuntime
     var globalScriptCount:Int = countPsychScripts(modPath);
     var unsupportedScriptCount:Int = countUnsupportedPsychScripts(modPath);
     var playableCount:Int = 0;
+
+    // The legacy V-Slice importer ignores several Psych-only chart fields.
+    // Inspect raw JSON before advertising the package as launchable so we do
+    // not silently drop its stage, cast, events, or custom note behavior.
+    for (source in sources)
+    {
+      for (chartPath in source.chartFiles)
+      {
+        var chartProblem:Null<String> = inspectUnsupportedChartFeatures(chartPath);
+        if (chartProblem != null)
+        {
+          return unavailable("This Psych package contains a chart feature NovaBeat does not support yet: " + chartProblem);
+        }
+      }
+    }
     var songScriptCount:Int = 0;
 
     for (source in sources)
@@ -91,6 +107,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      if (!inspectPackage(modPath).launchable) continue;
 
       for (source in scanSongSources(modPath))
       {
@@ -345,6 +362,115 @@ class PsychModRuntime
     {
       return null;
     }
+  }
+
+  /**
+   * Return a reason when raw Psych chart data contains a feature that the
+   * current legacy-chart adapter would otherwise discard or replace.
+   */
+  static function inspectUnsupportedChartFeatures(path:String):Null<String>
+  {
+    try
+    {
+      var root:Dynamic = Json.parse(File.getContent(path));
+      var song:Dynamic = Reflect.field(root, "song");
+      if (song == null) return "the chart is missing its song data";
+
+      var supportedIds:Map<String, String> = [
+        "player1" => "bf",
+        "player2" => "dad",
+        "player3" => "gf",
+        "gfVersion" => "gf",
+        "stage" => Constants.DEFAULT_STAGE,
+        "stageDefault" => Constants.DEFAULT_STAGE
+      ];
+
+      for (field => expected in supportedIds)
+      {
+        var rawValue:Dynamic = Reflect.field(song, field);
+        if (rawValue == null) continue;
+        var actual:String = StringTools.trim(Std.string(rawValue)).toLowerCase();
+        if (actual.length == 0) continue;
+        if (actual != expected.toLowerCase())
+          return "custom or non-default " + field + " (" + actual + ")";
+      }
+
+      for (field in ["arrowSkin", "splashSkin", "noteStyle"])
+      {
+        var rawValue:Dynamic = Reflect.field(song, field);
+        if (rawValue == null) continue;
+        if (StringTools.trim(Std.string(rawValue)).length > 0)
+          return "custom note skin/style metadata (" + field + ")";
+      }
+
+      var events:Dynamic = Reflect.field(song, "events");
+      if (Std.isOfType(events, Array) && (cast events:Array<Dynamic>).length > 0)
+        return "chart event data";
+
+      var noteData:Dynamic = Reflect.field(song, "notes");
+      if (Std.isOfType(noteData, Array))
+      {
+        var problem:Null<String> = inspectNoteSections(cast noteData);
+        if (problem != null) return problem;
+      }
+      else if (noteData != null)
+      {
+        for (difficulty in Reflect.fields(noteData))
+        {
+          var difficultyNotes:Dynamic = Reflect.field(noteData, difficulty);
+          if (!Std.isOfType(difficultyNotes, Array)) continue;
+          var problem:Null<String> = inspectNoteSections(cast difficultyNotes);
+          if (problem != null) return problem;
+        }
+      }
+
+      return null;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not inspect raw chart ' + path + ': ' + Std.string(error));
+      return "raw chart metadata could not be safely inspected";
+    }
+  }
+
+  static function inspectNoteSections(sections:Array<Dynamic>):Null<String>
+  {
+    for (section in sections)
+    {
+      if (section == null) continue;
+
+      var sectionType:Dynamic = Reflect.field(section, "typeOfSection");
+      if (sectionType != null && Std.int(sectionType) != 0)
+        return "alternate section type metadata";
+
+      var gfSection:Dynamic = Reflect.field(section, "gfSection");
+      if (gfSection == true)
+        return "GF-specific section ownership";
+
+      var rows:Dynamic = Reflect.field(section, "sectionNotes");
+      if (!Std.isOfType(rows, Array)) continue;
+
+      for (note in (cast rows:Array<Dynamic>))
+      {
+        if (!Std.isOfType(note, Array)) continue;
+        var values:Array<Dynamic> = cast note;
+        if (values.length < 2 || values[1] == null) continue;
+
+        var lane:Float = Std.parseFloat(Std.string(values[1]));
+        if (Math.isNaN(lane) || lane < 0 || lane > 7)
+          return "event or non-standard note-lane data";
+
+        if (values.length > 3 && values[3] != null)
+        {
+          var noteType:Dynamic = values[3];
+          if (Std.isOfType(noteType, Bool)) continue; // Legacy Alt Animation flag.
+          if (Std.isOfType(noteType, String) && StringTools.trim(cast noteType).length == 0) continue;
+          return "custom Psych note types";
+        }
+      }
+    }
+
+    return null;
   }
 
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
