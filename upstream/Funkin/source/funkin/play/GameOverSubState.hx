@@ -152,6 +152,7 @@ class GameOverSubState extends MusicBeatSubState
     super.create();
 
     parentPlayState = cast _parentState;
+    parentPlayState?.dispatchPsychGameOverStart();
 
     //
     // Set up the visuals
@@ -377,7 +378,7 @@ class GameOverSubState extends MusicBeatSubState
       // This callback belongs to the game-over confirmation input. A Retry
       // action from the pause menu also triggers SONG_RETRY, but is not a
       // Psych onGameOverConfirm event.
-      parentPlayState?.dispatchPsychGameOverConfirm();
+      parentPlayState?.dispatchPsychGameOverConfirm(true);
 
       // Stop death quotes immediately.
       hasPlayedDeathQuote = true;
@@ -567,6 +568,8 @@ class GameOverSubState extends MusicBeatSubState
     if (!blueballed || mustNotExit) return;
     isEnding = true;
     blueballed = false;
+    // Psych receives false when the player backs out instead of retrying.
+    parentPlayState?.dispatchPsychGameOverConfirm(false);
     if (parentPlayState != null) parentPlayState.deathCounter = 0;
     // PlayState.seenCutscene = false; // old thing...
     if (gameOverMusic != null) gameOverMusic.stop();
