@@ -626,6 +626,9 @@ class PsychGameplayApi
     if (Std.isOfType(value, Int)) return cast value;
     var colorText:String = StringTools.trim(Std.string(value));
     if (colorText.length == 0) return FlxColor.WHITE;
+    if (!StringTools.startsWith(colorText, "#") && !StringTools.startsWith(colorText.toLowerCase(), "0x")
+      && (~/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.match(colorText)))
+      colorText = "#" + colorText;
     var parsed:Null<FlxColor> = FlxColor.fromString(colorText);
     return parsed == null ? FlxColor.WHITE : parsed;
   }
