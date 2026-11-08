@@ -5,6 +5,7 @@ import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.input.FlxInputState;
 import flixel.input.keyboard.FlxKey;
+import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.math.FlxPoint;
 import flixel.FlxSprite;
 import flixel.FlxSubState;
@@ -87,13 +88,19 @@ class PsychGameplayApi
     {
       var controller = FlxG.gamepads.getByID(id);
       if (controller == null) return 0.0;
-      return controller.getXAxis(leftStick);
+      var stickId:FlxGamepadInputID = leftStick
+        ? FlxGamepadInputID.LEFT_ANALOG_STICK
+        : FlxGamepadInputID.RIGHT_ANALOG_STICK;
+      return controller.getXAxis(stickId);
     });
     vars.set("gamepadAnalogY", function(id:Int, ?leftStick:Bool = true):Float
     {
       var controller = FlxG.gamepads.getByID(id);
       if (controller == null) return 0.0;
-      return controller.getYAxis(leftStick);
+      var stickId:FlxGamepadInputID = leftStick
+        ? FlxGamepadInputID.LEFT_ANALOG_STICK
+        : FlxGamepadInputID.RIGHT_ANALOG_STICK;
+      return controller.getYAxis(stickId);
     });
     vars.set("mouseClicked", function(?button:String = "left"):Bool return mouseStatus(button, "justPressed"));
     vars.set("mousePressed", function(?button:String = "left"):Bool return mouseStatus(button, "pressed"));
