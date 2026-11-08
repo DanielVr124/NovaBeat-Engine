@@ -53,6 +53,50 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
+      - name: Restore Neko 2.4.0 tool cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/neko/2.4.0
+          key: ${{ runner.os }}-${{ runner.arch }}-neko-2.4.0-v1
+          save-always: true
+
+      - name: Prime Neko tool cache with extended download retries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_cache="${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE is not set}"
+          neko_root="$tool_cache/neko/2.4.0"
+          neko_path="$neko_root/x64"
+
+          if [[ -x "$neko_path/neko" && -f "$neko_root/x64.complete" ]]; then
+            echo "Neko 2.4.0 is already restored from the runner tool cache."
+            exit 0
+          fi
+
+          archive="$RUNNER_TEMP/neko-2.4.0-linux64.tar.gz"
+          extract="$RUNNER_TEMP/neko-2.4.0-extract"
+          rm -rf "$extract"
+          mkdir -p "$extract"
+
+          # setup-haxe v2 retries transient downloads three times. Neko's release
+          # endpoint has repeatedly returned HTTP 504 in CI, so prime the exact
+          # actions/tool-cache location with a longer retry window first.
+          curl -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 \
+            "https://github.com/HaxeFoundation/neko/releases/download/v2-4-0/neko-2.4.0-linux64.tar.gz" \
+            -o "$archive"
+
+          tar -xzf "$archive" -C "$extract"
+          archive_root="$(find "$extract" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$archive_root"
+          test -x "$archive_root/neko"
+
+          mkdir -p "$neko_root"
+          rm -rf "$neko_path"
+          cp -a "$archive_root" "$neko_path"
+          touch "$neko_root/x64.complete"
+          echo "$neko_path" >> "$GITHUB_PATH"
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v2
         with:
@@ -227,6 +271,50 @@ jobs:
           test -f upstream/Funkin/assets/LICENSE.md
           test -f upstream/Funkin/art/LICENSE.md
 
+      - name: Restore Neko 2.4.0 tool cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/neko/2.4.0
+          key: ${{ runner.os }}-${{ runner.arch }}-neko-2.4.0-v1
+          save-always: true
+
+      - name: Prime Neko tool cache with extended download retries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_cache="${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE is not set}"
+          neko_root="$tool_cache/neko/2.4.0"
+          neko_path="$neko_root/x64"
+
+          if [[ -x "$neko_path/neko" && -f "$neko_root/x64.complete" ]]; then
+            echo "Neko 2.4.0 is already restored from the runner tool cache."
+            exit 0
+          fi
+
+          archive="$RUNNER_TEMP/neko-2.4.0-linux64.tar.gz"
+          extract="$RUNNER_TEMP/neko-2.4.0-extract"
+          rm -rf "$extract"
+          mkdir -p "$extract"
+
+          # setup-haxe v2 retries transient downloads three times. Neko's release
+          # endpoint has repeatedly returned HTTP 504 in CI, so prime the exact
+          # actions/tool-cache location with a longer retry window first.
+          curl -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 \
+            "https://github.com/HaxeFoundation/neko/releases/download/v2-4-0/neko-2.4.0-linux64.tar.gz" \
+            -o "$archive"
+
+          tar -xzf "$archive" -C "$extract"
+          archive_root="$(find "$extract" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$archive_root"
+          test -x "$archive_root/neko"
+
+          mkdir -p "$neko_root"
+          rm -rf "$neko_path"
+          cp -a "$archive_root" "$neko_path"
+          touch "$neko_root/x64.complete"
+          echo "$neko_path" >> "$GITHUB_PATH"
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v2
         with:
