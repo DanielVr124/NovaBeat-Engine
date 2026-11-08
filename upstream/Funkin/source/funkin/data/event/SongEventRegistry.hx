@@ -6,6 +6,7 @@ import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.play.event.ScriptedSongEvent;
 import funkin.play.event.SongEvent;
+import funkin.play.event.PsychCompatibilitySongEvent;
 import funkin.util.SortUtil;
 import funkin.util.macro.ClassMacro;
 
@@ -58,6 +59,10 @@ class SongEventRegistry
         trace(' Failed to load built-in song event: ${Type.getClassName(eventCls)}');
       }
     }
+
+    // Psych chart events are normalized by the legacy chart adapter into one
+    // wrapper event kind; register its handler explicitly so it is executable.
+    eventCache.set("PsychCompatibilityEvent", new PsychCompatibilitySongEvent("PsychCompatibilityEvent"));
   }
 
   static function registerScriptedEvents()
