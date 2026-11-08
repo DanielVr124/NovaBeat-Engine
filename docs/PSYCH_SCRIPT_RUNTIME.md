@@ -67,7 +67,11 @@ sustain state, and a live note-group index.
 - `score`, `misses`, `hits`, `combo`, `rating`, and `ratingPercent` map to the
   live song score/tallies
 - `getVar`, `setVar`, `removeVar`
-- `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
+- `getSongPosition`, `getSongName`, `getDifficulty`, `getSongLength`,
+  `getHealth`, `setHealth`, `addHealth`, `getRandomInt`, `getRandomFloat`,
+  `getRandomBool`
+- The `songLength` timing global is refreshed from the active instrumental in
+  milliseconds.
 - Basic keyboard, gamepad, and mouse queries: `keyboardJustPressed`,
   `keyboardPressed`, `keyboardReleased`, `anyGamepadJustPressed`,
   `anyGamepadPressed`, `anyGamepadReleased`, `gamepadAnalogX`,
