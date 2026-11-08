@@ -1626,7 +1626,16 @@ class PsychGameplayApi
         return false;
       }
 
-      var lines:Array<Dynamic> = cast rawLines;
+      var lines:Array<Dynamic> = [];
+      for (line in (cast rawLines:Array<Dynamic>))
+        if (line != null) lines.push(line);
+      if (lines.length == 0)
+      {
+        trace('[Psych Dialogue] The dialogue file contains no usable dialogue lines: ' + source.path);
+        resumeAfterMissingPsychDialogue(state);
+        return false;
+      }
+
       var endingSong:Bool = state.isSongEnd;
       activeDialogue = new PsychDialogueOverlay(state, lines, function():Void
       {
