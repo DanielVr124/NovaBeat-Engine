@@ -350,9 +350,6 @@ class EngineBridge
   #else
   static function hasPsychMarkers(modPath:String):Bool return false;
   #end
-  #else
-  static function hasPsychMarkers(modPath:String):Bool return false;
-  #end
 }
 
 typedef EngineDetection =
