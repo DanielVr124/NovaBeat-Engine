@@ -3099,6 +3099,11 @@ class PlayState extends MusicBeatSubState
           }
         }
 
+        var psychNoteId:Int = PsychGameplayApi.getNoteId(this, note);
+        var psychDirection:Int = Std.int(note.direction);
+        var psychNoteType:String = note.kind ?? "";
+        var psychIsSustain:Bool = note.isHoldNote;
+
         // Command the opponent to hit the note on time.
         // NOTE: This is what handles the strumline and cleaning up the note itself!
         opponentStrumline.hitNote(note);
@@ -3107,6 +3112,12 @@ class PlayState extends MusicBeatSubState
         {
           opponentStrumline.playNoteHoldCover(note.holdNoteSprite);
         }
+
+        PsychScriptRuntime.dispatchPsychNoteCallback(
+          "opponentNoteHit",
+          [psychNoteId, psychDirection, psychNoteType, psychIsSustain],
+          [note]
+        );
       }
     }
 
@@ -3431,6 +3442,13 @@ class PlayState extends MusicBeatSubState
       applyScore(event.score, event.judgement, event.healthChange, event.isComboBreak);
       popUpScore(event.judgement);
     }
+
+    var psychNoteId:Int = PsychGameplayApi.getNoteId(this, note);
+    PsychScriptRuntime.dispatchPsychNoteCallback(
+      "goodNoteHit",
+      [psychNoteId, Std.int(note.direction), note.kind ?? "", note.isHoldNote],
+      [note]
+    );
   }
 
   /**
@@ -3485,6 +3503,7 @@ class PlayState extends MusicBeatSubState
 
     health += event.healthChange;
     songScore += event.scoreChange;
+    updatePsychScoreCallbacks(true);
 
     if (!isPracticeMode)
     {
@@ -3596,6 +3615,14 @@ class PlayState extends MusicBeatSubState
   /**
      * Handles applying health, score, and ratings.
      */
+  function updatePsychScoreCallbacks(miss:Bool):Void
+  {
+    PsychScriptRuntime.callOnScripts("onRecalculateRating", [], true);
+    if (PsychScriptRuntime.dispatchStop("preUpdateScore", [miss], true)) return;
+    updateScoreText();
+    PsychScriptRuntime.dispatch("onUpdateScore", [miss]);
+  }
+
   function applyScore(score:Float, daRating:String, healthChange:Float, isComboBreak:Bool)
   {
     switch (daRating)
@@ -3626,6 +3653,7 @@ class PlayState extends MusicBeatSubState
       if (Highscore.tallies.combo > Highscore.tallies.maxCombo) Highscore.tallies.maxCombo = Highscore.tallies.combo;
     }
     songScore += score;
+    updatePsychScoreCallbacks(daRating == "miss");
   }
 
   /**
