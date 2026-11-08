@@ -541,6 +541,10 @@ class MainMenuState extends MusicBeatState
   {
     super.update(elapsed);
 
+    // Keep the standard OS cursor hidden throughout the FNF menu, even if a
+    // previous screen restored the cursor while transitioning back here.
+    if (FlxG.mouse.visible) Cursor.hide();
+
     Conductor.instance.update();
 
     if ((FlxG.sound.music?.volume ?? 1.0) < 0.8)
