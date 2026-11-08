@@ -105,7 +105,7 @@ class PsychGameplayApi
 
     vars.set("playSound", function(sound:String, ?volume:Float = 1, ?tag:String = ""):Bool
       return playTaggedSound(sound, volume, tag));
-    vars.set("playMusic", function(music:String, ?volume:Float = 1, ?looped:Bool = true):Bool
+    vars.set("playMusic", function(music:String, ?volume:Float = 1, ?looped:Bool = false):Bool
       return playModMusic(music, volume, looped));
     vars.set("stopSound", function(?tag:String = ""):Void stopTaggedSound(tag));
     vars.set("pauseSound", function(?tag:String = ""):Void pauseTaggedSound(tag));
@@ -132,12 +132,15 @@ class PsychGameplayApi
     });
     vars.set("getSoundPitch", function(tag:String):Float
     {
-      var sound:Null<FlxSound> = (tag == null || tag.length == 0) ? FlxG.sound.music : activeSounds.get(tag);
+      // Psych only exposes pitch for tagged modchart sounds, not global music.
+      if (tag == null || tag.length == 0) return 0;
+      var sound:Null<FlxSound> = activeSounds.get(tag);
       return sound == null ? 0 : sound.pitch;
     });
     vars.set("setSoundPitch", function(tag:String, value:Float, ?doPause:Bool = false):Bool
     {
-      var sound:Null<FlxSound> = (tag == null || tag.length == 0) ? FlxG.sound.music : activeSounds.get(tag);
+      if (tag == null || tag.length == 0) return false;
+      var sound:Null<FlxSound> = activeSounds.get(tag);
       if (sound == null) return false;
       var wasPlaying:Bool = sound.playing;
       if (doPause) sound.pause();
