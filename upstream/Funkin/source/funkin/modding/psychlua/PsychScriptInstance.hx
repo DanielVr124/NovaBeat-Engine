@@ -21,6 +21,11 @@ import funkin.Paths;
 import funkin.play.PlayState;
 import funkin.play.character.BaseCharacter;
 import funkin.play.notes.NoteSprite;
+import funkin.Preferences;
+import funkin.graphics.FunkinCamera;
+import funkin.play.stage.Stage;
+import funkin.play.stage.Bopper;
+import funkin.modding.psychlua.PsychCustomSubState;
 
 #if (cpp || js)
 import vm.lua.Lua;
@@ -144,6 +149,12 @@ class PsychScriptInstance
     runtime.set("Character", BaseCharacter);
     runtime.set("Note", NoteSprite);
     runtime.set("StringTools", StringTools);
+    runtime.set("Preferences", Preferences);
+    runtime.set("ClientPrefs", Preferences);
+    runtime.set("Stage", Stage);
+    runtime.set("Bopper", Bopper);
+    runtime.set("PsychCamera", FunkinCamera);
+    runtime.set("CustomSubstate", PsychCustomSubState);
 
     runtime.doString(source, sourcePath);
     if (runtime.parsingException != null)
