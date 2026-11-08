@@ -979,7 +979,7 @@ class FreeplayState extends MusicBeatSubState
 
       // Available variations for current character. We get this since bf is usually `default` variation, and `pico` is `pico`
       // but sometimes pico can be the default variation (weekend 1 songs), and bf can be `bf` variation (darnell)
-      if (ExperienceManager.isPsychSong(song.songId))
+      if (ExperienceManager.isPsychSong(song.data.id))
       {
         return song.data.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true).length > 0;
       }
@@ -2052,7 +2052,19 @@ class FreeplayState extends MusicBeatSubState
         return;
       }
       var targetSong:Song = targetSongNullable;
-      var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, targetVariation);
+      var targetVariation:Null<String> = ExperienceManager.isPsychSong(targetSongID)
+        ? Constants.DEFAULT_VARIATION
+        : currentVariation;
+      var targetDifficultyId:String = currentDifficulty;
+
+      if (ExperienceManager.isPsychSong(targetSongID))
+      {
+        var psychDifficulties:Array<String> = targetSong.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true);
+        if (psychDifficulties.length > 0 && !psychDifficulties.contains(targetDifficultyId))
+          targetDifficultyId = psychDifficulties[0];
+      }
+
+      var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(targetDifficultyId, targetVariation);
       if (targetDifficulty == null)
       {
         FlxG.log.warn('WARN: could not find difficulty with id (${targetDifficultyId})');
