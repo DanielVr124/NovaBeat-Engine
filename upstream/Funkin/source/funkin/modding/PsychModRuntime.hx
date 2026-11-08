@@ -125,7 +125,7 @@ class PsychModRuntime
 
       for (source in scanSongSources(modPath))
       {
-        if (source.instrumentFile == null || source.chartFiles.length == 0 || hasSongScripts(source)) continue;
+        if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
 
         var songId:String = buildSongId(directory, source.songFolder);
         try
