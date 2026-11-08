@@ -26,7 +26,7 @@ class EngineBridge
     packageMetadata:Dynamic = null
   ):EngineDetection
   {
-    var engineValue:Dynamic = firstField([novaBeatMetadata, polymodMetadata, packageMetadata], ["engine", "engineId", "engine_id"]);
+    var engineValue:Dynamic = firstField([novaBeatMetadata, polymodMetadata, packageMetadata], ["engine", "engineId", "engine_id", "engineName", "engine_name", "psychEngine", "psych_engine"]);
     var declaredId:Null<String> = asString(engineValue);
 
     if (declaredId == null && engineValue != null && !Std.isOfType(engineValue, String))
@@ -145,8 +145,6 @@ class EngineBridge
       "psych_engine_version",
       "psychVersion",
       "psych_version",
-      "psychEngine",
-      "psych_engine"
     ];
     for (source in metadataSources)
     {
