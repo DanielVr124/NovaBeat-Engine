@@ -245,6 +245,8 @@ class PsychGameplayApi
     {
       case "this", "instance", "game":
         return state;
+      case "notes":
+        return getActiveNotes(state);
       case "boyfriend":
         return getStageCharacter(state, "getBoyfriend");
       case "dad", "opponent":
@@ -357,6 +359,27 @@ class PsychGameplayApi
       if (current == null) return null;
     }
     return setSegment(current, parts[parts.length - 1], value, allowMaps);
+  }
+
+  public static function getNoteId(state:PlayState, note:NoteSprite):Int
+  {
+    return getActiveNotes(state).indexOf(note);
+  }
+
+  static function getActiveNotes(state:PlayState):Array<NoteSprite>
+  {
+    var result:Array<NoteSprite> = [];
+    if (state.playerStrumline != null && state.playerStrumline.notes != null)
+      for (note in state.playerStrumline.notes.members)
+        if (note != null && note.exists && note.alive) result.push(note);
+    if (state.opponentStrumline != null && state.opponentStrumline.notes != null)
+      for (note in state.opponentStrumline.notes.members)
+        if (note != null && note.exists && note.alive) result.push(note);
+    result.sort(function(a:NoteSprite, b:NoteSprite):Int
+    {
+      return Reflect.compare(a.strumTime, b.strumTime);
+    });
+    return result;
   }
 
   static function getPropertyFromGroup(state:PlayState, group:String, index:Int, path:String, allowMaps:Bool):Dynamic

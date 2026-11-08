@@ -34,6 +34,7 @@ import funkin.graphics.FunkinSprite;
 import funkin.Highscore.Tallies;
 import funkin.input.PreciseInputManager;
 import funkin.modding.events.ScriptEvent;
+import funkin.modding.events.ScriptEvent.NoteScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.ExperienceManager;
@@ -1547,44 +1548,30 @@ class PlayState extends MusicBeatSubState
 
     if (PsychScriptRuntime.getScriptPaths().length > 0)
     {
-      if (event.type == "NOTE_HIT" || event.type == "NOTE_MISS")
+      if (event.type == "NOTE_HIT" || event.type == "NOTE_MISS" || event.type == "NOTE_INCOMING")
       {
-        var noteEvent:Dynamic = event;
-        var note:Dynamic = Reflect.field(noteEvent, "note");
-        if (note != null)
+        var noteEvent:NoteScriptEvent = cast event;
+        var note:NoteSprite = noteEvent.note;
+        if (note != null && note.noteData != null)
         {
-          var noteData:Dynamic = Reflect.field(note, "noteData");
-          var direction:Int = Std.int(Reflect.field(note, "direction"));
-          var noteType:String = Std.string(Reflect.field(note, "kind") ?? "");
-          var isSustain:Bool = Reflect.field(note, "isHoldNote") == true;
-          var noteId:Int = Std.int(Reflect.field(note, "strumTime"));
-          var strumlineIndex:Int = 0;
-          if (noteData != null)
+          var noteId:Int = PsychGameplayApi.getNoteId(this, note);
+          var direction:Int = Std.int(note.direction);
+          var noteType:String = note.kind ?? "";
+          var isSustain:Bool = note.isHoldNote;
+
+          if (event.type == "NOTE_INCOMING")
           {
-            var getStrumlineIndex:Dynamic = Reflect.field(noteData, "getStrumlineIndex");
-            if (getStrumlineIndex != null)
-              strumlineIndex = Std.int(Reflect.callMethod(noteData, getStrumlineIndex, []));
+            PsychScriptRuntime.dispatch("onSpawnNote", [noteId, direction, noteType, isSustain]);
           }
+          else
+          {
+            var callback:String = event.type == "NOTE_MISS"
+              ? "noteMiss"
+              : (note.noteData.getStrumlineIndex() == 1 ? "opponentNoteHit" : "goodNoteHit");
 
-          var callback:String = event.type == "NOTE_MISS"
-            ? "noteMiss"
-            : (strumlineIndex == 1 ? "opponentNoteHit" : "goodNoteHit");
-
-          if (PsychScriptRuntime.dispatchStop(callback, [noteId, direction, noteType, isSustain]))
-            event.cancel();
-        }
-      }
-      else if (event.type == "NOTE_INCOMING")
-      {
-        var incoming:Dynamic = event;
-        var note:Dynamic = Reflect.field(incoming, "note");
-        if (note != null)
-        {
-          var noteId:Int = Std.int(Reflect.field(note, "strumTime"));
-          var direction:Int = Std.int(Reflect.field(note, "direction"));
-          var noteType:String = Std.string(Reflect.field(note, "kind") ?? "");
-          var isSustain:Bool = Reflect.field(note, "isHoldNote") == true;
-          PsychScriptRuntime.dispatch("onSpawnNote", [noteId, direction, noteType, isSustain]);
+            if (PsychScriptRuntime.dispatchStop(callback, [noteId, direction, noteType, isSustain]))
+              event.cancel();
+          }
         }
       }
       else if (event.type == "SONG_END")
