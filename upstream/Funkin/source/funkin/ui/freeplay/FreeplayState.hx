@@ -2055,7 +2055,7 @@ class FreeplayState extends MusicBeatSubState
       var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, targetVariation);
       if (targetDifficulty == null)
       {
-        FlxG.log.warn('WARN: could not find difficulty with id (${currentDifficulty})');
+        FlxG.log.warn('WARN: could not find difficulty with id (${targetDifficultyId})');
         uiStateMachine.transition(Idle);
         return;
       }
@@ -2908,7 +2908,6 @@ class FreeplayState extends MusicBeatSubState
     var targetVariation:Null<String> = ExperienceManager.isPsychSong(targetSongId)
       ? Constants.DEFAULT_VARIATION
       : currentVariation;
-    dispatchEvent(new CapsuleScriptEvent(SONG_SELECTED, currentCapsule, currentDifficulty, targetVariation));
 
     PlayStatePlaylist.isStoryMode = false;
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId, {variation: targetVariation});
@@ -2929,6 +2928,7 @@ class FreeplayState extends MusicBeatSubState
         targetDifficultyId = psychDifficulties[0];
     }
 
+    dispatchEvent(new CapsuleScriptEvent(SONG_SELECTED, currentCapsule, targetDifficultyId, targetVariation));
     PlayStatePlaylist.campaignId = targetLevelId ?? null;
 
     var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(targetDifficultyId, targetVariation);
