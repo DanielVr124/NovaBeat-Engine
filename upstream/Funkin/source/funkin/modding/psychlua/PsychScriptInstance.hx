@@ -52,6 +52,15 @@ class PsychScriptInstance
   var luaHasFunction:Dynamic = null;
   #end
   var destroyed:Bool = false;
+  public var closed(default, null):Bool = false;
+
+  /** Stop this script from receiving future callbacks without destroying it mid-callback. */
+  public function close():Bool
+  {
+    if (destroyed || closed) return false;
+    closed = true;
+    return true;
+  }
 
   static inline final HSCRIPT_INSTRUCTION_LIMIT:Int = 250000;
   static inline final HSCRIPT_TIME_LIMIT_MS:Int = 100;
@@ -247,7 +256,7 @@ class PsychScriptInstance
 
   public function call(name:String, args:Array<Dynamic>):Dynamic
   {
-    if (destroyed) return null;
+    if (destroyed || closed) return null;
     lastError = null;
     if (!hasFunction(name)) return null;
 
