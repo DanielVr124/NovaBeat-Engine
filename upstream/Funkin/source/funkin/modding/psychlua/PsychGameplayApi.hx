@@ -24,6 +24,7 @@ import flixel.util.FlxColor;
 import flixel.util.FlxAxes;
 import openfl.display.BlendMode;
 import flixel.util.FlxTimer;
+import flixel.util.FlxSave;
 import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
@@ -55,6 +56,7 @@ class PsychGameplayApi
   // script-variable references can be released when that substate closes.
   static final customSubstateObjects:Map<String, FlxSprite> = [];
   static final activeSounds:Map<String, FlxSound> = [];
+  static final activeSaves:Map<String, FlxSave> = [];
   static final preloadedCharacters:Map<String, BaseCharacter> = [];
   static var activeTimeBar:Null<PsychTimeBar> = null;
   static var activeDialogue:Null<PsychDialogueOverlay> = null;
@@ -107,6 +109,39 @@ class PsychGameplayApi
     });
     vars.set("getVar", function(name:String):Dynamic return scriptVariables.get(name));
     vars.set("removeVar", function(name:String):Bool return scriptVariables.remove(name));
+
+    vars.set("initSaveData", function(name:String, ?folder:String = "psychenginemods"):Bool
+      return initSaveData(name, folder));
+    vars.set("flushSaveData", function(name:String):Bool
+    {
+      var save:Null<FlxSave> = activeSaves.get(name);
+      if (save == null) return false;
+      save.flush();
+      return true;
+    });
+    vars.set("getDataFromSave", function(name:String, field:String, ?defaultValue:Dynamic = null):Dynamic
+    {
+      var save:Null<FlxSave> = activeSaves.get(name);
+      if (save == null || field == null || field.length == 0) return defaultValue;
+      return Reflect.hasField(save.data, field) ? Reflect.field(save.data, field) : defaultValue;
+    });
+    vars.set("setDataFromSave", function(name:String, field:String, value:Dynamic):Bool
+    {
+      var save:Null<FlxSave> = activeSaves.get(name);
+      if (save == null || field == null || field.length == 0) return false;
+      Reflect.setField(save.data, field, value);
+      return true;
+    });
+    vars.set("eraseSaveData", function(name:String):Bool
+    {
+      var save:Null<FlxSave> = activeSaves.get(name);
+      if (save == null) return false;
+      save.erase();
+      activeSaves.remove(name);
+      return true;
+    });
+    vars.set("getModSetting", function(saveTag:String, ?modName:String = null):Dynamic
+      return PsychModRuntime.getModSetting(saveTag, modName));
 
     vars.set("playSound", function(sound:String, ?volume:Float = 1, ?tag:String = ""):Bool
       return playTaggedSound(sound, volume, tag));
@@ -1273,6 +1308,7 @@ class PsychGameplayApi
       "setTextString", "setTextSize", "setTextWidth", "setTextHeight", "setTextAutoSize",
       "setTextItalic", "setTextFont", "setTextColor", "setTextAlignment", "setTextBorder",
       "getTextString", "getTextSize", "getTextWidth", "getTextFont", "objectPlayAnimation",
+      "initSaveData", "flushSaveData", "getDataFromSave", "setDataFromSave", "eraseSaveData", "getModSetting",
       "addAnimationByPrefix", "addAnimationByIndices", "doTweenX", "startTween",
       "noteTweenX", "noteTweenDirection", "runTimer", "cancelTimer", "cancelTween",
       "playSound", "playMusic", "stopSound", "pauseSound", "resumeSound",
@@ -1671,6 +1707,9 @@ class PsychGameplayApi
     activeTimers.clear();
     for (sound in activeSounds)
       if (sound != null) sound.stop();
+    for (save in activeSaves)
+      if (save != null) save.flush();
+    activeSaves.clear();
     activeSounds.clear();
     activeTimeBar = null;
     activeDialogue = null;
@@ -2182,6 +2221,29 @@ class PsychGameplayApi
       return Reflect.compare(a.strumTime, b.strumTime);
     });
     return result;
+  }
+
+  static function initSaveData(name:String, folder:String):Bool
+  {
+    if (!isSafeSaveIdentifier(name) || !isSafeSaveIdentifier(folder) || activeSaves.exists(name)) return false;
+    var save:FlxSave = new FlxSave();
+    var savePath:String = Constants.SAVE_PATH + "/" + folder;
+    if (!save.bind(name, savePath)) return false;
+    activeSaves.set(name, save);
+    return true;
+  }
+
+  static function isSafeSaveIdentifier(value:String):Bool
+  {
+    if (value == null || value.length == 0 || value.length > 64) return false;
+    for (i in 0...value.length)
+    {
+      var code:Int = value.charCodeAt(i);
+      var safe:Bool = (code >= 48 && code <= 57) || (code >= 65 && code <= 90)
+        || (code >= 97 && code <= 122) || code == 45 || code == 95;
+      if (!safe) return false;
+    }
+    return true;
   }
 
   static function noteKeyStatus(state:PlayState, name:String, status:String):Bool
