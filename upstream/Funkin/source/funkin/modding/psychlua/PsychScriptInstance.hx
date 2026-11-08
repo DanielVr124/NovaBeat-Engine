@@ -86,10 +86,11 @@ class PsychScriptInstance
   public static function createFlxPointApi():Dynamic
   {
     var api:Dynamic = {};
+    Reflect.setField(api, "EPSILON", FlxPoint.EPSILON);
+    Reflect.setField(api, "EPSILON_SQUARED", FlxPoint.EPSILON_SQUARED);
+    Reflect.setField(api, "EPSILON_LENGTH", FlxPoint.EPSILON_LENGTH);
     Reflect.setField(api, "get", function(?x:Float = 0, ?y:Float = 0):FlxPoint return FlxPoint.get(x, y));
     Reflect.setField(api, "weak", function(?x:Float = 0, ?y:Float = 0):FlxPoint return FlxPoint.weak(x, y));
-    Reflect.setField(api, "weakCopyFrom", function(point:FlxPoint):FlxPoint return FlxPoint.weakCopyFrom(point));
-    Reflect.setField(api, "put", function(point:FlxPoint):Void FlxPoint.put(point));
     return api;
   }
 
