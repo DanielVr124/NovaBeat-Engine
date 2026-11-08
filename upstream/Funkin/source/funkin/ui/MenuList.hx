@@ -46,6 +46,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   public var acceptOnTouchSelection:Bool = false;
 
+  /**
+   * Lets a page handle touch releases itself when it needs a custom camera or
+   * hitbox path. Keyboard/controller navigation and touch-drag scrolling stay
+   * enabled; only this list's automatic tap-selection path is skipped.
+   */
+  public var ignoreTouchPointerSelection:Bool = false;
+
   /**  */
   public var wrapMode:WrapMode = Both;
 
@@ -126,6 +133,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     super.update(elapsed);
 
     if (enabled && !busy && !pauseInput) updateControls();
+  }
+
+  inline function playMenuSelectionSound():Void
+  {
+    final soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
+    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
   }
 
   inline function updateControls():Void
@@ -231,7 +244,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
           if (selectedIndex != i)
           {
-            FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+            playMenuSelectionSound();
             selectItem(i);
           }
 
@@ -246,7 +259,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
       if (newIndex != selectedIndex)
       {
-        FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        playMenuSelectionSound();
         selectItem(newIndex);
       }
     }
@@ -271,11 +284,11 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       {
         if (newIndex != selectedIndex)
         {
-          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+          playMenuSelectionSound();
           selectItem(newIndex);
         }
       }
-      else if (TouchUtil.pressed || mobileBrowserMouseTap)
+      else if ((TouchUtil.pressed || mobileBrowserMouseTap) && !ignoreTouchPointerSelection)
       {
         for (i in 0...members.length)
         {
@@ -309,7 +322,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
               // this assignment, the pre-touch keyboard index can overwrite a
               // first-tap selection at the end of this update.
               if (!_isMainMenuState) newIndex = i;
-              FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+              playMenuSelectionSound();
               selectItem(i);
             }
 
@@ -345,14 +358,14 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
       if (newIndex != selectedIndex && !_isMainMenuState)
       {
-        FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+        playMenuSelectionSound();
         selectItem(newIndex);
       }
     }
     #else
     if (newIndex != selectedIndex)
     {
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      playMenuSelectionSound();
       selectItem(newIndex);
     }
     #end
