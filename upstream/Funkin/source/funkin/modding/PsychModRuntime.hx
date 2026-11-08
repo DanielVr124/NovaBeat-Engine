@@ -52,7 +52,7 @@ class PsychModRuntime
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: "Psych Engine detected. This first compatibility tier needs a classic data/<song> chart and a songs/<song>/Inst.ogg instrumental. This package does not contain a complete song in that format."
+        explanation: "Psych Engine detected. This first native compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. This package does not contain a complete song in that format."
       };
     }
 
@@ -68,7 +68,7 @@ class PsychModRuntime
     return {
       launchable: true,
       supportedSongCount: playableCount,
-      explanation: "Limited Psych compatibility: classic chart files and instrumentals can launch with NovaBeat's built-in characters and stage. Psych Lua/HScript, custom events, custom note types, and custom character/stage behavior are not supported yet."
+      explanation: "Limited native Psych compatibility: classic chart files and instrumentals can launch with NovaBeat's built-in characters and default stage. Psych Lua/HScript, custom events, custom note types, custom character/stage behavior, and HTML5 local-mod launching are not supported yet."
     };
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
