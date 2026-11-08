@@ -2210,10 +2210,15 @@ class PlayState extends MusicBeatSubState
     // Create subtitles if they are enabled.
     if (Preferences.subtitles)
     {
-      final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && !ControlsHandler.hasExternalInputDevice)
-      #elseif (web && FEATURE_TOUCH_CONTROLS) (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      ) || #end Preferences.downscroll;
+      final isDownscroll:Bool = (
+        #if mobile
+        (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows && !ControlsHandler.hasExternalInputDevice)
+        #elseif (web && FEATURE_TOUCH_CONTROLS)
+        (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
+        #else
+        false
+        #end
+      ) || Preferences.downscroll;
 
       final subtitlesAlignment:SubtitlesAlignment = isDownscroll ? SubtitlesAlignment.SUBTITLES_TOP : SubtitlesAlignment.SUBTITLES_BOTTOM;
       subtitles = new Subtitles(0, 139, subtitlesAlignment);
