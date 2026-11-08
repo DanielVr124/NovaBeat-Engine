@@ -23,6 +23,7 @@ class PsychGameplayApi
 {
   static final activeTweens:Map<String, FlxTween> = [];
   static final activeTimers:Map<String, FlxTimer> = [];
+  static final scriptVariables:Map<String, Dynamic> = [];
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
@@ -41,11 +42,11 @@ class PsychGameplayApi
 
     vars.set("setVar", function(name:String, value:Dynamic):Dynamic
     {
-      state.variables.set(name, value);
+      scriptVariables.set(name, value);
       return value;
     });
-    vars.set("getVar", function(name:String):Dynamic return state.variables.get(name));
-    vars.set("removeVar", function(name:String):Bool return state.variables.remove(name));
+    vars.set("getVar", function(name:String):Dynamic return scriptVariables.get(name));
+    vars.set("removeVar", function(name:String):Bool return scriptVariables.remove(name));
 
     vars.set("getSongPosition", function():Float return Conductor.instance.songPosition);
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
@@ -94,7 +95,7 @@ class PsychGameplayApi
       {
         if (image != null && image.length > 0)
           sprite.loadGraphic(Paths.image(image));
-        state.variables.set(tag, sprite);
+        scriptVariables.set(tag, sprite);
         return true;
       }
       catch (error:Dynamic)
@@ -111,7 +112,7 @@ class PsychGameplayApi
       try
       {
         sprite.frames = Paths.getSparrowAtlas(image);
-        state.variables.set(tag, sprite);
+        scriptVariables.set(tag, sprite);
         return true;
       }
       catch (error:Dynamic)
@@ -318,12 +319,13 @@ class PsychGameplayApi
       timer.cancel();
     activeTweens.clear();
     activeTimers.clear();
+    scriptVariables.clear();
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
   {
-    if (tag == null || !state.variables.exists(tag)) return null;
-    var value:Dynamic = state.variables.get(tag);
+    if (tag == null || !scriptVariables.exists(tag)) return null;
+    var value:Dynamic = scriptVariables.get(tag);
     return Std.isOfType(value, FlxSprite) ? cast value : null;
   }
 
@@ -360,8 +362,8 @@ class PsychGameplayApi
       if (current == null) return null;
       if (parts.length == 0)
       {
-        if (state.variables.exists(rootName))
-          state.variables.set(rootName, value);
+        if (scriptVariables.exists(rootName))
+          scriptVariables.set(rootName, value);
         else
           Reflect.setProperty(state, rootName, value);
         return value;
@@ -398,7 +400,7 @@ class PsychGameplayApi
       case "FlxG", "flixel.FlxG":
         return FlxG;
       default:
-        if (state.variables.exists(name)) return state.variables.get(name);
+        if (scriptVariables.exists(name)) return scriptVariables.get(name);
         return Reflect.getProperty(state, name);
     }
   }
