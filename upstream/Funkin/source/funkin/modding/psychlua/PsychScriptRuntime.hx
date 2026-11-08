@@ -648,7 +648,7 @@ class PsychScriptRuntime
     {
       hscript = new PsychScriptInstance(
         "novabeat-hscript-smoke-test.hx",
-        "function add(a, b) { return a + b; } function echo(value) { return value; } function readInjected() { return injectedValue; } function readPreset() { return FlxBasic != null && FlxObject != null && FlxPoint != null; }",
+        "function add(a, b) { return a + b; } function echo(value) { return value; } function readInjected() { return injectedValue; } function readPreset() { var point = FlxPoint.get(4, 5); var valid = point.x == 4 && point.y == 5; point.put(); return FlxBasic != null && FlxObject != null && FlxPoint != null && valid; }",
         ["injectedValue" => 17]
       );
       hscriptPassed = hscript.hasFunction("add")
