@@ -397,7 +397,7 @@ class PsychGameplayApi
     {
       var shader = getRuntimeShader(state, objectPath);
       if (shader == null || imagePath == null || imagePath.length == 0) return false;
-      var graphic = Paths.image(imagePath);
+      var graphic = FlxG.bitmap.add(Paths.image(imagePath));
       if (graphic == null || graphic.bitmap == null) return false;
       shader.setSampler2D(property, graphic.bitmap);
       return true;
@@ -419,15 +419,28 @@ class PsychGameplayApi
     #end
 
     vars.set("checkFileExists", function(path:String, ?absolute:Bool = false):Bool
-      return !absolute && PsychModRuntime.getModFile(path) != null);
+    {
+      if (absolute) return false;
+      if (PsychModRuntime.getModFile(path) != null) return true;
+      try return Assets.exists(Paths.file(path)) catch (error:Dynamic) return false;
+    });
     vars.set("getTextFromFile", function(path:String, ?ignoreModFolders:Bool = false):Dynamic
     {
+      if (path == null || path.length == 0) return null;
       if (!ignoreModFolders)
       {
         var file:Null<PsychScriptSource> = PsychModRuntime.getModFile(path);
         if (file != null) return file.source;
       }
-      return null;
+      try
+      {
+        var assetPath:String = Paths.file(path);
+        return Assets.exists(assetPath) ? Assets.getText(assetPath) : null;
+      }
+      catch (error:Dynamic)
+      {
+        return null;
+      }
     });
     vars.set("saveFile", function(path:String, content:String, ?absolute:Bool = false):Bool
       return !absolute && PsychModRuntime.saveModFile(path, content));
@@ -2327,6 +2340,64 @@ class PsychGameplayApi
       return Reflect.compare(a.strumTime, b.strumTime);
     });
     return result;
+  }
+
+  #if (!flash && sys)
+  static function initLuaShader(name:String, glslVersion:Int):Bool
+  {
+    if (name == null || StringTools.trim(name).length == 0 || !Preferences.performanceStageShaders) return false;
+    var shaderName:String = StringTools.trim(name);
+    if (StringTools.endsWith(shaderName.toLowerCase(), ".frag")) shaderName = shaderName.substr(0, shaderName.length - 5);
+    if (StringTools.endsWith(shaderName.toLowerCase(), ".vert")) shaderName = shaderName.substr(0, shaderName.length - 5);
+    if (runtimeShaderSources.exists(shaderName)) return true;
+
+    var fragment:Null<PsychScriptSource> = PsychModRuntime.getModFile("shaders/" + shaderName + ".frag");
+    if (fragment == null) return false;
+    var vertex:Null<PsychScriptSource> = PsychModRuntime.getModFile("shaders/" + shaderName + ".vert");
+    runtimeShaderSources.set(shaderName, [fragment.source, vertex == null ? null : vertex.source]);
+    return true;
+  }
+
+  static function getRuntimeShader(state:PlayState, objectPath:String):Null<FlxRuntimeShader>
+  {
+    var object:Dynamic = getProperty(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) return null;
+    var shader:Dynamic = (cast object:FlxSprite).shader;
+    return Std.isOfType(shader, FlxRuntimeShader) ? cast shader : null;
+  }
+
+  static function setSpriteShader(state:PlayState, objectPath:String, shaderName:String):Bool
+  {
+    if (shaderName == null || shaderName.length == 0) return false;
+    if (!runtimeShaderSources.exists(shaderName) && !initLuaShader(shaderName, 120)) return false;
+    var object:Dynamic = getProperty(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) return false;
+    var source:Array<String> = runtimeShaderSources.get(shaderName);
+    try
+    {
+      (cast object:FlxSprite).shader = new FlxRuntimeShader(source[0], source[1]);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] Could not create runtime shader ' + shaderName + ': ' + Std.string(error));
+      return false;
+    }
+  }
+  #else
+  static function initLuaShader(name:String, glslVersion:Int):Bool return false;
+  static function setSpriteShader(state:PlayState, objectPath:String, shaderName:String):Bool return false;
+  #end
+
+  static function removeSpriteShader(state:PlayState, objectPath:String):Bool
+  {
+    var object:Dynamic = getProperty(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, objectPath);
+    if (!Std.isOfType(object, FlxSprite)) return false;
+    (cast object:FlxSprite).shader = null;
+    return true;
   }
 
   static function initSaveData(name:String, folder:String):Bool
