@@ -43,7 +43,8 @@ Supported callbacks currently include:
 screen. Retrying from the pause menu does not trigger this callback.
 
 Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
-`curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`.
+`curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`. They are refreshed immediately before each callback dispatch,
+including note, event, step/beat, timer, and tween callbacks.
 
 Live globals set through `setGlobal` are scoped to the active song and are
 available to scripts loaded later in that song. `setOnScripts`, `setOnLuas`,

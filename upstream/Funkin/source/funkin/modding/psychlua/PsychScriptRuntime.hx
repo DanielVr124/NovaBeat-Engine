@@ -280,7 +280,12 @@ class PsychScriptRuntime
     return null;
   }
 
-  public static function updateFrame(elapsed:Float):Void
+  /**
+   * Refresh Psych's timing globals immediately before script callbacks. Many
+   * callbacks are dispatched from inside PlayState.update (notes, steps,
+   * timers, tweens, and events), before the outer frame update can refresh them.
+   */
+  public static function updateTimingGlobals():Void
   {
     setGlobal("curStep", Conductor.instance.currentStep);
     setGlobal("curBeat", Conductor.instance.currentBeat);
@@ -292,6 +297,10 @@ class PsychScriptRuntime
     setGlobal("bpm", Conductor.instance.bpm);
     setGlobal("crochet", Conductor.instance.beatLengthMs);
     setGlobal("stepCrochet", Conductor.instance.stepLengthMs);
+  }
+
+  public static function updateFrame(elapsed:Float):Void
+  {
     dispatch("onUpdate", [elapsed]);
   }
 
@@ -310,6 +319,7 @@ class PsychScriptRuntime
    */
   static function dispatchInternal(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):PsychDispatchResult
   {
+    updateTimingGlobals();
     var callArgs:Array<Dynamic> = args == null ? [] : args;
     var results:Array<Dynamic> = [];
     var value:Dynamic = FUNCTION_CONTINUE;
@@ -399,6 +409,7 @@ class PsychScriptRuntime
 
   public static function callOnLuas(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
   {
+    updateTimingGlobals();
     var results:Array<Dynamic> = [];
     var value:Dynamic = FUNCTION_CONTINUE;
     for (script in scripts.copy())
@@ -414,6 +425,7 @@ class PsychScriptRuntime
 
   public static function callOnHScript(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
   {
+    updateTimingGlobals();
     var value:Dynamic = FUNCTION_CONTINUE;
     for (script in scripts.copy())
     {
