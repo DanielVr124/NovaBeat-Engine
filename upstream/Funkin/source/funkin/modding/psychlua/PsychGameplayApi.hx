@@ -2,6 +2,10 @@ package funkin.modding.psychlua;
 
 import flixel.FlxG;
 import flixel.FlxBasic;
+import flixel.FlxCamera;
+import flixel.input.FlxInputState;
+import flixel.input.keyboard.FlxKey;
+import flixel.math.FlxPoint;
 import flixel.FlxSprite;
 import flixel.FlxSubState;
 import flixel.text.FlxText;
@@ -73,6 +77,14 @@ class PsychGameplayApi
     });
 
     vars.set("getSongPosition", function():Float return Conductor.instance.songPosition);
+    vars.set("keyboardJustPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_PRESSED));
+    vars.set("keyboardPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.PRESSED));
+    vars.set("keyboardReleased", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_RELEASED));
+    vars.set("mouseClicked", function(?button:String = "left"):Bool return mouseStatus(button, "justPressed"));
+    vars.set("mousePressed", function(?button:String = "left"):Bool return mouseStatus(button, "pressed"));
+    vars.set("mouseReleased", function(?button:String = "left"):Bool return mouseStatus(button, "justReleased"));
+    vars.set("getMouseX", function(?camera:String = "game"):Float return getMousePosition(state, camera).x);
+    vars.set("getMouseY", function(?camera:String = "game"):Float return getMousePosition(state, camera).y);
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
     vars.set("getRandomInt", function(min:Int, max:Int):Int return FlxG.random.int(min, max));
     vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));
@@ -618,6 +630,58 @@ class PsychGameplayApi
       if (sound != null) sound.stop();
     activeSounds.clear();
     scriptVariables.clear();
+  }
+
+  static function keyboardStatus(key:String, status:FlxInputState):Bool
+  {
+    if (key == null || StringTools.trim(key).length == 0) return false;
+    var normalized:String = StringTools.trim(key).toUpperCase();
+    if (normalized == "ESC") normalized = "ESCAPE";
+    if (normalized == "RETURN") normalized = "ENTER";
+    try
+    {
+      return FlxG.keys.checkStatus(FlxKey.fromString(normalized), status);
+    }
+    catch (error:Dynamic)
+    {
+      return false;
+    }
+  }
+
+  static function mouseStatus(button:String, status:String):Bool
+  {
+    var normalized:String = button == null ? "left" : button.toLowerCase();
+    return switch (normalized)
+    {
+      case "right":
+        switch (status)
+        {
+          case "pressed": FlxG.mouse.pressedRight;
+          case "justReleased": FlxG.mouse.justReleasedRight;
+          default: FlxG.mouse.justPressedRight;
+        }
+      case "middle":
+        switch (status)
+        {
+          case "pressed": FlxG.mouse.pressedMiddle;
+          case "justReleased": FlxG.mouse.justReleasedMiddle;
+          default: FlxG.mouse.justPressedMiddle;
+        }
+      default:
+        switch (status)
+        {
+          case "pressed": FlxG.mouse.pressed;
+          case "justReleased": FlxG.mouse.justReleased;
+          default: FlxG.mouse.justPressed;
+        }
+    }
+  }
+
+  static function getMousePosition(state:PlayState, camera:String):FlxPoint
+  {
+    var targetCamera:FlxCamera = state.camGame;
+    if (camera != null && camera.toLowerCase() == "hud") targetCamera = state.camHUD;
+    return FlxG.mouse.getWorldPosition(targetCamera);
   }
 
   static function parsePsychColor(value:Dynamic):FlxColor

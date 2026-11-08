@@ -6,6 +6,8 @@ import hscript.SScript;
 import flixel.FlxG;
 import flixel.FlxCamera;
 import flixel.FlxSprite;
+import flixel.FlxSubState;
+import flixel.text.FlxText;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
@@ -85,6 +87,8 @@ class PsychScriptInstance
     runtime.set("FlxG", FlxG);
     runtime.set("FlxCamera", FlxCamera);
     runtime.set("FlxSprite", FlxSprite);
+    runtime.set("FlxText", FlxText);
+    runtime.set("FlxSubState", FlxSubState);
     runtime.set("FlxMath", FlxMath);
     runtime.set("FlxEase", FlxEase);
     runtime.set("FlxTween", FlxTween);

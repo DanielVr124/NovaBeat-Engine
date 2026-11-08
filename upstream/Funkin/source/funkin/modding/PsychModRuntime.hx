@@ -1020,7 +1020,7 @@ class PsychModRuntime
         metadata = importedMetadata;
         psychPlayerId = readPsychString(chartSong, "player1", "bf");
         psychOpponentId = readPsychString(chartSong, "player2", "dad");
-        psychGirlfriendId = readPsychString(chartSong, "gfVersion", "gf");
+        psychGirlfriendId = readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf"));
       }
 
       for (difficulty in importedChart.notes.keys())
