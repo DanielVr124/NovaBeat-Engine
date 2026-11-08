@@ -17,13 +17,13 @@ import sys.io.File;
 #end
 
 /**
- * First-pass runtime bridge for classic Psych Engine chart-only songs.
+ * Runtime bridge for the currently supported classic Psych Engine mod tier.
  *
- * This bridge intentionally does not execute mod scripts. It converts legacy
- * Psych chart JSON into native V-Slice Song/SongDifficulty objects and resolves
- * Psych's conventional songs/<song>/ audio assets through Polymod's asset
- * libraries. Packages that require Lua/HScript are not considered launchable
- * by this compatibility tier.
+ * It converts legacy Psych chart JSON into native V-Slice song data, resolves
+ * Psych's conventional songs/<song>/ audio assets, and exposes supported
+ * global and song-local Lua/HScript source files to the script runtime.
+ * Packages requiring unimplemented custom events, note types, stages,
+ * characters, or substates are kept unavailable rather than partially loaded.
  */
 @:nullSafety(Off)
 class PsychModRuntime
@@ -76,6 +76,7 @@ class PsychModRuntime
       explanation: hasBasicScripts
         ? "Experimental Psych scripting compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with global scripts and song-local Lua/HScript callbacks, basic property access, and basic Lua sprite helpers. Custom events, note types, stages, characters, custom substates, and many advanced Psych APIs are not supported yet. Native builds only."
         : "Limited native Psych chart compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with NovaBeat's built-in characters and default stage. Lua/HScript song and global script loading is available for this basic compatibility tier. Custom events, note types, stages, characters, and custom substates remain unsupported.";
+    };
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
     #end
