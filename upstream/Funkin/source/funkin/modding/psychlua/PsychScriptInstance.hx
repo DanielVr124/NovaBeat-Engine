@@ -3,6 +3,19 @@ package funkin.modding.psychlua;
 import haxe.Exception;
 import haxe.io.Path;
 import hscript.SScript;
+import flixel.FlxG;
+import flixel.FlxCamera;
+import flixel.FlxSprite;
+import flixel.math.FlxMath;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
+import flixel.util.FlxColor;
+import flixel.util.FlxTimer;
+import funkin.Conductor;
+import funkin.Paths;
+import funkin.play.PlayState;
+import funkin.play.character.BaseCharacter;
+import funkin.play.notes.NoteSprite;
 
 #if (cpp || js)
 import vm.lua.Lua;
@@ -66,6 +79,23 @@ class PsychScriptInstance
 
     for (name => value in initialVariables)
       runtime.set(name, value);
+
+    // These are the commonly used Psych HScript preset classes. They are
+    // bound directly rather than making arbitrary class resolution available.
+    runtime.set("FlxG", FlxG);
+    runtime.set("FlxCamera", FlxCamera);
+    runtime.set("FlxSprite", FlxSprite);
+    runtime.set("FlxMath", FlxMath);
+    runtime.set("FlxEase", FlxEase);
+    runtime.set("FlxTween", FlxTween);
+    runtime.set("FlxColor", FlxColor);
+    runtime.set("FlxTimer", FlxTimer);
+    runtime.set("Conductor", Conductor);
+    runtime.set("Paths", Paths);
+    runtime.set("PlayState", PlayState);
+    runtime.set("Character", BaseCharacter);
+    runtime.set("Note", NoteSprite);
+    runtime.set("StringTools", StringTools);
 
     runtime.doString(source, sourcePath);
     if (runtime.parsingException != null)

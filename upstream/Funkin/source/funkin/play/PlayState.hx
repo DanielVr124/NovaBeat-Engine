@@ -1544,6 +1544,56 @@ class PlayState extends MusicBeatSubState
 
     // super.dispatchEvent(event) dispatches event to module scripts.
     super.dispatchEvent(event);
+
+    if (PsychScriptRuntime.getScriptPaths().length > 0)
+    {
+      if (event.type == "NOTE_HIT" || event.type == "NOTE_MISS")
+      {
+        var noteEvent:Dynamic = event;
+        var note:Dynamic = Reflect.field(noteEvent, "note");
+        if (note != null)
+        {
+          var noteData:Dynamic = Reflect.field(note, "noteData");
+          var direction:Int = Std.int(Reflect.field(note, "direction"));
+          var noteType:String = Std.string(Reflect.field(note, "kind") ?? "");
+          var isSustain:Bool = Reflect.field(note, "isHoldNote") == true;
+          var noteId:Int = Std.int(Reflect.field(note, "strumTime"));
+          var strumlineIndex:Int = 0;
+          if (noteData != null)
+          {
+            var getStrumlineIndex:Dynamic = Reflect.field(noteData, "getStrumlineIndex");
+            if (getStrumlineIndex != null)
+              strumlineIndex = Std.int(Reflect.callMethod(noteData, getStrumlineIndex, []));
+          }
+
+          var callback:String = event.type == "NOTE_MISS"
+            ? "noteMiss"
+            : (strumlineIndex == 1 ? "opponentNoteHit" : "goodNoteHit");
+
+          if (PsychScriptRuntime.dispatchStop(callback, [noteId, direction, noteType, isSustain]))
+            event.cancel();
+        }
+      }
+      else if (event.type == "NOTE_INCOMING")
+      {
+        var incoming:Dynamic = event;
+        var note:Dynamic = Reflect.field(incoming, "note");
+        if (note != null)
+        {
+          var noteId:Int = Std.int(Reflect.field(note, "strumTime"));
+          var direction:Int = Std.int(Reflect.field(note, "direction"));
+          var noteType:String = Std.string(Reflect.field(note, "kind") ?? "");
+          var isSustain:Bool = Reflect.field(note, "isHoldNote") == true;
+          PsychScriptRuntime.dispatch("onSpawnNote", [noteId, direction, noteType, isSustain]);
+        }
+      }
+      else if (event.type == "SONG_END")
+      {
+        if (PsychScriptRuntime.dispatchStop("onSongEnd", []))
+          event.cancel();
+      }
+    }
+
     // Dispatch event to song script.
     ScriptEventDispatcher.callEvent(currentSong, event);
 

@@ -78,10 +78,18 @@ class PsychScriptRuntime
 
   public static function dispatchStop(callback:String, ?args:Array<Dynamic>):Bool
   {
-    for (result in dispatch(callback, args))
+    var callArgs:Array<Dynamic> = args == null ? [] : args;
+    for (script in scripts.copy())
     {
-      if (result == null) continue;
-      if (Std.isOfType(result, Int) && cast(result, Int) == 1) return true;
+      var result:Dynamic = script.call(callback, callArgs);
+      if (script.lastError != null)
+        trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
+      if (!Std.isOfType(result, Int)) continue;
+
+      var stopCode:Int = cast result;
+      if (stopCode == 1 || stopCode == 4) return true;
+      if (stopCode == 2 && script.language == "lua") return true;
+      if (stopCode == 3 && script.language == "hscript") return true;
     }
     return false;
   }
