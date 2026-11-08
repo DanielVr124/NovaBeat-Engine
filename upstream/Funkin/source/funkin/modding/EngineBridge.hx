@@ -35,7 +35,7 @@ class EngineBridge
     }
 
     var normalized:String = declaredId == null ? "" : declaredId.toLowerCase();
-    var explicitlyPsych:Bool = normalized.indexOf("psych") >= 0;
+    var explicitlyPsych:Bool = normalized.indexOf("psych") >= 0 || hasPsychMetadataFlag([novaBeatMetadata, polymodMetadata, packageMetadata]);
 
     // A version-only field is treated as a Psych declaration only when its
     // key explicitly names Psych. Generic "version" fields describe the mod,
@@ -94,6 +94,22 @@ class EngineBridge
       launchable: false,
       explanation: "NovaBeat could not confidently identify this mod's engine."
     };
+  }
+
+  static function hasPsychMetadataFlag(sources:Array<Dynamic>):Bool
+  {
+    for (source in sources)
+    {
+      if (source == null) continue;
+      for (field in ["isPsych", "isPsychEngine", "is_psych_engine", "psychEngine", "psych_engine"])
+      {
+        var value:Dynamic = Reflect.field(source, field);
+        if (value == true) return true;
+        var text:Null<String> = asString(value);
+        if (text != null && text.toLowerCase().indexOf("psych") >= 0) return true;
+      }
+    }
+    return false;
   }
 
   static function firstField(sources:Array<Dynamic>, fields:Array<String>):Dynamic
@@ -322,7 +338,7 @@ class EngineBridge
       var bpm:Dynamic = Reflect.field(songData, "bpm");
       var hasSongIdentity:Bool = songName != null && Std.isOfType(songName, String);
       var hasChartContent:Bool = notes != null;
-      var hasTempo:Bool = bpm != null && Std.isOfType(bpm, Float);
+      var hasTempo:Bool = bpm != null;
       return hasSongIdentity && hasChartContent && hasTempo;
     }
     catch (error:Dynamic)
