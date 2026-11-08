@@ -25,6 +25,7 @@ import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.credits.CreditsState;
+import funkin.input.Cursor;
 import funkin.ui.options.OptionsState;
 import funkin.util.DeviceUtil;
 import funkin.util.TouchUtil;
@@ -101,7 +102,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     // Story/Options can disable raw keyboard input before switching states.
     FlxG.keys.enabled = true;
-    FlxG.mouse.visible = false;
+    Cursor.hide();
     FlxG.cameras.reset(new FunkinCamera('novaBeatMainMenu'));
     uiCamera = new FunkinCamera('novaBeatMenuUI');
     FlxG.cameras.add(uiCamera, false);
