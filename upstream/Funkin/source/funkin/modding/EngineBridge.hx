@@ -1,8 +1,10 @@
 package funkin.modding;
 
 #if sys
+import haxe.Json;
 import haxe.io.Path;
 import sys.FileSystem;
+import sys.io.File;
 #end
 
 /**
@@ -107,6 +109,13 @@ class EngineBridge
   }
 
   #if sys
+  /**
+   * Detect the folder conventions used by official Psych Engine mods.
+   *
+   * Do not treat a generic "data" or "scripts" folder as sufficient on its
+   * own. We look for Psych-specific script locations or a Psych chart JSON
+   * shape to avoid misclassifying ordinary V-Slice/Polymod packages.
+   */
   static function hasPsychMarkers(modPath:String):Bool
   {
     var distinctiveFolders:Array<String> = ["custom_events", "custom_notetypes", "custom_substates"];
@@ -116,12 +125,80 @@ class EngineBridge
       if (FileSystem.exists(path) && FileSystem.isDirectory(path)) return true;
     }
 
-    var scriptsPath:String = Path.join([modPath, "scripts"]);
-    if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath))
+    // Psych supports scripts globally and beside data, stage, and character
+    // content. Search only these known roots and keep the traversal shallow.
+    var scriptFolders:Array<String> = [
+      "scripts",
+      "stages",
+      "characters",
+      "custom_events",
+      "custom_notetypes",
+      "custom_substates",
+      "data"
+    ];
+    for (folder in scriptFolders)
     {
-      for (file in FileSystem.readDirectory(scriptsPath))
+      if (containsPsychScript(Path.join([modPath, folder]), 3)) return true;
+    }
+
+    return hasPsychChartMarkers(modPath);
+  }
+
+  /**
+   * Looks for Lua/HScript files in a known Psych script root. The depth cap
+   * keeps discovery quick even when a mod includes large asset directories.
+   */
+  static function containsPsychScript(path:String, remainingDepth:Int):Bool
+  {
+    if (!FileSystem.exists(path) || !FileSystem.isDirectory(path)) return false;
+
+    for (entry in FileSystem.readDirectory(path))
+    {
+      if (entry.length == 0 || entry.charAt(0) == ".") continue;
+      var childPath:String = Path.join([path, entry]);
+
+      if (FileSystem.isDirectory(childPath))
       {
-        if (StringTools.endsWith(file.toLowerCase(), ".lua")) return true;
+        if (remainingDepth > 0 && containsPsychScript(childPath, remainingDepth - 1)) return true;
+        continue;
+      }
+
+      var lower:String = entry.toLowerCase();
+      if (StringTools.endsWith(lower, ".lua") || StringTools.endsWith(lower, ".hx")) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Scriptless Psych mods still use the characteristic chart envelope:
+   * { "song": { "song": "...", "notes": [...], ... } }.
+   */
+  static function hasPsychChartMarkers(modPath:String):Bool
+  {
+    var dataPath:String = Path.join([modPath, "data"]);
+    if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) return false;
+
+    for (songFolder in FileSystem.readDirectory(dataPath))
+    {
+      if (songFolder.length == 0 || songFolder.charAt(0) == ".") continue;
+      var songPath:String = Path.join([dataPath, songFolder]);
+      if (!FileSystem.exists(songPath) || !FileSystem.isDirectory(songPath)) continue;
+
+      for (fileName in FileSystem.readDirectory(songPath))
+      {
+        if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+        var chartPath:String = Path.join([songPath, fileName]);
+        try
+        {
+          var parsed:Dynamic = Json.parse(File.getContent(chartPath));
+          var songData:Dynamic = Reflect.field(parsed, "song");
+          if (songData != null && Reflect.field(songData, "notes") != null) return true;
+        }
+        catch (error:Dynamic)
+        {
+          // An unrelated or malformed JSON file is not proof of a Psych mod.
+        }
       }
     }
 
