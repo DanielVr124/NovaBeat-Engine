@@ -1,6 +1,7 @@
 package funkin.modding;
 
 import funkin.Assets;
+import flixel.FlxG;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongMetadata;
@@ -219,6 +220,80 @@ class PsychModRuntime
       trace('[Psych Compatibility] Could not read song data file ' + filePath + ': ' + Std.string(error));
       return null;
     }
+    #else
+    return null;
+    #end
+  }
+
+  /**
+   * Read a Psych mod's settings.json defaults and merge them with the user's
+   * persisted per-mod values in the normal game save. Only the named mod's
+   * own data/settings.json is read; script-provided paths are never accepted.
+   */
+  public static function getModSetting(saveTag:String, ?modName:String = null):Dynamic
+  {
+    if (saveTag == null || StringTools.trim(saveTag).length == 0) return null;
+    #if sys
+    var directory:String = modName == null || StringTools.trim(modName).length == 0
+      ? PsychScriptRuntime.getActiveModDirectory()
+      : StringTools.trim(modName);
+    if (directory.length == 0 || directory.indexOf("/") >= 0 || directory.indexOf("\\") >= 0
+      || directory == "." || directory == "..") return null;
+
+    var root:String = Path.normalize(PolymodHandler.getModRoot());
+    var modPath:String = Path.normalize(Path.join([root, directory]));
+    var rootPrefix:String = StringTools.endsWith(root, "/") ? root : root + "/";
+    if (!StringTools.startsWith(modPath, rootPrefix)) return null;
+
+    var settingsPath:String = Path.join([modPath, "data", "settings.json"]);
+    if (!FileSystem.exists(settingsPath) || FileSystem.isDirectory(settingsPath)) return null;
+
+    var allSettings:Map<String, Dynamic> = cast Reflect.field(FlxG.save.data, "modSettings");
+    if (allSettings == null)
+    {
+      allSettings = new Map<String, Dynamic>();
+      Reflect.setField(FlxG.save.data, "modSettings", allSettings);
+    }
+    var settings:Map<String, Dynamic> = cast allSettings.get(directory);
+    if (settings == null)
+    {
+      settings = new Map<String, Dynamic>();
+      try
+      {
+        var parsed:Dynamic = Json.parse(File.getContent(settingsPath));
+        if (Std.isOfType(parsed, Array))
+        {
+          for (entry in (cast parsed:Array<Dynamic>))
+          {
+            if (entry == null) continue;
+            var key:Dynamic = Reflect.field(entry, "save");
+            if (key == null) continue;
+            var keyName:String = Std.string(key);
+            if (keyName.length == 0 || settings.exists(keyName)) continue;
+            var kind:Dynamic = Reflect.field(entry, "type");
+            if (kind == "keybind" || kind == "key")
+            {
+              settings.set(keyName, {
+                keyboard: Reflect.field(entry, "keyboard") ?? "NONE",
+                gamepad: Reflect.field(entry, "gamepad") ?? "NONE"
+              });
+            }
+            else
+            {
+              var defaultValue:Dynamic = Reflect.field(entry, "value");
+              if (defaultValue != null) settings.set(keyName, defaultValue);
+            }
+          }
+        }
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych Compatibility] Could not read mod settings for ' + directory + ': ' + Std.string(error));
+        return null;
+      }
+      allSettings.set(directory, settings);
+    }
+    return settings.get(saveTag);
     #else
     return null;
     #end
