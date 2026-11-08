@@ -54,6 +54,8 @@ sustain state, and a live note-group index.
   `cancelTween`, with `onTimerCompleted` and `onTweenCompleted` callbacks
 - Basic sprite creation, animation, visibility/camera, scale, scroll-factor,
   size, add/remove, and draw-order helpers
+- Basic sound playback/control: `playSound`, tagged stop/pause/resume/volume,
+  `playMusic`, and `stopMusic` (no arbitrary streaming or external file access)
 - Basic `triggerEvent` handling for camera zoom, screen shake, and set-property
 
 The Lua VM removes its filesystem, OS, package-loading, debug, and garbage
@@ -71,7 +73,8 @@ The current tier deliberately keeps these package types unavailable:
   lifecycle behavior
 - Full Psych global-sharing semantics between script instances and the full
   Psych HScript preset/class registry
-- Full sound, shader, input, dialogue, cutscene, save-data, and
+- Advanced sound features (voice channels, audio time/volume queries, sound
+  fading/filters), shader, input, dialogue, cutscene, save-data, and
   mod-setting APIs
 - Every version-specific legacy API and extension used by arbitrary mods
 - HTML5 local-mod discovery and launching

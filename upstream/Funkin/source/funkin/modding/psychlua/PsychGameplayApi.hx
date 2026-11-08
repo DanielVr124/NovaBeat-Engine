@@ -7,6 +7,7 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
+import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
@@ -28,6 +29,8 @@ class PsychGameplayApi
   static final activeTweens:Map<String, FlxTween> = [];
   static final activeTimers:Map<String, FlxTimer> = [];
   static final scriptVariables:Map<String, Dynamic> = [];
+  static final activeSounds:Map<String, FlxSound> = [];
+  static var nextSoundTag:Int = 0;
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
@@ -51,6 +54,19 @@ class PsychGameplayApi
     });
     vars.set("getVar", function(name:String):Dynamic return scriptVariables.get(name));
     vars.set("removeVar", function(name:String):Bool return scriptVariables.remove(name));
+
+    vars.set("playSound", function(sound:String, ?volume:Float = 1, ?tag:String = ""):Bool
+      return playTaggedSound(sound, volume, tag));
+    vars.set("playMusic", function(music:String, ?volume:Float = 1, ?looped:Bool = true):Bool
+      return playModMusic(music, volume, looped));
+    vars.set("stopSound", function(?tag:String = ""):Void stopTaggedSound(tag));
+    vars.set("pauseSound", function(?tag:String = ""):Void pauseTaggedSound(tag));
+    vars.set("resumeSound", function(?tag:String = ""):Void resumeTaggedSound(tag));
+    vars.set("setSoundVolume", function(tag:String, volume:Float):Bool return setTaggedSoundVolume(tag, volume));
+    vars.set("stopMusic", function():Void
+    {
+      if (FlxG.sound.music != null) FlxG.sound.music.stop();
+    });
 
     vars.set("getSongPosition", function():Float return Conductor.instance.songPosition);
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
@@ -290,6 +306,82 @@ class PsychGameplayApi
     return vars;
   }
 
+  static function playTaggedSound(soundPath:String, volume:Float, tag:String):Bool
+  {
+    if (soundPath == null || soundPath.length == 0) return false;
+    var soundTag:String = tag == null || tag.length == 0
+      ? "psych-sound-" + Std.string(nextSoundTag++)
+      : tag;
+    stopTaggedSound(soundTag);
+
+    try
+    {
+      var sound:FlxSound = FlxG.sound.play(Paths.sound(soundPath), volume, false, null, true, function():Void
+      {
+        activeSounds.remove(soundTag);
+        PsychScriptRuntime.dispatch("onSoundFinished", [soundTag]);
+      });
+      if (sound == null) return false;
+      activeSounds.set(soundTag, sound);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] playSound(' + soundPath + ') failed: ' + Std.string(error));
+      return false;
+    }
+  }
+
+  static function playModMusic(musicPath:String, volume:Float, looped:Bool):Bool
+  {
+    if (musicPath == null || musicPath.length == 0) return false;
+    try
+    {
+      FlxG.sound.playMusic(Paths.music(musicPath), volume, looped);
+      return FlxG.sound.music != null;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] playMusic(' + musicPath + ') failed: ' + Std.string(error));
+      return false;
+    }
+  }
+
+  static function stopTaggedSound(tag:String):Void
+  {
+    if (tag == null || tag.length == 0)
+    {
+      for (sound in activeSounds)
+        if (sound != null) sound.stop();
+      activeSounds.clear();
+      return;
+    }
+
+    var sound:Null<FlxSound> = activeSounds.get(tag);
+    if (sound != null) sound.stop();
+    activeSounds.remove(tag);
+  }
+
+  static function pauseTaggedSound(tag:String):Void
+  {
+    var sound:Null<FlxSound> = activeSounds.get(tag);
+    if (sound != null) sound.pause();
+  }
+
+  static function resumeTaggedSound(tag:String):Void
+  {
+    var sound:Null<FlxSound> = activeSounds.get(tag);
+    if (sound != null) sound.resume();
+  }
+
+  static function setTaggedSoundVolume(tag:String, volume:Float):Bool
+  {
+    var sound:Null<FlxSound> = activeSounds.get(tag);
+    if (sound == null) return false;
+    sound.volume = Math.max(0, Math.min(1, volume));
+    return true;
+  }
+
   static function resolveEase(name:String):Float->Float
   {
     return switch (name == null ? "linear" : name.toLowerCase())
@@ -397,6 +489,9 @@ class PsychGameplayApi
       timer.cancel();
     activeTweens.clear();
     activeTimers.clear();
+    for (sound in activeSounds)
+      if (sound != null) sound.stop();
+    activeSounds.clear();
     scriptVariables.clear();
   }
 
