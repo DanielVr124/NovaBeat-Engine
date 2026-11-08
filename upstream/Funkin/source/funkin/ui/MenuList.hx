@@ -46,13 +46,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   public var acceptOnTouchSelection:Bool = false;
 
-  /**
-   * Lets a page handle touch releases itself when it needs a custom camera or
-   * hitbox path. Keyboard/controller navigation and touch-drag scrolling stay
-   * enabled; only this list's automatic tap-selection path is skipped.
-   */
-  public var ignoreTouchPointerSelection:Bool = false;
-
   /**  */
   public var wrapMode:WrapMode = Both;
 
@@ -271,11 +264,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       // than FlxTouch events. Route those taps through the same selection and
       // confirmation rules as native touch for both FNF and NovaBeat menus.
       final mobileBrowserMouseTap:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased;
+      final browserTouchPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.pressed;
+      final browserTouchJustPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed;
       if (TouchUtil.pressed)
       {
         touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
       }
-      else if (mobileBrowserMouseTap)
+      else if (browserTouchPressed || browserTouchJustPressed)
       {
         touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
       }
@@ -288,7 +283,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           selectItem(newIndex);
         }
       }
-      else if ((TouchUtil.pressed || mobileBrowserMouseTap) && !ignoreTouchPointerSelection)
+      else if (TouchUtil.pressed || browserTouchPressed)
       {
         for (i in 0...members.length)
         {
@@ -302,12 +297,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           final touchCamera = (cameras != null && cameras.length > 0)
             ? cameras[0]
             : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
-          final itemOverlaps:Bool = !_isMainMenuState && (mobileBrowserMouseTap ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
+          final itemOverlaps:Bool = !_isMainMenuState && (browserTouchPressed ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
           final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
           final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
 
-          if (item.available && isTouchingItem && (TouchUtil.justPressed || mobileBrowserMouseTap))
+          if (item.available && isTouchingItem && (TouchUtil.justPressed || browserTouchJustPressed))
           {
             var prevIndex:Int = selectedIndex;
 
