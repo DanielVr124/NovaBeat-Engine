@@ -4,6 +4,11 @@ import flixel.FlxG;
 import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.play.cutscene.VideoCutscene;
+import funkin.data.song.SongRegistry;
+import funkin.play.song.Song;
+import funkin.ui.transition.LoadingState;
+import funkin.modding.ExperienceManager;
+import funkin.modding.PsychModRuntime;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxObject;
@@ -398,6 +403,85 @@ class PsychGameplayApi
       FlxG.resetState();
       return true;
     });
+    vars.set("loadSong", function(?name:String = null, ?difficultyNum:Int = -1):Bool
+    {
+      if (name == null || StringTools.trim(name).length == 0)
+        name = state.currentSong == null ? "" : state.currentSong.id;
+      if (name == null || name.length == 0) return false;
+
+      var normalizedName:String = psychSongSlug(name);
+      var targetId:String = "";
+      var currentId:String = state.currentSong == null ? "" : state.currentSong.id;
+      if (normalizedName == psychSongSlug(currentId)
+        || (state.currentSong != null && normalizedName == psychSongSlug(state.currentSong.songName)))
+      {
+        targetId = currentId;
+      }
+      else
+      {
+        var matches:Array<String> = [];
+        for (songId in PsychModRuntime.collectSongIds(ExperienceManager.getActivePsychModDirs()))
+        {
+          if (psychSongSlug(songId) == normalizedName || StringTools.endsWith(psychSongSlug(songId), "-" + normalizedName))
+            matches.push(songId);
+        }
+        matches = matches.filter((id) -> id != null).distinct();
+        if (matches.length != 1)
+        {
+          trace('[Psych API] loadSong could not resolve an unambiguous active Psych song: ' + name);
+          return false;
+        }
+        targetId = matches[0];
+      }
+
+      var targetSong:Null<Song> = SongRegistry.instance.fetchEntry(targetId);
+      if (targetSong == null) return false;
+
+      var variation:String = targetSong.variations.contains(state.currentVariation)
+        ? state.currentVariation
+        : Constants.DEFAULT_VARIATION;
+      var availableDifficulties:Array<String> = targetSong.listDifficulties(variation);
+      if (availableDifficulties.length == 0) return false;
+
+      var targetDifficulty:String = "";
+      if (difficultyNum >= 0)
+      {
+        var standardDifficulties:Array<String> = ["easy", "normal", "hard"];
+        var preferred:String = difficultyNum < standardDifficulties.length
+          ? standardDifficulties[difficultyNum]
+          : "";
+        for (candidate in availableDifficulties)
+          if (candidate.toLowerCase() == preferred) targetDifficulty = candidate;
+
+        // Older Psych charts can define additional numbered difficulties.
+        if (targetDifficulty.length == 0 && difficultyNum < availableDifficulties.length)
+          targetDifficulty = availableDifficulties[difficultyNum];
+      }
+      else if (availableDifficulties.contains(state.currentDifficulty))
+      {
+        targetDifficulty = state.currentDifficulty;
+      }
+      else
+      {
+        for (candidate in availableDifficulties)
+          if (candidate.toLowerCase() == "normal") targetDifficulty = candidate;
+        if (targetDifficulty.length == 0) targetDifficulty = availableDifficulties[0];
+      }
+
+      if (targetSong.getDifficulty(targetDifficulty, variation) == null) return false;
+      LoadingState.loadPlayState({
+        targetSong: targetSong,
+        targetDifficulty: targetDifficulty,
+        targetVariation: variation,
+        targetInstrumental: "",
+        practiceMode: state.isPracticeMode,
+        botPlayMode: state.isBotPlayMode,
+        minimalMode: state.isMinimalMode,
+        playbackRate: state.playbackRate
+      }, true);
+      return true;
+    });
+
     vars.set("exitSong", function(?skipTransition:Bool = false):Bool
     {
       if (skipTransition)
@@ -1470,6 +1554,15 @@ class PsychGameplayApi
       colorText = "#" + colorText;
     var parsed:Null<FlxColor> = FlxColor.fromString(colorText);
     return parsed == null ? FlxColor.WHITE : parsed;
+  }
+
+  static function psychSongSlug(value:String):String
+  {
+    if (value == null) return "";
+    var normalized:String = ~/[^a-zA-Z0-9]+/g.replace(StringTools.trim(value), "-").toLowerCase();
+    while (StringTools.startsWith(normalized, "-")) normalized = normalized.substr(1);
+    while (StringTools.endsWith(normalized, "-")) normalized = normalized.substr(0, normalized.length - 1);
+    return normalized;
   }
 
   static function resolveSound(tag:String):Null<FlxSound>
