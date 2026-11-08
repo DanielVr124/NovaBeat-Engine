@@ -1611,6 +1611,7 @@ class PsychGameplayApi
     if (source == null)
     {
       trace('[Psych Dialogue] Could not find data/' + state.currentSong.id + '/' + dialogueFile + '.json in the owning Psych package.');
+      resumeAfterMissingPsychDialogue(state);
       return false;
     }
 
@@ -1619,7 +1620,11 @@ class PsychGameplayApi
       var parsed:Dynamic = haxe.Json.parse(source.source);
       var rawLines:Dynamic = Reflect.field(parsed, "dialogue");
       if (!Std.isOfType(rawLines, Array) || (cast rawLines:Array<Dynamic>).length == 0)
+      {
+        trace('[Psych Dialogue] The dialogue file contains no dialogue lines: ' + source.path);
+        resumeAfterMissingPsychDialogue(state);
         return false;
+      }
 
       var lines:Array<Dynamic> = cast rawLines;
       var endingSong:Bool = state.isSongEnd;
@@ -1654,8 +1659,19 @@ class PsychGameplayApi
     {
       activeDialogue = null;
       trace('[Psych Dialogue] Could not parse ' + source.path + ': ' + Std.string(error));
+      resumeAfterMissingPsychDialogue(state);
       return false;
     }
+  }
+
+  static function resumeAfterMissingPsychDialogue(state:PlayState):Void
+  {
+    if (state == null) return;
+    // Psych resumes the countdown/end-song flow when the requested dialogue
+    // file cannot be found. Do the same so a missing optional file never
+    // strands a chart in an input-disabled cutscene.
+    if (state.isSongEnd) state.endSong();
+    else state.startCountdown();
   }
 
   static function ensureTimeBar(state:PlayState):Void
