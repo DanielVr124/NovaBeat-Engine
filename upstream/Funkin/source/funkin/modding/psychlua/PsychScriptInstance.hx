@@ -214,6 +214,43 @@ class PsychScriptInstance
     return null;
   }
 
+  /**
+   * Execute another code chunk in this interpreter. Used by Psych's
+   * runHaxeCode/runLuaCode helpers to preserve an interpreter between calls.
+   */
+  public function executeSnippet(source:String):Bool
+  {
+    if (destroyed || source == null || source.length == 0) return !destroyed;
+    lastError = null;
+    try
+    {
+      if (hscript != null)
+      {
+        hscript.doString(source, sourcePath);
+        if (hscript.parsingException != null)
+        {
+          lastError = Std.string(hscript.parsingException);
+          return false;
+        }
+        return true;
+      }
+
+      #if (cpp || js)
+      if (lua != null)
+      {
+        resetLuaBudget();
+        lua.run(source);
+        return true;
+      }
+      #end
+    }
+    catch (error:Dynamic)
+    {
+      lastError = Std.string(error);
+    }
+    return false;
+  }
+
   public function setVariable(name:String, value:Dynamic):Void
   {
     if (destroyed || name == null || name.length == 0) return;

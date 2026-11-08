@@ -5,6 +5,7 @@ import flixel.FlxSprite;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+import flixel.util.FlxTimer;
 import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
@@ -20,7 +21,8 @@ import funkin.play.character.BaseCharacter;
 @:access(funkin.play.PlayState)
 class PsychGameplayApi
 {
-  static final spriteTweens:Map<String, FlxTween> = [];
+  static final activeTweens:Map<String, FlxTween> = [];
+  static final activeTimers:Map<String, FlxTimer> = [];
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
@@ -51,6 +53,30 @@ class PsychGameplayApi
     vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));
     vars.set("getRandomBool", function(?chance:Float = 50):Bool return FlxG.random.bool(chance));
     vars.set("getRunningScripts", function():Array<String> return PsychScriptRuntime.getScriptPaths());
+    vars.set("runHaxeCode", function(code:String, ?variablesToBring:Dynamic):Bool
+      return PsychScriptRuntime.runHaxeCode(code, variablesToBring));
+    vars.set("runHaxeFunction", function(name:String, ?args:Array<Dynamic>):Dynamic
+      return PsychScriptRuntime.runHaxeFunction(name, args));
+    vars.set("runLuaCode", function(code:String, ?variablesToBring:Dynamic):Bool
+      return PsychScriptRuntime.runLuaCode(code, variablesToBring));
+    vars.set("runLuaFunction", function(name:String, ?args:Array<Dynamic>):Dynamic
+      return PsychScriptRuntime.runLuaFunction(name, args));
+
+    vars.set("doTweenX", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, objectTag, {x: value}, duration, ease));
+    vars.set("doTweenY", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, objectTag, {y: value}, duration, ease));
+    vars.set("doTweenAlpha", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, objectTag, {alpha: value}, duration, ease));
+    vars.set("doTweenAngle", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, objectTag, {angle: value}, duration, ease));
+    vars.set("doTweenZoom", function(tag:String, cameraTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, cameraTag, {zoom: value}, duration, ease));
+    vars.set("doTweenColor", function(tag:String, objectTag:String, color:String, duration:Float, ?ease:String = "linear"):Bool
+      return startColorTween(state, tag, objectTag, color, duration, ease));
+    vars.set("cancelTween", function(tag:String):Bool return cancelTween(tag));
+    vars.set("runTimer", function(tag:String, time:Float, ?loops:Int = 1):Bool return runTimer(tag, time, loops));
+    vars.set("cancelTimer", function(tag:String):Bool return cancelTimer(tag));
 
     vars.set("makeLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
     {
@@ -178,6 +204,111 @@ class PsychGameplayApi
     vars.set("Function_StopAll", 4);
 
     return vars;
+  }
+
+  static function resolveEase(name:String):Float->Float
+  {
+    return switch (name == null ? "linear" : name.toLowerCase())
+    {
+      case "quadin": FlxEase.quadIn;
+      case "quadout": FlxEase.quadOut;
+      case "quadinout": FlxEase.quadInOut;
+      case "cubein": FlxEase.cubeIn;
+      case "cubeout": FlxEase.cubeOut;
+      case "cubeinout": FlxEase.cubeInOut;
+      case "sinein": FlxEase.sineIn;
+      case "sineout": FlxEase.sineOut;
+      case "sineinout": FlxEase.sineInOut;
+      case "circin": FlxEase.circIn;
+      case "circout": FlxEase.circOut;
+      case "bounceout": FlxEase.bounceOut;
+      case "elasticout": FlxEase.elasticOut;
+      default: FlxEase.linear;
+    }
+  }
+
+  static function startTween(state:PlayState, tag:String, objectTag:String, values:Dynamic, duration:Float, ease:String):Bool
+  {
+    if (tag == null || tag.length == 0 || duration < 0) return false;
+    var target:Dynamic = getProperty(state, objectTag);
+    if (target == null) return false;
+    cancelTween(tag);
+
+    var tween:FlxTween = FlxTween.tween(target, values, duration, {
+      ease: resolveEase(ease),
+      onComplete: function(_:FlxTween):Void
+      {
+        activeTweens.remove(tag);
+        PsychScriptRuntime.dispatch("onTweenCompleted", [tag]);
+      }
+    });
+    activeTweens.set(tag, tween);
+    return true;
+  }
+
+  static function startColorTween(state:PlayState, tag:String, objectTag:String, color:String, duration:Float, ease:String):Bool
+  {
+    var target:Dynamic = getProperty(state, objectTag);
+    if (!Std.isOfType(target, FlxSprite)) return false;
+    var sprite:FlxSprite = cast target;
+    var parsedColor:Null<FlxColor> = FlxColor.fromString(color);
+    if (parsedColor == null) return false;
+    if (tag == null || tag.length == 0 || duration < 0) return false;
+    cancelTween(tag);
+
+    var tween:FlxTween = FlxTween.color(sprite, duration, sprite.color, parsedColor, {
+      ease: resolveEase(ease),
+      onComplete: function(_:FlxTween):Void
+      {
+        activeTweens.remove(tag);
+        PsychScriptRuntime.dispatch("onTweenCompleted", [tag]);
+      }
+    });
+    activeTweens.set(tag, tween);
+    return true;
+  }
+
+  static function cancelTween(tag:String):Bool
+  {
+    var tween:Null<FlxTween> = activeTweens.get(tag);
+    if (tween == null) return false;
+    tween.cancel();
+    activeTweens.remove(tag);
+    return true;
+  }
+
+  static function runTimer(tag:String, time:Float, loops:Int):Bool
+  {
+    if (tag == null || tag.length == 0 || time < 0) return false;
+    cancelTimer(tag);
+    var timer = new FlxTimer();
+    timer.start(time, function(t:FlxTimer):Void
+    {
+      PsychScriptRuntime.dispatch("onTimerCompleted", [tag, t.loops, t.loopsLeft]);
+      if (t.finished)
+        activeTimers.remove(tag);
+    }, loops);
+    activeTimers.set(tag, timer);
+    return true;
+  }
+
+  static function cancelTimer(tag:String):Bool
+  {
+    var timer:Null<FlxTimer> = activeTimers.get(tag);
+    if (timer == null) return false;
+    timer.cancel();
+    activeTimers.remove(tag);
+    return true;
+  }
+
+  public static function clear():Void
+  {
+    for (tween in activeTweens)
+      tween.cancel();
+    for (timer in activeTimers)
+      timer.cancel();
+    activeTweens.clear();
+    activeTimers.clear();
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>

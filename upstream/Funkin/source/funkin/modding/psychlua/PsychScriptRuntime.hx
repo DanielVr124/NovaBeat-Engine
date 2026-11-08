@@ -17,6 +17,9 @@ import funkin.play.PlayState;
 class PsychScriptRuntime
 {
   static final scripts:Array<PsychScriptInstance> = [];
+  static var activeGlobals:Map<String, Dynamic> = [];
+  static var inlineHScriptBridge:Null<PsychScriptInstance> = null;
+  static var inlineLuaBridge:Null<PsychScriptInstance> = null;
   static final sharedGlobals:Map<String, Dynamic> = [
     "Function_Continue" => 0,
     "Function_Stop" => 1,
@@ -53,6 +56,9 @@ class PsychScriptRuntime
   {
     clear();
     var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
+    activeGlobals = new Map<String, Dynamic>();
+    for (name => value in globals)
+      activeGlobals.set(name, value);
     var loaded:Int = 0;
     var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
     for (source in sources)
@@ -64,6 +70,99 @@ class PsychScriptRuntime
     if (loaded > 0)
       dispatch("onCreate", []);
     return loaded;
+  }
+
+  static function buildBridgeGlobals(?extraVariables:Dynamic):Map<String, Dynamic>
+  {
+    var result:Map<String, Dynamic> = new Map<String, Dynamic>();
+    for (name => value in sharedGlobals)
+      result.set(name, value);
+    for (name => value in activeGlobals)
+      result.set(name, value);
+    if (extraVariables != null)
+    {
+      for (name in Reflect.fields(extraVariables))
+        result.set(name, Reflect.field(extraVariables, name));
+    }
+    return result;
+  }
+
+  public static function runHaxeCode(code:String, ?variablesToBring:Dynamic):Bool
+  {
+    if (code == null || code.length == 0) return true;
+    if (inlineHScriptBridge == null)
+    {
+      inlineHScriptBridge = new PsychScriptInstance(
+        "novabeat-inline-hscript.hx",
+        "",
+        buildBridgeGlobals(variablesToBring)
+      );
+      scripts.push(inlineHScriptBridge);
+    }
+    else if (variablesToBring != null)
+    {
+      for (name in Reflect.fields(variablesToBring))
+        inlineHScriptBridge.setVariable(name, Reflect.field(variablesToBring, name));
+    }
+
+    var succeeded:Bool = inlineHScriptBridge.executeSnippet(code);
+    if (!succeeded && inlineHScriptBridge.lastError != null)
+      trace('[Psych Script Runtime] runHaxeCode failed: ' + inlineHScriptBridge.lastError);
+    return succeeded;
+  }
+
+  public static function runLuaCode(code:String, ?variablesToBring:Dynamic):Bool
+  {
+    #if (cpp || js)
+    if (code == null || code.length == 0) return true;
+    if (inlineLuaBridge == null)
+    {
+      inlineLuaBridge = new PsychScriptInstance(
+        "novabeat-inline-lua.lua",
+        "",
+        buildBridgeGlobals(variablesToBring)
+      );
+      scripts.push(inlineLuaBridge);
+    }
+    else if (variablesToBring != null)
+    {
+      for (name in Reflect.fields(variablesToBring))
+        inlineLuaBridge.setVariable(name, Reflect.field(variablesToBring, name));
+    }
+
+    var succeeded:Bool = inlineLuaBridge.executeSnippet(code);
+    if (!succeeded && inlineLuaBridge.lastError != null)
+      trace('[Psych Script Runtime] runLuaCode failed: ' + inlineLuaBridge.lastError);
+    return succeeded;
+    #else
+    return false;
+    #end
+  }
+
+  public static function runHaxeFunction(name:String, ?args:Array<Dynamic>):Dynamic
+  {
+    var callArgs:Array<Dynamic> = args == null ? [] : args;
+    for (script in scripts)
+    {
+      if (script.language != "hscript" || !script.hasFunction(name)) continue;
+      return script.call(name, callArgs);
+    }
+    if (inlineHScriptBridge != null && inlineHScriptBridge.hasFunction(name))
+      return inlineHScriptBridge.call(name, callArgs);
+    return null;
+  }
+
+  public static function runLuaFunction(name:String, ?args:Array<Dynamic>):Dynamic
+  {
+    var callArgs:Array<Dynamic> = args == null ? [] : args;
+    for (script in scripts)
+    {
+      if (script.language != "lua" || !script.hasFunction(name)) continue;
+      return script.call(name, callArgs);
+    }
+    if (inlineLuaBridge != null && inlineLuaBridge.hasFunction(name))
+      return inlineLuaBridge.call(name, callArgs);
+    return null;
   }
 
   public static function updateFrame(elapsed:Float):Void
@@ -150,6 +249,10 @@ class PsychScriptRuntime
     for (script in scripts)
       script.destroy();
     scripts.resize(0);
+    inlineHScriptBridge = null;
+    inlineLuaBridge = null;
+    activeGlobals = new Map<String, Dynamic>();
+    PsychGameplayApi.clear();
   }
 
   /**

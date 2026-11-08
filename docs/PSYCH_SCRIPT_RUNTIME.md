@@ -38,6 +38,10 @@ sustain state, and a live note-group index.
 - `getPropertyFromGroup`, `setPropertyFromGroup`
 - `getVar`, `setVar`, `removeVar`
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
+- `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
+  for basic cross-language code and function calls
+- Named timers/tweens: `runTimer`, `cancelTimer`, `doTweenX/Y/Alpha/Angle/Zoom/Color`,
+  `cancelTween`, with `onTimerCompleted` and `onTweenCompleted` callbacks
 - Basic sprite creation, animation, visibility/camera, scale, scroll-factor,
   size, add/remove, and draw-order helpers
 - Basic `triggerEvent` handling for camera zoom, screen shake, and set-property
@@ -55,9 +59,9 @@ The current tier deliberately keeps these package types unavailable:
 - Stage scripts (`stages/`) and custom character scripts (`characters/`)
 - Custom stage JSON, character JSON/atlases, and Psych-specific stage/character
   lifecycle behavior
-- `runHaxeCode` / `runHaxeFunction`, full Lua↔HScript cross-calls, and exact
-  Psych global-sharing behavior between script instances
-- Full timers, tweens, sound, shader, input, dialogue, cutscene, save-data, and
+- Full Psych global-sharing semantics between script instances and the full
+  Psych HScript preset/class registry
+- Full sound, shader, input, dialogue, cutscene, save-data, and
   mod-setting APIs
 - Every version-specific legacy API and extension used by arbitrary mods
 - HTML5 local-mod discovery and launching
