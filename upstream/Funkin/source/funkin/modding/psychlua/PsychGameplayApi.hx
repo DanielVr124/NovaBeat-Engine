@@ -614,8 +614,7 @@ class PsychGameplayApi
         return Highscore.tallies.totalNotesHit;
       case "combo":
         return Highscore.tallies.combo;
-      case "rating":
-      case "ratingPercent":
+      case "rating", "ratingPercent":
         return Highscore.tallies.totalNotes <= 0
           ? 0.0
           : Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes;
