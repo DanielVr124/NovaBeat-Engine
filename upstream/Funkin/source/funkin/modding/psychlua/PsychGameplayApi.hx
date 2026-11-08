@@ -439,10 +439,21 @@ class PsychGameplayApi
       if (current == null) return null;
       if (parts.length == 0)
       {
-        if (scriptVariables.exists(rootName))
-          scriptVariables.set(rootName, value);
-        else
-          Reflect.setProperty(state, rootName, value);
+        switch (rootName)
+        {
+          case "defaultCamZoom":
+            state.currentCameraZoom = cast value;
+            state.camGame.zoom = state.currentCameraZoom;
+          case "cameraX":
+            state.cameraFollowPoint.x = cast value;
+          case "cameraY":
+            state.cameraFollowPoint.y = cast value;
+          default:
+            if (scriptVariables.exists(rootName))
+              scriptVariables.set(rootName, value);
+            else
+              Reflect.setProperty(state, rootName, value);
+        }
         return value;
       }
       for (i in 0...(parts.length - 1))
@@ -482,6 +493,14 @@ class PsychGameplayApi
         return getStageCharacter(state, "getGirlfriend");
       case "FlxG", "flixel.FlxG":
         return FlxG;
+      case "camFollow", "cameraFollowPoint":
+        return state.cameraFollowPoint;
+      case "cameraX":
+        return state.cameraFollowPoint.x;
+      case "cameraY":
+        return state.cameraFollowPoint.y;
+      case "defaultCamZoom":
+        return state.currentCameraZoom;
       default:
         if (scriptVariables.exists(name)) return scriptVariables.get(name);
         return Reflect.getProperty(state, name);
@@ -681,6 +700,37 @@ class PsychGameplayApi
           state.camHUD.shake(parseFloatOr(hudParts[1], 0), parseFloatOr(hudParts[0], 0));
       case "set property":
         setProperty(state, value1, value2);
+      case "camera follow pos":
+        if (value1 != null && value1.length > 0 && value2 != null && value2.length > 0)
+        {
+          var x:Float = parseFloatOr(value1, state.cameraFollowPoint.x);
+          var y:Float = parseFloatOr(value2, state.cameraFollowPoint.y);
+          state.cameraFollowPoint.setPosition(x, y);
+        }
+      case "play animation":
+        var characterId:String = value2 == null || value2.length == 0 ? "bf" : value2.toLowerCase();
+        if (characterId == "boyfriend" || characterId == "player") characterId = "bf";
+        if (characterId == "opponent") characterId = "dad";
+        if (state.currentStage != null)
+        {
+          var character:Null<BaseCharacter> = state.currentStage.getCharacter(characterId);
+          if (character != null && value1 != null && value1.length > 0)
+            character.playAnimation(value1, true);
+        }
+      case "hey!":
+        var heyCharacter:String = value1 == null || value1.length == 0 ? "bf" : value1.toLowerCase();
+        if (heyCharacter == "boyfriend" || heyCharacter == "player") heyCharacter = "bf";
+        if (heyCharacter == "opponent") heyCharacter = "dad";
+        if (state.currentStage != null)
+        {
+          var character:Null<BaseCharacter> = state.currentStage.getCharacter(heyCharacter);
+          if (character != null && character.hasAnimation("hey"))
+            character.playAnimation("hey", true);
+        }
+      case "set gf speed":
+        var girlfriend:Null<BaseCharacter> = state.currentStage == null ? null : state.currentStage.getGirlfriend();
+        var speed:Int = Std.int(parseFloatOr(value1, 1));
+        if (girlfriend != null) girlfriend.danceEvery = Std.int(Math.max(1, speed));
       default:
         trace('[Psych API] Unsupported built-in event: ' + name);
     }
