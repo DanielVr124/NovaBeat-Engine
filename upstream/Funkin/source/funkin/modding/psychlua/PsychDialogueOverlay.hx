@@ -161,7 +161,14 @@ class PsychDialogueOverlay extends FlxSpriteGroup
       return;
     }
 
-    FlxG.sound.play(Paths.sound("dialogueClose"), 0.65);
+    try
+    {
+      FlxG.sound.play(Paths.sound("dialogueClose"), 0.65);
+    }
+    catch (error:Dynamic)
+    {
+      // This optional sound can be absent from a mod package.
+    }
     showNextLine();
   }
 
