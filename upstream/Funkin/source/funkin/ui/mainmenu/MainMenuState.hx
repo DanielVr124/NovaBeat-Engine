@@ -1,6 +1,7 @@
 package funkin.ui.mainmenu;
 
 import funkin.Preferences;
+import funkin.input.Cursor;
 
 import flixel.addons.transition.FlxTransitionableState;
 #if FEATURE_DEBUG_MENU
@@ -92,6 +93,7 @@ class MainMenuState extends MusicBeatState
 
   override function create():Void
   {
+    Cursor.hide();
     // Keep the upstream FNF menu as the default. NovaBeat is an explicit
     // preference and is routed here only after the player opts in.
     if (Preferences.menuStyle == "NovaBeat")
