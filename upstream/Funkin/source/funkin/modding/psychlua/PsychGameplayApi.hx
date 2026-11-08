@@ -31,6 +31,7 @@ import flixel.addons.display.FlxRuntimeShader;
 import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
+import funkin.graphics.FunkinSprite;
 import funkin.Assets;
 import funkin.play.PlayState;
 import funkin.Highscore;
@@ -473,12 +474,57 @@ class PsychGameplayApi
       return token;
     });
 
-    // FlxAnimate is an optional Psych dependency and is not bundled by NovaBeat.
-    // Keep the callback names present so scripts can feature-detect cleanly.
-    vars.set("makeFlxAnimateSprite", function(tag:String, ?x:Float = 0, ?y:Float = 0, ?loadFolder:String = null):Bool return false);
-    vars.set("loadAnimateAtlas", function(tag:String, folderOrImg:Dynamic, ?spriteJson:Dynamic = null, ?animationJson:Dynamic = null):Bool return false);
-    vars.set("addAnimationBySymbol", function(tag:String, name:String, symbol:String, ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool return false);
-    vars.set("addAnimationBySymbolIndices", function(tag:String, name:String, symbol:String, ?indices:Dynamic = null, ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool return false);
+    // Psych's Animate helpers use NovaBeat's existing FunkinSprite atlas renderer.
+    // Texture files are resolved through the active Polymod asset set.
+    vars.set("makeFlxAnimateSprite", function(tag:String, ?x:Float = 0, ?y:Float = 0, ?loadFolder:String = null):Bool
+    {
+      if (tag == null || StringTools.trim(tag).length == 0) return false;
+      var normalizedTag:String = StringTools.replace(tag, ".", "");
+      var previous:Null<FlxSprite> = getSprite(state, normalizedTag);
+      if (previous != null)
+      {
+        state.remove(previous, true);
+        previous.destroy();
+        scriptVariables.remove(normalizedTag);
+      }
+
+      var sprite:PsychAnimateSprite = new PsychAnimateSprite(x, y);
+      if (loadFolder != null && StringTools.trim(loadFolder).length > 0
+        && !loadPsychAnimateAtlas(sprite, loadFolder))
+      {
+        sprite.destroy();
+        return false;
+      }
+      scriptVariables.set(normalizedTag, sprite);
+      return true;
+    });
+    vars.set("loadAnimateAtlas", function(tag:String, folderOrImg:Dynamic, ?spriteJson:Dynamic = null, ?animationJson:Dynamic = null):Bool
+    {
+      var sprite:Null<PsychAnimateSprite> = getPsychAnimateSprite(state, tag);
+      return sprite != null && loadPsychAnimateAtlas(sprite, folderOrImg, spriteJson, animationJson);
+    });
+    vars.set("addAnimationBySymbol", function(tag:String, name:String, symbol:String,
+        ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
+    {
+      var sprite:Null<PsychAnimateSprite> = getPsychAnimateSprite(state, tag);
+      if (sprite == null || !sprite.anim.hasAnimateAtlas || name == null || symbol == null) return false;
+      sprite.anim.addBySymbol(name, symbol, framerate, loop);
+      sprite.addOffset(name, matX, matY);
+      if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
+      return true;
+    });
+    vars.set("addAnimationBySymbolIndices", function(tag:String, name:String, symbol:String, ?indices:Dynamic = null,
+        ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
+    {
+      var sprite:Null<PsychAnimateSprite> = getPsychAnimateSprite(state, tag);
+      if (sprite == null || !sprite.anim.hasAnimateAtlas || name == null || symbol == null) return false;
+      var parsedIndices:Array<Int> = parsePsychAnimateIndices(indices);
+      if (parsedIndices.length == 0) parsedIndices = [0];
+      sprite.anim.addBySymbolIndices(name, symbol, parsedIndices, framerate, loop);
+      sprite.addOffset(name, matX, matY);
+      if (sprite.getCurrentAnimation().length == 0) sprite.playPsychAnimation(name, true);
+      return true;
+    });
     vars.set("getMidpointX", function(variable:String):Float
     {
       var object:Dynamic = getProperty(state, variable);
@@ -2838,6 +2884,71 @@ class PsychGameplayApi
     return PsychScriptRuntime.getExecutingScriptModDirectory() + "::" + name;
   }
 
+  static function getPsychAnimateSprite(state:PlayState, tag:String):Null<PsychAnimateSprite>
+  {
+    var sprite:Null<FlxSprite> = getSprite(state, tag);
+    return sprite != null && Std.isOfType(sprite, PsychAnimateSprite) ? cast sprite : null;
+  }
+
+  static function parsePsychAnimateIndices(indices:Dynamic):Array<Int>
+  {
+    var result:Array<Int> = [];
+    if (indices == null) return [0];
+    if (Std.isOfType(indices, Array))
+    {
+      for (value in (cast indices:Array<Dynamic>))
+      {
+        if (value == null) continue;
+        var parsed:Null<Int> = Std.parseInt(Std.string(value));
+        if (parsed != null && parsed >= 0) result.push(parsed);
+      }
+    }
+    else
+    {
+      for (part in Std.string(indices).split(","))
+      {
+        var parsed:Null<Int> = Std.parseInt(StringTools.trim(part));
+        if (parsed != null && parsed >= 0) result.push(parsed);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Load a standard Adobe Animate atlas from the active Polymod asset set.
+   * Psych's separate JSON override overload is rejected explicitly; the
+   * supported atlas folder must contain Animation.json and its spritemaps.
+   */
+  static function loadPsychAnimateAtlas(sprite:FunkinSprite, folderOrImg:Dynamic,
+      ?spriteJson:Dynamic = null, ?animationJson:Dynamic = null):Bool
+  {
+    if (sprite == null || folderOrImg == null || !Std.isOfType(folderOrImg, String)) return false;
+    if (spriteJson != null || animationJson != null)
+    {
+      trace('[Psych API] loadAnimateAtlas: separate JSON overrides are not supported; use the atlas folder containing Animation.json and its spritemaps.');
+      return false;
+    }
+
+    var folder:String = StringTools.replace(StringTools.trim(Std.string(folderOrImg)), "\\", "/");
+    if (StringTools.startsWith(folder, "images/")) folder = folder.substr("images/".length);
+    while (StringTools.startsWith(folder, "./")) folder = folder.substr(2);
+    if (folder.length == 0 || StringTools.startsWith(folder, "/")
+      || (folder.length > 1 && folder.charAt(1) == ":")) return false;
+    for (part in folder.split("/"))
+      if (part == ".." || part == "." || part.length == 0) return false;
+
+    try
+    {
+      sprite.loadTextureAtlas(folder);
+      return sprite.anim.hasAnimateAtlas;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] loadAnimateAtlas(' + folder + ') failed: ' + Std.string(error));
+      return false;
+    }
+  }
+
   static function initSaveData(name:String, folder:String):Bool
   {
     var directory:String = PsychScriptRuntime.getExecutingScriptModDirectory();
@@ -3014,5 +3125,31 @@ class PsychGameplayApi
   {
     var result:Null<Float> = Std.parseFloat(value);
     return result == null || Math.isNaN(result) ? fallback : result;
+  }
+}
+
+/** Psych-style animation offsets on NovaBeat's native Adobe Animate sprite. */
+@:nullSafety(Off)
+class PsychAnimateSprite extends FunkinSprite
+{
+  final psychAnimOffsets:Map<String, Array<Float>> = [];
+
+  public function new(x:Float = 0, y:Float = 0)
+  {
+    super(x, y);
+  }
+
+  public function addOffset(name:String, x:Float, y:Float):Void
+  {
+    if (name == null || name.length == 0) return;
+    psychAnimOffsets.set(name, [x, y]);
+  }
+
+  public function playPsychAnimation(name:String, force:Bool = false, reverse:Bool = false, startFrame:Int = 0):Void
+  {
+    if (name == null || name.length == 0) return;
+    anim.play(name, force, reverse, startFrame);
+    var values:Null<Array<Float>> = psychAnimOffsets.get(name);
+    if (values != null && values.length >= 2) offset.set(values[0], values[1]);
   }
 }
