@@ -45,6 +45,8 @@ class PsychScriptRuntime
     activeGlobals.set(name, value);
     for (script in scripts)
       script.setVariable(name, value);
+    if (inlineHScriptBridge != null) inlineHScriptBridge.setVariable(name, value);
+    if (inlineLuaBridge != null) inlineLuaBridge.setVariable(name, value);
   }
 
   public static function removeGlobal(name:String):Void
@@ -221,7 +223,6 @@ class PsychScriptRuntime
         "",
         buildBridgeGlobals(variablesToBring)
       );
-      scripts.push(inlineHScriptBridge);
     }
     else if (variablesToBring != null)
     {
@@ -246,7 +247,6 @@ class PsychScriptRuntime
         "",
         buildBridgeGlobals(variablesToBring)
       );
-      scripts.push(inlineLuaBridge);
     }
     else if (variablesToBring != null)
     {
@@ -323,10 +323,13 @@ class PsychScriptRuntime
     if (callback == null || callback.length == 0) return false;
 
     for (script in scripts)
+    {
+      // Inline runLuaCode/runHaxeCode bridges are helper interpreters, not
+      // loaded mod files. Keep them out of lifecycle callback detection even
+      // if a future refactor accidentally registers one in the script list.
+      if (script == inlineHScriptBridge || script == inlineLuaBridge) continue;
       if (script.hasFunction(callback)) return true;
-
-    // Inline runLuaCode/runHaxeCode bridges are callable snippets, not members
-    // of the lifecycle dispatch list, so they must not affect alias detection.
+    }
     return false;
   }
 
@@ -483,12 +486,14 @@ class PsychScriptRuntime
   {
     for (script in scripts)
       if (script.language == "lua") script.setVariable(name, value);
+    if (inlineLuaBridge != null) inlineLuaBridge.setVariable(name, value);
   }
 
   public static function setOnHScript(name:String, value:Dynamic):Void
   {
     for (script in scripts)
       if (script.language == "hscript") script.setVariable(name, value);
+    if (inlineHScriptBridge != null) inlineHScriptBridge.setVariable(name, value);
   }
 
   public static function clear():Void
@@ -497,6 +502,8 @@ class PsychScriptRuntime
       script.destroy();
     scripts.resize(0);
     customSubstateScripts.resize(0);
+    if (inlineHScriptBridge != null) inlineHScriptBridge.destroy();
+    if (inlineLuaBridge != null) inlineLuaBridge.destroy();
     activeModDirs = [];
     inlineHScriptBridge = null;
     inlineLuaBridge = null;
