@@ -374,6 +374,11 @@ class GameOverSubState extends MusicBeatSubState
     {
       isEnding = true;
 
+      // This callback belongs to the game-over confirmation input. A Retry
+      // action from the pause menu also triggers SONG_RETRY, but is not a
+      // Psych onGameOverConfirm event.
+      parentPlayState?.dispatchPsychGameOverConfirm();
+
       // Stop death quotes immediately.
       hasPlayedDeathQuote = true;
       if (deathQuoteSound != null)
