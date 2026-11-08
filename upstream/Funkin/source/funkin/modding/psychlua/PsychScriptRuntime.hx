@@ -1,7 +1,6 @@
 package funkin.modding.psychlua;
 
 import haxe.Exception;
-import flixel.FlxG;
 import funkin.Conductor;
 import funkin.modding.PsychModRuntime;
 import funkin.modding.PsychModRuntime.PsychScriptSource;
@@ -15,6 +14,7 @@ import funkin.play.PlayState;
  * and preserves Psych's Lua-first/HScript-second return semantics.
  */
 @:nullSafety(Off)
+@:access(funkin.play.PlayState)
 class PsychScriptRuntime
 {
   static final scripts:Array<PsychScriptInstance> = [];
@@ -306,7 +306,7 @@ class PsychScriptRuntime
     setGlobal("bpm", Conductor.instance.bpm);
     setGlobal("crochet", Conductor.instance.beatLengthMs);
     setGlobal("stepCrochet", Conductor.instance.stepLengthMs);
-    setGlobal("songLength", FlxG.sound.music == null ? 0 : FlxG.sound.music.length);
+    setGlobal("songLength", PlayState.instance?.currentSongLengthMs ?? 0);
   }
 
   public static function updateFrame(elapsed:Float):Void
