@@ -574,6 +574,18 @@ class SongRegistry extends BaseRegistry<Song, SongMetadata, SongEntryParams> imp
       }
     }
 
+    // Psych compatibility songs use NovaBeat's built-in BF/GF/Dad cast,
+    // so include their chart difficulties regardless of the selected player.
+    for (psychSongId in ExperienceManager.getActivePsychSongIds())
+    {
+      var psychSong:Null<Song> = fetchEntry(psychSongId);
+      if (psychSong == null) continue;
+      for (diff in psychSong.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true))
+      {
+        if (!allDifficulties.contains(diff)) allDifficulties.push(diff);
+      }
+    }
+
     allDifficulties.sort(funkin.util.SortUtil.defaultsThenAlphabetically.bind(Constants.DEFAULT_DIFFICULTY_LIST_FULL));
 
     if (allDifficulties.length == 0)
