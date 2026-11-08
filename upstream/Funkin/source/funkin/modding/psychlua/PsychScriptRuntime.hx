@@ -103,6 +103,12 @@ class PsychScriptRuntime
       return true;
     }
 
+    if (fullName == "flixel.math.FlxPoint")
+    {
+      setHScriptGlobal(name, PsychScriptInstance.createFlxPointApi());
+      return true;
+    }
+
     var resolved:Class<Dynamic> = Type.resolveClass(fullName);
     if (resolved == null) return false;
     setHScriptGlobal(name, resolved);
