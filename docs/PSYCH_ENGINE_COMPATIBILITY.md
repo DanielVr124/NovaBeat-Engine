@@ -2,15 +2,15 @@
 
 ## Compatibility target
 
-NovaBeat's compatibility target is the **official ShadowMario Psych Engine 0.7.3 mod format and scripting API**. Psych forks are out of scope unless explicitly added later.
+NovaBeat's detection target is **official Psych Engine across version families**, including older and newer releases. Detection is intentionally version-agnostic: a package can be identified from its long-lived Psych chart/script layout even when it does not declare an engine version. When metadata explicitly supplies a Psych Engine version, NovaBeat displays it; otherwise it displays **Psych Engine (version unknown)**. Psych forks are out of scope unless explicitly added later.
 
-The goal is to run compatible Psych mods inside NovaBeat's own gameplay runtime. This is not a plan to bundle a second complete copy of Psych Engine or to ship other people's mod assets with NovaBeat. Installed mods remain separate packages.
+The goal is to detect official Psych packages regardless of release version, then run compatible mods inside NovaBeat's own gameplay runtime. Detection and runtime compatibility are separate: recognizing a package from an older/newer version does not imply all of that version's APIs have already been implemented. The initial scripting-API compatibility baseline for runtime development is Psych 0.7.3, with version-specific adapters added as testing reveals differences. This is not a plan to bundle a second complete copy of Psych Engine or to ship other people's mod assets with NovaBeat. Installed mods remain separate packages.
 
 ## Architecture
 
 Keep the native V-Slice path and Psych compatibility path isolated:
 
-1. **Package discovery** identifies Psych folders even when they do not contain NovaBeat or Polymod metadata. It records the declared/detected engine and version, and inventories the Psych-specific content.
+1. **Package discovery** identifies Psych folders across version families even when they do not contain NovaBeat or Polymod metadata. It reads explicit Psych-version fields from supported metadata files, but never mistakes a mod's generic `version` field for the engine version. If no exact Psych version is declared, it records the engine as Psych with the version unknown, and inventories the Psych-specific content.
 2. **Data adapters** read Psych song charts, character/stage data, events, note types, dialogue, and other standard data formats, then map them into NovaBeat runtime models.
 3. **Lua runtime** executes Psych Lua scripts and exposes the expected globals, properties, callbacks, timers, tweens, sprite helpers, sound helpers, and gameplay functions.
 4. **HScript runtime** executes supported Psych HScript files through a separate adapter, with the same game lifecycle and object model.
@@ -23,9 +23,9 @@ The script runtimes must be behind platform-neutral interfaces. Platform-specifi
 
 A Psych package is not considered supported merely because its folder or chart can be detected.
 
-The compatibility checklist includes:
+The version-agnostic detection checklist includes:
 
-- Psych folder and metadata detection, version identification, and mod load order.
+- Psych folder and metadata detection across older/newer official layouts; explicit version extraction where declared; safe `version unknown` fallback where it is not; and mod load order.
 - Psych song chart JSON, difficulties, note lanes, sustain notes, BPM changes, song speed, player/opponent/GF assignments, and stage assignment.
 - Character definitions, sprite atlases/animations, icons, offsets, and character script hooks.
 - Stage data, stage Lua/HScript, foreground/background ordering, camera behavior, and common stage effects.
@@ -60,4 +60,4 @@ A Psych package remains **detected but not launchable** until an end-to-end test
 
 ## Current status
 
-The repository already has an experience scanner and an engine bridge that can label some packages as Psych Engine. The bridge currently marks Psych packages as not launchable, correctly, because no Psych Lua/HScript runtime or compatible gameplay API is integrated yet. The first implementation pass is strengthening discovery; runtime support is still pending.
+The repository now has an experience scanner and a version-agnostic Psych detector. It checks long-lived official Psych script roots, Lua/HScript files, legacy chart JSON structure, common nested `mods/<mod>` extraction layouts, and explicit engine/version fields from NovaBeat, Polymod, and generic package metadata. It deliberately does not infer the Psych engine version from a generic mod `version` field. Psych packages remain detected but not launchable because no Psych Lua/HScript runtime or compatible gameplay API is integrated yet. Runtime support is still pending.
