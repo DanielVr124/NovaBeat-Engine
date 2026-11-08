@@ -567,12 +567,12 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         // camera as the visible NovaBeat page and a bounds-based overlap.
         // Pixel-perfect hit-testing against an empty transparent graphic
         // makes the rows impossible to select reliably on touch screens.
-        var rowTapped:Bool = TouchUtil.pressAction(item, FlxG.camera, false);
+        var rowTapped:Bool = TouchUtil.pressAction(item, menuCamera, false);
         #if web
         // HTML5 can report the completed finger tap through FlxMouse after
         // the FlxTouch object has already been removed from the active list.
         if (!rowTapped && DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased)
-          rowTapped = FlxG.mouse.overlaps(item, FlxG.camera);
+          rowTapped = FlxG.mouse.overlaps(item, menuCamera);
         #end
         if (rowTapped && !items.busy)
         {
