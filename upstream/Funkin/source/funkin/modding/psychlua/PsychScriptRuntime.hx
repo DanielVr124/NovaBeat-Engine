@@ -39,7 +39,9 @@ class PsychScriptRuntime
   public static function setGlobal(name:String, value:Dynamic):Void
   {
     if (name == null || name.length == 0) return;
-    sharedGlobals.set(name, value);
+    // Dynamic game globals belong to the active song. Keeping them in
+    // sharedGlobals would leak values (and object references) into later songs.
+    activeGlobals.set(name, value);
     for (script in scripts)
       script.setVariable(name, value);
   }
@@ -97,7 +99,7 @@ class PsychScriptRuntime
 
   public static function getGlobal(name:String):Dynamic
   {
-    return sharedGlobals.get(name);
+    return activeGlobals.exists(name) ? activeGlobals.get(name) : sharedGlobals.get(name);
   }
 
   /**
@@ -432,9 +434,10 @@ class PsychScriptRuntime
 
   public static function setOnScripts(name:String, value:Dynamic):Void
   {
+    // setOnScripts updates only the currently loaded interpreters. It must not
+    // promote transient script variables into the persistent runtime globals.
     setOnLuas(name, value);
     setOnHScript(name, value);
-    setGlobal(name, value);
   }
 
   public static function setOnLuas(name:String, value:Dynamic):Void
@@ -474,10 +477,16 @@ class PsychScriptRuntime
     {
       hscript = new PsychScriptInstance(
         "novabeat-hscript-smoke-test.hx",
-        "function add(a, b) { return a + b; }",
-        new Map<String, Dynamic>()
+        "function add(a, b) { return a + b; } function echo(value) { return value; } function readInjected() { return injectedValue; }",
+        ["injectedValue" => 17]
       );
-      hscriptPassed = hscript.hasFunction("add") && hscript.call("add", [2, 3]) == 5 && hscript.lastError == null;
+      hscriptPassed = hscript.hasFunction("add")
+        && hscript.call("add", [2, 3]) == 5
+        && hscript.call("echo", ["novabeat"]) == "novabeat"
+        && hscript.call("readInjected", []) == 17
+        && hscript.lastError == null;
+      if (!hscriptPassed)
+        trace('[Psych Script Runtime] HScript smoke test did not pass function, argument, or injected-global checks.');
     }
     catch (error:Dynamic)
     {
@@ -492,10 +501,17 @@ class PsychScriptRuntime
     {
       lua = new PsychScriptInstance(
         "novabeat-lua-smoke-test.lua",
-        "function add(a, b) return a + b end",
-        new Map<String, Dynamic>()
+        "function add(a, b) return a + b end\nfunction echo(value) return value end\nfunction readInjected() return injectedValue end\nfunction sandboxIntact() return io == nil and os == nil and package == nil and debug == nil and require == nil and dofile == nil and loadfile == nil end",
+        ["injectedValue" => 17]
       );
-      luaPassed = lua.hasFunction("add") && lua.call("add", [2, 3]) == 5 && lua.lastError == null;
+      luaPassed = lua.hasFunction("add")
+        && lua.call("add", [2, 3]) == 5
+        && lua.call("echo", ["novabeat"]) == "novabeat"
+        && lua.call("readInjected", []) == 17
+        && lua.call("sandboxIntact", []) == true
+        && lua.lastError == null;
+      if (!luaPassed)
+        trace('[Psych Script Runtime] Lua smoke test did not pass function, argument, injected-global, or sandbox checks.');
     }
     catch (error:Dynamic)
     {

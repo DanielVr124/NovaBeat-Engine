@@ -131,9 +131,10 @@ run:
 testPsychScriptRuntimes
 ```
 
-A passing result verifies that the HScript and Lua adapters can load a simple
-function and call it. It does not prove that a representative Psych mod plays
-correctly. The next validation step is to test real, script-light Psych song
+A passing result verifies HScript and Lua function execution, argument passing,
+injected globals, and (for Lua) that host filesystem/process/package/debug
+entry points remain unavailable. It does not prove that a representative Psych
+mod plays correctly. The next validation step is to test real, script-light Psych song
 packages with their actual scripts and audio.
 
 ## Platform note
