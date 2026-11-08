@@ -20,6 +20,7 @@ import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
 import funkin.Highscore;
+import funkin.Preferences;
 import funkin.play.notes.NoteSprite;
 import funkin.play.notes.SustainTrail;
 import funkin.play.character.BaseCharacter;
@@ -554,7 +555,7 @@ class PsychGameplayApi
     });
     vars.set("updateHitboxFromGroup", function(group:String, index:Int):Bool
     {
-      var object:Dynamic = getPropertyFromGroup(state, group, index, "", false);
+      var object:Dynamic = getGroupMember(state, group, index);
       if (!Std.isOfType(object, FlxSprite)) return false;
       (cast object:FlxSprite).updateHitbox();
       return true;
@@ -784,6 +785,82 @@ class PsychGameplayApi
     vars.set("Function_StopAll", PsychScriptRuntime.getGlobal("Function_StopAll"));
 
     return vars;
+  }
+
+  /**
+   * Refresh Psych's widely used song globals from the live NovaBeat state.
+   * These values must not be frozen at script-load time: mods read score,
+   * health, character names, camera position and preferences throughout play.
+   */
+  public static function updateGlobals(state:PlayState):Void
+  {
+    if (state == null) return;
+    PsychScriptRuntime.setGlobal("health", state.health);
+    PsychScriptRuntime.setGlobal("score", state.songScore);
+    PsychScriptRuntime.setGlobal("misses", Highscore.tallies.missed);
+    PsychScriptRuntime.setGlobal("hits", Highscore.tallies.totalNotesHit);
+    PsychScriptRuntime.setGlobal("combo", Highscore.tallies.combo);
+    PsychScriptRuntime.setGlobal("songName", state.currentSong == null ? "" : state.currentSong.songName);
+    PsychScriptRuntime.setGlobal("songPath", state.currentSong == null ? "" : state.currentSong.id);
+    PsychScriptRuntime.setGlobal("difficulty", state.currentDifficulty);
+    PsychScriptRuntime.setGlobal("difficultyName", state.currentDifficulty);
+    PsychScriptRuntime.setGlobal("songLength", state.currentSongLengthMs);
+    PsychScriptRuntime.setGlobal("playbackRate", state.playbackRate);
+    PsychScriptRuntime.setGlobal("hasVocals", state.vocals != null);
+    PsychScriptRuntime.setGlobal("inGameOver", state.isGameOverState);
+    PsychScriptRuntime.setGlobal("practice", state.isPracticeMode);
+    PsychScriptRuntime.setGlobal("botPlay", state.isBotPlayMode);
+    PsychScriptRuntime.setGlobal("startedCountdown", state.isInCountdown);
+    PsychScriptRuntime.setGlobal("inChartEditor", false);
+    PsychScriptRuntime.setGlobal("screenWidth", FlxG.width);
+    PsychScriptRuntime.setGlobal("screenHeight", FlxG.height);
+    PsychScriptRuntime.setGlobal("cameraX", state.cameraFollowPoint == null ? 0 : state.cameraFollowPoint.x);
+    PsychScriptRuntime.setGlobal("cameraY", state.cameraFollowPoint == null ? 0 : state.cameraFollowPoint.y);
+    PsychScriptRuntime.setGlobal("curStage", state.currentStage == null ? "" : state.currentStage.stageName);
+    PsychScriptRuntime.setGlobal("downscroll", Preferences.downscroll);
+    PsychScriptRuntime.setGlobal("flashingLights", Preferences.flashingLights);
+    PsychScriptRuntime.setGlobal("framerate", Preferences.framerate);
+    PsychScriptRuntime.setGlobal("cameraZoomOnBeat", Preferences.zoomCamera);
+    PsychScriptRuntime.setGlobal("noteOffset", Preferences.globalOffset);
+    PsychScriptRuntime.setGlobal("luaDebugMode", false);
+    PsychScriptRuntime.setGlobal("luaDeprecatedWarnings", false);
+    PsychScriptRuntime.setGlobal("isStoryMode", false);
+
+    var currentStage = state.currentStage;
+    if (currentStage != null)
+    {
+      var boyfriend:Null<BaseCharacter> = currentStage.getBoyfriend();
+      var dad:Null<BaseCharacter> = currentStage.getDad();
+      var girlfriend:Null<BaseCharacter> = currentStage.getGirlfriend();
+      PsychScriptRuntime.setGlobal("boyfriend", boyfriend);
+      PsychScriptRuntime.setGlobal("dad", dad);
+      PsychScriptRuntime.setGlobal("gf", girlfriend);
+      PsychScriptRuntime.setGlobal("boyfriendName", boyfriend == null ? "" : boyfriend.characterId);
+      PsychScriptRuntime.setGlobal("dadName", dad == null ? "" : dad.characterId);
+      PsychScriptRuntime.setGlobal("gfName", girlfriend == null ? "" : girlfriend.characterId);
+      if (boyfriend != null)
+      {
+        PsychScriptRuntime.setGlobal("defaultBoyfriendX", boyfriend.originalPosition.x);
+        PsychScriptRuntime.setGlobal("defaultBoyfriendY", boyfriend.originalPosition.y);
+      }
+      if (dad != null)
+      {
+        PsychScriptRuntime.setGlobal("defaultOpponentX", dad.originalPosition.x);
+        PsychScriptRuntime.setGlobal("defaultOpponentY", dad.originalPosition.y);
+      }
+      if (girlfriend != null)
+      {
+        PsychScriptRuntime.setGlobal("defaultGirlfriendX", girlfriend.originalPosition.x);
+        PsychScriptRuntime.setGlobal("defaultGirlfriendY", girlfriend.originalPosition.y);
+      }
+    }
+
+    var activeDirectory:String = PsychScriptRuntime.getActiveModDirectory();
+    PsychScriptRuntime.setGlobal("currentModDirectory", activeDirectory);
+    PsychScriptRuntime.setGlobal("curSection", Std.int(Math.floor(Conductor.instance.currentStep / 16)));
+    PsychScriptRuntime.setGlobal("rating", Highscore.tallies.totalNotes <= 0
+      ? 0.0
+      : Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes);
   }
 
   public static function hideDefaultStageProps(state:PlayState):Void
@@ -1419,6 +1496,16 @@ class PsychGameplayApi
       return Reflect.compare(a.strumTime, b.strumTime);
     });
     return result;
+  }
+
+  static function getGroupMember(state:PlayState, group:String, index:Int):Dynamic
+  {
+    var collection:Dynamic = resolveRoot(state, group);
+    if (collection == null || index < 0) return null;
+    var members:Dynamic = Reflect.field(collection, "members");
+    if (members != null)
+      return index < members.length ? members[index] : null;
+    return index < collection.length ? collection[index] : null;
   }
 
   static function getPropertyFromGroup(state:PlayState, group:String, index:Int, path:String, allowMaps:Bool):Dynamic
