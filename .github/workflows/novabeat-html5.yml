@@ -101,6 +101,56 @@ jobs:
           cp -a "$archive_root" "$neko_path"
           touch "$neko_root/x64.complete"
           echo "$neko_path" >> "$GITHUB_PATH"
+
+      - name: Restore Haxe 4.3.7 tool cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/haxe/4.3.7
+          key: ${{ runner.os }}-${{ runner.arch }}-haxe-4.3.7-v1
+          save-always: true
+
+      - name: Prime Linux Haxe tool cache with extended download retries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_cache="${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE is not set}"
+          haxe_root="$tool_cache/haxe/4.3.7"
+          haxe_path="$haxe_root/x64"
+
+          if [[ -x "$haxe_path/haxe" && -d "$haxe_path/std" && -f "$haxe_root/x64.complete" ]]; then
+            echo "Haxe 4.3.7 is already restored from the runner tool cache."
+            exit 0
+          fi
+
+          archive="$RUNNER_TEMP/haxe-4.3.7-linux64.tar.gz"
+          extract="$RUNNER_TEMP/haxe-4.3.7-extract"
+          rm -rf "$extract"
+          mkdir -p "$extract"
+
+          # setup-haxe v2 retries downloads three times for at most 90 seconds.
+          # The Haxe release asset has repeatedly returned HTTP 504 in CI, so
+          # download with a longer retry window and prime actions/tool-cache's
+          # exact haxe/<version>/x64 layout before setup-haxe runs.
+          curl -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 \
+            "https://github.com/HaxeFoundation/haxe/releases/download/4.3.7/haxe-4.3.7-linux64.tar.gz" \
+            -o "$archive"
+
+          tar -xzf "$archive" -C "$extract"
+          haxe_binary="$(find "$extract" -type f -name haxe -print -quit)"
+          test -n "$haxe_binary"
+          haxe_source="$(dirname "$haxe_binary")"
+          test -d "$haxe_source/std"
+
+          mkdir -p "$haxe_root"
+          rm -rf "$haxe_path"
+          mkdir -p "$haxe_path"
+          cp -a "$haxe_source/." "$haxe_path/"
+          test -x "$haxe_path/haxe"
+          test -d "$haxe_path/std"
+          touch "$haxe_root/x64.complete"
+          echo "$haxe_path" >> "$GITHUB_PATH"
+
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v2
         with:
