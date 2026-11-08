@@ -108,17 +108,24 @@ class LevelTitle extends FlxSpriteGroup
 
     if (cropTop <= 0 && cropBottom >= sprite.frameHeight)
     {
-      sprite.clipRect = null;
+      if (sprite.clipRect != null) sprite.clipRect = null;
       return;
     }
 
-    if (cropBottom <= cropTop)
-    {
+    // Clip rectangles are pixel-aligned. Rounding before comparing keeps
+    // fractional tween movement from replacing the rectangle every frame.
+    var clipY:Float = Math.floor(cropTop);
+    var clipBottom:Float = Math.ceil(cropBottom);
+    var clipHeight:Float = Math.max(0, clipBottom - clipY);
+    var currentClip:Null<FlxRect> = sprite.clipRect;
+
+    if (currentClip != null && currentClip.x == 0 && currentClip.y == clipY
+      && currentClip.width == sprite.frameWidth && currentClip.height == clipHeight) return;
+
+    if (clipHeight <= 0)
       sprite.clipRect = FlxRect.get(0, 0, 0, 0);
-      return;
-    }
-
-    sprite.clipRect = FlxRect.get(0, cropTop, sprite.frameWidth, cropBottom - cropTop);
+    else
+      sprite.clipRect = FlxRect.get(0, clipY, sprite.frameWidth, clipHeight);
   }
 
   public function showLock():Void
