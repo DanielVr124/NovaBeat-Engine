@@ -34,6 +34,7 @@ import sys.io.File;
 class PsychModRuntime
 {
   static final audioFolders:Map<String, String> = [];
+  static final songDataFolders:Map<String, String> = [];
   static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
@@ -145,6 +146,7 @@ class PsychModRuntime
     var loaded:Array<String> = [];
     #if sys
     audioFolders.clear();
+    songDataFolders.clear();
     cachedSoundAssetKeys = null;
 
     var root:String = PolymodHandler.getModRoot();
@@ -167,6 +169,7 @@ class PsychModRuntime
           if (song == null) continue;
 
           audioFolders.set(songId, source.songFolder);
+          songDataFolders.set(songId, source.dataPath);
           SongRegistry.instance.registerCompatibilitySong(song);
           loaded.push(songId);
         }
@@ -178,6 +181,12 @@ class PsychModRuntime
     }
     #end
     return loaded;
+  }
+
+  /** True only for a song imported by this Psych compatibility loader. */
+  public static function isImportedSong(songId:String):Bool
+  {
+    return songId != null && audioFolders.exists(songId);
   }
 
   public static function getInstrumentalAssetPath(songId:String, suffix:String = ""):Null<String>
