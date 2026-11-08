@@ -45,6 +45,7 @@ import funkin.play.notes.StrumlineNote;
 @:access(funkin.play.PlayState)
 class PsychGameplayApi
 {
+  // [web-build] Compile the complete Psych 0.7.3 compatibility API on feature-branch changes.
   static final activeTweens:Map<String, FlxTween> = [];
   static final activeTimers:Map<String, FlxTimer> = [];
   static final scriptVariables:Map<String, Dynamic> = [];
