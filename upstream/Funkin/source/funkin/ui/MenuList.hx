@@ -9,7 +9,6 @@ import funkin.audio.FunkinSound;
 import funkin.util.TouchUtil;
 import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
-import funkin.Preferences;
 import funkin.ui.Page.PageName;
 import flixel.tweens.FlxEase;
 import funkin.util.HapticUtil;
@@ -21,9 +20,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   // Pause input variable
   public static var pauseInput:Bool = false;
 
-  // Prevent the action that opens a page from also activating a control on it.
+  // Compatibility fields used by NovaBeat pages; stock input does not gate on them.
   public static var inputHandoffBlocked:Bool = false;
-  static var inputHandoffReleaseObserved:Bool = false;
+  public var acceptOnTouchSelection:Bool = false;
+  public var ignoreTouchPointerSelection:Bool = false;
 
   public var selectedIndex(default, null):Int = 0;
   public var selectedItem(get, never):T;
@@ -39,12 +39,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   /** Set to false to disable nav control */
   public var enabled:Bool = true;
-
-  /**
-   * When enabled, touching a different row both selects and accepts it.
-   * Keep disabled by default so existing FNF menus retain their stock behavior.
-   */
-  public var acceptOnTouchSelection:Bool = false;
 
   /**  */
   public var wrapMode:WrapMode = Both;
@@ -67,10 +61,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    * Why is it needed? Because touch control's a bitch. Thats why. */
   public var currentPage:Null<PageName>;
 
-  // Helper variables
+  // Helper variable
   var _isMainMenuState:Bool = false;
-  var _isPrimaryMainMenuState:Bool = false;
-  var touchScrollAccumulator:Float = 0;
 
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
@@ -92,8 +84,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy = new FlxSprite().makeGraphic(10, 10);
     _isMainMenuState = Std.isOfType(FlxG.state, funkin.ui.mainmenu.MainMenuState);
-    _isPrimaryMainMenuState = _isMainMenuState
-      || Std.isOfType(FlxG.state, funkin.ui.mainmenu.NovaBeatMainMenuState);
 
     super();
   }
@@ -101,10 +91,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   public function addItem(name:String, item:T):T
   {
     if (length == selectedIndex) item.select();
-
-    // Keep NovaBeat's transparent hit rows on the same camera as their list.
-    // All mobile menu presses and swipes use the original FNF TouchUtil path.
-    if (Preferences.menuStyle == "NovaBeat" && cameras != null) item.cameras = cameras;
 
     byName[name] = item;
     return add(item);
@@ -128,68 +114,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     if (enabled && !busy && !pauseInput) updateControls();
   }
 
-  inline function playMenuSelectionSound():Void
-  {
-    final soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
-    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
-  }
-
   inline function updateControls():Void
   {
     var controls = PlayerSettings.player1.controls;
-
-    if (inputHandoffBlocked)
-    {
-      touchScrollAccumulator = 0;
-      if (controls.ACCEPT || TouchUtil.pressed || FlxG.mouse.pressed)
-      {
-        inputHandoffReleaseObserved = false;
-      }
-      else if (!inputHandoffReleaseObserved)
-      {
-        inputHandoffReleaseObserved = true;
-      }
-      else
-      {
-        inputHandoffBlocked = false;
-        inputHandoffReleaseObserved = false;
-      }
-      return;
-    }
-
-    var touchDragUp:Bool = false;
-    var touchDragDown:Bool = false;
-    #if FEATURE_TOUCH_CONTROLS
-    #if (mobile || web)
-    if (DeviceUtil.isMobileBrowser && !_isPrimaryMainMenuState && navControls == Vertical)
-    {
-      if (TouchUtil.pressed && TouchUtil.touch != null)
-      {
-        var deltaY:Float = TouchUtil.touch.deltaViewY;
-        if (Math.isFinite(deltaY))
-        {
-          touchScrollAccumulator -= deltaY;
-          var rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
-          var step:Float = Math.max(30, rowHeight * 0.55);
-          if (touchScrollAccumulator >= step)
-          {
-            touchDragDown = true;
-            touchScrollAccumulator -= step;
-          }
-          else if (touchScrollAccumulator <= -step)
-          {
-            touchDragUp = true;
-            touchScrollAccumulator += step;
-          }
-        }
-      }
-      else if (TouchUtil.justReleased)
-      {
-        touchScrollAccumulator = 0;
-      }
-    }
-    #end
-    #end
 
     var wrapX = wrapMode.match(Horizontal | Both);
     var wrapY = wrapMode.match(Vertical | Both);
@@ -197,10 +124,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     var newIndex = 0;
 
     // Define unified input handlers
-    final inputUp:Bool = controls.UI_UP_P || (!_isPrimaryMainMenuState && (DeviceUtil.isMobileBrowser ? touchDragUp : SwipeUtil.swipeUp));
-    final inputDown:Bool = controls.UI_DOWN_P || (!_isPrimaryMainMenuState && (DeviceUtil.isMobileBrowser ? touchDragDown : SwipeUtil.swipeDown));
-    final inputLeft:Bool = controls.UI_LEFT_P || (!_isPrimaryMainMenuState && SwipeUtil.swipeLeft);
-    final inputRight:Bool = controls.UI_RIGHT_P || (!_isPrimaryMainMenuState && SwipeUtil.swipeRight);
+    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState && SwipeUtil.swipeUp);
+    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState && SwipeUtil.swipeDown);
+    final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState && SwipeUtil.swipeLeft);
+    final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState && SwipeUtil.swipeRight);
 
     // Keepin' these for keyboard/controller support on mobile platforms
     newIndex = switch (navControls)
@@ -218,154 +145,102 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         navGrid(num, inputUp, inputDown, wrapY, inputLeft, inputRight, wrapX);
     };
 
-    var pointerAccepted:Bool = false;
-
     #if FEATURE_TOUCH_CONTROLS
-    #if web
-    // The HTML5 target includes touch support for phones, but desktop browsers
-    // must keep normal keyboard navigation and mouse-pointer behavior.
-    if (!DeviceUtil.isMobileBrowser)
+    // Update touch position
+    // Keep the official FNF TouchUtil path. A small HTML5-only adapter maps
+    // browsers that synthesize mouse events for finger input onto that same
+    // press/selection flow without enabling mouse control on desktop.
+    final browserTouchPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.pressed;
+    final browserTouchJustPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed;
+    if (TouchUtil.pressed)
     {
-      // Primary menus remain keyboard/controller-driven on desktop.
-      if (!_isPrimaryMainMenuState && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
-      {
-        for (i in 0...members.length)
-        {
-          final item = members[i];
-          final pointerCamera = (cameras != null && cameras.length > 0) ? cameras[0] : item.camera;
-          if (!item.available || !FlxG.mouse.overlaps(item, pointerCamera)) continue;
+      touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
+    }
+    else if (browserTouchPressed || browserTouchJustPressed)
+    {
+      touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
+    }
 
-          if (selectedIndex != i)
-          {
-            playMenuSelectionSound();
-            selectItem(i);
-          }
-
-          if (FlxG.mouse.justPressed)
-          {
-            accept();
-            pointerAccepted = true;
-          }
-          break;
-        }
-      }
-
+    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
+    {
       if (newIndex != selectedIndex)
       {
-        playMenuSelectionSound();
+        FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
         selectItem(newIndex);
       }
     }
-    else
-    #end
+    else if (TouchUtil.pressed || browserTouchPressed)
     {
-      // Mobile browsers retain native touch input, but some browsers expose
-      // Some HTML5 mobile browsers expose finger input as FlxMouse events.
-      // Treat mouse-down as the same press event used by the official FNF
-      // TouchUtil path; do not synthesize a second action on release.
-      final browserTouchPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.pressed;
-      final browserTouchJustPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed;
-      if (TouchUtil.pressed)
+      for (i in 0...members.length)
       {
-        touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
-      }
-      else if (browserTouchPressed || browserTouchJustPressed)
-      {
-        touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
-      }
+        final item = members[i];
+        final menuCamera = FlxG.cameras.list[1];
 
-      if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
-      {
-        if (newIndex != selectedIndex)
+        final itemOverlaps:Bool = !_isMainMenuState && (browserTouchPressed ? FlxG.mouse.overlaps(item, menuCamera) : TouchUtil.overlaps(item, menuCamera));
+        final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
+
+        final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
+
+        if (item.available && isTouchingItem && (TouchUtil.justPressed || browserTouchJustPressed))
         {
-          playMenuSelectionSound();
-          selectItem(newIndex);
-        }
-      }
-      else if (TouchUtil.pressed || browserTouchPressed)
-      {
-        for (i in 0...members.length)
-        {
-          final item = members[i];
-          final menuCamera = FlxG.cameras.list[1];
+          var prevIndex:Int = selectedIndex;
 
-          // If this list declares a camera, use that exact viewport for hit-testing.
-          // This matters for added Options pages because they can own cameras other
-          // than the stock global camera at index 1. Unmodified FNF lists retain the
-          // original fallback, while NovaBeat rows use their assigned camera.
-          final touchCamera = (cameras != null && cameras.length > 0)
-            ? cameras[0]
-            : (Preferences.menuStyle == "NovaBeat" ? item.camera : menuCamera);
-          final itemOverlaps:Bool = !_isMainMenuState && (browserTouchPressed ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
-          final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
-
-          final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
-
-          if (item.available && isTouchingItem && (TouchUtil.justPressed || browserTouchJustPressed))
+          if (!_isMainMenuState && selectedIndex != i)
           {
-            var prevIndex:Int = selectedIndex;
-
-            if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
-            {
-              newIndex = i;
-              break;
-            }
-            else
-            {
-              // Keep the tapped row as the current navigation index. Without
-              // this assignment, the pre-touch keyboard index can overwrite a
-              // first-tap selection at the end of this update.
-              if (!_isMainMenuState) newIndex = i;
-              playMenuSelectionSound();
-              selectItem(i);
-            }
-
-            if (_isMainMenuState)
-            {
-              if (prevIndex == i)
-              {
-                FlxTween.cancelTweensOf(item);
-                item.scale.set(1.1, 1.1);
-                FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-                HapticUtil.vibrate(0, 0.05, 1);
-                accept();
-              }
-              else
-              {
-                FlxTween.cancelTweensOf(item);
-                item.scale.set(0.94, 0.94);
-                FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
-
-                HapticUtil.vibrate(0, 0.01, 0.5);
-              }
-            }
-            else
-            {
-              accept();
-            }
-
+            newIndex = i;
             break;
           }
+          else
+          {
+            FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+            selectItem(i);
+          }
+
+          if (_isMainMenuState)
+          {
+            if (prevIndex == i)
+            {
+              FlxTween.cancelTweensOf(item);
+              item.scale.set(1.1, 1.1);
+              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+
+              HapticUtil.vibrate(0, 0.05, 1);
+              accept();
+            }
+            else
+            {
+              FlxTween.cancelTweensOf(item);
+              item.scale.set(0.94, 0.94);
+              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+
+              HapticUtil.vibrate(0, 0.01, 0.5);
+            }
+          }
+          else
+          {
+            accept();
+          }
+
+          break;
         }
       }
+    }
 
-      if (newIndex != selectedIndex && !_isMainMenuState)
-      {
-        playMenuSelectionSound();
-        selectItem(newIndex);
-      }
+    if (newIndex != selectedIndex && !_isMainMenuState)
+    {
+      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+      selectItem(newIndex);
     }
     #else
     if (newIndex != selectedIndex)
     {
-      playMenuSelectionSound();
+      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
       selectItem(newIndex);
     }
     #end
 
     // Todo: bypass popup blocker on firefox
-    if (controls.ACCEPT_P && !pointerAccepted) accept();
+    if (controls.ACCEPT_P) accept();
 
     return;
   }
@@ -425,18 +300,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   public function accept():Void
   {
-    if (members.length == 0 || selectedIndex < 0 || selectedIndex >= members.length) return;
     var menuItem:T = members[selectedIndex];
 
     if (!menuItem.available) return;
 
-    inputHandoffBlocked = true;
-    inputHandoffReleaseObserved = false;
     onAcceptPress.dispatch(menuItem);
 
-    // NovaBeat uses separate visible labels over transparent hit rows; skip
-    // the stock flicker delay for those invisible targets.
-    if (menuItem.fireInstantly || Preferences.menuStyle == "NovaBeat") menuItem.callback();
+    if (menuItem.fireInstantly) menuItem.callback();
     else
     {
       busy = true;
@@ -461,8 +331,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   public function selectItem(index:Int):Void
   {
-    if (members.length == 0) return;
-    index = Std.int(Math.max(0, Math.min(index, members.length - 1)));
     members[selectedIndex].idle();
 
     if (!members[index].available)
