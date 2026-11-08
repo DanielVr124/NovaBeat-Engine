@@ -11,9 +11,9 @@ Psych Engine and not yet compatible with every Psych mod.
 - Lua uses hxvm-lua with native Lua on C++ targets; the HTML5 build includes
   Fengari. The mod-folder loader itself is currently native-only.
 - HScript uses SScript, with a bounded instruction/time budget and a small,
-  explicit set of common Psych HScript globals (FlxG, FlxSprite, FlxText,
-  FlxSubState, FlxTween, FlxTimer, FlxColor, Paths, Conductor, PlayState,
-  Character, and Note).
+  explicit set of common Psych HScript globals (FlxG, FlxBasic, FlxObject,
+  FlxPoint, FlxSprite, FlxText, FlxSubState, FlxTween, FlxTimer, FlxColor,
+  Paths, Conductor, PlayState, Character, and Note).
 - Global scripts load from each selected Psych package's `scripts/` folder.
   Matching chart-referenced stage scripts (`stages/<stage>`), character scripts
   (`characters/<id>`), custom-event scripts (`custom_events/<event>`), and
@@ -76,7 +76,11 @@ sustain state, and a live note-group index.
   `keyboardPressed`, `keyboardReleased`, `anyGamepadJustPressed`,
   `anyGamepadPressed`, `anyGamepadReleased`, `gamepadAnalogX`,
   `gamepadAnalogY`, `mouseClicked`, `mousePressed`, `mouseReleased`,
-  `getMouseX`, `getMouseY`, and `getMouseWheel`
+  `getMouseX`, `getMouseY`, and `getMouseWheel`; mouse X/Y use camera
+  screen coordinates to match Psych's helper behavior
+- Lua-sprite tag access: `getPropertyLuaSprite` and `setPropertyLuaSprite`
+- Object geometry helpers: `getMidpointX/Y`, `getGraphicMidpointX/Y`, and
+  `getScreenPositionX/Y`
 - Basic gameplay utility helpers: `getColorFromHex`, `addScore`, `setScore`,
   `addMisses`, `setMisses`, `addHits`, and `setHits`
 - `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist,
