@@ -83,24 +83,17 @@ class PsychScriptInstance
     #if (cpp || js)
     var runtime = new Lua();
 
-    // Keep the standard language libraries, but remove OS, filesystem,
-    // package loading, debug access, and garbage-collector control.
-    for (name in ["io", "os", "package", "debug", "dofile", "loadfile", "require", "collectgarbage"])
-      runtime.setGlobalVar(name, null);
-
-    // Fengari and native Lua both support debug hooks. Capture the reset and
-    // function-check closures in Haxe, then remove their global names so a mod
-    // cannot replace the host's instruction-budget controls.
+    // Install the instruction hook while the debug library is still present.
+    // The hook remains active after its global library is removed below.
     var bootstrap:String =
-      "local __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + "\n" +
-      "local function __novabeat_hook()\n" +
-      "  __novabeat_budget = __novabeat_budget - 1\n" +
-      "  if __novabeat_budget <= 0 then error('NovaBeat Lua instruction budget exceeded', 0) end\n" +
-      "end\n" +
-      "function __novabeat_reset_budget() __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + " end\n" +
-      "function __novabeat_has_function(name) return type(_G[name]) == 'function' end\n" +
-      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\n" +
-      "debug = nil\n";
+      "local __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + "\\n" +
+      "local function __novabeat_hook()\\n" +
+      "  __novabeat_budget = __novabeat_budget - 1\\n" +
+      "  if __novabeat_budget <= 0 then error('NovaBeat Lua instruction budget exceeded', 0) end\\n" +
+      "end\\n" +
+      "function __novabeat_reset_budget() __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + " end\\n" +
+      "function __novabeat_has_function(name) return type(_G[name]) == 'function' end\\n" +
+      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\\n";
 
     try
     {
@@ -109,6 +102,11 @@ class PsychScriptInstance
       luaHasFunction = runtime.getGlobalVar("__novabeat_has_function");
       runtime.setGlobalVar("__novabeat_reset_budget", null);
       runtime.setGlobalVar("__novabeat_has_function", null);
+
+      // Remove host-level filesystem, process, package and debug access only
+      // after the execution-budget hook has been installed and captured.
+      for (name in ["io", "os", "package", "debug", "dofile", "loadfile", "require", "collectgarbage"])
+        runtime.setGlobalVar(name, null);
 
       for (name => value in initialVariables)
         runtime.setGlobalVar(name, value);

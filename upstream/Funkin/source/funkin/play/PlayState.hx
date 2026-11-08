@@ -2011,10 +2011,14 @@ class PlayState extends MusicBeatSubState
      */
   function initHealthBar():Void
   {
-    final isDownscroll:Bool = #if mobile (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      && !ControlsHandler.hasExternalInputDevice)
-      #elseif (web && FEATURE_TOUCH_CONTROLS) (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
-      ) || #end Preferences.downscroll;
+    final isDownscroll:Bool =
+      #if mobile
+      (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows
+        && !ControlsHandler.hasExternalInputDevice) ||
+      #elseif (web && FEATURE_TOUCH_CONTROLS)
+      (Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows) ||
+      #end
+      Preferences.downscroll;
 
     var healthBarYPos:Float = isDownscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
 
