@@ -123,6 +123,84 @@ class PsychGameplayApi
       if (doPause && wasPlaying) sound.play();
       return true;
     });
+
+    vars.set("soundFadeIn", function(tag:String, duration:Float, ?fromValue:Float = 0, ?toValue:Float = 1):Bool
+    {
+      var sound:Null<FlxSound> = resolveSound(tag);
+      if (sound == null || duration < 0) return false;
+      sound.fadeIn(duration, fromValue, toValue);
+      return true;
+    });
+    vars.set("soundFadeOut", function(tag:String, duration:Float, ?toValue:Float = 0):Bool
+    {
+      var sound:Null<FlxSound> = resolveSound(tag);
+      if (sound == null || duration < 0) return false;
+      sound.fadeOut(duration, toValue);
+      return true;
+    });
+    vars.set("soundFadeCancel", function(tag:String):Bool
+    {
+      var sound:Null<FlxSound> = resolveSound(tag);
+      if (sound == null || sound.fadeTween == null) return false;
+      sound.fadeTween.cancel();
+      sound.fadeTween = null;
+      return true;
+    });
+
+    // Precache helpers intentionally resolve through NovaBeat's asset paths.
+    // The mod loader still requires a native installed-mod filesystem.
+    vars.set("precacheImage", function(name:String, ?allowGPU:Bool = true):Bool
+    {
+      if (name == null || name.length == 0) return false;
+      try
+      {
+        FlxG.bitmap.add(Paths.image(name));
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] precacheImage(' + name + ') failed: ' + Std.string(error));
+        return false;
+      }
+    });
+    vars.set("precacheSound", function(name:String):Bool
+    {
+      if (name == null || name.length == 0) return false;
+      try
+      {
+        FlxG.sound.cache(Paths.sound(name));
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] precacheSound(' + name + ') failed: ' + Std.string(error));
+        return false;
+      }
+    });
+    vars.set("precacheMusic", function(name:String):Bool
+    {
+      if (name == null || name.length == 0) return false;
+      try
+      {
+        FlxG.sound.cache(Paths.music(name));
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] precacheMusic(' + name + ') failed: ' + Std.string(error));
+        return false;
+      }
+    });
+    vars.set("setHealthBarColors", function(left:Dynamic, right:Dynamic):Bool
+    {
+      if (state.healthBar == null) return false;
+      // NovaBeat's current health bar is a two-color filled bar rather than
+      // Psych's player/opponent split bar. Keep the API useful, but make the
+      // visual mapping explicit: left=empty/background, right=filled.
+      state.healthBar.createFilledBar(parsePsychColor(left), parsePsychColor(right));
+      state.healthBar.updateBar();
+      return true;
+    });
     vars.set("stopMusic", function():Void
     {
       if (FlxG.sound.music != null) FlxG.sound.music.stop();
@@ -1190,6 +1268,12 @@ class PsychGameplayApi
       colorText = "#" + colorText;
     var parsed:Null<FlxColor> = FlxColor.fromString(colorText);
     return parsed == null ? FlxColor.WHITE : parsed;
+  }
+
+  static function resolveSound(tag:String):Null<FlxSound>
+  {
+    if (tag == null || tag.length == 0) return FlxG.sound.music;
+    return activeSounds.get(tag);
   }
 
   static function getCharacterForRole(state:PlayState, role:String):Null<BaseCharacter>
