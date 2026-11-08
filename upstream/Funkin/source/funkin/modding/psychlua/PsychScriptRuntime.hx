@@ -9,9 +9,9 @@ import funkin.play.PlayState;
 /**
  * Owns interpreter instances used by the Psych compatibility layer.
  *
- * This first stage provides isolated HScript/Lua execution, shared constants,
- * callback dispatch, and a debug smoke test. It does not yet expose Psych's
- * PlayState, FlxG, character, sprite, camera, event, or note APIs.
+ * It loads global and song-local scripts, dispatches supported Psych
+ * lifecycle/note/game-over callbacks, exposes the bounded gameplay API,
+ * and preserves Psych's Lua-first/HScript-second return semantics.
  */
 @:nullSafety(Off)
 class PsychScriptRuntime
