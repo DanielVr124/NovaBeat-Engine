@@ -884,8 +884,11 @@ class FreeplayState extends MusicBeatSubState
     rankBg.alpha = 0;
 
     #if FEATURE_TOUCH_CONTROLS
-    addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
-    FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
+    if (DeviceUtil.isMobileBrowser)
+    {
+      addBackButton(FlxG.width, FlxG.height - 200, FlxColor.WHITE, goBack, 0.3, true);
+      FlxTween.tween(backButton, {x: FlxG.width - 230}, 0.5, {ease: FlxEase.expoOut});
+    }
     #end
 
     // Keep the stock FREEPLAY label in both styles. The old NovaBeat-only

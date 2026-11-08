@@ -166,19 +166,54 @@ class TouchUtil
   // weird mix between "looks weird" and "looks neat" but i'll keep it for now -Zack
 
   @:noCompletion
-  static inline function get_justMoved():Bool return touch != null && touch.justMoved;
+  static inline function get_justMoved():Bool
+  {
+    #if (mobile || web)
+    return touch != null && touch.justMoved;
+    #else
+    return false;
+    #end
+  }
 
   @:noCompletion
-  static inline function get_pressed():Bool return touch != null && touch.pressed;
+  static inline function get_pressed():Bool
+  {
+    #if (mobile || web)
+    return touch != null && touch.pressed;
+    #else
+    return false;
+    #end
+  }
 
   @:noCompletion
-  static inline function get_justPressed():Bool return touch != null && touch.justPressed;
+  static inline function get_justPressed():Bool
+  {
+    #if (mobile || web)
+    return touch != null && touch.justPressed;
+    #else
+    return false;
+    #end
+  }
 
   @:noCompletion
-  static inline function get_justReleased():Bool return touch != null && touch.justReleased;
+  static inline function get_justReleased():Bool
+  {
+    #if (mobile || web)
+    return touch != null && touch.justReleased;
+    #else
+    return false;
+    #end
+  }
 
   @:noCompletion
-  static function get_released():Bool return touch != null && touch.released;
+  static function get_released():Bool
+  {
+    #if (mobile || web)
+    return touch != null && touch.released;
+    #else
+    return false;
+    #end
+  }
 
   #if mobile
   @:noCompletion
@@ -199,18 +234,27 @@ class TouchUtil
     // continues to expose its normal mouse pointer.
     if (DeviceUtil.isMobileBrowser)
     {
+      // Prefer an active finger. Some mobile browsers remove FlxTouch before
+      // the release frame and expose that event through FlxMouse instead.
+      var firstTouch:Dynamic = null;
       for (touch in FlxG.touches.list)
       {
-        if (touch != null) return touch;
+        if (touch == null) continue;
+        if (touch.pressed || touch.justPressed || touch.justReleased || touch.justMoved) return touch;
+        if (firstTouch == null) firstTouch = touch;
       }
 
-      // Keep the touch manager's first pointer available for the release frame.
-      // On HTML5 mobile, the active list can be empty by the time the state
-      // processes justReleased; returning null here drops every button tap.
-      return FlxG.touches.getFirst();
+      var retainedTouch:Dynamic = FlxG.touches.getFirst();
+      if (retainedTouch != null
+        && (retainedTouch.pressed || retainedTouch.justPressed || retainedTouch.justReleased || retainedTouch.justMoved))
+        return retainedTouch;
+
+      if (FlxG.mouse.pressed || FlxG.mouse.justPressed || FlxG.mouse.justReleased || FlxG.mouse.justMoved)
+        return FlxG.mouse;
+
+      return retainedTouch != null ? retainedTouch : firstTouch;
     }
 
-    FlxG.mouse.visible = true;
     return FlxG.mouse;
   }
   #else

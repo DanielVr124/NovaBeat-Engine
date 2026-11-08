@@ -20,8 +20,9 @@ import funkin.modding.ExperienceManager.ExperienceInfo;
 import funkin.ui.MusicBeatState;
 import funkin.ui.title.TitleState;
 
-#if sys
 import openfl.display.BitmapData;
+import openfl.utils.Assets;
+#if sys
 import sys.FileSystem;
 import sys.io.File;
 #end
@@ -63,6 +64,7 @@ class ExperienceLibraryState extends MusicBeatState
     FlxG.keys.enabled = true;
     FlxG.cameras.reset(new FunkinCamera("experienceLibrary"));
     super.create();
+    FlxG.mouse.visible = false;
 
     // The experience library is a launcher, not the boot sequence.
     // Keep menu music silent here; TitleState starts the selected theme when
@@ -153,7 +155,7 @@ class ExperienceLibraryState extends MusicBeatState
     listX = panelX + inset;
     listY = panelY + (compactTouchLayout ? 46 : 54);
     listWidth = panelWidth - inset * 2;
-    rowHeight = portrait ? 88 : (compactTouchLayout ? 58 : (height < 500 ? 68 : 82));
+    rowHeight = portrait ? 98 : (compactTouchLayout ? 62 : (height < 500 ? 72 : 86));
     var rowGap:Float = 9;
     listHeight = panelHeight - (usesTouchControls ? (compactTouchLayout ? 150 : 174) : 88);
     visibleRows = Std.int(Math.max(1, Math.floor((listHeight + rowGap) / (rowHeight + rowGap))));
@@ -345,10 +347,10 @@ class ExperienceLibraryState extends MusicBeatState
       }
       else
       {
-        addRowLabel(textX, y + 9, textWidth, info.title, portrait ? 14 : 16,
+        addRowLabel(textX, y + 12, textWidth, info.title, 16,
           selected ? 0xFFFFFFFF : 0xFFE1E5EC);
-        addRowLabel(textX, y + 33, textWidth, shorten(info.description, 105), portrait ? 9 : 10, 0xFFB1B8C5);
-        addRowLabel(textX, y + 58, textWidth, detail, 8,
+        addRowLabel(textX, y + (portrait ? 39 : 36), textWidth, shorten(info.description, 105), 10, 0xFFB1B8C5);
+        addRowLabel(textX, y + (portrait ? 67 : 62), textWidth, detail, 8,
           info.launchable ? (novaBeatStyle ? 0xFF69DFF7 : 0xFF70D9F0) : 0xFFFFB86B);
       }
     }
@@ -363,8 +365,26 @@ class ExperienceLibraryState extends MusicBeatState
   function addExperienceIcon(info:ExperienceInfo, x:Float, y:Float, size:Float):Void
   {
     var loaded:Bool = false;
+    if (info.isOfficial)
+    {
+      try
+      {
+        var bitmap:BitmapData = Assets.getBitmapData("assets/branding/app-icon.png");
+        var icon:FlxSprite = new FlxSprite(x, y);
+        icon.loadGraphic(bitmap);
+        icon.setGraphicSize(Std.int(size), Std.int(size));
+        icon.updateHitbox();
+        icon.scrollFactor.set();
+        addTracked(icon, true);
+        loaded = true;
+      }
+      catch (error:Dynamic)
+      {
+        trace("Could not load the official base-game icon: " + Std.string(error));
+      }
+    }
     #if sys
-    if (info.iconPath != null && FileSystem.exists(info.iconPath))
+    if (!loaded && info.iconPath != null && FileSystem.exists(info.iconPath))
     {
       try
       {

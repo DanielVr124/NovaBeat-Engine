@@ -45,6 +45,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var touchActionActions:Array<String> = [];
   var mobileBackButton:Null<FlxSprite> = null;
   var mobileBackLabel:Null<FlxText> = null;
+  var mobileListDragActive:Bool = false;
+  var mobileListDragMoved:Bool = false;
+  var mobileListDragAccumulator:Float = 0;
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -190,15 +193,25 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     statusText = addLabel(innerX + 14, summaryY + summaryHeight - 20, innerWidth - 28, '', 9, 0xFF54DDF4);
 
     listHeading = addLabel(innerX + 2, summaryY + summaryHeight + 18, innerWidth - 4,
-      'INSTALLED MODS', 11, 0xFF54DDF4);
+      mobileModActionsEnabled() ? 'INSTALLED MODS' : 'LOCAL MODS ARE NOT AVAILABLE IN THIS BROWSER',
+      11, 0xFF54DDF4);
     rowX = innerX;
     rowY = summaryY + summaryHeight + 44;
     rowWidth = innerWidth;
-    rowHeight = 74;
-    visibleRows = Std.int(Math.max(1, Math.floor((panelY + panelHeight - 18 - rowY) / rowHeight)));
+    rowHeight = portraitLayout ? 78 : 74;
+    var actionDockHeight:Float = mobileModActionsEnabled() ? 76 : 0;
+    var listBottom:Float = panelY + panelHeight - 18 - actionDockHeight;
+    visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+    if (mobileModActionsEnabled())
+    {
+      var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
+      layoutMobileTouchActions(innerX, actionY, innerWidth, 30, 6, portraitLayout);
+    }
 
     helpText = addLabel(margin, height - 22, width - margin * 2,
-      'SELECT A MOD TO VIEW DETAILS  •  BACK TO RETURN',
+      mobileModActionsEnabled()
+        ? 'TAP A CARD  •  DRAG TO SCROLL  •  USE THE ACTIONS BELOW  •  BACK'
+        : 'BROWSER BUILDS CANNOT READ LOCAL MOD FOLDERS  •  BACK TO RETURN',
       9, 0xFF91A9CC);
   }
 
@@ -527,24 +540,72 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     // Runtime-detected HTML5 touch devices need the same pointer handling
     // as native mobile builds. Keep this outside compile-time mobile flags.
+    var listDragReleased:Bool = false;
     if (usesTouchControls)
     {
-      var touchActionHandled:Bool = false;
-      for (index in 0...touchActionHitboxes.length)
+      var pointer:Dynamic = TouchUtil.touch;
+      if (TouchUtil.justPressed && pointer != null)
       {
-        if (TouchUtil.justReleased && TouchUtil.overlaps(touchActionHitboxes[index]))
+        mobileListDragActive = false;
+        mobileListDragMoved = false;
+        mobileListDragAccumulator = 0;
+        for (background in rowBackgrounds)
         {
-          performTouchAction(touchActionActions[index]);
-          touchActionHandled = true;
-          break;
+          if (TouchUtil.overlaps(background))
+          {
+            mobileListDragActive = true;
+            break;
+          }
         }
       }
 
-      if (!touchActionHandled)
+      if (mobileListDragActive && TouchUtil.pressed && pointer != null)
+      {
+        var deltaY:Float = pointer.deltaViewY;
+        if (Math.isFinite(deltaY) && Math.abs(deltaY) > 1)
+        {
+          mobileListDragAccumulator -= deltaY;
+          mobileListDragMoved = mobileListDragMoved || Math.abs(mobileListDragAccumulator) > 12;
+          var rowStep:Float = Math.max(36, rowHeight * 0.55);
+          while (mobileListDragAccumulator >= rowStep)
+          {
+            selectMod(selectedIndex + 1, false);
+            mobileListDragAccumulator -= rowStep;
+          }
+          while (mobileListDragAccumulator <= -rowStep)
+          {
+            selectMod(selectedIndex - 1, false);
+            mobileListDragAccumulator += rowStep;
+          }
+        }
+      }
+
+      if (TouchUtil.justReleased && mobileListDragActive)
+      {
+        listDragReleased = mobileListDragMoved;
+        mobileListDragActive = false;
+        mobileListDragMoved = false;
+        mobileListDragAccumulator = 0;
+      }
+
+      var touchActionHandled:Bool = false;
+      if (!listDragReleased)
+      {
+        for (index in 0...touchActionHitboxes.length)
+        {
+          if (TouchUtil.justReleased && TouchUtil.overlaps(touchActionHitboxes[index]))
+          {
+            performTouchAction(touchActionActions[index]);
+            touchActionHandled = true;
+            break;
+          }
+        }
+      }
+
+      if (!touchActionHandled && !listDragReleased)
       {
         for (index in 0...rowBackgrounds.length)
         {
-          // The whole card is the tap target, not just the line of text.
           if (TouchUtil.justReleased && TouchUtil.overlaps(rowBackgrounds[index]))
           {
             selectMod(firstVisibleIndex + index, false);
@@ -556,9 +617,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (detectedMods.length > 0)
     {
-      if (controls.UI_UP_P || SwipeUtil.swipeUp)
+      if (controls.UI_UP_P || (!mobileListDragActive && SwipeUtil.swipeUp))
         selectMod(selectedIndex - 1, false);
-      if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
+      if (controls.UI_DOWN_P || (!mobileListDragActive && SwipeUtil.swipeDown))
         selectMod(selectedIndex + 1, false);
       if (controls.ACCEPT_P || FlxG.keys.justPressed.SPACE) toggleSelectedMod();
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
@@ -701,8 +762,15 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowX = innerX;
     rowY = summaryY + summaryHeight + 44;
     rowWidth = innerWidth;
-    rowHeight = 74;
-    visibleRows = Std.int(Math.max(1, Math.floor((panelY + panelHeight - 18 - rowY) / rowHeight)));
+    rowHeight = portraitLayout ? 78 : 74;
+    var actionDockHeight:Float = mobileModActionsEnabled() ? 76 : 0;
+    var listBottom:Float = panelY + panelHeight - 18 - actionDockHeight;
+    visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+    if (mobileModActionsEnabled())
+    {
+      var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
+      layoutMobileTouchActions(innerX, actionY, innerWidth, 30, 6, portraitLayout);
+    }
 
     helpText.setPosition(margin, height - 22);
     helpText.fieldWidth = width - margin * 2;

@@ -10,7 +10,6 @@ import flixel.FlxObject;
 import flixel.FlxSubState;
 import flixel.FlxSprite;
 import flixel.effects.FlxFlicker;
-import flixel.math.FlxPoint;
 import flixel.util.typeLimit.NextState;
 import flixel.util.FlxColor;
 import flixel.tweens.FlxEase;
@@ -59,9 +58,6 @@ class MainMenuState extends MusicBeatState
   var bg:Null<FlxSprite>;
   var magenta:FlxSprite;
   var camFollow:FlxObject;
-  #if (mobile || FEATURE_TOUCH_CONTROLS)
-  var gyroPan:Null<FlxPoint>;
-  #end
   var overrideMusic:Bool = false;
   var uiStateMachine:UIStateMachine = new UIStateMachine();
   var canInteract(get, never):Bool;
@@ -109,6 +105,7 @@ class MainMenuState extends MusicBeatState
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end
 
+    FlxG.mouse.visible = false;
     FlxG.cameras.reset(new FunkinCamera('mainMenu'));
 
     transIn = FlxTransitionableState.defaultTransIn;
@@ -297,10 +294,6 @@ class MainMenuState extends MusicBeatState
     });
 
     // FlxG.camera.setScrollBounds(bg.x, bg.x + bg.width, bg.y, bg.y + bg.height * 1.2);
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) gyroPan = new FlxPoint();
-    #end
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
@@ -547,21 +540,6 @@ class MainMenuState extends MusicBeatState
     super.update(elapsed);
 
     Conductor.instance.update();
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (gyroPan != null && bg != null && !ControlsHandler.usingExternalInputDevice)
-    {
-      gyroPan.add(FlxG.gyroscope.pitch * -1.25, FlxG.gyroscope.roll * -1.25);
-
-      // our pseudo damping
-      gyroPan.x = MathUtil.smoothLerpPrecision(gyroPan.x, 0, elapsed, 2.5);
-      gyroPan.y = MathUtil.smoothLerpPrecision(gyroPan.y, 0, elapsed, 2.5);
-
-      // how far away from bg mid do we want to pan via gyroPan
-      camFollow.x = bg.getGraphicMidpoint().x - gyroPan.x;
-      camFollow.y = bg.getGraphicMidpoint().y - gyroPan.y;
-    }
-    #end
 
     if ((FlxG.sound.music?.volume ?? 1.0) < 0.8)
     {

@@ -53,26 +53,11 @@ class DeviceUtil
     final maxTouchPoints:Int = Std.parseInt(Std.string(Reflect.field(Browser.navigator, "maxTouchPoints"))) ?? 0;
     final isIPadOS:Bool = platform == "MacIntel" && maxTouchPoints > 1;
 
-    // Some mobile browsers can use a desktop-style user agent (for example,
-    // when "Desktop site" is enabled). Prefer the browser's explicit mobile
-    // hint and primary-pointer capabilities as additional signals.
+    // Phones can use a desktop-style user agent or a fine-pointer accessory.
+    // maxTouchPoints remains a reliable touch capability signal.
     final userAgentData:Dynamic = Reflect.field(Browser.navigator, "userAgentData");
     final userAgentDataMobile:Bool = userAgentData != null && Reflect.field(userAgentData, "mobile") == true;
-    var primaryPointerIsCoarse:Bool = false;
-    try
-    {
-      final matchMedia:Dynamic = Reflect.field(Browser.window, "matchMedia");
-      if (matchMedia != null)
-      {
-        final pointerQuery:Dynamic = Reflect.callMethod(Browser.window, matchMedia, ["(pointer: coarse)"]);
-        primaryPointerIsCoarse = pointerQuery != null && Reflect.field(pointerQuery, "matches") == true;
-      }
-    }
-    catch (error:Dynamic)
-    {
-      primaryPointerIsCoarse = false;
-    }
-    final hasTouchFirstPointer:Bool = maxTouchPoints > 0 && primaryPointerIsCoarse;
+    final hasTouchInput:Bool = maxTouchPoints > 0;
 
     cachedIsMobileBrowser = isQuestBrowser
       || userAgent.indexOf("android") >= 0
@@ -82,7 +67,7 @@ class DeviceUtil
       || userAgent.indexOf("mobile") >= 0
       || isIPadOS
       || userAgentDataMobile
-      || hasTouchFirstPointer;
+      || hasTouchInput;
     #else
     cachedIsMobileBrowser = false;
     #end

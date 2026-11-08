@@ -10,7 +10,6 @@ import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
 import funkin.Preferences;
 import funkin.util.DeviceUtil;
-import funkin.util.TouchUtil;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
 import funkin.ui.TextMenuList;
@@ -60,7 +59,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     // directly to the list so MenuTypedList's mobile pointer hit-tests use
     // the same screen transform as the visible FNF-style entries.
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = novaBeatStyle;
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     var itemY:Float = novaBeatStyle ? 112 : 30;
@@ -83,7 +82,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     if (novaBeatStyle) styleNovaBeatCategory(performanceItem, 'PERFORMANCE');
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser || novaBeatStyle)
+    if (DeviceUtil.isMobileBrowser)
     {
       var mobileItem:TextMenuItem = items.createItem(0, itemY + 224, 'MOBILE', AtlasFont.BOLD, function()
     {
@@ -283,24 +282,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
-
-    #if FEATURE_TOUCH_CONTROLS
-    if (novaBeatStyle && items != null)
-    {
-      for (index in 0...categoryItems.length)
-      {
-        var item:TextMenuItem = categoryItems[index];
-        // NovaBeat category rows are transparent hit targets with separate visible labels.
-        // Use rectangle bounds instead of pixel-perfect alpha testing.
-        if (TouchUtil.pressAction(item, menuCamera, false) && !items.busy)
-        {
-          if (items.selectedIndex != index) items.selectItem(index);
-          items.accept();
-          break;
-        }
-      }
-    }
-    #end
 
     if (novaBeatStyle && camFollow != null && items != null && items.selectedItem != null)
       camFollow.y = items.selectedItem.y;

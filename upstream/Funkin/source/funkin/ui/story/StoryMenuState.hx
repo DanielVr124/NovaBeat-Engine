@@ -476,7 +476,6 @@ class StoryMenuState extends MusicBeatState
     }
 
     super.update(elapsed);
-    updateNovaBeatWeekTitleClip();
     updateNovaBeatWeekTitleFade();
   }
 
@@ -497,25 +496,6 @@ class StoryMenuState extends MusicBeatState
       var fadeAmount:Float = Math.max(0, Math.min(1, (item.y + item.height - fadeStart) / fadeRange));
       item.alpha = baseAlpha * (1.0 - fadeAmount);
     }
-  }
-
-  /**
-   * Keep every scrolling week title and lock icon inside the black NovaBeat
-   * carousel panel. FNF retains its original unclipped Story Mode layout.
-   */
-  function updateNovaBeatWeekTitleClip():Void
-  {
-    if (levelTitles == null) return;
-
-    if (Preferences.menuStyle == "NovaBeat" && novaBeatWeekPanel != null)
-    {
-      var panelTop:Float = novaBeatWeekPanel.y;
-      var panelBottom:Float = FlxG.height;
-      for (item in levelTitles.members)
-        item.clipToPanel(panelTop, panelBottom);
-    }
-    // The original FNF layout never installs these clips, so do not call
-    // clearPanelClip on every frame when the protected FNF menu is active.
   }
 
   // Story Mode uses the upstream FNF mobile touch and swipe recognizers in both themes.
@@ -670,15 +650,16 @@ class StoryMenuState extends MusicBeatState
 
     currentIndex += change;
 
-    #if FEATURE_TOUCH_CONTROLS
-    // Dont wrap around w/ touch.
-    if (currentIndex < 0) currentIndex = 0;
-    if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
-    #else
-    // Wrap around
-    if (currentIndex < 0) currentIndex = levelList.length - 1;
-    if (currentIndex >= levelList.length) currentIndex = 0;
-    #end
+    if (DeviceUtil.isMobileBrowser)
+    {
+      if (currentIndex < 0) currentIndex = 0;
+      if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
+    }
+    else
+    {
+      if (currentIndex < 0) currentIndex = levelList.length - 1;
+      if (currentIndex >= levelList.length) currentIndex = 0;
+    }
 
     var previousLevelId:String = currentLevelId;
     currentLevelId = levelList[currentIndex];
@@ -952,6 +933,8 @@ class StoryMenuState extends MusicBeatState
   {
     for (ind => prop in currentLevel.buildProps(levelProps.members))
     {
+      // Tutorial data sets danceEvery: 2; normalize only this preview.
+      if (currentLevelId == "tutorial") prop.danceEvery = 1.0;
       prop.x += (FullScreenScaleMode.gameCutoutSize.x / 4);
       prop.zIndex = 1000;
       if (levelProps.members[ind] != prop) levelProps.replace(levelProps.members[ind], prop) ?? levelProps.add(prop);

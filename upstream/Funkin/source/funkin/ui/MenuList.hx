@@ -21,6 +21,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   // Pause input variable
   public static var pauseInput:Bool = false;
 
+  // Prevent the action that opens a page from also activating a control on it.
+  public static var inputHandoffBlocked:Bool = false;
+  static var inputHandoffReleaseObserved:Bool = false;
+
   public var selectedIndex(default, null):Int = 0;
   public var selectedItem(get, never):T;
 
@@ -63,8 +67,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    * Why is it needed? Because touch control's a bitch. Thats why. */
   public var currentPage:Null<PageName>;
 
-  // Helper variable
+  // Helper variables
   var _isMainMenuState:Bool = false;
+  var _isPrimaryMainMenuState:Bool = false;
+  var touchScrollAccumulator:Float = 0;
 
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
@@ -86,6 +92,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy = new FlxSprite().makeGraphic(10, 10);
     _isMainMenuState = Std.isOfType(FlxG.state, funkin.ui.mainmenu.MainMenuState);
+    _isPrimaryMainMenuState = _isMainMenuState
+      || Std.isOfType(FlxG.state, funkin.ui.mainmenu.NovaBeatMainMenuState);
 
     super();
   }
@@ -124,16 +132,69 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   {
     var controls = PlayerSettings.player1.controls;
 
+    if (inputHandoffBlocked)
+    {
+      touchScrollAccumulator = 0;
+      if (controls.ACCEPT || TouchUtil.pressed || FlxG.mouse.pressed)
+      {
+        inputHandoffReleaseObserved = false;
+      }
+      else if (!inputHandoffReleaseObserved)
+      {
+        inputHandoffReleaseObserved = true;
+      }
+      else
+      {
+        inputHandoffBlocked = false;
+        inputHandoffReleaseObserved = false;
+      }
+      return;
+    }
+
+    var touchDragUp:Bool = false;
+    var touchDragDown:Bool = false;
+    #if FEATURE_TOUCH_CONTROLS
+    #if (mobile || web)
+    if (DeviceUtil.isMobileBrowser && !_isPrimaryMainMenuState && navControls == Vertical)
+    {
+      if (TouchUtil.pressed && TouchUtil.touch != null)
+      {
+        var deltaY:Float = TouchUtil.touch.deltaViewY;
+        if (Math.isFinite(deltaY))
+        {
+          touchScrollAccumulator -= deltaY;
+          var rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
+          var step:Float = Math.max(30, rowHeight * 0.55);
+          if (touchScrollAccumulator >= step)
+          {
+            touchDragDown = true;
+            touchScrollAccumulator -= step;
+          }
+          else if (touchScrollAccumulator <= -step)
+          {
+            touchDragUp = true;
+            touchScrollAccumulator += step;
+          }
+        }
+      }
+      else if (TouchUtil.justReleased)
+      {
+        touchScrollAccumulator = 0;
+      }
+    }
+    #end
+    #end
+
     var wrapX = wrapMode.match(Horizontal | Both);
     var wrapY = wrapMode.match(Vertical | Both);
 
     var newIndex = 0;
 
     // Define unified input handlers
-    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState && SwipeUtil.swipeUp);
-    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState && SwipeUtil.swipeDown);
-    final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState && SwipeUtil.swipeLeft);
-    final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState && SwipeUtil.swipeRight);
+    final inputUp:Bool = controls.UI_UP_P || (!_isPrimaryMainMenuState && (DeviceUtil.isMobileBrowser ? touchDragUp : SwipeUtil.swipeUp));
+    final inputDown:Bool = controls.UI_DOWN_P || (!_isPrimaryMainMenuState && (DeviceUtil.isMobileBrowser ? touchDragDown : SwipeUtil.swipeDown));
+    final inputLeft:Bool = controls.UI_LEFT_P || (!_isPrimaryMainMenuState && SwipeUtil.swipeLeft);
+    final inputRight:Bool = controls.UI_RIGHT_P || (!_isPrimaryMainMenuState && SwipeUtil.swipeRight);
 
     // Keepin' these for keyboard/controller support on mobile platforms
     newIndex = switch (navControls)
@@ -159,8 +220,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     // must keep normal keyboard navigation and mouse-pointer behavior.
     if (!DeviceUtil.isMobileBrowser)
     {
-      // Desktop mouse hover selects; a normal left click accepts immediately.
-      if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+      // Primary menus remain keyboard/controller-driven on desktop.
+      if (!_isPrimaryMainMenuState && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
       {
         for (i in 0...members.length)
         {
@@ -362,6 +423,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     if (!menuItem.available) return;
 
+    inputHandoffBlocked = true;
+    inputHandoffReleaseObserved = false;
     onAcceptPress.dispatch(menuItem);
 
     // NovaBeat uses separate visible labels over transparent hit rows; skip
