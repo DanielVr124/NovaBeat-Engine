@@ -21,7 +21,7 @@ class DeviceUtil
 
   static function get_isQuestBrowser():Bool
   {
-    if (cachedIsQuestBrowser != null) return cachedIsQuestBrowser;
+    if (cachedIsQuestBrowser != null) return cachedIsQuestBrowser ?? false;
 
     #if web
     final userAgent:String = Browser.navigator.userAgent.toLowerCase();
@@ -43,7 +43,7 @@ class DeviceUtil
 
   static function get_isMobileBrowser():Bool
   {
-    if (cachedIsMobileBrowser != null) return cachedIsMobileBrowser;
+    if (cachedIsMobileBrowser != null) return cachedIsMobileBrowser ?? false;
 
     #if mobile
     cachedIsMobileBrowser = true;
