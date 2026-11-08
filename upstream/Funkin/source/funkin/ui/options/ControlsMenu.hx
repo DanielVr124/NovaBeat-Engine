@@ -70,6 +70,7 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   var labels:FlxTypedGroup<AtlasText>;
   var currentDevice:Device = Keys;
   var deviceListSelected:Bool = false;
+  var controlsPageWasActive:Bool = false;
   var actionPrevented:Bool = false;
   var novaBeatStyle:Bool = false;
   var novaBeatRows:FlxTypedGroup<FunkinSprite>;
@@ -95,9 +96,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
   public function new()
   {
     super();
-    // Entering Controls from another menu must not reuse the press that
-    // opened this page as a request to bind the currently selected key.
-    MenuTypedList.inputHandoffBlocked = true;
 
     novaBeatStyle = Preferences.menuStyle == "NovaBeat";
     menuCamera = new FunkinCamera('controlsMenu');
@@ -513,6 +511,19 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
 
   override function update(elapsed:Float):Void
   {
+    // Arm the handoff gate when the page becomes visible, not when OptionsState
+    // constructs every Codex page up front. This prevents the Enter/tap that
+    // opens Controls from immediately becoming a key-binding request.
+    if (exists && visible && !controlsPageWasActive)
+    {
+      controlsPageWasActive = true;
+      MenuTypedList.inputHandoffBlocked = true;
+    }
+    else if (!exists || !visible)
+    {
+      controlsPageWasActive = false;
+    }
+
     super.update(elapsed);
 
     var controls = PlayerSettings.player1.controls;
