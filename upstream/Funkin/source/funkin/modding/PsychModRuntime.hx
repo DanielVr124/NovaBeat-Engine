@@ -40,11 +40,17 @@ class PsychModRuntime
     var sources:Array<PsychSongSource> = scanSongSources(modPath);
     var scriptCount:Int = countPsychScripts(modPath);
     var playableCount:Int = 0;
+    var songScriptCount:Int = 0;
 
     for (source in sources)
     {
-      if (source.instrumentFile != null && source.chartFiles.length > 0)
-        playableCount++;
+      if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
+      if (hasSongScripts(source))
+      {
+        songScriptCount++;
+        continue;
+      }
+      playableCount++;
     }
 
     if (playableCount == 0)
@@ -52,7 +58,9 @@ class PsychModRuntime
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: "Psych Engine detected. This first native compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. This package does not contain a complete song in that format."
+        explanation: songScriptCount > 0
+          ? "Psych charts and instrumentals were found, but every complete song has a song-local Lua/HScript file. Those songs are not launchable until the Psych scripting runtime is implemented."
+          : "Psych Engine detected. This first native compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. This package does not contain a complete song in that format."
       };
     }
 
@@ -68,7 +76,7 @@ class PsychModRuntime
     return {
       launchable: true,
       supportedSongCount: playableCount,
-      explanation: "Limited native Psych compatibility: classic chart files and instrumentals can launch with NovaBeat's built-in characters and default stage. Psych Lua/HScript, custom events, custom note types, custom character/stage behavior, and HTML5 local-mod launching are not supported yet."
+      explanation: "Limited native Psych compatibility: " + Std.string(playableCount) + " classic chart song(s) without song-local scripts can launch with NovaBeat's built-in characters and default stage. " + Std.string(songScriptCount) + " song(s) with local Lua/HScript are skipped. Psych Lua/HScript execution, custom events, custom note types, custom character/stage behavior, and HTML5 local-mod launching are not supported yet."
     };
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
@@ -87,7 +95,7 @@ class PsychModRuntime
 
       for (source in scanSongSources(modPath))
       {
-        if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
+        if (source.instrumentFile == null || source.chartFiles.length == 0 || hasSongScripts(source)) continue;
         var songId:String = buildSongId(directory, source.songFolder);
         if (!result.contains(songId)) result.push(songId);
       }
@@ -119,7 +127,7 @@ class PsychModRuntime
 
       for (source in scanSongSources(modPath))
       {
-        if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
+        if (source.instrumentFile == null || source.chartFiles.length == 0 || hasSongScripts(source)) continue;
 
         var songId:String = buildSongId(directory, source.songFolder);
         try
@@ -349,8 +357,7 @@ class PsychModRuntime
       "custom_notes",
       "custom_substates",
       "stages",
-      "characters",
-      "data"
+      "characters"
     ];
     var count:Int = 0;
     for (folder in roots)
@@ -358,6 +365,11 @@ class PsychModRuntime
       count += countScriptFiles(Path.join([modPath, folder]), 5);
     }
     return count;
+  }
+
+  static function hasSongScripts(source:PsychSongSource):Bool
+  {
+    return countScriptFiles(source.dataPath, 3) > 0;
   }
 
   static function countScriptFiles(path:String, depth:Int):Int
