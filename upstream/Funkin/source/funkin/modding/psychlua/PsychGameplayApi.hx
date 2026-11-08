@@ -396,11 +396,13 @@ class PsychGameplayApi
     });
     vars.set("setShaderSampler2D", function(objectPath:String, property:String, imagePath:String):Bool
     {
-      var shader = getRuntimeShader(state, objectPath);
+      var shader:Dynamic = getRuntimeShader(state, objectPath);
       if (shader == null || imagePath == null || imagePath.length == 0) return false;
       var graphic = FlxG.bitmap.add(Paths.image(imagePath));
       if (graphic == null || graphic.bitmap == null) return false;
-      shader.setSampler2D(property, graphic.bitmap);
+      var setter:Dynamic = Reflect.field(shader, "setSampler2D");
+      if (setter == null) return false;
+      Reflect.callMethod(shader, setter, [property, graphic.bitmap]);
       return true;
     });
     #else
