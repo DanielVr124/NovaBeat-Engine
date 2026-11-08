@@ -127,7 +127,10 @@ class PsychGameplayApi
     {
       var sound:Null<FlxSound> = activeSounds.get(tag);
       if (sound == null) return false;
+      var wasPlaying:Bool = sound.playing;
+      sound.pause();
       sound.time = Math.max(0, value);
+      if (wasPlaying) sound.play();
       return true;
     });
     vars.set("getSoundPitch", function(tag:String):Float
@@ -1267,9 +1270,10 @@ class PsychGameplayApi
   static function playTaggedSound(soundPath:String, volume:Float, tag:String):Bool
   {
     if (soundPath == null || soundPath.length == 0) return false;
-    var soundTag:String = tag == null || tag.length == 0
+    var normalizedTag:String = tag == null ? "" : StringTools.replace(tag, ".", "");
+    var soundTag:String = normalizedTag.length == 0
       ? "psych-sound-" + Std.string(nextSoundTag++)
-      : tag;
+      : normalizedTag;
     stopTaggedSound(soundTag);
 
     try
