@@ -2102,8 +2102,9 @@ class FreeplayState extends MusicBeatSubState
   private function handleTouchCapsuleClick():Void
   {
     if (diffSelRight == null) return;
-    if (menuTouchPressAction() && _moveLength <= 0 && !menuPointerJustSwipedAny()
-      && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
+    if (menuTouchPressAction() && _moveLength <= 0
+      && (menuPointer()?.ticksDeltaSincePress ?? 0) < 500
+      && !menuPointerJustSwipedAny() && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
     {
       curSelected = Math.round(curSelectedFloat);
 
