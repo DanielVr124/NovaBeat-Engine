@@ -126,7 +126,10 @@ class PsychScriptRuntime
     }
 
     if (loaded > 0)
+    {
       dispatch("onCreate", []);
+      dispatch("onSongLoaded", []);
+    }
     return loaded;
   }
 

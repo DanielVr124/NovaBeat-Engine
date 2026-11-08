@@ -35,6 +35,7 @@ import funkin.Highscore.Tallies;
 import funkin.input.PreciseInputManager;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEvent.NoteScriptEvent;
+import funkin.modding.events.ScriptEvent.SongEventScriptEvent;
 import funkin.modding.events.ScriptEvent.SongRetryEvent;
 import funkin.modding.events.ScriptEvent.CountdownScriptEvent;
 import funkin.modding.events.ScriptEvent.HoldNoteScriptEvent;
@@ -1581,6 +1582,38 @@ class PlayState extends MusicBeatSubState
               event.cancel();
           }
         }
+      }
+      else if (event.type == "SONG_EVENT")
+      {
+        var songEvent:SongEventScriptEvent = cast event;
+        var eventData = songEvent.eventData;
+        var value1:String = "";
+        var value2:String = "";
+        var rawValue:Dynamic = eventData.value;
+        if (rawValue != null)
+        {
+          if (Std.isOfType(rawValue, Array))
+          {
+            var values:Array<Dynamic> = cast rawValue;
+            if (values.length > 0) value1 = Std.string(values[0]);
+            if (values.length > 1) value2 = Std.string(values[1]);
+          }
+          else if (Reflect.isObject(rawValue))
+          {
+            var first:Dynamic = Reflect.field(rawValue, "value1");
+            var second:Dynamic = Reflect.field(rawValue, "value2");
+            if (first == null) first = Reflect.field(rawValue, "value");
+            if (first != null) value1 = Std.string(first);
+            if (second != null) value2 = Std.string(second);
+          }
+          else
+          {
+            value1 = Std.string(rawValue);
+          }
+        }
+
+        if (PsychScriptRuntime.dispatchStop("onEvent", [eventData.eventKind, value1, value2]))
+          event.cancel();
       }
       else if (event.type == "SONG_END")
       {
