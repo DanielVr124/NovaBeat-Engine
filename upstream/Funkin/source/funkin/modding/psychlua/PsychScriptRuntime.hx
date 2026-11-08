@@ -24,6 +24,7 @@ class PsychScriptRuntime
   static var inlineHScriptBridge:Null<PsychScriptInstance> = null;
   static var inlineLuaBridge:Null<PsychScriptInstance> = null;
   static var executingScript:Null<PsychScriptInstance> = null;
+  static var pendingSongLifecycleCallbacks:Bool = false;
   static inline final FUNCTION_STOP:String = "##PSYCHLUA_FUNCTIONSTOP";
   static inline final FUNCTION_CONTINUE:String = "##PSYCHLUA_FUNCTIONCONTINUE";
   static inline final FUNCTION_STOP_LUA:String = "##PSYCHLUA_FUNCTIONSTOPLUA";
@@ -183,7 +184,7 @@ class PsychScriptRuntime
    * packages. Global scripts always precede song scripts, matching the
    * established Psych loading order for these two supported scopes.
    */
-  public static function loadForSong(modDirs:Array<String>, songId:String, playState:PlayState):Int
+  public static function loadForSong(modDirs:Array<String>, songId:String, playState:PlayState, ?deferLifecycleCallbacks:Bool = false):Int
   {
     clear();
     activeModDirs = modDirs == null ? [] : modDirs.copy();
@@ -220,10 +221,22 @@ class PsychScriptRuntime
     if (loaded > 0)
     {
       if (hasCustomStageScript) PsychGameplayApi.hideDefaultStageProps(playState);
-      dispatch("onCreate", []);
-      dispatch("onSongLoaded", []);
+      if (deferLifecycleCallbacks)
+        pendingSongLifecycleCallbacks = true;
+      else
+        dispatchLoadedCallbacks();
     }
     return loaded;
+  }
+
+  /** Dispatch lifecycle callbacks after song notes and chart events have been prepared. */
+  public static function dispatchLoadedCallbacks():Void
+  {
+    if (!pendingSongLifecycleCallbacks) return;
+    pendingSongLifecycleCallbacks = false;
+    if (scripts.length == 0) return;
+    dispatch("onCreate", []);
+    dispatch("onSongLoaded", []);
   }
 
   public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
@@ -751,6 +764,7 @@ class PsychScriptRuntime
   public static function clear():Void
   {
     executingScript = null;
+    pendingSongLifecycleCallbacks = false;
     for (script in scripts)
       script.destroy();
     scripts.resize(0);
