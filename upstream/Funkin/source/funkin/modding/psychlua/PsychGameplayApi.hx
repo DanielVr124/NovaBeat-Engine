@@ -783,6 +783,104 @@ class PsychGameplayApi
       sprite.updateHitbox();
       return true;
     });
+    // Psych 0.7.x deprecated aliases remain in widespread mod use.
+    vars.set("addAnimationByIndicesLoop", function(tag:String, name:String, prefix:String,
+        indices:String, ?framerate:Int = 24):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      var parsed:Array<Int> = [];
+      if (indices != null)
+        for (part in indices.split(","))
+        {
+          var value:Null<Int> = Std.parseInt(StringTools.trim(part));
+          if (value != null) parsed.push(value);
+        }
+      if (parsed.length == 0) return false;
+      sprite.animation.addByIndices(name, prefix, parsed, "", framerate, true);
+      return true;
+    });
+    vars.set("characterPlayAnim", function(role:String, animation:String, ?forced:Bool = false):Bool
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      if (character == null || animation == null || !character.hasAnimation(animation)) return false;
+      character.playAnimation(animation, forced);
+      return true;
+    });
+    vars.set("luaSpriteMakeGraphic", function(tag:String, width:Int, height:Int, color:Dynamic):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || width <= 0 || height <= 0) return false;
+      sprite.makeGraphic(width, height, parsePsychColor(color));
+      return true;
+    });
+    vars.set("luaSpriteAddAnimationByPrefix", function(tag:String, name:String, prefix:String,
+        ?framerate:Int = 24, ?loop:Bool = true):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.animation.addByPrefix(name, prefix, framerate, loop);
+      if (sprite.animation.curAnim == null) sprite.animation.play(name, true);
+      return true;
+    });
+    vars.set("luaSpriteAddAnimationByIndices", function(tag:String, name:String, prefix:String,
+        indices:String, ?framerate:Int = 24):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || indices == null) return false;
+      var parsed:Array<Int> = [];
+      for (part in indices.split(","))
+      {
+        var value:Null<Int> = Std.parseInt(StringTools.trim(part));
+        if (value != null) parsed.push(value);
+      }
+      if (parsed.length == 0) return false;
+      sprite.animation.addByIndices(name, prefix, parsed, "", framerate, false);
+      if (sprite.animation.curAnim == null) sprite.animation.play(name, true);
+      return true;
+    });
+    vars.set("luaSpritePlayAnimation", function(tag:String, name:String, ?forced:Bool = false):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.animation.play(name, forced);
+      return true;
+    });
+    vars.set("setLuaSpriteCamera", function(tag:String, ?camera:String = ""):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.cameras = [resolveCamera(state, camera)];
+      return true;
+    });
+    vars.set("setLuaSpriteScrollFactor", function(tag:String, scrollX:Float, scrollY:Float):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.scrollFactor.set(scrollX, scrollY);
+      return true;
+    });
+    vars.set("scaleLuaSprite", function(tag:String, x:Float, y:Float):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.scale.set(x, y);
+      sprite.updateHitbox();
+      return true;
+    });
+    vars.set("musicFadeIn", function(duration:Float, ?fromValue:Float = 0, ?toValue:Float = 1):Bool
+    {
+      if (FlxG.sound.music == null || duration < 0) return false;
+      FlxG.sound.music.fadeIn(duration, fromValue, toValue);
+      return true;
+    });
+    vars.set("musicFadeOut", function(duration:Float, ?toValue:Float = 0):Bool
+    {
+      if (FlxG.sound.music == null || duration < 0) return false;
+      FlxG.sound.music.fadeOut(duration, toValue);
+      return true;
+    });
+
     vars.set("setObjectOrder", function(tag:String, index:Int):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
