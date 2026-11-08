@@ -60,12 +60,16 @@ class ExperienceManager
       var modPath:String = Path.join([root, directory]);
       var polymodMetadata:Dynamic = readJson(Path.join([modPath, "_polymod_meta.json"]));
       var novaBeatMetadata:Dynamic = readJson(Path.join([modPath, "_novabeat.json"]));
+      // Keep each metadata source separate so an engine declaration in
+      // meta.json/pack.json is still visible when Polymod metadata also exists.
+      var packageMetadata:Dynamic = readJson(Path.join([modPath, "meta.json"]));
+      if (packageMetadata == null) packageMetadata = readJson(Path.join([modPath, "pack.json"]));
+
       var genericMetadata:Dynamic = polymodMetadata;
       if (genericMetadata == null) genericMetadata = novaBeatMetadata;
-      if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "meta.json"]));
-      if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "pack.json"]));
+      if (genericMetadata == null) genericMetadata = packageMetadata;
 
-      var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata, genericMetadata);
+      var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata, packageMetadata);
       var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata);
       var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
