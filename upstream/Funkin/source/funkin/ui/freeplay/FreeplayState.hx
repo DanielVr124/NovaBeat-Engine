@@ -433,6 +433,19 @@ class FreeplayState extends MusicBeatSubState
       }
     }
 
+    // Psych compatibility songs do not have V-Slice week metadata. Attach
+    // them to the built-in tutorial level only as a Freeplay card container.
+    var psychLevel:Null<Level> = LevelRegistry.instance.fetchEntry('tutorial');
+    if (psychLevel != null)
+    {
+      for (songId in ExperienceManager.getActivePsychSongIds())
+      {
+        var psychSong:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: Constants.DEFAULT_VARIATION});
+        if (psychSong == null) continue;
+        songs.push(new FreeplaySongData(songId, psychLevel, this));
+      }
+    }
+
     // LOAD MUSIC
 
     // LOAD CHARACTERS
@@ -966,6 +979,11 @@ class FreeplayState extends MusicBeatSubState
 
       // Available variations for current character. We get this since bf is usually `default` variation, and `pico` is `pico`
       // but sometimes pico can be the default variation (weekend 1 songs), and bf can be `bf` variation (darnell)
+      if (ExperienceManager.isPsychSong(song.songId))
+      {
+        return song.data.getDifficulty(currentDifficulty, Constants.DEFAULT_VARIATION) != null;
+      }
+
       var characterVariations:Array<String> = song.data.getVariationsByCharacter(currentCharacter);
 
       // Gets all available difficulties for our character, via our available variations
@@ -2034,7 +2052,7 @@ class FreeplayState extends MusicBeatSubState
         return;
       }
       var targetSong:Song = targetSongNullable;
-      var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, currentVariation);
+      var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, targetVariation);
       if (targetDifficulty == null)
       {
         FlxG.log.warn('WARN: could not find difficulty with id (${currentDifficulty})');
@@ -2802,8 +2820,10 @@ class FreeplayState extends MusicBeatSubState
   function capsuleOnOpenDefault(cap:SongMenuItem):Void
   {
     var targetDifficultyId:String = currentDifficulty;
-    var targetVariation:Null<String> = currentVariation;
     var targetSongId:String = cap?.freeplayData?.data.id ?? 'unknown';
+    var targetVariation:Null<String> = ExperienceManager.isPsychSong(targetSongId)
+      ? Constants.DEFAULT_VARIATION
+      : currentVariation;
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId, {variation: targetVariation});
     if (targetSongNullable == null)
     {
@@ -2878,12 +2898,13 @@ class FreeplayState extends MusicBeatSubState
   {
     uiStateMachine.transition(Exiting);
 
-    dispatchEvent(new CapsuleScriptEvent(SONG_SELECTED, currentCapsule, currentDifficulty, currentVariation));
+    var targetSongId:String = cap?.freeplayData?.data.id ?? 'unknown';
+    var targetVariation:Null<String> = ExperienceManager.isPsychSong(targetSongId)
+      ? Constants.DEFAULT_VARIATION
+      : currentVariation;
+    dispatchEvent(new CapsuleScriptEvent(SONG_SELECTED, currentCapsule, currentDifficulty, targetVariation));
 
     PlayStatePlaylist.isStoryMode = false;
-
-    var targetVariation:Null<String> = currentVariation;
-    var targetSongId:String = cap?.freeplayData?.data.id ?? 'unknown';
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId, {variation: targetVariation});
     if (targetSongNullable == null)
     {
@@ -2959,7 +2980,7 @@ class FreeplayState extends MusicBeatSubState
         LoadingState.loadPlayState({
           targetSong: targetSong,
           targetDifficulty: currentDifficulty,
-          targetVariation: currentVariation,
+          targetVariation: targetVariation,
           targetInstrumental: targetInstId,
           practiceMode: false,
           minimalMode: false,
