@@ -407,21 +407,40 @@ class PsychScriptRuntime
 
   public static function dispatchStop(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Bool
   {
-    var result:PsychDispatchResult = dispatchInternal(callback, args, ignoreStops);
-    return result.value == FUNCTION_STOP;
+    return dispatchInternal(callback, args, ignoreStops).value == FUNCTION_STOP;
+  }
+
+  /** Dispatch a callback using Psych's distinct Lua and HScript argument shapes. */
+  public static function dispatchSplit(callback:String, luaArgs:Array<Dynamic>, hscriptArgs:Array<Dynamic>,
+      ?ignoreStops:Bool = false):Array<Dynamic>
+  {
+    return dispatchSplitInternal(callback, luaArgs, hscriptArgs, ignoreStops).results;
+  }
+
+  /** Split-argument dispatch variant which reports whether Function_Stop cancelled gameplay. */
+  public static function dispatchStopSplit(callback:String, luaArgs:Array<Dynamic>, hscriptArgs:Array<Dynamic>,
+      ?ignoreStops:Bool = false):Bool
+  {
+    return dispatchSplitInternal(callback, luaArgs, hscriptArgs, ignoreStops).value == FUNCTION_STOP;
+  }
+
+  static function dispatchInternal(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):PsychDispatchResult
+  {
+    return dispatchSplitInternal(callback, args, args, ignoreStops);
   }
 
   /**
    * Match Psych's callOnScripts ordering and return handling:
    * execute every Lua script first, then HScript only when Lua returned
    * Function_Continue (or no value). StopLua/StopHScript/StopAll stop script
-   * dispatch at their respective language boundary; only Function_Stop
-   * cancels the gameplay operation itself.
+   * dispatch at their documented boundaries.
    */
-  static function dispatchInternal(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):PsychDispatchResult
+  static function dispatchSplitInternal(callback:String, luaArgs:Array<Dynamic>, hscriptArgs:Array<Dynamic>,
+      ?ignoreStops:Bool = false):PsychDispatchResult
   {
     updateTimingGlobals();
-    var callArgs:Array<Dynamic> = args == null ? [] : args;
+    var luaCallArgs:Array<Dynamic> = luaArgs == null ? [] : luaArgs;
+    var hscriptCallArgs:Array<Dynamic> = hscriptArgs == null ? [] : hscriptArgs;
     var results:Array<Dynamic> = [];
     var value:Dynamic = FUNCTION_CONTINUE;
     var luaResult:Dynamic = FUNCTION_CONTINUE;
@@ -429,7 +448,7 @@ class PsychScriptRuntime
     for (script in scripts.copy())
     {
       if (script.language != "lua") continue;
-      var result:Dynamic = callScriptInstance(script, callback, callArgs);
+      var result:Dynamic = callScriptInstance(script, callback, luaCallArgs);
       if (script.lastError != null)
         trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
       results.push(result);
@@ -450,7 +469,7 @@ class PsychScriptRuntime
       for (script in scripts.copy())
       {
         if (script.language != "hscript") continue;
-        var result:Dynamic = callScriptInstance(script, callback, callArgs);
+        var result:Dynamic = callScriptInstance(script, callback, hscriptCallArgs);
         if (script.lastError != null)
           trace('[Psych Script Runtime] ' + script.sourcePath + ' :: ' + callback + ' :: ' + script.lastError);
         results.push(result);
