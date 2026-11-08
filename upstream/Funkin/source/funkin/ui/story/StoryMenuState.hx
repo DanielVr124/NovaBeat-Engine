@@ -514,11 +514,8 @@ class StoryMenuState extends MusicBeatState
       for (item in levelTitles.members)
         item.clipToPanel(panelTop, panelBottom);
     }
-    else
-    {
-      for (item in levelTitles.members)
-        item.clearPanelClip();
-    }
+    // The original FNF layout never installs these clips, so do not call
+    // clearPanelClip on every frame when the protected FNF menu is active.
   }
 
   // Story Mode uses the upstream FNF mobile touch and swipe recognizers in both themes.
