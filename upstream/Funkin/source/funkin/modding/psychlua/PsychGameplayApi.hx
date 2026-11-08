@@ -55,6 +55,7 @@ class PsychGameplayApi
   static final activeSounds:Map<String, FlxSound> = [];
   static final preloadedCharacters:Map<String, BaseCharacter> = [];
   static var activeTimeBar:Null<PsychTimeBar> = null;
+  static var activeDialogue:Null<PsychDialogueOverlay> = null;
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
 
@@ -227,6 +228,8 @@ class PsychGameplayApi
       activeTimeBar.setColors(left, right);
       return true;
     });
+    vars.set("startDialogue", function(dialogueFile:String, ?music:String = null):Bool
+      return startPsychDialogue(state, dialogueFile, music));
     vars.set("stopMusic", function():Void
     {
       if (FlxG.sound.music != null) FlxG.sound.music.stop();
@@ -1151,7 +1154,7 @@ class PsychGameplayApi
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
-      "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong", "loadSong", "startVideo",
+      "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong", "loadSong", "startVideo", "startDialogue",
       "addCharacterToList", "precacheImage", "precacheSound", "precacheMusic", "setHealthBarColors",
       "addAnimationByIndicesLoop", "characterPlayAnim", "luaSpriteMakeGraphic",
       "luaSpriteAddAnimationByPrefix", "luaSpriteAddAnimationByIndices", "luaSpritePlayAnimation",
@@ -1485,6 +1488,7 @@ class PsychGameplayApi
       if (sound != null) sound.stop();
     activeSounds.clear();
     activeTimeBar = null;
+    activeDialogue = null;
     for (character in preloadedCharacters)
       if (character != null) character.destroy();
     preloadedCharacters.clear();
@@ -1581,6 +1585,70 @@ class PsychGameplayApi
     while (StringTools.startsWith(normalized, "-")) normalized = normalized.substr(1);
     while (StringTools.endsWith(normalized, "-")) normalized = normalized.substr(0, normalized.length - 1);
     return normalized;
+  }
+
+  public static function hasActiveDialogue():Bool
+  {
+    return activeDialogue != null && activeDialogue.exists && !activeDialogue.isDead;
+  }
+
+  public static function advanceDialogue():Void
+  {
+    if (hasActiveDialogue()) activeDialogue.advance();
+  }
+
+  static function startPsychDialogue(state:PlayState, dialogueFile:String, ?music:String):Bool
+  {
+    if (state == null || state.currentSong == null || hasActiveDialogue()) return false;
+    var source:Null<PsychScriptSource> = PsychModRuntime.getSongDataFile(state.currentSong.id, dialogueFile);
+    if (source == null)
+    {
+      trace('[Psych Dialogue] Could not find data/' + state.currentSong.id + '/' + dialogueFile + '.json in the owning Psych package.');
+      return false;
+    }
+
+    try
+    {
+      var parsed:Dynamic = haxe.Json.parse(source.source);
+      var rawLines:Dynamic = Reflect.field(parsed, "dialogue");
+      if (!Std.isOfType(rawLines, Array) || (cast rawLines:Array<Dynamic>).length == 0)
+        return false;
+
+      var lines:Array<Dynamic> = cast rawLines;
+      var endingSong:Bool = state.isSongEnd;
+      activeDialogue = new PsychDialogueOverlay(state, lines, function():Void
+      {
+        var finishedDialogue:Null<PsychDialogueOverlay> = activeDialogue;
+        activeDialogue = null;
+        if (finishedDialogue != null)
+          state.remove(finishedDialogue, true);
+
+        state.isInCutscene = false;
+        if (music != null && StringTools.trim(music).length > 0
+          && FlxG.sound.music != null)
+          FlxG.sound.music.fadeOut(1, 0);
+
+        // Match Psych's common pre-countdown / post-song dialogue lifecycle.
+        if (endingSong) state.endSong();
+        else state.startCountdown();
+      });
+
+      state.isInCutscene = true;
+      state.add(activeDialogue);
+
+      if (music != null && StringTools.trim(music).length > 0)
+      {
+        FlxG.sound.playMusic(Paths.music(StringTools.trim(music)), 0, true);
+        if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(2, 0, 1);
+      }
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      activeDialogue = null;
+      trace('[Psych Dialogue] Could not parse ' + source.path + ': ' + Std.string(error));
+      return false;
+    }
   }
 
   static function ensureTimeBar(state:PlayState):Void
