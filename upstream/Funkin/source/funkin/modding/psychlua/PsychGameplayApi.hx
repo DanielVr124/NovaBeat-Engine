@@ -24,6 +24,7 @@ import funkin.Preferences;
 import funkin.play.notes.NoteSprite;
 import funkin.play.notes.SustainTrail;
 import funkin.play.character.BaseCharacter;
+import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.play.notes.Strumline;
 import funkin.play.notes.StrumlineNote;
 
@@ -43,6 +44,7 @@ class PsychGameplayApi
   // script-variable references can be released when that substate closes.
   static final customSubstateObjects:Map<String, FlxSprite> = [];
   static final activeSounds:Map<String, FlxSound> = [];
+  static final preloadedCharacters:Map<String, BaseCharacter> = [];
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
 
@@ -321,6 +323,31 @@ class PsychGameplayApi
 
     // Character position and camera focus helpers use NovaBeat's actual stage
     // characters. They do not create substitute characters or fake group data.
+    vars.set("addCharacterToList", function(name:String, ?role:String = "bf"):Bool
+    {
+      if (name == null || StringTools.trim(name).length == 0) return false;
+      var normalized:String = StringTools.trim(name);
+      var existing:Null<BaseCharacter> = preloadedCharacters.get(normalized);
+      if (existing != null && existing.exists) return true;
+
+      // Constructing a character is the engine's actual asset preload path.
+      // This deliberately does not replace the active BF/DAD/GF; character
+      // swapping needs a full stage/health-icon transaction and is not faked.
+      try
+      {
+        var character:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(normalized, true);
+        if (character == null) return false;
+        character.visible = false;
+        character.active = false;
+        preloadedCharacters.set(normalized, character);
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] addCharacterToList(' + normalized + ') failed: ' + Std.string(error));
+        return false;
+      }
+    });
     vars.set("getCharacterX", function(role:String):Float
     {
       var character:Null<BaseCharacter> = getCharacterForRole(state, role);
@@ -1227,6 +1254,9 @@ class PsychGameplayApi
     for (sound in activeSounds)
       if (sound != null) sound.stop();
     activeSounds.clear();
+    for (character in preloadedCharacters)
+      if (character != null) character.destroy();
+    preloadedCharacters.clear();
     scriptVariables.clear();
   }
 
