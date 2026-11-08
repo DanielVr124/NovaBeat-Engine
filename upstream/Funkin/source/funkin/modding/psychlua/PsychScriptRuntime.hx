@@ -140,12 +140,18 @@ class PsychScriptRuntime
     activeGlobals = new Map<String, Dynamic>();
     for (name => value in globals)
       activeGlobals.set(name, value);
+
+    // Psych scripts can read globals in their top-level declarations, before
+    // onCreate is dispatched. Populate the complete song state before parsing
+    // and executing the first line of any mod script.
+    PsychGameplayApi.updateGlobals(playState);
+
     var loaded:Int = 0;
     var hasCustomStageScript:Bool = false;
     var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
     for (source in sources)
     {
-      if (loadSource(source.path, source.source, globals) != null)
+      if (loadSource(source.path, source.source, activeGlobals) != null)
       {
         loaded++;
         var normalizedPath:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
