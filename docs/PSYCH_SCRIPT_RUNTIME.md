@@ -29,18 +29,20 @@ Supported callbacks currently include:
 - `onCreate`, `onCreatePost`
 - `onUpdate`, `onUpdatePost`
 - `onStepHit`, `onBeatHit`, `onSectionHit`
-- `onCountdownTick`, `onCountdownFinished`
+- `onCountdownTick`, `onCountdownStarted`, `onCountdownFinished`
 - `onSongLoaded`, `onEvent`, `onSoundFinished`
-- `onStartCountdown`, `onSongStart`, `onSongEnd`
-- `onPause`, `onResume`, `onGameOver`, `onDestroy`
+- `onStartCountdown`, `onSongStart`, `onEndSong` (legacy `onSongEnd` fallback)
+- `onPause`, `onResume`, `onGameOver`, `onGameOverStart`, `onDestroy`
 - `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onSpawnNote`,
   `onHoldNoteDrop`, `onGameOverConfirm`
 - `onCustomSubstateCreate`, `onCustomSubstateCreatePost`,
   `onCustomSubstateUpdate`, `onCustomSubstateUpdatePost`,
   `onCustomSubstateDestroy`
 
-`onGameOverConfirm` is dispatched only when the player confirms the game-over
-screen. Retrying from the pause menu does not trigger this callback.
+`onGameOverStart` runs after the game-over substate is created.
+`onGameOverConfirm(retry)` receives `true` when retrying and `false` when
+backing out of the game-over screen. It is dispatched only from that screen;
+retrying from the pause menu does not trigger it.
 
 Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
 `curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`. They are refreshed immediately before each callback dispatch,
