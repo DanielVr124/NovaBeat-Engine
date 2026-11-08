@@ -88,7 +88,20 @@ class PsychScriptInstance
     runtime.set("FlxMath", FlxMath);
     runtime.set("FlxEase", FlxEase);
     runtime.set("FlxTween", FlxTween);
-    runtime.set("FlxColor", FlxColor);
+    // FlxColor is an abstract over Int, not a runtime class. Expose the
+    // public static palette and factory methods through a script-friendly object.
+    var flxColorApi:Dynamic = {};
+    for (name => value in FlxColor.colorLookup)
+      Reflect.setField(flxColorApi, name, value);
+    Reflect.setField(flxColorApi, "colorLookup", FlxColor.colorLookup);
+    Reflect.setField(flxColorApi, "fromInt", function(value:Int):Int return FlxColor.fromInt(value));
+    Reflect.setField(flxColorApi, "fromRGB", function(red:Int, green:Int, blue:Int, alpha:Int = 255):Int return FlxColor.fromRGB(red, green, blue, alpha));
+    Reflect.setField(flxColorApi, "fromRGBFloat", function(red:Float, green:Float, blue:Float, alpha:Float = 1):Int return FlxColor.fromRGBFloat(red, green, blue, alpha));
+    Reflect.setField(flxColorApi, "fromCMYK", function(cyan:Float, magenta:Float, yellow:Float, black:Float, alpha:Float = 1):Int return FlxColor.fromCMYK(cyan, magenta, yellow, black, alpha));
+    Reflect.setField(flxColorApi, "fromHSB", function(hue:Float, saturation:Float, brightness:Float, alpha:Float = 1):Int return FlxColor.fromHSB(hue, saturation, brightness, alpha));
+    Reflect.setField(flxColorApi, "fromHSL", function(hue:Float, saturation:Float, lightness:Float, alpha:Float = 1):Int return FlxColor.fromHSL(hue, saturation, lightness, alpha));
+    Reflect.setField(flxColorApi, "fromString", function(value:String):Null<Int> return FlxColor.fromString(value));
+    runtime.set("FlxColor", flxColorApi);
     runtime.set("FlxTimer", FlxTimer);
     runtime.set("Conductor", Conductor);
     runtime.set("Paths", Paths);
