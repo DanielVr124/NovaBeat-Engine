@@ -25,6 +25,9 @@ import flixel.util.FlxAxes;
 import openfl.display.BlendMode;
 import flixel.util.FlxTimer;
 import flixel.util.FlxSave;
+#if (!flash && sys)
+import flixel.addons.display.FlxRuntimeShader;
+#end
 import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
@@ -57,6 +60,9 @@ class PsychGameplayApi
   static final customSubstateObjects:Map<String, FlxSprite> = [];
   static final activeSounds:Map<String, FlxSound> = [];
   static final activeSaves:Map<String, FlxSave> = [];
+  #if (!flash && sys)
+  static final runtimeShaderSources:Map<String, Array<String>> = [];
+  #end
   static final preloadedCharacters:Map<String, BaseCharacter> = [];
   static var activeTimeBar:Null<PsychTimeBar> = null;
   static var activeDialogue:Null<PsychDialogueOverlay> = null;
@@ -334,6 +340,101 @@ class PsychGameplayApi
     vars.set("stringSplit", function(value:String, separator:String):Array<String>
       return value == null || separator == null || separator.length == 0 ? (value == null ? [] : [value]) : value.split(separator));
     vars.set("stringTrim", function(value:String):String return value == null ? "" : StringTools.trim(value));
+
+    vars.set("initLuaShader", function(name:String, ?glslVersion:Int = 120):Bool return initLuaShader(name, glslVersion));
+    vars.set("setSpriteShader", function(objectPath:String, shaderName:String):Bool return setSpriteShader(state, objectPath, shaderName));
+    vars.set("removeSpriteShader", function(objectPath:String):Bool return removeSpriteShader(state, objectPath));
+    #if (!flash && sys)
+    vars.set("getShaderBool", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getBool(property));
+    vars.set("getShaderBoolArray", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getBoolArray(property));
+    vars.set("getShaderInt", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getInt(property));
+    vars.set("getShaderIntArray", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getIntArray(property));
+    vars.set("getShaderFloat", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getFloat(property));
+    vars.set("getShaderFloatArray", function(objectPath:String, property:String):Dynamic return getRuntimeShader(state, objectPath)?.getFloatArray(property));
+    vars.set("setShaderBool", function(objectPath:String, property:String, value:Bool):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setBool(property, value);
+      return true;
+    });
+    vars.set("setShaderBoolArray", function(objectPath:String, property:String, values:Dynamic):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setBoolArray(property, values);
+      return true;
+    });
+    vars.set("setShaderInt", function(objectPath:String, property:String, value:Int):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setInt(property, value);
+      return true;
+    });
+    vars.set("setShaderIntArray", function(objectPath:String, property:String, values:Dynamic):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setIntArray(property, values);
+      return true;
+    });
+    vars.set("setShaderFloat", function(objectPath:String, property:String, value:Float):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setFloat(property, value);
+      return true;
+    });
+    vars.set("setShaderFloatArray", function(objectPath:String, property:String, values:Dynamic):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null) return false;
+      shader.setFloatArray(property, values);
+      return true;
+    });
+    vars.set("setShaderSampler2D", function(objectPath:String, property:String, imagePath:String):Bool
+    {
+      var shader = getRuntimeShader(state, objectPath);
+      if (shader == null || imagePath == null || imagePath.length == 0) return false;
+      var graphic = Paths.image(imagePath);
+      if (graphic == null || graphic.bitmap == null) return false;
+      shader.setSampler2D(property, graphic.bitmap);
+      return true;
+    });
+    #else
+    vars.set("getShaderBool", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("getShaderBoolArray", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("getShaderInt", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("getShaderIntArray", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("getShaderFloat", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("getShaderFloatArray", function(objectPath:String, property:String):Dynamic return null);
+    vars.set("setShaderBool", function(objectPath:String, property:String, value:Bool):Bool return false);
+    vars.set("setShaderBoolArray", function(objectPath:String, property:String, values:Dynamic):Bool return false);
+    vars.set("setShaderInt", function(objectPath:String, property:String, value:Int):Bool return false);
+    vars.set("setShaderIntArray", function(objectPath:String, property:String, values:Dynamic):Bool return false);
+    vars.set("setShaderFloat", function(objectPath:String, property:String, value:Float):Bool return false);
+    vars.set("setShaderFloatArray", function(objectPath:String, property:String, values:Dynamic):Bool return false);
+    vars.set("setShaderSampler2D", function(objectPath:String, property:String, imagePath:String):Bool return false);
+    #end
+
+    vars.set("checkFileExists", function(path:String, ?absolute:Bool = false):Bool
+      return !absolute && PsychModRuntime.getModFile(path) != null);
+    vars.set("getTextFromFile", function(path:String, ?ignoreModFolders:Bool = false):Dynamic
+    {
+      if (!ignoreModFolders)
+      {
+        var file:Null<PsychScriptSource> = PsychModRuntime.getModFile(path);
+        if (file != null) return file.source;
+      }
+      return null;
+    });
+    vars.set("saveFile", function(path:String, content:String, ?absolute:Bool = false):Bool
+      return !absolute && PsychModRuntime.saveModFile(path, content));
+    vars.set("deleteFile", function(path:String, ?ignoreModFolders:Bool = false):Bool
+      return !ignoreModFolders && PsychModRuntime.deleteModFile(path));
+    vars.set("directoryFileList", function(path:String):Array<String>
+      return PsychModRuntime.listModDirectory(path));
     vars.set("getMidpointX", function(variable:String):Float
     {
       var object:Dynamic = getProperty(state, variable);
@@ -1317,6 +1418,11 @@ class PsychGameplayApi
       "setTimeBarColors", "close", "keyJustPressed", "keyPressed", "keyReleased",
       "gamepadJustPressed", "gamepadPressed", "gamepadReleased",
       "stringStartsWith", "stringEndsWith", "stringSplit", "stringTrim",
+      "checkFileExists", "getTextFromFile", "saveFile", "deleteFile", "directoryFileList",
+      "initLuaShader", "setSpriteShader", "removeSpriteShader", "getShaderBool", "getShaderBoolArray",
+      "getShaderInt", "getShaderIntArray", "getShaderFloat", "getShaderFloatArray",
+      "setShaderBool", "setShaderBoolArray", "setShaderInt", "setShaderIntArray",
+      "setShaderFloat", "setShaderFloatArray", "setShaderSampler2D",
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
