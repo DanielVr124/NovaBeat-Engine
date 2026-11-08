@@ -132,7 +132,10 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     items = new TextMenuList(NavControls.Vertical);
     // Draw and hit-test the visible NovaBeat rows through the same camera.
     items.cameras = [FlxG.camera];
-    items.acceptOnTouchSelection = novaBeatLayout;
+    // This page has its own release-based touch handler below. Do not let
+    // MenuList also accept the same touch on press, or settings can fire twice.
+    items.ignoreTouchPointerSelection = novaBeatLayout;
+    items.acceptOnTouchSelection = false;
 
     descriptions = [
       'Choose the primary NovaBeat highlight and selection colour.',
