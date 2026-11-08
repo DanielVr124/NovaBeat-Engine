@@ -952,6 +952,11 @@ class PlayState extends MusicBeatSubState
     // This gets set back to false when the chart actually starts.
     startingSong = true;
 
+    // Load Psych scripts before the countdown so onCreate and
+    // onStartCountdown can run and cancel the countdown when needed.
+    var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
+    PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this);
+
     // Call a script event to start the countdown.
     // Songs with cutscenes should call event.cancel().
     // As long as they call `PlayState.instance.startCountdown()` later, the countdown will start.
@@ -983,10 +988,8 @@ class PlayState extends MusicBeatSubState
     // and it's important to call it last so all elements get affected.
     refresh();
 
-    // Activate Psych scripts only for the selected/assigned Psych packages.
-    // FNF menu and non-Psych gameplay are unaffected.
-    var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
-    PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this);
+    // Global and song-local scripts have already loaded before the countdown.
+    // Run post-create only after the state and all scene children are fully created.
     if (PsychScriptRuntime.getScriptPaths().length > 0)
       PsychScriptRuntime.dispatch("onCreatePost", []);
   }
@@ -1938,7 +1941,7 @@ class PlayState extends MusicBeatSubState
     // Try to call hold note haptics each step hit. Works if atleast one note status is NoteStatus.isHoldNotePressed.
     playerStrumline.noteVibrations.tryHoldNoteVibration();
 
-    PsychScriptRuntime.dispatch("onStepHit", [Conductor.instance.currentStep]);
+    PsychScriptRuntime.dispatch("onStepHit", []);
     return true;
   }
 
@@ -2001,7 +2004,7 @@ class PlayState extends MusicBeatSubState
     if (playerStrumline != null) playerStrumline.onBeatHit();
     if (opponentStrumline != null) opponentStrumline.onBeatHit();
 
-    PsychScriptRuntime.dispatch("onBeatHit", [Conductor.instance.currentBeat]);
+    PsychScriptRuntime.dispatch("onBeatHit", []);
     return true;
   }
 
