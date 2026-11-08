@@ -214,9 +214,7 @@ class PsychGameplayApi
       var object:Null<FlxSprite> = getSprite(state, tag);
       if (object == null || !Std.isOfType(object, FlxText)) return false;
       var textObject:FlxText = cast object;
-      textObject.borderSize = borderSize;
-      textObject.borderColor = parsePsychColor(borderColor);
-      textObject.borderStyle = cast borderStyle;
+      textObject.setBorderStyle(cast borderStyle, parsePsychColor(borderColor), borderSize);
       return true;
     });
 
@@ -628,8 +626,8 @@ class PsychGameplayApi
     if (Std.isOfType(value, Int)) return cast value;
     var colorText:String = StringTools.trim(Std.string(value));
     if (colorText.length == 0) return FlxColor.WHITE;
-    var parsed:FlxColor = FlxColor.fromString(colorText);
-    return parsed;
+    var parsed:Null<FlxColor> = FlxColor.fromString(colorText);
+    return parsed == null ? FlxColor.WHITE : parsed;
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
