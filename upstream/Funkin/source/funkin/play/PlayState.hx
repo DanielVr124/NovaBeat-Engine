@@ -948,12 +948,6 @@ class PlayState extends MusicBeatSubState
     initDiscord();
     #end
 
-    // Read the song's note data and pass it to the strumlines.
-    generateSong();
-
-    // Reset the camera's zoom and force it to focus on the camera follow point.
-    resetCamera();
-
     initPreciseInputs();
 
     FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
@@ -962,10 +956,16 @@ class PlayState extends MusicBeatSubState
     // This gets set back to false when the chart actually starts.
     startingSong = true;
 
-    // Load Psych scripts before the countdown so onCreate and
-    // onStartCountdown can run and cancel the countdown when needed.
+    // Load Psych scripts before note/event generation. This lets
+    // eventEarlyTrigger and onEventPushed run while chart events are built.
     var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
     PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this);
+
+    // Read the song's note data and pass it to the strumlines.
+    generateSong();
+
+    // Reset the camera's zoom and force it to focus on the camera follow point.
+    resetCamera();
 
     // Call a script event to start the countdown.
     // Songs with cutscenes should call event.cancel().
@@ -3062,7 +3062,7 @@ class PlayState extends MusicBeatSubState
      */
   function onKeyRelease(event:PreciseInputEvent):Void
   {
-    if (isGamePaused || isInCutscene || disableKeys || isBotPlayMode || isSongEnd || isPlayerDying || !startedCountdown) return;
+    if (isGamePaused || isInCutscene || disableKeys || isBotPlayMode || isSongEnd || isPlayerDying) return;
 
     var direction:Int = Std.int(event.noteDirection);
     if (PsychScriptRuntime.dispatchStop("onKeyReleasePre", [direction])) return;
