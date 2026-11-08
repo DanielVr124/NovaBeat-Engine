@@ -3,8 +3,6 @@ package funkin.modding.psychlua;
 import flixel.FlxG;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
-import flixel.input.FlxInputState;
-import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.math.FlxPoint;
 import flixel.FlxSprite;
@@ -78,9 +76,9 @@ class PsychGameplayApi
     });
 
     vars.set("getSongPosition", function():Float return Conductor.instance.songPosition);
-    vars.set("keyboardJustPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_PRESSED));
-    vars.set("keyboardPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.PRESSED));
-    vars.set("keyboardReleased", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_RELEASED));
+    vars.set("keyboardJustPressed", function(key:String):Bool return keyboardStatus(key, "justPressed"));
+    vars.set("keyboardPressed", function(key:String):Bool return keyboardStatus(key, "pressed"));
+    vars.set("keyboardReleased", function(key:String):Bool return keyboardStatus(key, "justReleased"));
     vars.set("anyGamepadJustPressed", function(button:String):Bool return FlxG.gamepads.anyJustPressed(button));
     vars.set("anyGamepadPressed", function(button:String):Bool return FlxG.gamepads.anyPressed(button));
     vars.set("anyGamepadReleased", function(button:String):Bool return FlxG.gamepads.anyJustReleased(button));
@@ -662,20 +660,16 @@ class PsychGameplayApi
     scriptVariables.clear();
   }
 
-  static function keyboardStatus(key:String, status:FlxInputState):Bool
+  static function keyboardStatus(key:String, status:String):Bool
   {
     if (key == null || StringTools.trim(key).length == 0) return false;
-    var normalized:String = StringTools.trim(key).toUpperCase();
-    if (normalized == "ESC") normalized = "ESCAPE";
-    if (normalized == "RETURN") normalized = "ENTER";
-    try
-    {
-      return FlxG.keys.checkStatus(FlxKey.fromString(normalized), status);
-    }
-    catch (error:Dynamic)
-    {
-      return false;
-    }
+    var normalized:String = StringTools.trim(key);
+    if (normalized.toLowerCase() == "esc") normalized = "ESCAPE";
+    if (normalized.toLowerCase() == "return") normalized = "ENTER";
+    var keyState:Dynamic = Reflect.getProperty(FlxG.keys, status);
+    if (keyState == null) return false;
+    var pressed:Dynamic = Reflect.getProperty(keyState, normalized.toUpperCase());
+    return pressed == true;
   }
 
   static function mouseStatus(button:String, status:String):Bool
