@@ -91,8 +91,13 @@ sustain state, and a live note-group index.
 - Basic `triggerEvent` handling for camera zoom, screen shake, and set-property
 
 The Lua VM removes its filesystem, OS, package-loading, debug, and garbage
-collector globals. HScript execution is sandboxed and receives only the common
-preset classes listed above plus the explicit runtime API.
+collector globals. It also provides compatibility aliases for commonly used
+Lua 5.1/LuaJIT standard-library names (`unpack`, `loadstring`,
+`string.gfind`, `math.mod`, `math.atan2`, and `table.maxn`) when the
+embedded Lua version does not provide them. This does not make the embedded
+Lua runtime a complete LuaJIT replacement. HScript execution is sandboxed and
+receives only the common preset classes listed above plus the explicit runtime
+API.
 
 ## Not supported yet
 

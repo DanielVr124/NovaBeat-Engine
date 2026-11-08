@@ -140,7 +140,14 @@ class PsychScriptInstance
       "end\n" +
       "function __novabeat_reset_budget() __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + " end\n" +
       "function __novabeat_has_function(name) return type(_G[name]) == 'function' end\n" +
-      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\n";
+      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\n" +
+      // Provide common Lua 5.1/LuaJIT standard-library aliases used by older Psych scripts.
+      "if table ~= nil and table.unpack ~= nil and unpack == nil then unpack = table.unpack end\n" +
+      "if loadstring == nil and load ~= nil then loadstring = load end\n" +
+      "if string ~= nil and string.gfind == nil then string.gfind = string.gmatch end\n" +
+      "if math ~= nil and math.mod == nil and math.fmod ~= nil then math.mod = math.fmod end\n" +
+      "if math ~= nil and math.atan2 == nil and math.atan ~= nil then math.atan2 = function(y, x) return math.atan(y, x) end end\n" +
+      "if table ~= nil and table.maxn == nil then table.maxn = function(value) local maximum = 0; if type(value) ~= 'table' then return maximum end; for key in pairs(value) do if type(key) == 'number' and key > maximum and key % 1 == 0 then maximum = key end end; return maximum end end\n";
 
     try
     {

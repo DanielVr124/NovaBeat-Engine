@@ -502,7 +502,7 @@ class PsychScriptRuntime
     {
       lua = new PsychScriptInstance(
         "novabeat-lua-smoke-test.lua",
-        "function add(a, b) return a + b end\nfunction echo(value) return value end\nfunction readInjected() return injectedValue end\nfunction sandboxIntact() return io == nil and os == nil and package == nil and debug == nil and require == nil and dofile == nil and loadfile == nil end",
+        "function add(a, b) return a + b end\nfunction echo(value) return value end\nfunction readInjected() return injectedValue end\nfunction sandboxIntact() return io == nil and os == nil and package == nil and debug == nil and require == nil and dofile == nil and loadfile == nil end\nfunction legacyRuntimeCompatibility() local values = {10, 20, 30}; local compile = loadstring('return 7'); return unpack(values) == 10 and compile() == 7 and string.gfind == string.gmatch and math.mod(7, 4) == 3 and math.atan2(1, 1) > 0 and table.maxn({[4] = true}) == 4 end",
         ["injectedValue" => 17]
       );
       luaPassed = lua.hasFunction("add")
@@ -510,6 +510,7 @@ class PsychScriptRuntime
         && lua.call("echo", ["novabeat"]) == "novabeat"
         && lua.call("readInjected", []) == 17
         && lua.call("sandboxIntact", []) == true
+        && lua.call("legacyRuntimeCompatibility", []) == true
         && lua.lastError == null;
       if (!luaPassed)
         trace('[Psych Script Runtime] Lua smoke test did not pass function, argument, injected-global, or sandbox checks.');
