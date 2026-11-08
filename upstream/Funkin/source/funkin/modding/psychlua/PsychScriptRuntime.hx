@@ -48,6 +48,51 @@ class PsychScriptRuntime
     sharedGlobals.remove(name);
   }
 
+  public static function setHScriptGlobal(name:String, value:Dynamic):Void
+  {
+    if (name == null || name.length == 0) return;
+    for (script in scripts)
+      if (script.language == "hscript") script.setVariable(name, value);
+    if (inlineHScriptBridge != null)
+      inlineHScriptBridge.setVariable(name, value);
+  }
+
+  /**
+   * Expose only a small list of commonly used Haxe/Flixel classes. The
+   * package argument is optional, matching Psych's addHaxeLibrary signature.
+   * Arbitrary class resolution is deliberately not exposed to mod scripts.
+   */
+  public static function addHaxeLibrary(name:String, ?packageName:String = ""):Bool
+  {
+    if (name == null || name.length == 0) return false;
+    var fullName:String = packageName == null || packageName.length == 0 ? name : packageName + "." + name;
+    var allowed:Array<String> = [
+      "flixel.FlxG",
+      "flixel.FlxBasic",
+      "flixel.FlxCamera",
+      "flixel.FlxSprite",
+      "flixel.FlxObject",
+      "flixel.math.FlxMath",
+      "flixel.math.FlxPoint",
+      "flixel.tweens.FlxTween",
+      "flixel.tweens.FlxEase",
+      "flixel.util.FlxColor",
+      "flixel.util.FlxTimer",
+      "funkin.Paths",
+      "funkin.Conductor",
+      "funkin.play.PlayState",
+      "funkin.play.notes.NoteSprite",
+      "funkin.play.notes.Strumline",
+      "funkin.play.character.BaseCharacter"
+    ];
+    if (allowed.indexOf(fullName) < 0) return false;
+
+    var resolved:Class<Dynamic> = Type.resolveClass(fullName);
+    if (resolved == null) return false;
+    setHScriptGlobal(name, resolved);
+    return true;
+  }
+
   public static function getGlobal(name:String):Dynamic
   {
     return sharedGlobals.get(name);

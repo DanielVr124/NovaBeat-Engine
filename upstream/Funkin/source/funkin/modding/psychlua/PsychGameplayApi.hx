@@ -57,6 +57,8 @@ class PsychGameplayApi
     vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));
     vars.set("getRandomBool", function(?chance:Float = 50):Bool return FlxG.random.bool(chance));
     vars.set("getRunningScripts", function():Array<String> return PsychScriptRuntime.getScriptPaths());
+    vars.set("addHaxeLibrary", function(name:String, ?packageName:String = ""):Bool
+      return PsychScriptRuntime.addHaxeLibrary(name, packageName));
     vars.set("runHaxeCode", function(code:String, ?variablesToBring:Dynamic):Bool
       return PsychScriptRuntime.runHaxeCode(code, variablesToBring));
     vars.set("runHaxeFunction", function(name:String, ?args:Array<Dynamic>):Dynamic

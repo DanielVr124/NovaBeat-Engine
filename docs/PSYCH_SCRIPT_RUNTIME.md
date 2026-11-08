@@ -43,6 +43,7 @@ sustain state, and a live note-group index.
 - `getPropertyFromGroup`, `setPropertyFromGroup`
 - `getVar`, `setVar`, `removeVar`
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
+- `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
   for basic cross-language code and function calls
 - `callOnScripts`, `callOnLuas`, `callOnHScript`, `setOnScripts`, `setOnLuas`,
