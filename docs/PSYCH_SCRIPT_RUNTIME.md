@@ -31,6 +31,9 @@ Supported callbacks currently include:
 - `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onSpawnNote`,
   `onHoldNoteDrop`, `onGameOverConfirm`
 
+`onGameOverConfirm` is dispatched only when the player confirms the game-over
+screen. Retrying from the pause menu does not trigger this callback.
+
 Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
 `curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`.
 
