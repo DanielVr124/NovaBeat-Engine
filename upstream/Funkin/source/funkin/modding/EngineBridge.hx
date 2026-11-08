@@ -219,6 +219,19 @@ class EngineBridge
     if (pattern.match(value)) return pattern.matched(1);
     return null;
   }
+  /**
+   * Runtime-facing wrapper used by the native Psych compatibility scanner.
+   * The detailed marker check remains shared with the Game Library detector.
+   */
+  public static function hasPsychMarkersForRuntime(modPath:String):Bool
+  {
+    #if sys
+    return hasPsychMarkers(modPath);
+    #else
+    return false;
+    #end
+  }
+
   public static function canLaunch(engineId:String):Bool
   {
     return engineId == ENGINE_VSLICE;
