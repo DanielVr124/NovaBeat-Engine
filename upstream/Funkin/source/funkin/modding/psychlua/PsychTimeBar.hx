@@ -4,7 +4,6 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxText;
-import flixel.text.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.Conductor;
 import funkin.play.PlayState;
@@ -55,7 +54,7 @@ class PsychTimeBar extends FlxSpriteGroup
 
     timeText = new FlxText(barX, barY + 13, barWidth, "0:00", 14);
     timeText.color = FlxColor.WHITE;
-    timeText.alignment = FlxTextAlign.CENTER;
+    timeText.alignment = "center";
 
     for (object in [background, leftFill, rightFill, timeText])
     {
