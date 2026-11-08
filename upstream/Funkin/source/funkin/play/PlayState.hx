@@ -3651,7 +3651,20 @@ class PlayState extends MusicBeatSubState
     if (isMobileTouchDevice() && pauseButton != null) pauseButtonCheck = TouchUtil.overlapsComplex(pauseButton);
     #end
 
-    if (currentConversation != null)
+    if (PsychGameplayApi.hasActiveDialogue())
+    {
+      // The Psych dialogue overlay uses the same cutscene-advance input as
+      // NovaBeat conversations, including the original mobile touch action.
+      if ((controls.CUTSCENE_ADVANCE #if (mobile || FEATURE_TOUCH_CONTROLS) || (isMobileTouchDevice() && !pauseButtonCheck && TouchUtil.justPressed) #end) && !justUnpaused)
+      {
+        PsychGameplayApi.advanceDialogue();
+      }
+      else if ((controls.PAUSE_P || androidPause || pauseButtonCheck) && !justUnpaused)
+      {
+        pause(Conversation);
+      }
+    }
+    else if (currentConversation != null)
     {
       // Pause/unpause may conflict with advancing the conversation!
       if ((controls.CUTSCENE_ADVANCE #if (mobile || FEATURE_TOUCH_CONTROLS) || (isMobileTouchDevice() && !pauseButtonCheck && TouchUtil.justPressed) #end) && !justUnpaused)
