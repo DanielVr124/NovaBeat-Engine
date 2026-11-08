@@ -2,6 +2,7 @@ package funkin.modding;
 
 import funkin.data.song.SongRegistry;
 import funkin.modding.EngineBridge.EngineDetection;
+import funkin.modding.PsychModRuntime;
 import funkin.save.Save;
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 
@@ -26,6 +27,8 @@ class ExperienceManager
 
   static var activeExperienceId:String = OFFICIAL_EXPERIENCE_ID;
   static var activeSongIds:Array<String> = [];
+  static var activePsychSongIds:Array<String> = [];
+  static var activePsychModDirs:Array<String> = [];
 
   public static function scanInstalled():Array<ExperienceInfo>
   {
@@ -70,6 +73,14 @@ class ExperienceManager
       if (genericMetadata == null) genericMetadata = packageMetadata;
 
       var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata, packageMetadata);
+      var psychAssessment:Null<PsychPackageAssessment> = engine.id == EngineBridge.ENGINE_PSYCH
+        ? PsychModRuntime.inspectPackage(modPath)
+        : null;
+      var packageLaunchable:Bool = engine.launchable || (psychAssessment != null && psychAssessment.launchable);
+      var packageExplanation:String = psychAssessment == null ? engine.explanation : psychAssessment.explanation;
+      var displayEngineLabel:String = psychAssessment != null && psychAssessment.launchable
+        ? engine.label + " • LEGACY CHARTS"
+        : engine.label;
       var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata);
       var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
@@ -89,15 +100,15 @@ class ExperienceManager
         description: description,
         author: author,
         engineId: engine.id,
-        engineLabel: engine.label,
+        engineLabel: displayEngineLabel,
         engineVersion: engine.version,
         packageType: packageType,
         ownerId: packageType == PACKAGE_EXTENSION ? getExtensionOwner(directory) : directory,
         enabled: enabledDirs != null && enabledDirs.indexOf(directory) >= 0,
         iconPath: findIcon(modPath),
         isOfficial: false,
-        launchable: engine.launchable,
-        explanation: engine.explanation
+        launchable: packageLaunchable,
+        explanation: packageExplanation
       });
     }
     #end
@@ -114,6 +125,10 @@ class ExperienceManager
   public static function getActiveExperienceId():String return activeExperienceId;
 
   public static function getActiveSongIds():Array<String> return activeSongIds.copy();
+
+  public static function getActivePsychSongIds():Array<String> return activePsychSongIds.copy();
+
+  public static function getActivePsychModDirs():Array<String> return activePsychModDirs.copy();
 
   public static function setPackageEnabled(info:ExperienceInfo):Bool
   {
@@ -206,7 +221,7 @@ class ExperienceManager
     {
       return "This mod is not classified yet. Press TAB to choose Standalone or Content Extension.";
     }
-    if (!info.isOfficial && !EngineBridge.canLaunch(info.engineId))
+    if (!info.isOfficial && !EngineBridge.canLaunch(info.engineId) && !info.launchable)
     {
       return info.explanation;
     }
@@ -214,16 +229,20 @@ class ExperienceManager
     var ownerId:String = info.isOfficial ? OFFICIAL_EXPERIENCE_ID : info.id;
     var modDirs:Array<String> = getModDirsForExperience(info);
     var songIds:Array<String> = collectSongIds(modDirs);
+    var psychDirs:Array<String> = ownerId == OFFICIAL_EXPERIENCE_ID ? [] : getLaunchablePsychModDirs(modDirs);
+    var psychSongIds:Array<String> = PsychModRuntime.collectSongIds(psychDirs);
 
     if (ownerId != OFFICIAL_EXPERIENCE_ID && songIds.length == 0)
     {
-      return "No V-Slice song folders were found in this experience yet. It cannot launch as a standalone song library.";
+      return "No playable songs were found. Psych support currently requires classic chart files and an instrumental; script-dependent mods are not supported yet.";
     }
 
     // Make the selected ownership context visible before registries and scripts
     // reload, so any initialization hooks query the correct experience.
     activeExperienceId = ownerId;
     activeSongIds = ownerId == OFFICIAL_EXPERIENCE_ID ? [] : songIds;
+    activePsychSongIds = ownerId == OFFICIAL_EXPERIENCE_ID ? [] : psychSongIds;
+    activePsychModDirs = psychDirs;
 
     Save.instance.activeExperienceId.value = ownerId;
     Save.system.flush();
@@ -304,6 +323,27 @@ class ExperienceManager
         if (FileSystem.isDirectory(songPath) && result.indexOf(songFolder) == -1)
           result.push(songFolder);
       }
+    }
+    #end
+
+    for (songId in PsychModRuntime.collectSongIds(modDirs))
+    {
+      if (result.indexOf(songId) == -1) result.push(songId);
+    }
+
+    return result;
+  }
+
+  static function getLaunchablePsychModDirs(modDirs:Array<String>):Array<String>
+  {
+    var result:Array<String> = [];
+    #if sys
+    var root:String = PolymodHandler.getModRoot();
+    for (directory in modDirs)
+    {
+      var modPath:String = Path.join([root, directory]);
+      if (PsychModRuntime.isPsychDirectory(modPath) && PsychModRuntime.inspectPackage(modPath).launchable)
+        result.push(directory);
     }
     #end
     return result;
