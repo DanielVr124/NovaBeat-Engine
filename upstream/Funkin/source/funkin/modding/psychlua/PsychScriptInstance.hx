@@ -71,6 +71,27 @@ class PsychScriptInstance
     }
   }
 
+  /**
+   * FlxColor is an abstract over Int, so it has no runtime class for
+   * Type.resolveClass/addHaxeLibrary to return. Expose a script-friendly API
+   * object that can be shared by the HScript preset and addHaxeLibrary.
+   */
+  public static function createFlxColorApi():Dynamic
+  {
+    var api:Dynamic = {};
+    for (name => value in FlxColor.colorLookup)
+      Reflect.setField(api, name, value);
+    Reflect.setField(api, "colorLookup", FlxColor.colorLookup);
+    Reflect.setField(api, "fromInt", function(value:Int):Int return FlxColor.fromInt(value));
+    Reflect.setField(api, "fromRGB", function(red:Int, green:Int, blue:Int, alpha:Int = 255):Int return FlxColor.fromRGB(red, green, blue, alpha));
+    Reflect.setField(api, "fromRGBFloat", function(red:Float, green:Float, blue:Float, alpha:Float = 1):Int return FlxColor.fromRGBFloat(red, green, blue, alpha));
+    Reflect.setField(api, "fromCMYK", function(cyan:Float, magenta:Float, yellow:Float, black:Float, alpha:Float = 1):Int return FlxColor.fromCMYK(cyan, magenta, yellow, black, alpha));
+    Reflect.setField(api, "fromHSB", function(hue:Float, saturation:Float, brightness:Float, alpha:Float = 1):Int return FlxColor.fromHSB(hue, saturation, brightness, alpha));
+    Reflect.setField(api, "fromHSL", function(hue:Float, saturation:Float, lightness:Float, alpha:Float = 1):Int return FlxColor.fromHSL(hue, saturation, lightness, alpha));
+    Reflect.setField(api, "fromString", function(value:String):Null<Int> return FlxColor.fromString(value));
+    return api;
+  }
+
   function createHScript(source:String, initialVariables:Map<String, Dynamic>):Void
   {
     var runtime = new SScript("", false, false);
@@ -94,18 +115,7 @@ class PsychScriptInstance
     runtime.set("FlxTween", FlxTween);
     // FlxColor is an abstract over Int, not a runtime class. Expose the
     // public static palette and factory methods through a script-friendly object.
-    var flxColorApi:Dynamic = {};
-    for (name => value in FlxColor.colorLookup)
-      Reflect.setField(flxColorApi, name, value);
-    Reflect.setField(flxColorApi, "colorLookup", FlxColor.colorLookup);
-    Reflect.setField(flxColorApi, "fromInt", function(value:Int):Int return FlxColor.fromInt(value));
-    Reflect.setField(flxColorApi, "fromRGB", function(red:Int, green:Int, blue:Int, alpha:Int = 255):Int return FlxColor.fromRGB(red, green, blue, alpha));
-    Reflect.setField(flxColorApi, "fromRGBFloat", function(red:Float, green:Float, blue:Float, alpha:Float = 1):Int return FlxColor.fromRGBFloat(red, green, blue, alpha));
-    Reflect.setField(flxColorApi, "fromCMYK", function(cyan:Float, magenta:Float, yellow:Float, black:Float, alpha:Float = 1):Int return FlxColor.fromCMYK(cyan, magenta, yellow, black, alpha));
-    Reflect.setField(flxColorApi, "fromHSB", function(hue:Float, saturation:Float, brightness:Float, alpha:Float = 1):Int return FlxColor.fromHSB(hue, saturation, brightness, alpha));
-    Reflect.setField(flxColorApi, "fromHSL", function(hue:Float, saturation:Float, lightness:Float, alpha:Float = 1):Int return FlxColor.fromHSL(hue, saturation, lightness, alpha));
-    Reflect.setField(flxColorApi, "fromString", function(value:String):Null<Int> return FlxColor.fromString(value));
-    runtime.set("FlxColor", flxColorApi);
+    runtime.set("FlxColor", createFlxColorApi());
     runtime.set("FlxTimer", FlxTimer);
     runtime.set("Conductor", Conductor);
     runtime.set("Paths", Paths);

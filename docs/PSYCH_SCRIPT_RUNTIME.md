@@ -73,7 +73,8 @@ sustain state, and a live note-group index.
   `getMouseX`, `getMouseY`, and `getMouseWheel`
 - Basic gameplay utility helpers: `getColorFromHex`, `addScore`, `setScore`,
   `addMisses`, `setMisses`, `addHits`, and `setHits`
-- `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist
+- `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist,
+  including a script-safe wrapper for HaxeFlixel's `FlxColor` abstract
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
   for basic cross-language code and function calls
 - `callOnScripts`, `callOnLuas`, `callOnHScript`, `setOnScripts`, `setOnLuas`,

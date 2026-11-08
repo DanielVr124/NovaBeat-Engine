@@ -92,6 +92,14 @@ class PsychScriptRuntime
     ];
     if (allowed.indexOf(fullName) < 0) return false;
 
+    // FlxColor is an abstract type rather than a runtime class. Resolve it
+    // through the same safe wrapper used by the default HScript preset.
+    if (fullName == "flixel.util.FlxColor")
+    {
+      setHScriptGlobal(name, PsychScriptInstance.createFlxColorApi());
+      return true;
+    }
+
     var resolved:Class<Dynamic> = Type.resolveClass(fullName);
     if (resolved == null) return false;
     setHScriptGlobal(name, resolved);
