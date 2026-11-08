@@ -80,11 +80,34 @@ class PsychGameplayApi
     vars.set("keyboardJustPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_PRESSED));
     vars.set("keyboardPressed", function(key:String):Bool return keyboardStatus(key, FlxInputState.PRESSED));
     vars.set("keyboardReleased", function(key:String):Bool return keyboardStatus(key, FlxInputState.JUST_RELEASED));
+    vars.set("anyGamepadJustPressed", function(button:String):Bool return FlxG.gamepads.anyJustPressed(button));
+    vars.set("anyGamepadPressed", function(button:String):Bool return FlxG.gamepads.anyPressed(button));
+    vars.set("anyGamepadReleased", function(button:String):Bool return FlxG.gamepads.anyJustReleased(button));
+    vars.set("gamepadAnalogX", function(id:Int, ?leftStick:Bool = true):Float
+    {
+      var controller = FlxG.gamepads.getByID(id);
+      if (controller == null) return 0.0;
+      return controller.getXAxis(leftStick);
+    });
+    vars.set("gamepadAnalogY", function(id:Int, ?leftStick:Bool = true):Float
+    {
+      var controller = FlxG.gamepads.getByID(id);
+      if (controller == null) return 0.0;
+      return controller.getYAxis(leftStick);
+    });
     vars.set("mouseClicked", function(?button:String = "left"):Bool return mouseStatus(button, "justPressed"));
     vars.set("mousePressed", function(?button:String = "left"):Bool return mouseStatus(button, "pressed"));
     vars.set("mouseReleased", function(?button:String = "left"):Bool return mouseStatus(button, "justReleased"));
     vars.set("getMouseX", function(?camera:String = "game"):Float return getMousePosition(state, camera).x);
     vars.set("getMouseY", function(?camera:String = "game"):Float return getMousePosition(state, camera).y);
+    vars.set("getMouseWheel", function():Int return FlxG.mouse.wheel);
+    vars.set("getColorFromHex", function(color:String):Int return parsePsychColor(color));
+    vars.set("addScore", function(value:Int):Void setProperty(state, "score", state.songScore + value));
+    vars.set("setScore", function(value:Int):Void setProperty(state, "score", value));
+    vars.set("addMisses", function(value:Int):Void setProperty(state, "misses", Highscore.tallies.missed + value));
+    vars.set("setMisses", function(value:Int):Void setProperty(state, "misses", value));
+    vars.set("addHits", function(value:Int):Void setProperty(state, "hits", Highscore.tallies.totalNotesHit + value));
+    vars.set("setHits", function(value:Int):Void setProperty(state, "hits", value));
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
     vars.set("getRandomInt", function(min:Int, max:Int):Int return FlxG.random.int(min, max));
     vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));

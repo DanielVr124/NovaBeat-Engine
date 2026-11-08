@@ -59,9 +59,13 @@ sustain state, and a live note-group index.
   live song score/tallies
 - `getVar`, `setVar`, `removeVar`
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
-- Basic keyboard and mouse state/position queries: `keyboardJustPressed`,
-  `keyboardPressed`, `keyboardReleased`, `mouseClicked`, `mousePressed`,
-  `mouseReleased`, `getMouseX`, and `getMouseY`
+- Basic keyboard, gamepad, and mouse queries: `keyboardJustPressed`,
+  `keyboardPressed`, `keyboardReleased`, `anyGamepadJustPressed`,
+  `anyGamepadPressed`, `anyGamepadReleased`, `gamepadAnalogX`,
+  `gamepadAnalogY`, `mouseClicked`, `mousePressed`, `mouseReleased`,
+  `getMouseX`, `getMouseY`, and `getMouseWheel`
+- Basic gameplay utility helpers: `getColorFromHex`, `addScore`, `setScore`,
+  `addMisses`, `setMisses`, `addHits`, and `setHits`
 - `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
   for basic cross-language code and function calls
@@ -106,8 +110,8 @@ The current tier still does not support:
 - The complete Psych HScript preset/class registry and exact global-sharing
   semantics between every version of Lua and HScript.
 - Advanced sound features (voice channels, audio time/volume queries, sound
-  fading/filters), shaders, gamepad/action bindings, dialogue, cutscene,
-  save-data, and mod-setting APIs.
+  fading/filters), shaders, contextual action/control binding APIs, dialogue,
+  cutscene, save-data, and mod-setting APIs.
 - Every version-specific legacy API and extension used by arbitrary mods.
 - HTML5 local-mod discovery and launching.
 
