@@ -523,16 +523,17 @@ class PsychScriptRuntime
     {
       hscript = new PsychScriptInstance(
         "novabeat-hscript-smoke-test.hx",
-        "function add(a, b) { return a + b; } function echo(value) { return value; } function readInjected() { return injectedValue; }",
+        "function add(a, b) { return a + b; } function echo(value) { return value; } function readInjected() { return injectedValue; } function readPreset() { return FlxBasic != null && FlxObject != null && FlxPoint != null; }",
         ["injectedValue" => 17]
       );
       hscriptPassed = hscript.hasFunction("add")
         && hscript.call("add", [2, 3]) == 5
         && hscript.call("echo", ["novabeat"]) == "novabeat"
         && hscript.call("readInjected", []) == 17
+        && hscript.call("readPreset", []) == true
         && hscript.lastError == null;
       if (!hscriptPassed)
-        trace('[Psych Script Runtime] HScript smoke test did not pass function, argument, or injected-global checks.');
+        trace('[Psych Script Runtime] HScript smoke test did not pass function, argument, injected-global, or preset-class checks.');
     }
     catch (error:Dynamic)
     {
