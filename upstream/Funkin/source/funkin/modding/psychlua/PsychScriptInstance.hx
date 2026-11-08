@@ -79,6 +79,20 @@ class PsychScriptInstance
    * Type.resolveClass/addHaxeLibrary to return. Expose a script-friendly API
    * object that can be shared by the HScript preset and addHaxeLibrary.
    */
+  /**
+   * FlxPoint is a Haxe abstract, so it cannot be injected as a class value.
+   * Expose the allocation helpers commonly used by Psych HScript instead.
+   */
+  public static function createFlxPointApi():Dynamic
+  {
+    var api:Dynamic = {};
+    Reflect.setField(api, "get", function(?x:Float = 0, ?y:Float = 0):FlxPoint return FlxPoint.get(x, y));
+    Reflect.setField(api, "weak", function(?x:Float = 0, ?y:Float = 0):FlxPoint return FlxPoint.weak(x, y));
+    Reflect.setField(api, "weakCopyFrom", function(point:FlxPoint):FlxPoint return FlxPoint.weakCopyFrom(point));
+    Reflect.setField(api, "put", function(point:FlxPoint):Void FlxPoint.put(point));
+    return api;
+  }
+
   public static function createFlxColorApi():Dynamic
   {
     var api:Dynamic = {};
@@ -112,7 +126,7 @@ class PsychScriptInstance
     runtime.set("FlxBasic", FlxBasic);
     runtime.set("FlxCamera", FlxCamera);
     runtime.set("FlxObject", FlxObject);
-    runtime.set("FlxPoint", FlxPoint);
+    runtime.set("FlxPoint", createFlxPointApi());
     runtime.set("FlxSprite", FlxSprite);
     runtime.set("FlxText", FlxText);
     runtime.set("FlxSubState", FlxSubState);
