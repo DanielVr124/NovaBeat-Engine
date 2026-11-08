@@ -12,6 +12,8 @@ import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+import flixel.util.FlxAxes;
+import openfl.display.BlendMode;
 import flixel.util.FlxTimer;
 import flixel.sound.FlxSound;
 import funkin.Conductor;
@@ -86,6 +88,40 @@ class PsychGameplayApi
     vars.set("pauseSound", function(?tag:String = ""):Void pauseTaggedSound(tag));
     vars.set("resumeSound", function(?tag:String = ""):Void resumeTaggedSound(tag));
     vars.set("setSoundVolume", function(tag:String, volume:Float):Bool return setTaggedSoundVolume(tag, volume));
+    vars.set("getSoundVolume", function(?tag:String = ""):Float
+    {
+      if (tag == null || tag.length == 0)
+        return FlxG.sound.music == null ? 0 : FlxG.sound.music.volume;
+      var sound:Null<FlxSound> = activeSounds.get(tag);
+      return sound == null ? 0 : sound.volume;
+    });
+    vars.set("getSoundTime", function(tag:String):Float
+    {
+      var sound:Null<FlxSound> = activeSounds.get(tag);
+      return sound == null ? 0 : sound.time;
+    });
+    vars.set("setSoundTime", function(tag:String, value:Float):Bool
+    {
+      var sound:Null<FlxSound> = activeSounds.get(tag);
+      if (sound == null) return false;
+      sound.time = Math.max(0, value);
+      return true;
+    });
+    vars.set("getSoundPitch", function(tag:String):Float
+    {
+      var sound:Null<FlxSound> = (tag == null || tag.length == 0) ? FlxG.sound.music : activeSounds.get(tag);
+      return sound == null ? 0 : sound.pitch;
+    });
+    vars.set("setSoundPitch", function(tag:String, value:Float, ?doPause:Bool = false):Bool
+    {
+      var sound:Null<FlxSound> = (tag == null || tag.length == 0) ? FlxG.sound.music : activeSounds.get(tag);
+      if (sound == null) return false;
+      var wasPlaying:Bool = sound.playing;
+      if (doPause) sound.pause();
+      sound.pitch = value;
+      if (doPause && wasPlaying) sound.play();
+      return true;
+    });
     vars.set("stopMusic", function():Void
     {
       if (FlxG.sound.music != null) FlxG.sound.music.stop();
@@ -179,6 +215,83 @@ class PsychGameplayApi
     vars.set("setMisses", function(value:Int):Void setProperty(state, "misses", value));
     vars.set("addHits", function(value:Int):Void setProperty(state, "hits", Highscore.tallies.totalNotesHit + value));
     vars.set("setHits", function(value:Int):Void setProperty(state, "hits", value));
+
+    // Psych 0.7.x exposes read helpers as well as setters for song tallies.
+    vars.set("getScore", function():Int return Std.int(state.songScore));
+    vars.set("getMisses", function():Int return Highscore.tallies.missed);
+    vars.set("getHits", function():Int return Highscore.tallies.totalNotesHit);
+    vars.set("getColorFromName", function(name:String):Int return parsePsychColor(name));
+    vars.set("getColorFromString", function(value:String):Int return parsePsychColor(value));
+    vars.set("FlxColor", PsychScriptInstance.createFlxColorApi());
+
+    // Cross-script helpers and runtime script management.
+    vars.set("callScript", function(script:String, callback:String, ?args:Array<Dynamic>):Dynamic
+      return PsychScriptRuntime.callScript(script, callback, args));
+    vars.set("getGlobalFromScript", function(script:String, name:String):Dynamic
+      return PsychScriptRuntime.getGlobalFromScript(script, name));
+    vars.set("setGlobalFromScript", function(script:String, name:String, value:Dynamic):Bool
+      return PsychScriptRuntime.setGlobalFromScript(script, name, value));
+    vars.set("getGlobals", function(script:String):Dynamic return PsychScriptRuntime.getScriptGlobals(script));
+    vars.set("isRunning", function(script:String):Bool return PsychScriptRuntime.isScriptRunning(script));
+    vars.set("addLuaScript", function(script:String, ?ignoreAlreadyRunning:Bool = false):Bool
+      return PsychScriptRuntime.addScript(script, "lua", ignoreAlreadyRunning));
+    vars.set("addHScript", function(script:String, ?ignoreAlreadyRunning:Bool = false):Bool
+      return PsychScriptRuntime.addScript(script, "hscript", ignoreAlreadyRunning));
+    vars.set("removeLuaScript", function(script:String):Bool return PsychScriptRuntime.removeScript(script, "lua"));
+    vars.set("removeHScript", function(script:String):Bool return PsychScriptRuntime.removeScript(script, "hscript"));
+
+    // Character position and camera focus helpers use NovaBeat's actual stage
+    // characters. They do not create substitute characters or fake group data.
+    vars.set("getCharacterX", function(role:String):Float
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      return character == null ? 0 : character.x;
+    });
+    vars.set("getCharacterY", function(role:String):Float
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      return character == null ? 0 : character.y;
+    });
+    vars.set("setCharacterX", function(role:String, value:Float):Bool
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      if (character == null) return false;
+      character.x = value;
+      return true;
+    });
+    vars.set("setCharacterY", function(role:String, value:Float):Bool
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      if (character == null) return false;
+      character.y = value;
+      return true;
+    });
+    vars.set("cameraSetTarget", function(role:String):Bool
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      if (character == null || character.cameraFocusPoint == null) return false;
+      state.tweenCameraToPosition(character.cameraFocusPoint.x, character.cameraFocusPoint.y, 0);
+      return true;
+    });
+    vars.set("startCountdown", function():Bool
+    {
+      state.startCountdown();
+      return true;
+    });
+    vars.set("endSong", function():Bool
+    {
+      state.endSong();
+      return true;
+    });
+    vars.set("restartSong", function(?skipTransition:Bool = false):Bool
+    {
+      // PlayState preserves its launch parameters for a state reset.
+      FlxG.resetState();
+      return true;
+    });
+    vars.set("setRatingPercent", function(value:Float):Void PsychScriptRuntime.setGlobal("ratingPercent", value));
+    vars.set("setRatingName", function(value:String):Void PsychScriptRuntime.setGlobal("ratingName", value));
+    vars.set("setRatingFC", function(value:String):Void PsychScriptRuntime.setGlobal("ratingFC", value));
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
     vars.set("getRandomInt", function(min:Int, max:Int):Int return FlxG.random.int(min, max));
     vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));
@@ -222,6 +335,10 @@ class PsychGameplayApi
       return noteTween(state, tag, note, {y: value}, duration, ease));
     vars.set("noteTweenAngle", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
       return noteTween(state, tag, note, {angle: value}, duration, ease));
+    vars.set("noteTweenDirection", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return noteTween(state, tag, note, {angle: value}, duration, ease));
+    vars.set("startTween", function(tag:String, objectTag:String, values:Dynamic, duration:Float, ?ease:String = "linear"):Bool
+      return startTween(state, tag, objectTag, values, duration, ease));
     vars.set("noteTweenAlpha", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
       return noteTween(state, tag, note, {alpha: value}, duration, ease));
     vars.set("cancelTween", function(tag:String):Bool return cancelTween(tag));
@@ -348,6 +465,163 @@ class PsychGameplayApi
       sprite.animation.addByPrefix(name, prefix, framerate, loop);
       return true;
     });
+
+    vars.set("addAnimation", function(tag:String, name:String, frames:Array<Int>, ?framerate:Int = 24, ?loop:Bool = false):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || frames == null || frames.length == 0) return false;
+      sprite.animation.add(name, frames, framerate, loop);
+      return true;
+    });
+    vars.set("addAnimationByIndices", function(tag:String, name:String, prefix:String, indices:Dynamic,
+        ?framerate:Int = 24, ?loop:Bool = false):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      var parsed:Array<Int> = [];
+      if (Std.isOfType(indices, Array))
+        for (index in (cast indices:Array<Dynamic>))
+          parsed.push(Std.int(index));
+      else if (indices != null)
+        for (part in Std.string(indices).split(","))
+        {
+          var value:Null<Int> = Std.parseInt(StringTools.trim(part));
+          if (value != null) parsed.push(value);
+        }
+      if (parsed.length == 0) return false;
+      sprite.animation.addByIndices(name, prefix, parsed, "", framerate, loop);
+      return true;
+    });
+    vars.set("playAnim", function(tag:String, name:String, ?force:Bool = false, ?reversed:Bool = false, ?frame:Int = 0):Bool
+    {
+      var object:Dynamic = getProperty(state, tag);
+      if (Std.isOfType(object, BaseCharacter))
+      {
+        (cast object:BaseCharacter).playAnimation(name, force, false, reversed);
+        return true;
+      }
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null && Std.isOfType(object, FlxSprite)) sprite = cast object;
+      if (sprite == null) return false;
+      sprite.animation.play(name, force, reversed, frame);
+      return true;
+    });
+    vars.set("addOffset", function(characterTag:String, animation:String, x:Float, y:Float):Bool
+    {
+      var object:Dynamic = getProperty(state, characterTag);
+      if (!Std.isOfType(object, BaseCharacter)) return false;
+      (cast object:BaseCharacter).animationOffsets.set(animation, [x, y]);
+      return true;
+    });
+    vars.set("characterDance", function(?role:String = "bf"):Bool
+    {
+      var character:Null<BaseCharacter> = getCharacterForRole(state, role);
+      if (character == null) return false;
+      character.dance();
+      return true;
+    });
+    vars.set("loadGraphic", function(tag:String, image:String, ?gridX:Int = 0, ?gridY:Int = 0):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || image == null || image.length == 0) return false;
+      sprite.loadGraphic(Paths.image(image), gridX > 0 && gridY > 0, gridX, gridY);
+      return true;
+    });
+    vars.set("loadFrames", function(tag:String, image:String, ?spriteType:String = "sparrow"):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null || image == null || image.length == 0) return false;
+      try
+      {
+        sprite.frames = StringTools.trim(spriteType).toLowerCase() == "packer"
+          ? Paths.getPackerAtlas(image)
+          : Paths.getSparrowAtlas(image);
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] loadFrames(' + tag + ') failed: ' + Std.string(error));
+        return false;
+      }
+    });
+    vars.set("updateHitbox", function(tag:String):Bool
+    {
+      var object:Dynamic = getProperty(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) return false;
+      (cast object:FlxSprite).updateHitbox();
+      return true;
+    });
+    vars.set("updateHitboxFromGroup", function(group:String, index:Int):Bool
+    {
+      var object:Dynamic = getPropertyFromGroup(state, group, index, "", false);
+      if (!Std.isOfType(object, FlxSprite)) return false;
+      (cast object:FlxSprite).updateHitbox();
+      return true;
+    });
+    vars.set("screenCenter", function(tag:String, ?axes:String = "xy"):Bool
+    {
+      var object:Dynamic = getProperty(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) return false;
+      var normalized:String = axes == null ? "xy" : StringTools.trim(axes).toLowerCase();
+      var resolvedAxes:FlxAxes = normalized == "x" ? FlxAxes.X : (normalized == "y" ? FlxAxes.Y : FlxAxes.XY);
+      (cast object:FlxSprite).screenCenter(resolvedAxes);
+      return true;
+    });
+    vars.set("setBlendMode", function(tag:String, ?mode:String = ""):Bool
+    {
+      var object:Dynamic = getProperty(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) object = getSprite(state, tag);
+      if (!Std.isOfType(object, FlxSprite)) return false;
+      var blend:BlendMode = switch (mode == null ? "" : StringTools.trim(mode).toLowerCase())
+      {
+        case "add", "additive": BlendMode.ADD;
+        case "multiply": BlendMode.MULTIPLY;
+        case "screen": BlendMode.SCREEN;
+        case "darken": BlendMode.DARKEN;
+        case "lighten": BlendMode.LIGHTEN;
+        case "overlay": BlendMode.OVERLAY;
+        case "hardlight": BlendMode.HARDLIGHT;
+        case "difference": BlendMode.DIFFERENCE;
+        case "invert": BlendMode.INVERT;
+        case "alpha": BlendMode.ALPHA;
+        case "erase": BlendMode.ERASE;
+        default: BlendMode.NORMAL;
+      };
+      (cast object:FlxSprite).blend = blend;
+      return true;
+    });
+    vars.set("objectsOverlap", function(first:String, second:String):Bool
+    {
+      var objectA:Dynamic = getProperty(state, first);
+      if (objectA == null) objectA = getSprite(state, first);
+      var objectB:Dynamic = getProperty(state, second);
+      if (objectB == null) objectB = getSprite(state, second);
+      if (!Std.isOfType(objectA, FlxBasic) || !Std.isOfType(objectB, FlxBasic)) return false;
+      return FlxG.overlap(cast objectA, cast objectB);
+    });
+    vars.set("getPixelColor", function(tag:String, x:Int, y:Int):Int
+    {
+      var sprite:Dynamic = getProperty(state, tag);
+      if (!Std.isOfType(sprite, FlxSprite)) sprite = getSprite(state, tag);
+      if (!Std.isOfType(sprite, FlxSprite)) return FlxColor.BLACK;
+      try
+      {
+        return (cast sprite:FlxSprite).pixels.getPixel32(x, y);
+      }
+      catch (error:Dynamic)
+      {
+        return FlxColor.BLACK;
+      }
+    });
+    vars.set("luaSpriteExists", function(tag:String):Bool return getSprite(state, tag) != null);
+    vars.set("luaTextExists", function(tag:String):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      return sprite != null && Std.isOfType(sprite, FlxText);
+    });
+    vars.set("luaSoundExists", function(tag:String):Bool return activeSounds.exists(tag));
     vars.set("objectPlayAnimation", function(tag:String, name:String, ?force:Bool = false, ?reversed:Bool = false, ?frame:Int = 0):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
@@ -839,6 +1113,17 @@ class PsychGameplayApi
       colorText = "#" + colorText;
     var parsed:Null<FlxColor> = FlxColor.fromString(colorText);
     return parsed == null ? FlxColor.WHITE : parsed;
+  }
+
+  static function getCharacterForRole(state:PlayState, role:String):Null<BaseCharacter>
+  {
+    var normalized:String = role == null ? "bf" : StringTools.trim(role).toLowerCase();
+    return switch (normalized)
+    {
+      case "dad", "opponent", "1": getStageCharacter(state, "getDad");
+      case "gf", "girlfriend", "2": getStageCharacter(state, "getGirlfriend");
+      default: getStageCharacter(state, "getBoyfriend");
+    };
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
