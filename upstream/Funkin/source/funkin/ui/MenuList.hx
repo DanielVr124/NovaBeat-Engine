@@ -260,10 +260,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #end
     {
       // Mobile browsers retain native touch input, but some browsers expose
-      // Some mobile browsers expose taps as synthetic FlxMouse events rather
-      // than FlxTouch events. Route those taps through the same selection and
-      // confirmation rules as native touch for both FNF and NovaBeat menus.
-      final mobileBrowserMouseTap:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased;
+      // Some HTML5 mobile browsers expose finger input as FlxMouse events.
+      // Treat mouse-down as the same press event used by the official FNF
+      // TouchUtil path; do not synthesize a second action on release.
       final browserTouchPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.pressed;
       final browserTouchJustPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed;
       if (TouchUtil.pressed)
@@ -323,7 +322,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
             if (_isMainMenuState)
             {
-              if (prevIndex == i || (Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser))
+              if (prevIndex == i)
               {
                 FlxTween.cancelTweensOf(item);
                 item.scale.set(1.1, 1.1);
