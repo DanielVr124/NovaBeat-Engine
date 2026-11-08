@@ -11,6 +11,7 @@ import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
+import funkin.Highscore;
 import funkin.play.notes.NoteSprite;
 import funkin.play.notes.SustainTrail;
 import funkin.play.character.BaseCharacter;
@@ -544,6 +545,14 @@ class PsychGameplayApi
             state.cameraFollowPoint.x = cast value;
           case "cameraY":
             state.cameraFollowPoint.y = cast value;
+          case "score":
+            state.songScore = cast value;
+          case "misses":
+            Highscore.tallies.missed = Std.int(value);
+          case "hits":
+            Highscore.tallies.totalNotesHit = Std.int(value);
+          case "combo":
+            Highscore.tallies.combo = Std.int(value);
           default:
             if (scriptVariables.exists(rootName))
               scriptVariables.set(rootName, value);
@@ -597,6 +606,19 @@ class PsychGameplayApi
         return state.cameraFollowPoint.y;
       case "defaultCamZoom":
         return state.currentCameraZoom;
+      case "score":
+        return state.songScore;
+      case "misses":
+        return Highscore.tallies.missed;
+      case "hits":
+        return Highscore.tallies.totalNotesHit;
+      case "combo":
+        return Highscore.tallies.combo;
+      case "rating":
+      case "ratingPercent":
+        return Highscore.tallies.totalNotes <= 0
+          ? 0.0
+          : Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes;
       default:
         if (scriptVariables.exists(name)) return scriptVariables.get(name);
         return Reflect.getProperty(state, name);
