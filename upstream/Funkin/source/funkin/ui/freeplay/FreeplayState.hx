@@ -1833,7 +1833,8 @@ class FreeplayState extends MusicBeatSubState
     // sets the text of the completion percentage. Perhaps eventually we may want to generalize this,
     // but for now we can just clamp the values between 0 and 100.
     // Fixes issue where it rounds to negative integer overflow on Windows? Which occurs when switching to an unranked song?
-    txtCompletion.text = '${Math.floor(lerpCompletion * 100).clamp(0, 100)}';
+    var completionText:String = '${Math.floor(lerpCompletion * 100).clamp(0, 100)}';
+    if (txtCompletion.text != completionText) txtCompletion.text = completionText;
 
     // Right align the completion percentage
     switch (txtCompletion.text.length)
@@ -2151,7 +2152,9 @@ class FreeplayState extends MusicBeatSubState
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
     if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && menuTouchPressed()))) return;
-    if (menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
+    // A normal tap on the selected card is handled by the capsule click path.
+    // A drag that ends over that card must still reach the scroll cleanup below.
+    if (_moveLength <= 0 && menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
     if (menuTouchJustPressed())
     {
