@@ -61,6 +61,15 @@ class PsychGameplayApi
       return PsychScriptRuntime.runLuaCode(code, variablesToBring));
     vars.set("runLuaFunction", function(name:String, ?args:Array<Dynamic>):Dynamic
       return PsychScriptRuntime.runLuaFunction(name, args));
+    vars.set("callOnScripts", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+      return PsychScriptRuntime.callOnScripts(name, args, ignoreStops));
+    vars.set("callOnLuas", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+      return PsychScriptRuntime.callOnLuas(name, args, ignoreStops));
+    vars.set("callOnHScript", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+      return PsychScriptRuntime.callOnHScript(name, args, ignoreStops));
+    vars.set("setOnScripts", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnScripts(name, value));
+    vars.set("setOnLuas", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnLuas(name, value));
+    vars.set("setOnHScript", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnHScript(name, value));
 
     vars.set("doTweenX", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
       return startTween(state, tag, objectTag, {x: value}, duration, ease));
@@ -197,11 +206,11 @@ class PsychGameplayApi
     vars.set("screenWidth", FlxG.width);
     vars.set("screenHeight", FlxG.height);
     vars.set("songName", state.currentSong == null ? "" : state.currentSong.songName);
-    vars.set("Function_Continue", 0);
-    vars.set("Function_Stop", 1);
-    vars.set("Function_StopLua", 2);
-    vars.set("Function_StopHScript", 3);
-    vars.set("Function_StopAll", 4);
+    vars.set("Function_Continue", PsychScriptRuntime.getGlobal("Function_Continue"));
+    vars.set("Function_Stop", PsychScriptRuntime.getGlobal("Function_Stop"));
+    vars.set("Function_StopLua", PsychScriptRuntime.getGlobal("Function_StopLua"));
+    vars.set("Function_StopHScript", PsychScriptRuntime.getGlobal("Function_StopHScript"));
+    vars.set("Function_StopAll", PsychScriptRuntime.getGlobal("Function_StopAll"));
 
     return vars;
   }

@@ -28,8 +28,10 @@ Supported callbacks currently include:
 - `onPause`, `onDestroy`
 - `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `onSpawnNote`
 
-Callback return values support the basic Psych stop codes, including
-language-specific stop behavior. Note callbacks receive direction, note kind,
+Callback return values use Psych 0.7.3's official string sentinel values and
+preserve Lua-first/HScript-second ordering. `Function_Stop` cancels the
+associated gameplay action; `Function_StopLua`, `Function_StopHScript`, and
+`Function_StopAll` stop script dispatch at their language boundaries. Note callbacks receive direction, note kind,
 sustain state, and a live note-group index.
 
 ### Initial gameplay API surface
@@ -40,6 +42,8 @@ sustain state, and a live note-group index.
 - `getSongPosition`, `getRandomInt`, `getRandomFloat`, `getRandomBool`
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
   for basic cross-language code and function calls
+- `callOnScripts`, `callOnLuas`, `callOnHScript`, `setOnScripts`, `setOnLuas`,
+  and `setOnHScript` for inter-script communication
 - Named timers/tweens: `runTimer`, `cancelTimer`, `doTweenX/Y/Alpha/Angle/Zoom/Color`,
   `cancelTween`, with `onTimerCompleted` and `onTweenCompleted` callbacks
 - Basic sprite creation, animation, visibility/camera, scale, scroll-factor,
