@@ -13,6 +13,7 @@ import funkin.play.PlayState;
 import funkin.play.notes.NoteSprite;
 import funkin.play.character.BaseCharacter;
 import funkin.play.notes.Strumline;
+import funkin.play.notes.StrumlineNote;
 
 /**
  * Deliberately bounded Psych API surface for the first script-enabled tier.
@@ -86,6 +87,14 @@ class PsychGameplayApi
       return startTween(state, tag, cameraTag, {zoom: value}, duration, ease));
     vars.set("doTweenColor", function(tag:String, objectTag:String, color:String, duration:Float, ?ease:String = "linear"):Bool
       return startColorTween(state, tag, objectTag, color, duration, ease));
+    vars.set("noteTweenX", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return noteTween(state, tag, note, {x: value}, duration, ease));
+    vars.set("noteTweenY", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return noteTween(state, tag, note, {y: value}, duration, ease));
+    vars.set("noteTweenAngle", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return noteTween(state, tag, note, {angle: value}, duration, ease));
+    vars.set("noteTweenAlpha", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
+      return noteTween(state, tag, note, {alpha: value}, duration, ease));
     vars.set("cancelTween", function(tag:String):Bool return cancelTween(tag));
     vars.set("runTimer", function(tag:String, time:Float, ?loops:Int = 1):Bool return runTimer(tag, time, loops));
     vars.set("cancelTimer", function(tag:String):Bool return cancelTimer(tag));
@@ -152,6 +161,7 @@ class PsychGameplayApi
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
       state.remove(sprite, true);
+      scriptVariables.remove(tag);
       if (destroy) sprite.destroy();
       return true;
     });
@@ -300,9 +310,13 @@ class PsychGameplayApi
 
   static function startTween(state:PlayState, tag:String, objectTag:String, values:Dynamic, duration:Float, ease:String):Bool
   {
-    if (tag == null || tag.length == 0 || duration < 0) return false;
     var target:Dynamic = getProperty(state, objectTag);
-    if (target == null) return false;
+    return startTweenTarget(tag, target, values, duration, ease, [tag, values]);
+  }
+
+  static function startTweenTarget(tag:String, target:Dynamic, values:Dynamic, duration:Float, ease:String, callbackArgs:Array<Dynamic>):Bool
+  {
+    if (tag == null || tag.length == 0 || target == null || duration < 0) return false;
     cancelTween(tag);
 
     var tween:FlxTween = FlxTween.tween(target, values, duration, {
@@ -310,7 +324,7 @@ class PsychGameplayApi
       onComplete: function(_:FlxTween):Void
       {
         activeTweens.remove(tag);
-        PsychScriptRuntime.dispatch("onTweenCompleted", [tag, values]);
+        PsychScriptRuntime.dispatch("onTweenCompleted", callbackArgs);
       }
     });
     activeTweens.set(tag, tween);
@@ -452,6 +466,12 @@ class PsychGameplayApi
         return state;
       case "notes":
         return getActiveNotes(state);
+      case "strumLineNotes":
+        return getAllStrumNotes(state);
+      case "playerStrums":
+        return state.playerStrumline == null ? [] : state.playerStrumline.strumlineNotes.members;
+      case "opponentStrums":
+        return state.opponentStrumline == null ? [] : state.opponentStrumline.strumlineNotes.members;
       case "boyfriend":
         return getStageCharacter(state, "getBoyfriend");
       case "dad", "opponent":
@@ -569,6 +589,33 @@ class PsychGameplayApi
       if (current == null) return null;
     }
     return setSegment(current, parts[parts.length - 1], value, allowMaps);
+  }
+
+  static function getAllStrumNotes(state:PlayState):Array<StrumlineNote>
+  {
+    var result:Array<StrumlineNote> = [];
+    // Psych's combined strumLineNotes group is opponent receptors first,
+    // followed by the player's receptors.
+    if (state.opponentStrumline != null)
+      for (note in state.opponentStrumline.strumlineNotes.members) result.push(note);
+    if (state.playerStrumline != null)
+      for (note in state.playerStrumline.strumlineNotes.members) result.push(note);
+    return result;
+  }
+
+  static function getStrumNote(state:PlayState, index:Int):Null<StrumlineNote>
+  {
+    var notes:Array<StrumlineNote> = getAllStrumNotes(state);
+    if (notes.length == 0) return null;
+    var normalized:Int = index < 0 ? 0 : index % notes.length;
+    return notes[normalized];
+  }
+
+  static function noteTween(state:PlayState, tag:String, noteIndex:Int, values:Dynamic, duration:Float, ease:String):Bool
+  {
+    var target:Null<StrumlineNote> = getStrumNote(state, noteIndex);
+    if (target == null) return false;
+    return startTweenTarget(tag, target, values, duration, ease, [tag]);
   }
 
   public static function getNoteId(state:PlayState, note:NoteSprite):Int
