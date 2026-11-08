@@ -301,11 +301,13 @@ class DataParse
       case JArray(values):
         var time:Null<Float> = values[0] == null ? null : Tools.getValue(values[0]);
         var data:Null<Int> = values[1] == null ? null : Tools.getValue(values[1]);
-        var length:Null<Float> = values[2] == null ? null : Tools.getValue(values[2]);
-        var alt:Null<Bool> = values[3] == null ? null : Tools.getValue(values[3]);
+        var length:Null<Float> = values.length > 2 && values[2] != null ? Tools.getValue(values[2]) : null;
+        var rawKind:Dynamic = values.length > 3 && values[3] != null ? Tools.getValue(values[3]) : null;
+        var alt:Bool = Std.isOfType(rawKind, Bool) && rawKind == true;
+        var kind:String = Std.isOfType(rawKind, String) ? cast rawKind : "";
 
         if (time == null || data == null) throw 'Property $name note is missing time and/or data values.';
-        return new LegacyNote(time, data, length, alt);
+        return new LegacyNote(time, data, length, alt, kind);
       // return null;
       default:
         throw 'Expected property $name to be a note, but it was ${json.value}.';

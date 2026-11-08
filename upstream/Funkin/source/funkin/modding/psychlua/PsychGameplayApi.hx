@@ -813,7 +813,7 @@ class PsychGameplayApi
     return setOnObject(item, path, value, allowMaps);
   }
 
-  static function triggerEvent(state:PlayState, name:String, value1:String, value2:String):Void
+  public static function triggerEvent(state:PlayState, name:String, value1:String, value2:String):Void
   {
     switch (StringTools.trim(name).toLowerCase())
     {

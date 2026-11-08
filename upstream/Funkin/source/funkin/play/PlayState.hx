@@ -1598,6 +1598,7 @@ class PlayState extends MusicBeatSubState
         var eventData = songEvent.eventData;
         var value1:String = "";
         var value2:String = "";
+        var callbackEventName:String = eventData.eventKind;
         var rawValue:Dynamic = eventData.value;
         if (rawValue != null)
         {
@@ -1609,6 +1610,11 @@ class PlayState extends MusicBeatSubState
           }
           else if (Reflect.isObject(rawValue))
           {
+            if (eventData.eventKind == "PsychCompatibilityEvent")
+            {
+              var originalName:Dynamic = Reflect.field(rawValue, "name");
+              if (originalName != null) callbackEventName = Std.string(originalName);
+            }
             var first:Dynamic = Reflect.field(rawValue, "value1");
             var second:Dynamic = Reflect.field(rawValue, "value2");
             if (first == null) first = Reflect.field(rawValue, "value");
@@ -1621,7 +1627,7 @@ class PlayState extends MusicBeatSubState
           }
         }
 
-        if (PsychScriptRuntime.dispatchStop("onEvent", [eventData.eventKind, value1, value2]))
+        if (PsychScriptRuntime.dispatchStop("onEvent", [callbackEventName, value1, value2]))
           event.cancel();
       }
       else if (event.type == "SONG_END")

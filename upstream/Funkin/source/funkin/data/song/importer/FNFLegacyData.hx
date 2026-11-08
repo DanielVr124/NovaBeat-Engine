@@ -107,18 +107,21 @@ class LegacyNote
   public var data:Int;
   public var length:Float;
   public var alt:Bool;
+  public var kind:String;
 
-  public function new(time:Float, data:Int, ?length:Float, ?alt:Bool)
+  public function new(time:Float, data:Int, ?length:Float, ?alt:Bool, ?kind:String)
   {
     this.time = time;
     this.data = data;
 
     this.length = length ?? 0.0;
     this.alt = alt ?? false;
+    this.kind = kind ?? '';
   }
 
   public inline function getKind():String
   {
+    if (this.kind != null && this.kind.length > 0) return this.kind;
     return this.alt ? 'alt' : '';
   }
 
