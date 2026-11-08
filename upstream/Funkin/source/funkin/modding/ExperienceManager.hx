@@ -81,7 +81,7 @@ class ExperienceManager
       var displayEngineLabel:String = psychAssessment != null && psychAssessment.launchable
         ? engine.label + " • LEGACY CHARTS"
         : engine.label;
-      var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata);
+      var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata, packageLaunchable);
       var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
       if (title == null) title = metadataString(genericMetadata, "name");
@@ -129,6 +129,8 @@ class ExperienceManager
   public static function getActivePsychSongIds():Array<String> return activePsychSongIds.copy();
 
   public static function getActivePsychModDirs():Array<String> return activePsychModDirs.copy();
+
+  public static function isPsychSong(songId:String):Bool return activePsychSongIds.indexOf(songId) >= 0;
 
   public static function setPackageEnabled(info:ExperienceInfo):Bool
   {
@@ -349,7 +351,7 @@ class ExperienceManager
     return result;
   }
 
-  static function resolvePackageType(directory:String, engine:EngineDetection, metadata:Dynamic):String
+  static function resolvePackageType(directory:String, engine:EngineDetection, metadata:Dynamic, launchable:Bool):String
   {
     var stored:Map<String, String> = Save.instance.modPackageKinds.value;
     if (stored != null)
@@ -363,8 +365,10 @@ class ExperienceManager
     if (declared == null) declared = metadataString(metadata, "packageType");
     if (declared != null) return normalizePackageType(declared);
 
-    // V-Slice packages are treated as extensions by default. External engines
-    // remain unclassified until the player or a recognized manifest decides.
+    // Native V-Slice content packages remain extensions by default. A Psych
+    // package that passes the limited chart-only runtime gate becomes its own
+    // standalone experience so it can be selected directly from the library.
+    if (engine.id == EngineBridge.ENGINE_PSYCH && launchable) return PACKAGE_STANDALONE;
     return engine.id == EngineBridge.ENGINE_VSLICE ? PACKAGE_EXTENSION : PACKAGE_UNCLASSIFIED;
   }
 
