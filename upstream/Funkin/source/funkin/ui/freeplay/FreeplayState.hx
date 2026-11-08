@@ -262,6 +262,9 @@ class FreeplayState extends MusicBeatSubState
   var styleData:Null<FreeplayStyle> = null;
   var fromCharSelect:Bool = false;
   var forceSkipIntro:Bool = false;
+  // Opt-in mode used by the Psych-only menu route. Default Freeplay remains
+  // unchanged unless the caller explicitly requests this filter.
+  var psychOnly:Bool = false;
 
   public var freeplayArrow:Null<FlxText>;
   var freeplayTitleText:Null<FlxText> = null;
@@ -302,6 +305,7 @@ class FreeplayState extends MusicBeatSubState
     rememberedCharacterId = currentCharacter?.id ?? Constants.DEFAULT_CHARACTER;
 
     fromCharSelect = params?.fromCharSelect ?? false;
+    psychOnly = params?.psychOnly ?? false;
     fromResultsParams = params?.fromResults;
     prepForNewRank = fromResultsParams?.playRankAnim ?? false;
 
@@ -407,29 +411,33 @@ class FreeplayState extends MusicBeatSubState
     // Add a null entry that represents the RANDOM option
     songs.push(null);
 
-    // programmatically adds the songs via LevelRegistry and SongRegistry
-    for (levelId in LevelRegistry.instance.listSortedLevelIds())
+    // The Psych-only route deliberately omits V-Slice week songs.
+    if (!psychOnly)
     {
-      var level:Null<Level> = LevelRegistry.instance.fetchEntry(levelId);
-
-      if (level == null)
+      // programmatically adds the songs via LevelRegistry and SongRegistry
+      for (levelId in LevelRegistry.instance.listSortedLevelIds())
       {
-        trace(' WARNING '.warning() + ' Could not find level with id (${levelId})');
-        continue;
-      }
+        var level:Null<Level> = LevelRegistry.instance.fetchEntry(levelId);
 
-      for (songId in level.getSongs())
-      {
-        if (!ExperienceManager.isSongAvailable(songId)) continue;
-        var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: currentVariation});
-
-        if (song == null)
+        if (level == null)
         {
-          trace(' WARNING '.warning() + ' Could not find song with id (${songId})');
+          trace(' WARNING '.warning() + ' Could not find level with id (${levelId})');
           continue;
         }
 
-        songs.push(new FreeplaySongData(songId, level, this));
+        for (songId in level.getSongs())
+        {
+          if (!ExperienceManager.isSongAvailable(songId)) continue;
+          var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: currentVariation});
+
+          if (song == null)
+          {
+            trace(' WARNING '.warning() + ' Could not find song with id (${songId})');
+            continue;
+          }
+
+          songs.push(new FreeplaySongData(songId, level, this));
+        }
       }
     }
 
@@ -568,16 +576,17 @@ class FreeplayState extends MusicBeatSubState
       FlxTween.tween(blackOverlayBullshitLOLXD, {x: backingImage.x}, 0.7, {ease: FlxEase.quintOut});
     }
 
-    var topLeftCornerText:FlxText = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8, 0, 'FREEPLAY', 48);
+    var topLeftCornerText:FlxText = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8, 0,
+      psychOnly ? 'PSYCH FREEPLAY' : 'FREEPLAY', 48);
     freeplayTitleText = topLeftCornerText;
     topLeftCornerText.font = 'VCR OSD Mono';
-    topLeftCornerText.visible = false;
+    topLeftCornerText.visible = psychOnly;
 
     var freeplayTxtBg:FlxSprite = new FlxSprite().makeGraphic(Math.round(topLeftCornerText.width + 16), Math.round(topLeftCornerText.height + 16),
       FlxColor.BLACK);
     freeplayTxtBg.x = topLeftCornerText.x - 8;
     freeplayTitleBackground = freeplayTxtBg;
-    freeplayTxtBg.visible = false;
+    freeplayTxtBg.visible = psychOnly;
 
     freeplayArrow = new FlxText(Math.max(FullScreenScaleMode.gameNotchSize.x, 8), 8, 0, '<---', 48);
     freeplayArrow.font = 'VCR OSD Mono';
@@ -976,6 +985,9 @@ class FreeplayState extends MusicBeatSubState
     tempSongs = tempSongs.filter(song ->
     {
       if (song == null) return true; // Random
+      // Keep the playlist strict even if another source later adds a
+      // non-Psych song to this FreeplayState instance.
+      if (psychOnly && !ExperienceManager.isPsychSong(song.data.id)) return false;
 
       // Available variations for current character. We get this since bf is usually `default` variation, and `pico` is `pico`
       // but sometimes pico can be the default variation (weekend 1 songs), and bf can be `bf` variation (darnell)
@@ -3873,6 +3885,7 @@ typedef FreeplayStateParams =
   ?character:String,
   ?fromCharSelect:Bool,
   ?fromResults:FromResultsParams,
+  ?psychOnly:Bool,
 };
 
 /**

@@ -14,6 +14,7 @@ import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
 import funkin.save.Save;
 import funkin.audio.FunkinSound;
+import funkin.modding.ExperienceManager;
 import funkin.graphics.FunkinCamera;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.MenuList.NavControls;
@@ -46,16 +47,18 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_NAMES:Array<String> = [
     'STORY MODE',
     'FREEPLAY',
+    'PSYCH FREEPLAY',
     'MODS',
     'OPTIONS',
     'CREDITS'
   ];
 
-  static final ITEM_ICONS:Array<String> = ['▤', '♫', '✣', '⚙', '★'];
+  static final ITEM_ICONS:Array<String> = ['▤', '♫', 'Ψ', '✣', '⚙', '★'];
 
   static final ITEM_TITLES:Array<String> = [
     'STORY\nMODE',
     'FREEPLAY',
+    'PSYCH FREEPLAY',
     'MODS',
     'OPTIONS',
     'CREDITS'
@@ -64,6 +67,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_KICKERS:Array<String> = [
     'CAMPAIGN',
     'SINGLE SONG',
+    'PSYCH MOD SONGS',
     'LOCAL MODS',
     'GAME PREFERENCES',
     'ABOUT THIS BUILD'
@@ -72,6 +76,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_DESCRIPTIONS:Array<String> = [
     "Jump into the original Friday Night Funkin' story, keep your progress, and take on every week at your own pace.",
     'Search the song library, choose a difficulty, and jump straight into a track.',
+    'Browse only the songs supplied by the currently active Psych Engine experience.',
     'Browse local mods, inspect their information, enable or disable them, and arrange load priority.',
     'Adjust your game preferences, controls, accessibility, and the menu presentation.',
     "View the people and projects behind Friday Night Funkin' and NovaBeat Engine."
@@ -80,6 +85,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_SHORT_DESCRIPTIONS:Array<String> = [
     'Choose a week and continue the campaign.',
     'Pick a song and difficulty.',
+    'Play songs from the active Psych Engine mod.',
     'Manage installed mods and load order.',
     'Change settings and customize the menus.',
     'Meet the people behind the engine.'
@@ -88,6 +94,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_META:Array<Array<String>> = [
     ['CAMPAIGN', 'WEEK SELECT', 'DIFFICULTY'],
     ['SONG LIBRARY', 'DIFFICULTY', 'FAVORITES'],
+    ['PSYCH MODS', 'SONG DATA', 'DIFFICULTY'],
     ['INSTALLED', 'LOCAL LIBRARY', 'LOAD ORDER'],
     ['AUDIO', 'GAMEPLAY', 'CUSTOMIZATION'],
     ['ENGINE', 'FOUNDATION', 'CREDITS']
@@ -97,6 +104,9 @@ class NovaBeatMainMenuState extends MusicBeatState
   var interfaceLayer:FlxTypedGroup<FlxBasic>;
   var routeInterfaceObjects:Bool = false;
   var menuItems:TextMenuList;
+  // Indexes into the menu content arrays. Psych Freeplay is inserted only
+  // while a launchable Psych experience is active.
+  var visibleItemIndexes:Array<Int> = [];
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
   var transitioning:Bool = false;
@@ -427,9 +437,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     var gap:Float = (tileLayout ? Math.max(8, FlxG.width * 0.018) : Math.max(9, FlxG.height * 0.018));
     gap *= densityMultiplier() * 1.06;
 
+    // Installed-but-inactive Psych packages do not add a menu entry.
+    visibleItemIndexes = [0, 1];
+    if (ExperienceManager.getActivePsychSongIds().length > 0)
+      visibleItemIndexes.push(2);
+    visibleItemIndexes = visibleItemIndexes.concat([3, 4, 5]);
+
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
     var columns:Int = tileLayout ? (portraitLayout ? 1 : 2) : 1;
-    var rows:Int = Std.int(Math.ceil(ITEM_NAMES.length / columns));
+    var entryCount:Int = visibleItemIndexes.length;
+    var rows:Int = Std.int(Math.ceil(entryCount / columns));
     var buttonW:Float = tileLayout ? (width - gap * (columns + 1)) / columns : width - 20;
     var buttonH:Float;
     if (tileLayout)
@@ -441,7 +458,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
     else
     {
-      buttonH = Math.max(54, Math.min(82, (height - gap * 4) / 5));
+      buttonH = Math.max(54, Math.min(82, (height - gap * (rows - 1)) / rows));
     }
 
     var firstX:Float = tileLayout ? x + gap : x + 6;
@@ -451,8 +468,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     menuItems.cameras = [uiCamera];
     menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
-    for (index in 0...ITEM_NAMES.length)
+    for (index in 0...visibleItemIndexes.length)
     {
+      var menuIndex:Int = visibleItemIndexes[index];
       var column:Int = tileLayout ? index % columns : 0;
       var row:Int = tileLayout ? Std.int(index / columns) : index;
       var itemX:Float = tileLayout ? firstX + column * (buttonW + gap) : firstX;
@@ -466,7 +484,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       accent.alpha = 0.38;
       rowAccents.push(accent);
 
-      var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[index], AtlasFont.BOLD, makeCallback(index));
+      var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
       item.cameras = [uiCamera];
       item.makeGraphic(Std.int(buttonW), Std.int(buttonH), FlxColor.TRANSPARENT);
       item.updateHitbox();
@@ -485,7 +503,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       rowIconPlates.push(iconPlate);
 
       var iconSize:Int = tileLayout ? (portraitLayout ? 28 : 24) : 25;
-      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[index], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
+      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[menuIndex], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
       icon.scrollFactor.set();
       icon.autoSize = false;
       icon.fieldWidth = iconPlateSize;
@@ -494,7 +512,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       var labelX:Float = iconX + iconPlateSize + (tileLayout ? 10 : 14);
       var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
-      var title:String = ITEM_TITLES[index].split('\n').join(' ');
+      var title:String = ITEM_TITLES[menuIndex].split('\n').join(' ');
       var titleY:Float = itemY + 8;
       var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? (portraitLayout ? 19 : 16) : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
       label.autoSize = false;
@@ -505,7 +523,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       rowLabels.push(label);
 
       var kickerY:Float = itemY + (tileLayout ? (portraitLayout ? 39 : 32) : 31);
-      var kicker:FlxText = addLabel(labelX, kickerY, labelWidth, ITEM_KICKERS[index], tileLayout ? (portraitLayout ? 11 : 10) : 9, 0xFF48CDEB, FlxTextAlign.LEFT, 'Arial');
+      var kicker:FlxText = addLabel(labelX, kickerY, labelWidth, ITEM_KICKERS[menuIndex], tileLayout ? (portraitLayout ? 11 : 10) : 9, 0xFF48CDEB, FlxTextAlign.LEFT, 'Arial');
       kicker.autoSize = false;
       kicker.wordWrap = false;
       kicker.fieldWidth = labelWidth;
@@ -514,7 +532,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       rowKickers.push(kicker);
 
       var descriptionY:Float = itemY + (tileLayout ? (portraitLayout ? 62 : 52) : 47);
-      var description:String = tileLayout ? ITEM_SHORT_DESCRIPTIONS[index] : ITEM_DESCRIPTIONS[index];
+      var description:String = tileLayout ? ITEM_SHORT_DESCRIPTIONS[menuIndex] : ITEM_DESCRIPTIONS[menuIndex];
       var descriptionText:FlxText = addLabel(labelX, descriptionY, labelWidth, description, tileLayout ? (portraitLayout ? 11 : 9) : 9, 0xFFAABBDD, FlxTextAlign.LEFT, 'Arial');
       descriptionText.autoSize = false;
       descriptionText.wordWrap = true;
@@ -581,9 +599,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function updateSelection(index:Int):Void
   {
-    if (index < 0 || index >= ITEM_NAMES.length) return;
+    if (index < 0 || index >= visibleItemIndexes.length) return;
 
-    for (i in 0...ITEM_NAMES.length)
+    for (i in 0...visibleItemIndexes.length)
     {
       var selected:Bool = i == index;
       if (i < rowBackgrounds.length)
@@ -621,9 +639,10 @@ class NovaBeatMainMenuState extends MusicBeatState
       }
     }
 
-    if (featureKicker != null) featureKicker.text = ITEM_KICKERS[index];
-    if (featureTitle != null) featureTitle.text = ITEM_NAMES[index];
-    if (featureDescription != null) featureDescription.text = ITEM_DESCRIPTIONS[index];
+    var selectedMenuIndex:Int = visibleItemIndexes[index];
+    if (featureKicker != null) featureKicker.text = ITEM_KICKERS[selectedMenuIndex];
+    if (featureTitle != null) featureTitle.text = ITEM_NAMES[selectedMenuIndex];
+    if (featureDescription != null) featureDescription.text = ITEM_DESCRIPTIONS[selectedMenuIndex];
 
     // MenuTypedList owns navigation sounds for keyboard, controller, and mouse.
   }
@@ -777,10 +796,19 @@ class NovaBeatMainMenuState extends MusicBeatState
           }));
           persistentUpdate = false;
         case 2:
-          FlxG.switchState(() -> new NovaBeatModsMenuState());
+          // Re-check at activation time so a stale Psych context cannot open
+          // an empty Psych-only playlist.
+          if (ExperienceManager.getActivePsychSongIds().length == 0) return;
+          openSubState(new FreeplayState({
+            character: FreeplayState.rememberedCharacterId,
+            psychOnly: true
+          }));
+          persistentUpdate = false;
         case 3:
-          openOptions();
+          FlxG.switchState(() -> new NovaBeatModsMenuState());
         case 4:
+          openOptions();
+        case 5:
           FlxG.switchState(() -> new CreditsState());
         default:
       }
