@@ -4,6 +4,8 @@ import funkin.Assets;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongMetadata;
+import funkin.data.character.CharacterDataParser;
+import funkin.data.character.CharacterData.CharacterData;
 import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongRegistry;
 import funkin.data.song.importer.FNFLegacyData;
@@ -238,6 +240,8 @@ class PsychModRuntime
   public static function getScriptSources(modDirs:Array<String>, songId:String):Array<PsychScriptSource>
   {
     var globalSources:Array<PsychScriptSource> = [];
+    var stageSources:Array<PsychScriptSource> = [];
+    var characterSources:Array<PsychScriptSource> = [];
     var customEventSources:Array<PsychScriptSource> = [];
     var customNoteSources:Array<PsychScriptSource> = [];
     var songSources:Array<PsychScriptSource> = [];
@@ -261,6 +265,8 @@ class PsychModRuntime
 
         var eventNames:Array<String> = [];
         var noteTypeNames:Array<String> = [];
+        var stageNames:Array<String> = [];
+        var characterNames:Array<String> = [];
         for (fileName in FileSystem.readDirectory(dataPath))
         {
           var lower:String = fileName.toLowerCase();
@@ -273,6 +279,24 @@ class PsychModRuntime
             for (event in extractPsychEvents(Reflect.field(chartSong, "events")))
               if (!eventNames.contains(event.name.toLowerCase())) eventNames.push(event.name.toLowerCase());
             collectPsychNoteTypes(Reflect.field(chartSong, "notes"), noteTypeNames);
+
+            var rawStage:Dynamic = Reflect.field(chartSong, "stage");
+            if (rawStage == null || StringTools.trim(Std.string(rawStage)).length == 0)
+              rawStage = Reflect.field(chartSong, "stageDefault");
+            if (rawStage != null)
+            {
+              var stageName:String = StringTools.trim(Std.string(rawStage)).toLowerCase();
+              if (stageName.length > 0 && !stageNames.contains(stageName)) stageNames.push(stageName);
+            }
+
+            for (field in ["player1", "player2", "player3", "gfVersion"])
+            {
+              var rawCharacter:Dynamic = Reflect.field(chartSong, field);
+              if (rawCharacter == null) continue;
+              var characterName:String = StringTools.trim(Std.string(rawCharacter)).toLowerCase();
+              if (characterName.length > 0 && !characterNames.contains(characterName))
+                characterNames.push(characterName);
+            }
           }
           catch (error:Dynamic)
           {
@@ -295,6 +319,12 @@ class PsychModRuntime
           }
         }
 
+        stageSources = stageSources.concat(
+          readNamedScriptSources(Path.join([modPath, "stages"]), stageNames)
+        );
+        characterSources = characterSources.concat(
+          readNamedScriptSources(Path.join([modPath, "characters"]), characterNames)
+        );
         customEventSources = customEventSources.concat(
           readNamedScriptSources(Path.join([modPath, "custom_events"]), eventNames)
         );
@@ -305,10 +335,145 @@ class PsychModRuntime
       }
     }
     #end
-    return globalSources.concat(customEventSources).concat(customNoteSources).concat(songSources);
+    return globalSources.concat(stageSources).concat(characterSources)
+      .concat(customEventSources).concat(customNoteSources).concat(songSources);
+  }
+
+  public static function prepareSongCharacters(modDirs:Array<String>, songId:String,
+      characters:Null<SongCharacterData>):Void
+  {
+    if (characters == null) return;
+    var characterIds:Array<String> = [characters.player, characters.girlfriend, characters.opponent];
+    for (characterId in characterIds)
+    {
+      if (characterId == null || characterId.length == 0
+        || CharacterDataParser.fetchCharacterData(characterId) != null) continue;
+
+      var registered:Bool = false;
+      #if sys
+      var root:String = PolymodHandler.getModRoot();
+      for (directory in modDirs)
+      {
+        var modPath:String = Path.join([root, directory]);
+        var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, characterId);
+        if (jsonPath == null) continue;
+        try
+        {
+          var raw:Dynamic = Json.parse(File.getContent(jsonPath));
+          var converted:Null<CharacterData> = convertPsychCharacterData(characterId, raw);
+          if (converted != null && CharacterDataParser.registerModCharacterData(characterId, converted))
+          {
+            trace('[Psych Compatibility] Registered custom Psych character: ' + characterId);
+            registered = true;
+            break;
+          }
+        }
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not convert custom character ' + characterId + ': ' + Std.string(error));
+        }
+      }
+      #end
+      if (!registered)
+        trace('[Psych Compatibility] Custom character data was not registered: ' + characterId);
+    }
   }
 
   #if sys
+  static function findPsychCharacterDataFile(modPath:String, characterId:String):Null<String>
+  {
+    var candidates:Array<String> = [
+      Path.join([modPath, "characters", characterId + ".json"]),
+      Path.join([modPath, "data", "characters", characterId + ".json"])
+    ];
+    for (candidate in candidates)
+      if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate)) return candidate;
+    for (root in [Path.join([modPath, "characters"]), Path.join([modPath, "data", "characters"])])
+    {
+      if (!FileSystem.exists(root) || !FileSystem.isDirectory(root)) continue;
+      for (entry in FileSystem.readDirectory(root))
+        if (!FileSystem.isDirectory(Path.join([root, entry]))
+          && entry.toLowerCase() == (characterId + ".json").toLowerCase())
+          return Path.join([root, entry]);
+    }
+    return null;
+  }
+
+  static function hasPsychCharacterDataFile(modPath:String, characterId:String):Bool
+  {
+    return findPsychCharacterDataFile(modPath, characterId) != null;
+  }
+
+  static function convertPsychCharacterData(characterId:String, raw:Dynamic):Null<CharacterData>
+  {
+    if (raw == null) return null;
+    var image:Dynamic = Reflect.field(raw, "image");
+    var rawAnimations:Dynamic = Reflect.field(raw, "animations");
+    if (image == null || !Std.isOfType(rawAnimations, Array)) return null;
+
+    var animations:Array<Dynamic> = [];
+    var startingAnimation:String = "idle";
+    for (rawAnimation in (cast rawAnimations:Array<Dynamic>))
+    {
+      if (rawAnimation == null) continue;
+      var animationName:Dynamic = Reflect.field(rawAnimation, "anim");
+      var animationPrefix:Dynamic = Reflect.field(rawAnimation, "name");
+      if (animationName == null) continue;
+      if (animationPrefix == null) animationPrefix = animationName;
+      if (animations.length == 0) startingAnimation = Std.string(animationName);
+      var fpsValue:Dynamic = Reflect.field(rawAnimation, "fps");
+      var fps:Float = fpsValue == null ? 24 : Std.parseFloat(Std.string(fpsValue));
+      if (Math.isNaN(fps) || fps <= 0) fps = 24;
+      var offsetsValue:Dynamic = Reflect.field(rawAnimation, "offsets");
+      var animationOffsets:Array<Float> = Std.isOfType(offsetsValue, Array) ? cast offsetsValue : [0, 0];
+      animations.push({
+        name: Std.string(animationName),
+        prefix: Std.string(animationPrefix),
+        frameRate: Std.int(fps),
+        looped: Reflect.field(rawAnimation, "loop") == true,
+        offsets: animationOffsets
+      });
+      if (Std.string(animationName).toLowerCase() == "idle") startingAnimation = "idle";
+    }
+    if (animations.length == 0) return null;
+
+    var cameraValue:Dynamic = Reflect.field(raw, "camera_position");
+    var cameraOffsets:Array<Float> = Std.isOfType(cameraValue, Array) ? cast cameraValue : [0, 0];
+    var positionValue:Dynamic = Reflect.field(raw, "position");
+    var position:Array<Float> = Std.isOfType(positionValue, Array) ? cast positionValue : [0, 0];
+    var healthIconId:Dynamic = Reflect.field(raw, "healthicon");
+    if (healthIconId == null || Std.string(healthIconId).length == 0) healthIconId = characterId;
+    var scaleValue:Dynamic = Reflect.field(raw, "scale");
+    var scale:Float = scaleValue == null ? 1 : Std.parseFloat(Std.string(scaleValue));
+    if (Math.isNaN(scale) || scale <= 0) scale = 1;
+    var singTimeValue:Dynamic = Reflect.field(raw, "sing_duration");
+    var singTime:Float = singTimeValue == null ? 8 : Std.parseFloat(Std.string(singTimeValue));
+    if (Math.isNaN(singTime) || singTime <= 0) singTime = 8;
+    var isPixel:Bool = Reflect.field(raw, "no_antialiasing") == true;
+
+    var data:Dynamic = {
+      version: CharacterDataParser.CHARACTER_DATA_VERSION,
+      name: characterId,
+      renderType: "sparrow",
+      assetPath: Std.string(image),
+      scale: scale,
+      healthIcon: {
+        id: Std.string(healthIconId), shouldBop: true, scale: 1, flipX: false,
+        isPixel: isPixel, offsets: [0, 25]
+      },
+      offsets: position,
+      cameraOffsets: cameraOffsets,
+      isPixel: isPixel,
+      danceEvery: 1,
+      singTime: singTime,
+      animations: animations,
+      startingAnimation: startingAnimation,
+      flipX: Reflect.field(raw, "flip_x") == true,
+      applyStageMatrix: false
+    };
+    return cast data;
+  }
+
   static function readScriptSources(path:String, depth:Int):Array<PsychScriptSource>
   {
     var paths:Array<String> = [];
@@ -480,24 +645,30 @@ class PsychModRuntime
       // this chart-specific gate when the file has the legacy song.notes key.
       if (song == null || Reflect.field(song, "notes") == null) return null;
 
-      var supportedIds:Map<String, String> = [
+      var supportedCharacterIds:Map<String, String> = [
         "player1" => "bf",
         "player2" => "dad",
         "player3" => "gf",
-        "gfVersion" => "gf",
-        "stage" => Constants.DEFAULT_STAGE,
-        "stageDefault" => Constants.DEFAULT_STAGE
+        "gfVersion" => "gf"
       ];
 
-      for (field => expected in supportedIds)
+      for (field => expected in supportedCharacterIds)
       {
         var rawValue:Dynamic = Reflect.field(song, field);
         if (rawValue == null) continue;
-        var actual:String = StringTools.trim(Std.string(rawValue)).toLowerCase();
-        if (actual.length == 0) continue;
-        if (actual != expected.toLowerCase())
-          return "custom or non-default " + field + " (" + actual + ")";
+        var actual:String = StringTools.trim(Std.string(rawValue));
+        if (actual.length == 0 || actual.toLowerCase() == expected.toLowerCase()) continue;
+        if (!hasPsychCharacterDataFile(modPath, actual))
+          return "custom character '" + actual + "' is missing characters/" + actual + ".json";
       }
+
+      var stageValue:Dynamic = Reflect.field(song, "stage");
+      if (stageValue == null || StringTools.trim(Std.string(stageValue)).length == 0)
+        stageValue = Reflect.field(song, "stageDefault");
+      var stageName:String = stageValue == null ? Constants.DEFAULT_STAGE : StringTools.trim(Std.string(stageValue));
+      if (stageName.length > 0 && stageName.toLowerCase() != Constants.DEFAULT_STAGE.toLowerCase()
+        && !hasNamedPsychScript(Path.join([modPath, "stages"]), stageName))
+        return "custom stage '" + stageName + "' is missing a matching stages/" + stageName + ".lua script";
 
       for (field in ["arrowSkin", "splashSkin", "noteStyle"])
       {
@@ -799,9 +970,20 @@ class PsychModRuntime
     return null;
   }
 
+  static function readPsychString(source:Dynamic, field:String, fallback:String):String
+  {
+    var value:Dynamic = source == null ? null : Reflect.field(source, field);
+    if (value == null) return fallback;
+    var result:String = StringTools.trim(Std.string(value));
+    return result.length == 0 ? fallback : result;
+  }
+
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
   {
     var metadata:Null<SongMetadata> = null;
+    var psychPlayerId:String = "bf";
+    var psychGirlfriendId:String = "gf";
+    var psychOpponentId:String = "dad";
     var combinedNotes:Map<String, Array<funkin.data.song.SongData.SongNoteData>> = [];
     var combinedSpeeds:Map<String, Float> = [];
     var combinedEvents:Array<funkin.data.song.SongData.SongEventData> = [];
@@ -811,11 +993,19 @@ class PsychModRuntime
       var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
       if (legacy == null || legacy.song == null || legacy.song.notes == null) continue;
 
+      var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
+      var chartSong:Dynamic = Reflect.field(chartRoot, "song");
       var difficultyName:String = getDifficultyName(source.songFolder, Path.withoutExtension(Path.withoutDirectory(chartPath)));
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
-      if (metadata == null) metadata = importedMetadata;
+      if (metadata == null)
+      {
+        metadata = importedMetadata;
+        psychPlayerId = readPsychString(chartSong, "player1", "bf");
+        psychOpponentId = readPsychString(chartSong, "player2", "dad");
+        psychGirlfriendId = readPsychString(chartSong, "gfVersion", "gf");
+      }
 
       for (difficulty in importedChart.notes.keys())
       {
@@ -830,8 +1020,6 @@ class PsychModRuntime
           combinedEvents.push(event);
       }
 
-      var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
-      var chartSong:Dynamic = Reflect.field(chartRoot, "song");
       for (event in extractPsychEvents(Reflect.field(chartSong, "events")))
       {
         combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
@@ -865,7 +1053,7 @@ class PsychModRuntime
     metadata.generatedBy = "NovaBeat Psych compatibility";
     metadata.playData.songVariations = [];
     metadata.playData.difficulties = [for (difficulty in combinedNotes.keys()) difficulty];
-    metadata.playData.characters = new SongCharacterData("bf", "gf", "dad");
+    metadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
     metadata.playData.stage = Constants.DEFAULT_STAGE;
     metadata.playData.noteStyle = Constants.DEFAULT_NOTE_STYLE;
     for (difficulty in metadata.playData.difficulties)
@@ -917,9 +1105,7 @@ class PsychModRuntime
     // lifecycle adapters and are deliberately rejected.
     var roots:Array<String> = [
       "custom_notes",
-      "custom_substates",
-      "stages",
-      "characters"
+      "custom_substates"
     ];
     var count:Int = 0;
     for (folder in roots)

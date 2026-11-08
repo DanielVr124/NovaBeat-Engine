@@ -897,6 +897,10 @@ class PlayState extends MusicBeatSubState
 
     Conductor.instance.update(pre);
 
+    // Register standard Psych character JSON before NovaBeat's character factory runs.
+    var characterRegistrationDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
+    PsychModRuntime.prepareSongCharacters(characterRegistrationDirs, currentSong.id, currentChart.characters);
+
     // The song is now loaded. We can continue to initialize the play state.
     initCameras();
     initHealthBar();

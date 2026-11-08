@@ -118,15 +118,21 @@ class PsychScriptRuntime
     for (name => value in globals)
       activeGlobals.set(name, value);
     var loaded:Int = 0;
+    var hasCustomStageScript:Bool = false;
     var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
     for (source in sources)
     {
       if (loadSource(source.path, source.source, globals) != null)
+      {
         loaded++;
+        var normalizedPath:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
+        if (StringTools.contains(normalizedPath, "/stages/")) hasCustomStageScript = true;
+      }
     }
 
     if (loaded > 0)
     {
+      if (hasCustomStageScript) PsychGameplayApi.hideDefaultStageProps(playState);
       dispatch("onCreate", []);
       dispatch("onSongLoaded", []);
     }

@@ -309,6 +309,20 @@ class CharacterDataParser
   }
 
   /**
+   * Register converted mod character data after applying the same validation
+   * used for packaged character JSON. Existing entries are never overwritten.
+   */
+  public static function registerModCharacterData(charId:String, input:CharacterData):Bool
+  {
+    if (charId == null || charId.length == 0 || characterCache.exists(charId)) return false;
+    var validated:Null<CharacterData> = validateCharacterData(charId, input);
+    if (validated == null) return false;
+    characterCache.set(charId, validated);
+    characterScriptedClass.remove(charId);
+    return true;
+  }
+
+  /**
    * Lists all the valid character IDs.
    * @return An array of character IDs.
    */

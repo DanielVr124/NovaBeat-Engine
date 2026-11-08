@@ -307,6 +307,16 @@ class PsychGameplayApi
     return vars;
   }
 
+  public static function hideDefaultStageProps(state:PlayState):Void
+  {
+    if (state == null || state.currentStage == null) return;
+    for (member in state.currentStage.members)
+    {
+      if (member == null || Std.isOfType(member, BaseCharacter)) continue;
+      member.visible = false;
+    }
+  }
+
   static function playTaggedSound(soundPath:String, volume:Float, tag:String):Bool
   {
     if (soundPath == null || soundPath.length == 0) return false;
