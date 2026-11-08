@@ -57,6 +57,8 @@ import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.HapticUtil;
 import funkin.util.MathUtil;
 import funkin.util.SortUtil;
+import funkin.util.TouchUtil;
+import funkin.util.SwipeUtil;
 import openfl.display.BlendMode;
 import funkin.ui.freeplay.DifficultyDot;
 import funkin.data.freeplay.style.FreeplayStyleRegistry;
@@ -70,8 +72,6 @@ import funkin.ui.debug.stageeditor.StageEditorState;
 import funkin.api.discord.DiscordClient;
 #end
 #if FEATURE_TOUCH_CONTROLS
-import funkin.util.TouchUtil;
-import funkin.util.SwipeUtil;
 import funkin.mobile.input.ControlsHandler;
 import funkin.util.DeviceUtil;
 #end
