@@ -48,6 +48,10 @@ class PsychModRuntime
     // not silently drop its stage, cast, events, or custom note behavior.
     for (source in sources)
     {
+      // A chart without its matching instrumental cannot be launched and
+      // should not prevent otherwise complete songs in this package loading.
+      if (source.instrumentFile == null) continue;
+
       for (chartPath in source.chartFiles)
       {
         var chartProblem:Null<String> = inspectUnsupportedChartFeatures(chartPath);
@@ -333,8 +337,12 @@ class PsychModRuntime
         if (!StringTools.endsWith(lower, ".json") || lower == "events.json") continue;
 
         var chartPath:String = Path.join([dataPath, fileName]);
+        var chartProblem:Null<String> = inspectUnsupportedChartFeatures(chartPath);
         var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
-        if (legacy != null && legacy.song != null && legacy.song.notes != null)
+        // Preserve raw charts that use unsupported fields even when the
+        // legacy importer rejects them, so a different difficulty cannot
+        // accidentally make the whole package appear fully compatible.
+        if ((legacy != null && legacy.song != null && legacy.song.notes != null) || chartProblem != null)
           chartFiles.push(chartPath);
       }
 
@@ -374,7 +382,9 @@ class PsychModRuntime
     {
       var root:Dynamic = Json.parse(File.getContent(path));
       var song:Dynamic = Reflect.field(root, "song");
-      if (song == null) return "the chart is missing its song data";
+      // data/<song>/ can also contain dialogue/other JSON files. Only apply
+      // this chart-specific gate when the file has the legacy song.notes key.
+      if (song == null || Reflect.field(song, "notes") == null) return null;
 
       var supportedIds:Map<String, String> = [
         "player1" => "bf",
@@ -429,7 +439,9 @@ class PsychModRuntime
     catch (error:Dynamic)
     {
       trace('[Psych Compatibility] Could not inspect raw chart ' + path + ': ' + Std.string(error));
-      return "raw chart metadata could not be safely inspected";
+      // Invalid/non-chart JSON is not a supported chart file and will not be
+      // imported by parseLegacyChart either.
+      return null;
     }
   }
 
