@@ -12,6 +12,8 @@ import funkin.util.assets.DataAssets;
 import funkin.util.VersionUtil;
 import funkin.util.tools.ISingleton;
 import funkin.data.DefaultRegistryImpl;
+import funkin.modding.ExperienceManager;
+import funkin.modding.PsychModRuntime;
 
 using funkin.data.song.migrator.SongDataMigrator;
 
@@ -109,11 +111,29 @@ class SongRegistry extends BaseRegistry<Song, SongMetadata, SongEntryParams> imp
         continue;
       }
     }
+
+    // Import the limited, chart-only Psych compatibility tier after Polymod
+    // has mounted the active packages and the native song registry is ready.
+    var importedPsychSongs:Array<String> = PsychModRuntime.loadSongs(ExperienceManager.getActivePsychModDirs());
+    for (songId in importedPsychSongs)
+    {
+      log('Loaded classic Psych chart: ' + songId);
+    }
   }
 
   /**
    * Read, parse, and validate the JSON data and produce the corresponding data object.
    */
+  /**
+   * Register a compatibility song built from a non-native chart format.
+   * This is intentionally limited to runtime adapters such as PsychModRuntime.
+   */
+  public function registerCompatibilitySong(entry:Song):Void
+  {
+    if (entry == null) return;
+    entries.set(entry.id, entry);
+  }
+
   public function parseEntryData(id:String):Null<SongMetadata>
   {
     return parseEntryMetadata(id);
