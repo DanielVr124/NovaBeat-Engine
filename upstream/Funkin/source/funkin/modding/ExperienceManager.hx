@@ -3,6 +3,7 @@ package funkin.modding;
 import funkin.data.song.SongRegistry;
 import funkin.modding.EngineBridge.EngineDetection;
 import funkin.modding.PsychModRuntime;
+import funkin.modding.PsychModRuntime.PsychPackageAssessment;
 import funkin.save.Save;
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 
