@@ -691,7 +691,12 @@ class PsychScriptRuntime
       trace('[Psych Script Runtime] Lua smoke test failed: ' + Std.string(error));
     }
     if (lua != null) lua.destroy();
-    return hscriptPassed && luaPassed;
+
+    var apiPassed:Bool = PlayState.instance != null && PsychGameplayApi.runApiSmokeTests(PlayState.instance);
+    if (!apiPassed)
+      trace('[Psych Script Runtime] Gameplay API registration smoke test failed.');
+
+    return hscriptPassed && luaPassed && apiPassed;
     #else
     return false;
     #end
