@@ -86,14 +86,14 @@ class PsychScriptInstance
     // Install the instruction hook while the debug library is still present.
     // The hook remains active after its global library is removed below.
     var bootstrap:String =
-      "local __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + "\\n" +
-      "local function __novabeat_hook()\\n" +
-      "  __novabeat_budget = __novabeat_budget - 1\\n" +
-      "  if __novabeat_budget <= 0 then error('NovaBeat Lua instruction budget exceeded', 0) end\\n" +
-      "end\\n" +
-      "function __novabeat_reset_budget() __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + " end\\n" +
-      "function __novabeat_has_function(name) return type(_G[name]) == 'function' end\\n" +
-      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\\n";
+      "local __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + "\n" +
+      "local function __novabeat_hook()\n" +
+      "  __novabeat_budget = __novabeat_budget - 1\n" +
+      "  if __novabeat_budget <= 0 then error('NovaBeat Lua instruction budget exceeded', 0) end\n" +
+      "end\n" +
+      "function __novabeat_reset_budget() __novabeat_budget = " + Std.string(LUA_INSTRUCTION_BUDGET) + " end\n" +
+      "function __novabeat_has_function(name) return type(_G[name]) == 'function' end\n" +
+      "debug.sethook(__novabeat_hook, '', " + Std.string(LUA_HOOK_INTERVAL) + ")\n";
 
     try
     {
