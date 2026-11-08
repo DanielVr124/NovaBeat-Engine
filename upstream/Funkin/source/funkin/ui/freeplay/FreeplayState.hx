@@ -981,7 +981,7 @@ class FreeplayState extends MusicBeatSubState
       // but sometimes pico can be the default variation (weekend 1 songs), and bf can be `bf` variation (darnell)
       if (ExperienceManager.isPsychSong(song.songId))
       {
-        return song.data.getDifficulty(currentDifficulty, Constants.DEFAULT_VARIATION) != null;
+        return song.data.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true).length > 0;
       }
 
       var characterVariations:Array<String> = song.data.getVariationsByCharacter(currentCharacter);
@@ -2832,6 +2832,12 @@ class FreeplayState extends MusicBeatSubState
       return;
     }
     var targetSong:Song = targetSongNullable;
+    if (ExperienceManager.isPsychSong(targetSongId))
+    {
+      var psychDifficulties:Array<String> = targetSong.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true);
+      if (psychDifficulties.length > 0 && !psychDifficulties.contains(targetDifficultyId))
+        targetDifficultyId = psychDifficulties[0];
+    }
     var targetLevelId:Null<String> = cap?.freeplayData?.levelId;
     PlayStatePlaylist.campaignId = targetLevelId ?? null;
 
@@ -2914,10 +2920,18 @@ class FreeplayState extends MusicBeatSubState
     }
     var targetSong:Song = targetSongNullable;
     var targetLevelId:Null<String> = cap?.freeplayData?.levelId;
+    var targetDifficultyId:String = currentDifficulty;
+
+    if (ExperienceManager.isPsychSong(targetSongId))
+    {
+      var psychDifficulties:Array<String> = targetSong.listDifficulties(null, [Constants.DEFAULT_VARIATION], true, true);
+      if (psychDifficulties.length > 0 && !psychDifficulties.contains(targetDifficultyId))
+        targetDifficultyId = psychDifficulties[0];
+    }
 
     PlayStatePlaylist.campaignId = targetLevelId ?? null;
 
-    var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, currentVariation);
+    var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(targetDifficultyId, targetVariation);
     if (targetDifficulty == null)
     {
       FlxG.log.warn('WARN: could not find difficulty with id (${currentDifficulty})');
@@ -2927,7 +2941,7 @@ class FreeplayState extends MusicBeatSubState
 
     if (targetInstId == null)
     {
-      var baseInstrumentalId:String = targetSong?.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? Constants.DEFAULT_VARIATION) ?? '';
+      var baseInstrumentalId:String = targetSong?.getBaseInstrumentalId(targetDifficultyId, targetDifficulty.variation ?? Constants.DEFAULT_VARIATION) ?? '';
       targetInstId = baseInstrumentalId;
     }
 
@@ -2979,7 +2993,7 @@ class FreeplayState extends MusicBeatSubState
         Paths.setCurrentLevel(cap?.freeplayData?.levelId);
         LoadingState.loadPlayState({
           targetSong: targetSong,
-          targetDifficulty: currentDifficulty,
+          targetDifficulty: targetDifficultyId,
           targetVariation: targetVariation,
           targetInstrumental: targetInstId,
           practiceMode: false,
@@ -3824,6 +3838,8 @@ class FreeplaySongData
 
   function get_curVariation():String
   {
+    if (ExperienceManager.isPsychSong(songId)) return Constants.DEFAULT_VARIATION;
+
     // Temporarily fetch the song to check for the first valid variation of it.
     // For example if the current character is bf, for songs such as darnell we want to use the 'bf' variation instead of 'normal'.
     var song:Null<Song> = SongRegistry.instance.fetchEntry(songId);
