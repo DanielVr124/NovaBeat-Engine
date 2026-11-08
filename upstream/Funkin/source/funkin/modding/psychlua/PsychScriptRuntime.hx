@@ -754,6 +754,26 @@ class PsychScriptRuntime
     }
     if (hscript != null) hscript.destroy();
 
+    var closePassed:Bool = false;
+    var closeScript:Null<PsychScriptInstance> = null;
+    try
+    {
+      closeScript = new PsychScriptInstance(
+        "novabeat-close-smoke-test.hx",
+        "function closeAndReturn() { close(); return 23; }",
+        ["close" => function():Bool return PsychScriptRuntime.closeCurrentScript()]
+      );
+      var closeResult:Dynamic = callScriptInstance(closeScript, "closeAndReturn", []);
+      closePassed = closeResult == 23 && closeScript.closed && closeScript.lastError == null;
+      if (!closePassed)
+        trace('[Psych Script Runtime] close() smoke test did not close the current script after its callback returned.');
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Script Runtime] close() smoke test failed: ' + Std.string(error));
+    }
+    if (closeScript != null && !closeScript.closed) closeScript.destroy();
+
     #if (cpp || js)
     var luaPassed:Bool = false;
     var lua:Null<PsychScriptInstance> = null;
@@ -784,7 +804,7 @@ class PsychScriptRuntime
     if (!apiPassed)
       trace('[Psych Script Runtime] Gameplay API registration smoke test failed.');
 
-    return hscriptPassed && luaPassed && apiPassed;
+    return hscriptPassed && closePassed && luaPassed && apiPassed;
     #else
     return false;
     #end
