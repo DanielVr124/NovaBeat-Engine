@@ -73,6 +73,8 @@ class PsychGameplayApi
       vars.set("timeBarType", activeTimeBar.timeBarType);
     }
 
+    vars.set("close", function():Bool return PsychScriptRuntime.closeCurrentScript());
+
     vars.set("getProperty", function(path:String, ?allowMaps:Bool = false):Dynamic return getProperty(state, path, allowMaps));
     vars.set("setProperty", function(path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic return setProperty(state, path, value, allowMaps));
     // Psych exposes explicit helpers for objects created by makeLuaSprite /
@@ -95,6 +97,8 @@ class PsychGameplayApi
       return getPropertyFromGroup(state, group, index, path, allowMaps));
     vars.set("setPropertyFromGroup", function(group:String, index:Int, path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic
       return setPropertyFromGroup(state, group, index, path, value, allowMaps));
+    vars.set("removeFromGroup", function(group:String, index:Int, ?dontDestroy:Bool = false):Bool
+      return removeFromGroup(state, group, index, dontDestroy));
 
     vars.set("setVar", function(name:String, value:Dynamic):Dynamic
     {
@@ -281,7 +285,20 @@ class PsychGameplayApi
     vars.set("mouseReleased", function(?button:String = "left"):Bool return mouseStatus(button, "justReleased"));
     vars.set("getMouseX", function(?camera:String = "game"):Float return getMousePosition(state, camera).x);
     vars.set("getMouseY", function(?camera:String = "game"):Float return getMousePosition(state, camera).y);
-    vars.set("getMouseWheel", function():Int return FlxG.mouse.wheel);
+    vars.set("getMouseWheel", function():Int return FlxG.mouse.wheel); 
+    vars.set("keyJustPressed", function(?name:String = ""):Bool return noteKeyStatus(state, name, "justPressed"));
+    vars.set("keyPressed", function(?name:String = ""):Bool return noteKeyStatus(state, name, "pressed"));
+    vars.set("keyReleased", function(?name:String = ""):Bool return noteKeyStatus(state, name, "justReleased"));
+    vars.set("gamepadJustPressed", function(id:Int, name:String):Bool return gamepadButtonStatus(id, name, "justPressed"));
+    vars.set("gamepadPressed", function(id:Int, name:String):Bool return gamepadButtonStatus(id, name, "pressed"));
+    vars.set("gamepadReleased", function(id:Int, name:String):Bool return gamepadButtonStatus(id, name, "justReleased"));
+    vars.set("stringStartsWith", function(value:String, prefix:String):Bool
+      return value != null && prefix != null && StringTools.startsWith(value, prefix));
+    vars.set("stringEndsWith", function(value:String, suffix:String):Bool
+      return value != null && suffix != null && StringTools.endsWith(value, suffix));
+    vars.set("stringSplit", function(value:String, separator:String):Array<String>
+      return value == null || separator == null || separator.length == 0 ? (value == null ? [] : [value]) : value.split(separator));
+    vars.set("stringTrim", function(value:String):String return value == null ? "" : StringTools.trim(value));
     vars.set("getMidpointX", function(variable:String):Float
     {
       var object:Dynamic = getProperty(state, variable);
@@ -683,6 +700,67 @@ class PsychGameplayApi
       if (object == null || !Std.isOfType(object, FlxText)) return false;
       var textObject:FlxText = cast object;
       textObject.setBorderStyle(resolveTextBorderStyle(borderStyle), parsePsychColor(borderColor), borderSize);
+      return true;
+    }); 
+    vars.set("setTextWidth", function(tag:String, width:Float):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).fieldWidth = width;
+      return true;
+    });
+    vars.set("setTextHeight", function(tag:String, height:Float):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).fieldHeight = height;
+      return true;
+    });
+    vars.set("setTextAutoSize", function(tag:String, enabled:Bool):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).autoSize = enabled;
+      return true;
+    });
+    vars.set("setTextItalic", function(tag:String, enabled:Bool):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      (cast object:FlxText).italic = enabled;
+      return true;
+    });
+    vars.set("getTextString", function(tag:String):Dynamic
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      return object != null && Std.isOfType(object, FlxText) ? (cast object:FlxText).text : null;
+    });
+    vars.set("getTextSize", function(tag:String):Int
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      return object != null && Std.isOfType(object, FlxText) ? (cast object:FlxText).size : -1;
+    });
+    vars.set("getTextFont", function(tag:String):Dynamic
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      return object != null && Std.isOfType(object, FlxText) ? (cast object:FlxText).font : null;
+    });
+    vars.set("getTextWidth", function(tag:String):Float
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      return object != null && Std.isOfType(object, FlxText) ? (cast object:FlxText).fieldWidth : 0;
+    });
+    vars.set("removeLuaText", function(tag:String, ?destroy:Bool = true):Bool
+    {
+      var object:Null<FlxSprite> = getSprite(state, tag);
+      if (object == null || !Std.isOfType(object, FlxText)) return false;
+      state.remove(object, true);
+      if (destroy)
+      {
+        object.kill();
+        object.destroy();
+        scriptVariables.remove(tag);
+      }
       return true;
     });
 
@@ -1145,20 +1223,25 @@ class PsychGameplayApi
     var globals:Map<String, Dynamic> = createGlobals(state);
     var required:Array<String> = [
       "getProperty", "setProperty", "getPropertyFromClass", "setPropertyFromClass",
-      "getPropertyFromGroup", "setPropertyFromGroup", "setVar", "getVar", "removeVar",
+      "getPropertyFromGroup", "setPropertyFromGroup", "removeFromGroup", "setVar", "getVar", "removeVar",
       "getHealth", "setHealth", "addHealth", "getSongPosition", "getSongName",
       "getDifficulty", "getSongLength", "getScore", "getMisses", "getHits",
       "callScript", "callOnScripts", "callOnLuas", "callOnHScript",
       "getGlobalFromScript", "setGlobalFromScript", "getGlobals", "isRunning",
       "addLuaScript", "addHScript", "removeLuaScript", "removeHScript",
       "makeLuaSprite", "makeAnimatedLuaSprite", "makeLuaText", "makeGraphic",
-      "addLuaSprite", "removeLuaSprite", "addLuaText", "objectPlayAnimation",
+      "addLuaSprite", "removeLuaSprite", "addLuaText", "removeLuaText", "luaTextExists",
+      "setTextString", "setTextSize", "setTextWidth", "setTextHeight", "setTextAutoSize",
+      "setTextItalic", "setTextFont", "setTextColor", "setTextAlignment", "setTextBorder",
+      "getTextString", "getTextSize", "getTextWidth", "getTextFont", "objectPlayAnimation",
       "addAnimationByPrefix", "addAnimationByIndices", "doTweenX", "startTween",
       "noteTweenX", "noteTweenDirection", "runTimer", "cancelTimer", "cancelTween",
       "playSound", "playMusic", "stopSound", "pauseSound", "resumeSound",
       "getSoundVolume", "getSoundTime", "setSoundTime", "getSoundPitch", "setSoundPitch",
       "soundFadeIn", "soundFadeOut", "soundFadeCancel",
-      "setTimeBarColors",
+      "setTimeBarColors", "close", "keyJustPressed", "keyPressed", "keyReleased",
+      "gamepadJustPressed", "gamepadPressed", "gamepadReleased",
+      "stringStartsWith", "stringEndsWith", "stringSplit", "stringTrim",
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
@@ -2060,6 +2143,66 @@ class PsychGameplayApi
       return Reflect.compare(a.strumTime, b.strumTime);
     });
     return result;
+  }
+
+  static function noteKeyStatus(state:PlayState, name:String, status:String):Bool
+  {
+    if (state == null || name == null) return false;
+    return switch (StringTools.trim(name).toLowerCase())
+    {
+      case "left": status == "justPressed" ? state.controls.NOTE_LEFT_P : (status == "pressed" ? state.controls.NOTE_LEFT : state.controls.NOTE_LEFT_R);
+      case "down": status == "justPressed" ? state.controls.NOTE_DOWN_P : (status == "pressed" ? state.controls.NOTE_DOWN : state.controls.NOTE_DOWN_R);
+      case "up": status == "justPressed" ? state.controls.NOTE_UP_P : (status == "pressed" ? state.controls.NOTE_UP : state.controls.NOTE_UP_R);
+      case "right": status == "justPressed" ? state.controls.NOTE_RIGHT_P : (status == "pressed" ? state.controls.NOTE_RIGHT : state.controls.NOTE_RIGHT_R);
+      default:
+        var method:Dynamic = Reflect.field(state.controls, status);
+        if (method == null) return false;
+        try return Reflect.callMethod(state.controls, method, [name]) == true catch (error:Dynamic) return false;
+    };
+  }
+
+  static function gamepadButtonStatus(id:Int, name:String, status:String):Bool
+  {
+    if (name == null || name.length == 0) return false;
+    var gamepad = FlxG.gamepads.getByID(id);
+    if (gamepad == null) return false;
+    var buttonSet:Dynamic = switch (status)
+    {
+      case "justPressed": gamepad.justPressed;
+      case "pressed": gamepad.pressed;
+      default: gamepad.justReleased;
+    };
+    return Reflect.getProperty(buttonSet, name) == true;
+  }
+
+  static function removeFromGroup(state:PlayState, group:String, index:Int, dontDestroy:Bool):Bool
+  {
+    var collection:Dynamic = resolveRoot(state, group);
+    var item:Dynamic = getGroupMember(state, group, index);
+    if (collection == null || item == null) return false;
+
+    var members:Dynamic = Reflect.field(collection, "members");
+    if (members != null)
+    {
+      var removeMethod:Dynamic = Reflect.field(collection, "remove");
+      if (removeMethod == null) return false;
+      if (!dontDestroy)
+      {
+        var killMethod:Dynamic = Reflect.field(item, "kill");
+        if (killMethod != null) Reflect.callMethod(item, killMethod, []);
+      }
+      Reflect.callMethod(collection, removeMethod, [item, true]);
+      if (!dontDestroy)
+      {
+        var destroyMethod:Dynamic = Reflect.field(item, "destroy");
+        if (destroyMethod != null) Reflect.callMethod(item, destroyMethod, []);
+      }
+      return true;
+    }
+
+    if (Std.isOfType(collection, Array))
+      return (cast collection:Array<Dynamic>).remove(item);
+    return false;
   }
 
   static function getGroupMember(state:PlayState, group:String, index:Int):Dynamic
