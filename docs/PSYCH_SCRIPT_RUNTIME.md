@@ -45,6 +45,12 @@ screen. Retrying from the pause menu does not trigger this callback.
 Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
 `curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`.
 
+Live globals set through `setGlobal` are scoped to the active song and are
+available to scripts loaded later in that song. `setOnScripts`, `setOnLuas`,
+and `setOnHScript` update only interpreters that are already loaded; transient
+values are not promoted into the persistent built-in global table. Clearing the
+song runtime resets this per-song global state.
+
 Callback return values use Psych 0.7.3's official string sentinel values and
 preserve Lua-first/HScript-second ordering. `Function_Stop` cancels the
 associated gameplay action; `Function_StopLua`, `Function_StopHScript`, and

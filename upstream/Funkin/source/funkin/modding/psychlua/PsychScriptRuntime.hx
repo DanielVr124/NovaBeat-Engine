@@ -50,6 +50,7 @@ class PsychScriptRuntime
   {
     if (name == null || name.length == 0) return;
     sharedGlobals.remove(name);
+    activeGlobals.remove(name);
   }
 
   public static function setHScriptGlobal(name:String, value:Dynamic):Void
