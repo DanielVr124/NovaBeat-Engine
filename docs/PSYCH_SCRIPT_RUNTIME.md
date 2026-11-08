@@ -71,7 +71,7 @@ The inline Haxe/Lua helper interpreters are separate from loaded mod scripts: th
 - Song and cutscene flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), `startDialogue` (reads the active song's `data/<song>/` JSON, supports typed text, basic Sparrow portrait metadata, optional music, and the cutscene-advance input), and `startVideo` (uses the platform's existing video player with the default start-cutscene flow; Psych's optional mid-song/loop/skip controls are not mapped).
 - HUD: `setTimeBarColors` controls a separate live time bar shown only for imported Psych songs. The exposed `timeBar` and `timeTxt` are NovaBeat-backed compatibility objects; the time bar uses two color segments rather than Psych's exact gradient widget.
 
-The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The two unimplemented standard callbacks are `startDialogue` (Psych's legacy dialogue JSON/renderer) and `setTimeBarColors` (NovaBeat's current gameplay HUD has no Psych-style time bar). This callback count is a registration comparison, not a claim of perfect semantic parity.
+The standard Psych 0.7.3 Lua callback comparison covers **123 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The extended helper audit also registers the names found across the 0.7.3 `psychlua` helper modules. This is API-surface coverage, not perfect semantic parity: the optional FlxAnimate functions are present as feature-detection stubs that return `false`, runtime shaders are available only on native `sys` targets, and reflection calls are deliberately constrained to approved classes and methods.
 
 ## Not supported yet
 
@@ -81,10 +81,14 @@ The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123**
 - Psych stage JSON and the full stage registry/lifecycle. Matching stage Lua/HScript files can render scripted overlays, but Psych-specific stage JSON, default zoom rules, and all camera behavior are not mapped.
 - All Psych character formats and class implementations. The adapter converts common Sparrow character JSON; Packer, AnimateAtlas, multi-atlas, custom class, and advanced character formats remain gated. Active character replacement is not yet implemented.
 - Every detail of the Psych HScript preset and exact private-global sharing semantics.
-- Full mod settings/save-data APIs and every version-specific legacy extension or fork.
+- Full parity for Psych's mod settings UI. `getModSetting` reads the owning mod's `data/settings.json` defaults and the per-mod values stored in the active game save; `initSaveData`, `getDataFromSave`, `setDataFromSave`, `flushSaveData`, and `eraseSaveData` provide mod-namespaced save slots.
+- FlxAnimate's atlas renderer is not bundled. Its four callback names are exposed for feature detection, but `makeFlxAnimateSprite`, `loadAnimateAtlas`, `addAnimationBySymbol`, and `addAnimationBySymbolIndices` return `false` until that optional dependency is integrated.
+- Full unrestricted reflection. `callMethod`, `callMethodFromClass`, and `createInstance` use explicit class/method allowlists rather than Psych's arbitrary `Type.resolveClass` behavior.
+- Filesystem access is mod-scoped: file read/write/delete/list helpers operate only inside the currently executing mod folder. Absolute paths and traversal are rejected; Lua's general `io` and `os` libraries stay disabled.
+- Every version-specific legacy extension or fork beyond the audited 0.7.3 surface.
 - HTML5 local-mod discovery and launching. The browser interpreter can compile, but the current installed-mod folder scanner depends on native filesystem access.
 
-The Lua VM removes filesystem, OS, package-loading, debug, and garbage-collector entry points. Common Lua 5.1/LuaJIT aliases (`unpack`, `loadstring`, `string.gfind`, `math.mod`, `math.atan2`, and `table.maxn`) are supplied where missing. This does not make Fengari a complete LuaJIT replacement.
+The Lua VM removes general filesystem, OS, package-loading, debug, and garbage-collector entry points. Psych-compatible file helpers are separately exposed with paths confined to the executing mod's folder. Common Lua 5.1/LuaJIT aliases (`unpack`, `loadstring`, `string.gfind`, `math.mod`, `math.atan2`, and `table.maxn`) are supplied where missing. This does not make Fengari a complete LuaJIT replacement.
 
 A successful script parse, API registration smoke test, or compile does not prove that a representative mod plays correctly. Real-mod validation is still required. The API comparison does not measure full signature parity, event ordering for every edge case, asset compatibility, or whether a mod-specific chart behaves identically to Psych. Dialogue file/portrait lookup currently requires native installed-mod filesystem access.
 
@@ -100,4 +104,4 @@ The test checks Lua/HScript execution, argument passing, injected globals, the F
 
 ## Platform note
 
-The interpreter dependencies are configured for native C++ and HTML5. However, installed Psych mod discovery and runtime script lookup currently use native filesystem access. The Psych mod path is therefore not yet available in the browser build. Android and Windows still require their own successful build and in-game mod validation.
+The interpreter dependencies are configured for native C++ and HTML5. Installed Psych mod discovery and runtime script lookup still use native filesystem access, so HTML5 local-mod launching is not available. Runtime shaders and mod-folder read/write helpers are native-only; their API names remain registered in the browser build and report unsupported operations. Windows and Android builds must still pass before native testing.
