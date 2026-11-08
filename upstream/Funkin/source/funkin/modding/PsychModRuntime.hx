@@ -189,6 +189,76 @@ class PsychModRuntime
     return songId != null && audioFolders.exists(songId);
   }
 
+  /**
+   * Resolve a dialogue JSON file relative to data/<song>/ for the currently
+   * imported Psych song. Path traversal is rejected.
+   */
+  public static function getSongDataFile(songId:String, requestedPath:String):Null<PsychScriptSource>
+  {
+    #if sys
+    var root:Null<String> = songDataFolders.get(songId);
+    if (root == null || requestedPath == null || StringTools.trim(requestedPath).length == 0) return null;
+
+    var relative:String = StringTools.replace(StringTools.trim(requestedPath), "\\", "/");
+    while (StringTools.startsWith(relative, "/")) relative = relative.substr(1);
+    if (!StringTools.endsWith(relative.toLowerCase(), ".json")) relative += ".json";
+    for (part in relative.split("/"))
+      if (part == ".." || part == ".") return null;
+
+    var base:String = Path.normalize(root);
+    var prefix:String = StringTools.endsWith(base, "/") ? base : base + "/";
+    var filePath:String = Path.normalize(Path.join([base, relative]));
+    if (!StringTools.startsWith(filePath, prefix)) return null;
+    if (!FileSystem.exists(filePath) || FileSystem.isDirectory(filePath)) return null;
+    try
+    {
+      return {path: filePath, source: File.getContent(filePath)};
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not read song data file ' + filePath + ': ' + Std.string(error));
+      return null;
+    }
+    #else
+    return null;
+    #end
+  }
+
+  /**
+   * Resolve a file from the owning Psych package (for example
+   * images/dialogue/bf.json). It does not search outside that package.
+   */
+  public static function getModAssetFile(songId:String, requestedPath:String):Null<PsychScriptSource>
+  {
+    #if sys
+    var dataPath:Null<String> = songDataFolders.get(songId);
+    if (dataPath == null || requestedPath == null || StringTools.trim(requestedPath).length == 0) return null;
+
+    var relative:String = StringTools.replace(StringTools.trim(requestedPath), "\\", "/");
+    while (StringTools.startsWith(relative, "/")) relative = relative.substr(1);
+    for (part in relative.split("/"))
+      if (part == ".." || part == ".") return null;
+
+    var modRoot:String = Path.directory(Path.directory(dataPath));
+    var base:String = Path.normalize(modRoot);
+    var prefix:String = StringTools.endsWith(base, "/") ? base : base + "/";
+    var filePath:String = Path.normalize(Path.join([base, relative]));
+    if (!StringTools.startsWith(filePath, prefix)) return null;
+    if (!FileSystem.exists(filePath) || FileSystem.isDirectory(filePath)) return null;
+    try
+    {
+      return {path: filePath, source: File.getContent(filePath)};
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not read mod asset metadata ' + filePath + ': ' + Std.string(error));
+      return null;
+    }
+    #else
+    return null;
+    #end
+  }
+
   public static function getInstrumentalAssetPath(songId:String, suffix:String = ""):Null<String>
   {
     var folder:Null<String> = audioFolders.get(songId);
