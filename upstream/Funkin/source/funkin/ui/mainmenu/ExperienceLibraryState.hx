@@ -99,7 +99,92 @@ class ExperienceLibraryState extends MusicBeatState
   {
     // The Game Library is its own NovaBeat screen regardless of the
     // selected gameplay/menu theme. This does not modify the FNF main menu.
-    buildNovaBeatLayout();
+    if (DeviceUtil.isMobileBrowser)
+      buildMobileNovaBeatLayout();
+    else
+      buildNovaBeatLayout();
+  }
+
+  /**
+   * A purpose-built phone/tablet library, not a compressed desktop layout.
+   * It uses large one-column experience cards, a fixed thumb-friendly action
+   * dock, and a short touch-first footer. The existing gesture handler keeps
+   * card selection and vertical dragging consistent across orientations.
+   */
+  function buildMobileNovaBeatLayout():Void
+  {
+    clearObjects(layoutObjects);
+    clearObjects(rowObjects);
+    rowHitboxes.resize(0);
+    touchButtonHitboxes.resize(0);
+    touchButtonActions.resize(0);
+    touchGestureActive = false;
+
+    var width:Float = FlxG.width;
+    var height:Float = FlxG.height;
+    var portrait:Bool = height > width * 1.12;
+    var compactLandscape:Bool = !portrait && height < 500;
+    usesTouchControls = true;
+
+    var margin:Float = portrait ? 16 : 24;
+    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image("novabeat/menu-background"));
+    var backgroundScale:Float = Math.max(width / Math.max(1, background.width), height / Math.max(1, background.height)) * 1.08;
+    background.scale.set(backgroundScale, backgroundScale);
+    background.updateHitbox();
+    background.screenCenter();
+    background.scrollFactor.set();
+    background.alpha = 0.58;
+    addTracked(background, false);
+    addTracked(addSolid(0, 0, width, height, 0xD0061022), false);
+
+    var topLogo:FlxSprite = new FlxSprite(margin, 10).loadGraphic(Paths.image("novabeat/title-logo"));
+    topLogo.setGraphicSize(0, portrait ? 34 : 42);
+    topLogo.updateHitbox();
+    topLogo.scrollFactor.set();
+    addTracked(topLogo, false);
+
+    var titleY:Float = portrait ? 47 : 49;
+    addLabel(margin + 2, titleY, width - margin * 2, "MY GAME LIBRARY",
+      portrait ? 24 : 22, 0xFFF4F7FF, false);
+    addLabel(margin + 3, titleY + (portrait ? 29 : 27), width - margin * 2,
+      "PICK AN EXPERIENCE TO PLAY", 9, 0xFF68DFF7, false);
+
+    var panelX:Float = margin;
+    var panelY:Float = compactLandscape ? 88 : (portrait ? 108 : 100);
+    var panelWidth:Float = width - margin * 2;
+    var panelHeight:Float = height - panelY - (compactLandscape ? 48 : 64);
+
+    addTracked(addRoundRect(panelX, panelY, panelWidth, panelHeight, 22, 22, 0xFF51B7D2), false);
+    addTracked(addRoundRect(panelX + 2, panelY + 2, panelWidth - 4, panelHeight - 4, 20, 20, 0xF0071429), false);
+
+    var inset:Float = portrait ? 12 : 16;
+    listX = panelX + inset;
+    listY = panelY + (compactLandscape ? 42 : 50);
+    listWidth = panelWidth - inset * 2;
+    rowHeight = portrait ? 132 : (compactLandscape ? 76 : 108);
+    var rowGap:Float = 10;
+    listHeight = Math.max(rowHeight, panelHeight - (compactLandscape ? 126 : 156));
+    visibleRows = Std.int(Math.max(1, Math.floor((listHeight + rowGap) / (rowHeight + rowGap))));
+    firstVisibleIndex = 0;
+
+    addLabel(listX + 2, panelY + 15, listWidth * 0.65,
+      "AVAILABLE EXPERIENCES", 9, 0xFF66DDF5, false);
+    addLabel(listX + listWidth * 0.65, panelY + 15, listWidth * 0.35,
+      Std.string(experiences.length) + (experiences.length == 1 ? " AVAILABLE" : " AVAILABLE"),
+      8, 0xFF9AAFD0, false);
+
+    var statusY:Float = panelY + panelHeight - (compactLandscape ? 104 : 124);
+    statusText = addLabel(panelX + 16, statusY, panelWidth - 32, "",
+      compactLandscape ? 8 : 9, 0xFF72DDF5, false);
+
+    buildTouchControls(panelX, panelY, panelWidth, panelHeight);
+
+    addLabel(margin + 4, height - 22, width - margin * 2 - 8,
+      "TAP A CARD TO SELECT  •  TAP AGAIN OR PLAY SELECTED",
+      8, 0xFF9AAED0, false);
+
+    renderRows();
+    updateStatus();
   }
 
   function buildNovaBeatLayout():Void
@@ -288,6 +373,12 @@ class ExperienceLibraryState extends MusicBeatState
 
   function renderRows():Void
   {
+    if (usesTouchControls)
+    {
+      renderMobileRows();
+      return;
+    }
+
     clearObjects(rowObjects);
     rowHitboxes.resize(0);
     if (experiences.length == 0) return;
@@ -360,6 +451,76 @@ class ExperienceLibraryState extends MusicBeatState
   {
     if (value.length <= maxLength) return value;
     return value.substr(0, maxLength - 3) + "...";
+  }
+
+  function renderMobileRows():Void
+  {
+    clearObjects(rowObjects);
+    rowHitboxes.resize(0);
+    if (experiences.length == 0)
+    {
+      addRowLabel(listX + 12, listY + 18, listWidth - 24,
+        "NO EXPERIENCES INSTALLED YET", 15, 0xFFEAF6FF);
+      return;
+    }
+
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var compactLandscape:Bool = !portrait && FlxG.height < 500;
+    var rowGap:Float = 10;
+    adjustScrollWindow();
+
+    for (visibleIndex in 0...visibleRows)
+    {
+      var experienceIndex:Int = firstVisibleIndex + visibleIndex;
+      if (experienceIndex >= experiences.length) break;
+
+      var info:ExperienceInfo = experiences[experienceIndex];
+      var y:Float = listY + visibleIndex * (rowHeight + rowGap);
+      var selected:Bool = experienceIndex == selectedIndex;
+
+      var borderColor:FlxColor = selected ? 0xFF58DDF5 : 0xFF294967;
+      var fillColor:FlxColor = selected ? 0xFF173B59 : 0xE90A1930;
+      var card:FlxSprite = addRoundRect(listX, y, listWidth, rowHeight, 18, 18, borderColor);
+      addTracked(card, true);
+      rowHitboxes.push(card);
+      addTracked(addRoundRect(listX + 2, y + 2, listWidth - 4, rowHeight - 4, 16, 16, fillColor), true);
+      addTracked(addRoundRect(listX + 9, y + 12, 4, rowHeight - 24, 3, 3,
+        selected ? 0xFF5ADDF5 : 0xFF2C75AB), true);
+
+      var iconSize:Float = compactLandscape ? 48 : (portrait ? 82 : 68);
+      var iconX:Float = listX + (compactLandscape ? 10 : 14);
+      var iconY:Float = y + (rowHeight - iconSize) * 0.5;
+      addTracked(addRoundRect(iconX - 3, iconY - 3, iconSize + 6, iconSize + 6, 13, 13,
+        selected ? 0xFF255F80 : 0xFF1A2B44), true);
+      addExperienceIcon(info, iconX, iconY, iconSize);
+
+      var textX:Float = iconX + iconSize + (compactLandscape ? 10 : 14);
+      var textWidth:Float = Math.max(40, listWidth - (textX - listX) - 14);
+      var titleSize:Int = compactLandscape ? 13 : (portrait ? 18 : 16);
+      var detail:String = info.isOfficial
+        ? "BASE GAME  •  " + info.engineLabel
+        : info.engineLabel + "  •  " + packageTypeLabel(info.packageType);
+      if (!info.isOfficial) detail += info.enabled ? "  •  ENABLED" : "  •  DISABLED";
+      if (!info.launchable) detail += "  •  NOT YET SUPPORTED";
+
+      if (compactLandscape)
+      {
+        addRowLabel(textX, y + 8, textWidth, info.title, titleSize,
+          selected ? 0xFFFFFFFF : 0xFFE1EAF7);
+        addRowLabel(textX, y + 29, textWidth, shorten(info.description, 58), 8, 0xFFB7C9E0);
+        addRowLabel(textX, y + 50, textWidth, detail, 7,
+          info.launchable ? 0xFF70DFF5 : 0xFFFFB86B);
+      }
+      else
+      {
+        addRowLabel(textX, y + 17, textWidth, info.title, titleSize,
+          selected ? 0xFFFFFFFF : 0xFFE1EAF7);
+        addRowLabel(textX, y + (portrait ? 51 : 46), textWidth,
+          shorten(info.description, portrait ? 86 : 76), portrait ? 10 : 9, 0xFFB7C9E0);
+        addRowLabel(textX, y + (portrait ? 83 : 74), textWidth, detail, 8,
+          info.launchable ? 0xFF70DFF5 : 0xFFFFB86B);
+      }
+    }
   }
 
   function addExperienceIcon(info:ExperienceInfo, x:Float, y:Float, size:Float):Void
@@ -460,7 +621,7 @@ class ExperienceLibraryState extends MusicBeatState
     renderRows();
     scrollDirection = 0;
     updateStatus();
-    FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.4);
+    FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu"), 0.4);
   }
 
   function adjustScrollWindow():Void
