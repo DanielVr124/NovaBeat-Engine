@@ -420,6 +420,24 @@ class PsychGameplayApi
 
     vars.set("triggerEvent", function(name:String, ?value1:String = "", ?value2:String = ""):Void
       triggerEvent(state, name, value1, value2));
+    vars.set("cameraShake", function(camera:String, intensity:Float, duration:Float):Bool
+    {
+      if (duration < 0 || intensity < 0) return false;
+      resolveCamera(state, camera).shake(intensity, duration);
+      return true;
+    });
+    vars.set("cameraFlash", function(camera:String, color:Dynamic, duration:Float, ?forced:Bool = false):Bool
+    {
+      if (duration < 0) return false;
+      resolveCamera(state, camera).flash(parsePsychColor(color), duration, null, forced);
+      return true;
+    });
+    vars.set("cameraFade", function(camera:String, color:Dynamic, duration:Float, ?forced:Bool = false, ?fadeOut:Bool = false):Bool
+    {
+      if (duration < 0) return false;
+      resolveCamera(state, camera).fade(parsePsychColor(color), duration, fadeOut, null, forced);
+      return true;
+    });
 
     // Basic Psych-compatible camera aliases. They are read-only snapshots;
     // scripts should use getProperty/setProperty for mutable nested values.
