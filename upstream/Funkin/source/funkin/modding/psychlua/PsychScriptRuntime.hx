@@ -1,6 +1,10 @@
 package funkin.modding.psychlua;
 
 import haxe.Exception;
+import funkin.Conductor;
+import funkin.modding.PsychModRuntime;
+import funkin.modding.PsychModRuntime.PsychScriptSource;
+import funkin.play.PlayState;
 
 /**
  * Owns interpreter instances used by the Psych compatibility layer.
@@ -17,7 +21,8 @@ class PsychScriptRuntime
     "Function_Continue" => 0,
     "Function_Stop" => 1,
     "Function_StopLua" => 2,
-    "Function_StopHScript" => 3
+    "Function_StopHScript" => 3,
+    "Function_StopAll" => 4
   ];
 
   public static function setGlobal(name:String, value:Dynamic):Void
@@ -37,6 +42,53 @@ class PsychScriptRuntime
   public static function getGlobal(name:String):Dynamic
   {
     return sharedGlobals.get(name);
+  }
+
+  /**
+   * Load global and song-local scripts for the currently activated Psych
+   * packages. Global scripts always precede song scripts, matching the
+   * established Psych loading order for these two supported scopes.
+   */
+  public static function loadForSong(modDirs:Array<String>, songId:String, playState:PlayState):Int
+  {
+    clear();
+    var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
+    var loaded:Int = 0;
+    var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
+    for (source in sources)
+    {
+      if (loadSource(source.path, source.source, globals) != null)
+        loaded++;
+    }
+
+    if (loaded > 0)
+      dispatch("onCreate", []);
+    return loaded;
+  }
+
+  public static function updateFrame(elapsed:Float):Void
+  {
+    setGlobal("curStep", Conductor.instance.currentStep);
+    setGlobal("curBeat", Conductor.instance.currentBeat);
+    setGlobal("songPosition", Conductor.instance.songPosition);
+    setGlobal("curDecStep", Conductor.instance.currentStep);
+    setGlobal("curDecBeat", Conductor.instance.currentBeat);
+    dispatch("onUpdate", [elapsed]);
+  }
+
+  public static function dispatchStop(callback:String, ?args:Array<Dynamic>):Bool
+  {
+    for (result in dispatch(callback, args))
+    {
+      if (result == null) continue;
+      if (Std.isOfType(result, Int) && cast(result, Int) == 1) return true;
+    }
+    return false;
+  }
+
+  public static function getScriptPaths():Array<String>
+  {
+    return [for (script in scripts) script.sourcePath];
   }
 
   /**

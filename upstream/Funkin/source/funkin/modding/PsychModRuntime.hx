@@ -38,46 +38,44 @@ class PsychModRuntime
       return unavailable("The Psych mod folder could not be read.");
 
     var sources:Array<PsychSongSource> = scanSongSources(modPath);
-    var scriptCount:Int = countPsychScripts(modPath);
+    var globalScriptCount:Int = countPsychScripts(modPath);
+    var unsupportedScriptCount:Int = countUnsupportedPsychScripts(modPath);
     var playableCount:Int = 0;
     var songScriptCount:Int = 0;
 
     for (source in sources)
     {
       if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
-      if (hasSongScripts(source))
-      {
-        songScriptCount++;
-        continue;
-      }
-      playableCount++;
+      if (hasSongScripts(source)) songScriptCount++;
+      else playableCount++;
     }
 
-    if (playableCount == 0)
+    if (unsupportedScriptCount > 0)
     {
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: songScriptCount > 0
-          ? "Psych charts and instrumentals were found, but every complete song has a song-local Lua/HScript file. Those songs are not launchable until the Psych scripting runtime is implemented."
-          : "Psych Engine detected. This first native compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. This package does not contain a complete song in that format."
+        explanation: "Psych charts were found, but this package also contains custom event, note-type, stage, character, or substate scripts. Those systems are not implemented yet, so this package is kept unavailable rather than launched with missing behavior."
       };
     }
 
-    if (scriptCount > 0)
+    var supportedSongs:Int = playableCount + songScriptCount;
+    if (supportedSongs == 0)
     {
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: "Psych songs were found, but this mod contains Lua/HScript files. NovaBeat does not execute Psych scripts yet, so this package may depend on missing gameplay behavior."
+        explanation: "Psych Engine detected. This compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. No complete song package was found."
       };
     }
 
+    var hasBasicScripts:Bool = globalScriptCount > 0 || songScriptCount > 0;
     return {
       launchable: true,
-      supportedSongCount: playableCount,
-      explanation: "Limited native Psych compatibility: " + Std.string(playableCount) + " classic chart song(s) without song-local scripts can launch with NovaBeat's built-in characters and default stage. " + Std.string(songScriptCount) + " song(s) with local Lua/HScript are skipped. Psych Lua/HScript execution, custom events, custom note types, custom character/stage behavior, and HTML5 local-mod launching are not supported yet."
-    };
+      supportedSongCount: supportedSongs,
+      explanation: hasBasicScripts
+        ? "Experimental Psych scripting compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with global scripts and song-local Lua/HScript callbacks, basic property access, and basic Lua sprite helpers. Custom events, note types, stages, characters, custom substates, and many advanced Psych APIs are not supported yet. Native builds only."
+        : "Limited native Psych chart compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with NovaBeat's built-in characters and default stage. Lua/HScript song and global script loading is available for this basic compatibility tier. Custom events, note types, stages, characters, and custom substates remain unsupported.";
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
     #end
@@ -95,7 +93,7 @@ class PsychModRuntime
 
       for (source in scanSongSources(modPath))
       {
-        if (source.instrumentFile == null || source.chartFiles.length == 0 || hasSongScripts(source)) continue;
+        if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
         var songId:String = buildSongId(directory, source.songFolder);
         if (!result.contains(songId)) result.push(songId);
       }
@@ -201,6 +199,88 @@ class PsychModRuntime
   {
     return EngineBridge.hasPsychMarkersForRuntime(modPath);
   }
+
+  /**
+   * Read the supported Psych script set for the active song. Global scripts
+   * from each active package load first, followed by matching data/<song>
+   * scripts. Custom event/stage/character folders are intentionally excluded.
+   */
+  public static function getScriptSources(modDirs:Array<String>, songId:String):Array<PsychScriptSource>
+  {
+    var globalSources:Array<PsychScriptSource> = [];
+    var songSources:Array<PsychScriptSource> = [];
+    #if sys
+    var root:String = PolymodHandler.getModRoot();
+    for (directory in modDirs)
+    {
+      var modPath:String = Path.join([root, directory]);
+      if (!isPsychDirectory(modPath)) continue;
+
+      var scriptsPath:String = Path.join([modPath, "scripts"]);
+      globalSources = globalSources.concat(readScriptSources(scriptsPath, 5));
+
+      var dataRoot:String = Path.join([modPath, "data"]);
+      if (!FileSystem.exists(dataRoot) || !FileSystem.isDirectory(dataRoot)) continue;
+      for (songFolder in FileSystem.readDirectory(dataRoot))
+      {
+        var dataPath:String = Path.join([dataRoot, songFolder]);
+        if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) continue;
+        if (buildSongId(directory, songFolder) != songId) continue;
+        songSources = songSources.concat(readScriptSources(dataPath, 3));
+      }
+    }
+    #end
+    return globalSources.concat(songSources);
+  }
+
+  #if sys
+  static function readScriptSources(path:String, depth:Int):Array<PsychScriptSource>
+  {
+    var paths:Array<String> = [];
+    collectScriptPaths(path, depth, paths);
+    paths.sort(Reflect.compare);
+
+    var result:Array<PsychScriptSource> = [];
+    for (scriptPath in paths)
+    {
+      try
+      {
+        result.push({
+          path: scriptPath,
+          source: File.getContent(scriptPath)
+        });
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych Script Runtime] Could not read ' + scriptPath + ': ' + Std.string(error));
+      }
+    }
+    return result;
+  }
+
+  static function collectScriptPaths(path:String, depth:Int, result:Array<String>):Void
+  {
+    if (!FileSystem.exists(path) || !FileSystem.isDirectory(path)) return;
+
+    var entries:Array<String> = FileSystem.readDirectory(path);
+    entries.sort(Reflect.compare);
+    for (entry in entries)
+    {
+      if (entry.length == 0 || entry.charAt(0) == ".") continue;
+      var child:String = Path.join([path, entry]);
+      if (FileSystem.isDirectory(child))
+      {
+        if (depth > 0) collectScriptPaths(child, depth - 1, result);
+        continue;
+      }
+
+      var lower:String = entry.toLowerCase();
+      if (StringTools.endsWith(lower, ".lua") || StringTools.endsWith(lower, ".hx")
+        || StringTools.endsWith(lower, ".hscript"))
+        result.push(child);
+    }
+  }
+  #end
 
   static function unavailable(message:String):PsychPackageAssessment
   {
@@ -350,8 +430,13 @@ class PsychModRuntime
 
   static function countPsychScripts(modPath:String):Int
   {
+    // Only top-level/global scripts are part of the initial supported loader.
+    return countScriptFiles(Path.join([modPath, "scripts"]), 5);
+  }
+
+  static function countUnsupportedPsychScripts(modPath:String):Int
+  {
     var roots:Array<String> = [
-      "scripts",
       "custom_events",
       "custom_notetypes",
       "custom_notes",
@@ -361,9 +446,7 @@ class PsychModRuntime
     ];
     var count:Int = 0;
     for (folder in roots)
-    {
       count += countScriptFiles(Path.join([modPath, folder]), 5);
-    }
     return count;
   }
 
@@ -388,7 +471,7 @@ class PsychModRuntime
       }
 
       var lower:String = entry.toLowerCase();
-      if (StringTools.endsWith(lower, ".lua") || StringTools.endsWith(lower, ".hx"))
+      if (StringTools.endsWith(lower, ".lua") || StringTools.endsWith(lower, ".hx") || StringTools.endsWith(lower, ".hscript"))
         count++;
     }
 
@@ -428,10 +511,13 @@ class PsychModRuntime
   static function findAudioFolder(modPath:String, songFolder:String):Null<String> return null;
   static function findExistingInstrument(audioPath:String):Null<String> return null;
   static function countPsychScripts(modPath:String):Int return 0;
+  static function countUnsupportedPsychScripts(modPath:String):Int return 0;
   static function countScriptFiles(path:String, depth:Int):Int return 0;
   static function getDifficultyName(songFolder:String, fileName:String):String return Constants.DEFAULT_DIFFICULTY;
   static function buildSongId(modDirectory:String, songFolder:String):String return "psych-" + modDirectory + "-" + songFolder;
   static function slug(value:String):String return value;
+  static function readScriptSources(path:String, depth:Int):Array<PsychScriptSource> return [];
+  static function collectScriptPaths(path:String, depth:Int, result:Array<String>):Void {}
   #end
 
   static function findSongAsset(songFolder:String, baseName:String):Null<String>
@@ -483,4 +569,11 @@ typedef PsychSongSource =
   var audioPath:Null<String>;
   var instrumentFile:Null<String>;
   var chartFiles:Array<String>;
+}
+
+
+typedef PsychScriptSource =
+{
+  var path:String;
+  var source:String;
 }

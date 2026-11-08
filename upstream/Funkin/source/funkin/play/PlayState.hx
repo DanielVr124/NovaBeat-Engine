@@ -36,6 +36,7 @@ import funkin.input.PreciseInputManager;
 import funkin.modding.events.ScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
+import funkin.modding.ExperienceManager;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.play.character.BaseCharacter;
 import funkin.data.character.CharacterData.CharacterDataParser;
@@ -979,6 +980,13 @@ class PlayState extends MusicBeatSubState
     // This step ensures z-indexes are applied properly,
     // and it's important to call it last so all elements get affected.
     refresh();
+
+    // Activate Psych scripts only for the selected/assigned Psych packages.
+    // FNF menu and non-Psych gameplay are unaffected.
+    var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
+    PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this);
+    if (PsychScriptRuntime.getScriptPaths().length > 0)
+      PsychScriptRuntime.dispatch("onCreatePost", []);
   }
 
   public function togglePauseButton(visible:Bool = false):Void
@@ -1043,6 +1051,8 @@ class PlayState extends MusicBeatSubState
     if (criticalFailure) return;
 
     super.update(elapsed);
+
+    PsychScriptRuntime.updateFrame(elapsed);
 
     updateHealthBar();
     updateScoreText();
@@ -1353,6 +1363,8 @@ class PlayState extends MusicBeatSubState
     #if !mobile
     if (Preferences.autoPause) FlxG.autoPause = !mayPauseGame;
     #end
+
+    PsychScriptRuntime.dispatch("onUpdatePost", [elapsed]);
   }
 
   /**
@@ -1363,6 +1375,7 @@ class PlayState extends MusicBeatSubState
   function pause(mode:PauseMode = Standard, lostFocus:Bool = false):Void
   {
     if (!mayPauseGame || justUnpaused || isGamePaused || isPlayerDying || isSongEnd) return;
+    if (PsychScriptRuntime.dispatchStop("onPause", [])) return;
 
     switch (mode)
     {
@@ -1878,6 +1891,7 @@ class PlayState extends MusicBeatSubState
     // Try to call hold note haptics each step hit. Works if atleast one note status is NoteStatus.isHoldNotePressed.
     playerStrumline.noteVibrations.tryHoldNoteVibration();
 
+    PsychScriptRuntime.dispatch("onStepHit", [Conductor.instance.currentStep]);
     return true;
   }
 
@@ -1940,11 +1954,14 @@ class PlayState extends MusicBeatSubState
     if (playerStrumline != null) playerStrumline.onBeatHit();
     if (opponentStrumline != null) opponentStrumline.onBeatHit();
 
+    PsychScriptRuntime.dispatch("onBeatHit", [Conductor.instance.currentBeat]);
     return true;
   }
 
   override public function destroy():Void
   {
+    PsychScriptRuntime.dispatch("onDestroy", []);
+    PsychScriptRuntime.clear();
     performCleanup();
 
     #if mobile
@@ -2642,6 +2659,8 @@ class PlayState extends MusicBeatSubState
      */
   public function startCountdown():Void
   {
+    if (PsychScriptRuntime.dispatchStop("onStartCountdown", [])) return;
+
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
     if (!result) return;
@@ -2776,6 +2795,7 @@ class PlayState extends MusicBeatSubState
     }
 
     dispatchEvent(new ScriptEvent(SONG_START));
+    PsychScriptRuntime.dispatch("onSongStart", []);
 
     #if FEATURE_NEWGROUNDS
     Events.logStartSong(currentSong.id, currentVariation);
