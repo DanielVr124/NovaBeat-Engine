@@ -3,6 +3,7 @@ package funkin.modding.psychlua;
 import haxe.Exception;
 import funkin.Conductor;
 import funkin.modding.PsychModRuntime;
+import funkin.modding.PolymodHandler;
 import funkin.modding.PsychModRuntime.PsychScriptSource;
 import funkin.play.PlayState;
 
@@ -460,6 +461,20 @@ class PsychScriptRuntime
   public static function getActiveModDirectory():String
   {
     return activeModDirs.length == 0 ? "" : activeModDirs[0];
+  }
+
+  /** Resolve the directory which owns the currently executing script. */
+  public static function getExecutingScriptModDirectory():String
+  {
+    if (executingScript == null || executingScript.sourcePath == null) return getActiveModDirectory();
+    var path:String = normalizeScriptPath(executingScript.sourcePath);
+    var wrappedPath:String = "/" + path + "/";
+    for (directory in activeModDirs)
+    {
+      var marker:String = "/" + directory.toLowerCase() + "/";
+      if (wrappedPath.indexOf(marker) >= 0) return directory;
+    }
+    return getActiveModDirectory();
   }
 
   public static function getScriptPaths():Array<String>
