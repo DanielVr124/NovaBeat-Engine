@@ -1547,6 +1547,15 @@ class PlayState extends MusicBeatSubState
     }
   }
 
+  /**
+   * Dispatch Psych's game-over confirmation callback from the actual
+   * GameOverSubState confirmation path, not from generic song retries.
+   */
+  public function dispatchPsychGameOverConfirm():Void
+  {
+    PsychScriptRuntime.dispatch("onGameOverConfirm", []);
+  }
+
   override public function dispatchEvent(event:ScriptEvent):Void
   {
     // ORDER: Module, Song, Events, Notes, Stage, Conversation, Characters
@@ -1651,10 +1660,6 @@ class PlayState extends MusicBeatSubState
       else if (event.type == "COUNTDOWN_END")
       {
         PsychScriptRuntime.dispatch("onCountdownFinished", []);
-      }
-      else if (event.type == "SONG_RETRY")
-      {
-        PsychScriptRuntime.dispatch("onGameOverConfirm", []);
       }
       else if (event.type == "NOTE_HOLD_DROP")
       {
