@@ -305,6 +305,7 @@ class PsychScriptRuntime
     setGlobal("bpm", Conductor.instance.bpm);
     setGlobal("crochet", Conductor.instance.beatLengthMs);
     setGlobal("stepCrochet", Conductor.instance.stepLengthMs);
+    setGlobal("songLength", FlxG.sound.music == null ? 0 : FlxG.sound.music.length);
   }
 
   public static function updateFrame(elapsed:Float):Void
