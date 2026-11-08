@@ -254,7 +254,7 @@ class PsychGameplayApi
       var object:Null<FlxSprite> = getSprite(state, tag);
       if (object == null || !Std.isOfType(object, FlxText)) return false;
       var textObject:FlxText = cast object;
-      textObject.setBorderStyle(cast borderStyle, parsePsychColor(borderColor), borderSize);
+      textObject.setBorderStyle(resolveTextBorderStyle(borderStyle), parsePsychColor(borderColor), borderSize);
       return true;
     });
 
@@ -706,6 +706,22 @@ class PsychGameplayApi
     var targetCamera:FlxCamera = state.camGame;
     if (camera != null && camera.toLowerCase() == "hud") targetCamera = state.camHUD;
     return FlxG.mouse.getWorldPosition(targetCamera);
+  }
+
+  /**
+   * Convert Psych's string border-style names into HaxeFlixel's enum.
+   * A string cast is not valid for this enum on C++ targets.
+   */
+  static function resolveTextBorderStyle(value:String):FlxTextBorderStyle
+  {
+    return switch (value == null ? "outline" : StringTools.trim(value).toLowerCase())
+    {
+      case "none": FlxTextBorderStyle.NONE;
+      case "shadow": FlxTextBorderStyle.SHADOW;
+      case "shadow_xy", "shadow-xy": FlxTextBorderStyle.SHADOW_XY(1, 1);
+      case "outline_fast", "outline-fast", "outlinefast": FlxTextBorderStyle.OUTLINE_FAST;
+      default: FlxTextBorderStyle.OUTLINE;
+    };
   }
 
   static function parsePsychColor(value:Dynamic):FlxColor
