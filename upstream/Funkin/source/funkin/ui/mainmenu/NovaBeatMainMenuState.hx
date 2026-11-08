@@ -672,6 +672,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (!hit) continue;
 
       menuItems.selectItem(index);
+      playSfx('select', 0.45);
       menuItems.accept();
       return;
     }
@@ -686,6 +687,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (homeOptionsHitbox != null)
     {
       optionsPressed = TouchUtil.pressAction(homeOptionsHitbox, uiCamera);
+      #if web
+      if (!optionsPressed && FlxG.mouse.justReleased)
+        optionsPressed = FlxG.mouse.overlaps(homeOptionsHitbox, uiCamera);
+      #end
     }
 
     if (optionsPressed)
@@ -699,6 +704,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (homeAudioHitbox != null)
     {
       audioPressed = TouchUtil.pressAction(homeAudioHitbox, uiCamera);
+      #if web
+      if (!audioPressed && FlxG.mouse.justReleased)
+        audioPressed = FlxG.mouse.overlaps(homeAudioHitbox, uiCamera);
+      #end
     }
 
     if (audioPressed)
