@@ -54,12 +54,21 @@ class PsychGameplayApi
   static final customSubstateObjects:Map<String, FlxSprite> = [];
   static final activeSounds:Map<String, FlxSound> = [];
   static final preloadedCharacters:Map<String, BaseCharacter> = [];
+  static var activeTimeBar:Null<PsychTimeBar> = null;
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
     var vars:Map<String, Dynamic> = [];
+
+    ensureTimeBar(state);
+    if (activeTimeBar != null)
+    {
+      vars.set("timeBar", activeTimeBar.background);
+      vars.set("timeTxt", activeTimeBar.timeText);
+      vars.set("timeBarType", activeTimeBar.timeBarType);
+    }
 
     vars.set("getProperty", function(path:String, ?allowMaps:Bool = false):Dynamic return getProperty(state, path, allowMaps));
     vars.set("setProperty", function(path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic return setProperty(state, path, value, allowMaps));
@@ -210,6 +219,12 @@ class PsychGameplayApi
       // visual mapping explicit: left=empty/background, right=filled.
       state.healthBar.createFilledBar(parsePsychColor(left), parsePsychColor(right));
       state.healthBar.updateBar();
+      return true;
+    });
+    vars.set("setTimeBarColors", function(left:Dynamic, right:Dynamic):Bool
+    {
+      if (activeTimeBar == null || !activeTimeBar.exists) return false;
+      activeTimeBar.setColors(left, right);
       return true;
     });
     vars.set("stopMusic", function():Void
@@ -1132,6 +1147,7 @@ class PsychGameplayApi
       "playSound", "playMusic", "stopSound", "pauseSound", "resumeSound",
       "getSoundVolume", "getSoundTime", "setSoundTime", "getSoundPitch", "setSoundPitch",
       "soundFadeIn", "soundFadeOut", "soundFadeCancel",
+      "setTimeBarColors",
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
@@ -1468,6 +1484,7 @@ class PsychGameplayApi
     for (sound in activeSounds)
       if (sound != null) sound.stop();
     activeSounds.clear();
+    activeTimeBar = null;
     for (character in preloadedCharacters)
       if (character != null) character.destroy();
     preloadedCharacters.clear();
@@ -1564,6 +1581,17 @@ class PsychGameplayApi
     while (StringTools.startsWith(normalized, "-")) normalized = normalized.substr(1);
     while (StringTools.endsWith(normalized, "-")) normalized = normalized.substr(0, normalized.length - 1);
     return normalized;
+  }
+
+  static function ensureTimeBar(state:PlayState):Void
+  {
+    if (state == null || state.currentSong == null || !PsychModRuntime.isImportedSong(state.currentSong.id))
+      return;
+
+    if (activeTimeBar != null && activeTimeBar.exists) return;
+    activeTimeBar = new PsychTimeBar(state);
+    activeTimeBar.cameras = [state.camHUD];
+    state.add(activeTimeBar);
   }
 
   static function resolveSound(tag:String):Null<FlxSound>
