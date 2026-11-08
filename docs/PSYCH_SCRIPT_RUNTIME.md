@@ -86,7 +86,10 @@ sustain state, and a live note-group index.
 - `addHaxeLibrary` with a restricted Flixel/NovaBeat class allowlist,
   including a script-safe wrapper for HaxeFlixel's `FlxColor` abstract
 - `runHaxeCode` / `runHaxeFunction` and `runLuaCode` / `runLuaFunction`
-  for basic cross-language code and function calls
+  for basic cross-language code and function calls. Their persistent inline
+  helper interpreters are separate from loaded mod scripts: they can be called
+  explicitly, but do not receive lifecycle callbacks or appear in
+  `getRunningScripts()`
 - `callOnScripts`, `callOnLuas`, `callOnHScript`, `setOnScripts`, `setOnLuas`,
   and `setOnHScript` for inter-script communication
 - Named timers/tweens: `runTimer`, `cancelTimer`, `doTweenX/Y/Alpha/Angle/Zoom/Color`,
