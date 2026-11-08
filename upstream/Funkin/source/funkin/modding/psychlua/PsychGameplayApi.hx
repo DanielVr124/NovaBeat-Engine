@@ -11,6 +11,7 @@ import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
 import funkin.play.notes.NoteSprite;
+import funkin.play.notes.SustainTrail;
 import funkin.play.character.BaseCharacter;
 import funkin.play.notes.Strumline;
 import funkin.play.notes.StrumlineNote;
@@ -642,6 +643,20 @@ class PsychGameplayApi
   public static function getNoteId(state:PlayState, note:NoteSprite):Int
   {
     return getActiveNotes(state).indexOf(note);
+  }
+
+  public static function getNoteIdForHold(state:PlayState, holdNote:SustainTrail):Int
+  {
+    if (holdNote == null) return -1;
+    var notes:Array<NoteSprite> = getActiveNotes(state);
+    for (index in 0...notes.length)
+    {
+      var note:NoteSprite = notes[index];
+      if (note.strumTime == holdNote.strumTime
+        && note.direction == holdNote.noteDirection)
+        return index;
+    }
+    return -1;
   }
 
   static function getActiveNotes(state:PlayState):Array<NoteSprite>

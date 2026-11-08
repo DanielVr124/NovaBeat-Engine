@@ -35,6 +35,10 @@ import funkin.Highscore.Tallies;
 import funkin.input.PreciseInputManager;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEvent.NoteScriptEvent;
+import funkin.modding.events.ScriptEvent.SongRetryEvent;
+import funkin.modding.events.ScriptEvent.CountdownScriptEvent;
+import funkin.modding.events.ScriptEvent.HoldNoteScriptEvent;
+import funkin.modding.events.ScriptEvent.GhostMissNoteScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.ExperienceManager;
@@ -1592,6 +1596,49 @@ class PlayState extends MusicBeatSubState
       {
         PsychScriptRuntime.dispatch("onResume", []);
       }
+      else if (event.type == "COUNTDOWN_START")
+      {
+        if (PsychScriptRuntime.dispatchStop("onStartCountdown", [], true))
+          event.cancel();
+      }
+      else if (event.type == "COUNTDOWN_STEP")
+      {
+        var countdownEvent:CountdownScriptEvent = cast event;
+        var countdownIndex:Int = switch (countdownEvent.step)
+        {
+          case THREE: 0;
+          case TWO: 1;
+          case ONE: 2;
+          case GO: 3;
+          default: -1;
+        };
+        if (countdownIndex >= 0)
+          PsychScriptRuntime.dispatch("onCountdownTick", [countdownIndex]);
+      }
+      else if (event.type == "COUNTDOWN_END")
+      {
+        PsychScriptRuntime.dispatch("onCountdownFinished", []);
+      }
+      else if (event.type == "SONG_RETRY")
+      {
+        PsychScriptRuntime.dispatch("onGameOverConfirm", []);
+      }
+      else if (event.type == "NOTE_HOLD_DROP")
+      {
+        var holdEvent:HoldNoteScriptEvent = cast event;
+        var noteId:Int = PsychGameplayApi.getNoteIdForHold(this, holdEvent.holdNote);
+        var direction:Int = Std.int(holdEvent.holdNote.noteDirection);
+        var noteType:String = holdEvent.holdNote.noteData == null ? "" : (holdEvent.holdNote.noteData.kind ?? "");
+        if (PsychScriptRuntime.dispatchStop("noteMiss", [noteId, direction, noteType, true]))
+          event.cancel();
+        PsychScriptRuntime.dispatch("onHoldNoteDrop", [noteId, direction, noteType, true]);
+      }
+      else if (event.type == "NOTE_GHOST_MISS")
+      {
+        var ghostEvent:GhostMissNoteScriptEvent = cast event;
+        if (PsychScriptRuntime.dispatchStop("noteMissPress", [Std.int(ghostEvent.dir)]))
+          event.cancel();
+      }
     }
 
     // Dispatch event to song script.
@@ -2709,8 +2756,6 @@ class PlayState extends MusicBeatSubState
      */
   public function startCountdown():Void
   {
-    if (PsychScriptRuntime.dispatchStop("onStartCountdown", [], true)) return;
-
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
     if (!result) return;

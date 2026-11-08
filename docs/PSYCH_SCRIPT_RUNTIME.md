@@ -24,9 +24,11 @@ Supported callbacks currently include:
 - `onCreate`, `onCreatePost`
 - `onUpdate`, `onUpdatePost`
 - `onStepHit`, `onBeatHit`
+- `onCountdownTick`, `onCountdownFinished`
 - `onStartCountdown`, `onSongStart`, `onSongEnd`
 - `onPause`, `onResume`, `onGameOver`, `onDestroy`
-- `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `onSpawnNote`
+- `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onSpawnNote`,
+  `onHoldNoteDrop`, `onGameOverConfirm`
 
 Song timing globals include `bpm`, `curBpm`, `crochet`, `stepCrochet`,
 `curStep`, `curBeat`, `curDecStep`, `curDecBeat`, and `songPosition`.
