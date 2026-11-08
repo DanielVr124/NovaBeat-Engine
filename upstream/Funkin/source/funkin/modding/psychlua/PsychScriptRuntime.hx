@@ -3,7 +3,6 @@ package funkin.modding.psychlua;
 import haxe.Exception;
 import funkin.Conductor;
 import funkin.modding.PsychModRuntime;
-import funkin.modding.PolymodHandler;
 import funkin.modding.PsychModRuntime.PsychScriptSource;
 import funkin.play.PlayState;
 
