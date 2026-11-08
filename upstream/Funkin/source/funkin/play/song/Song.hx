@@ -13,6 +13,7 @@ import funkin.data.song.SongData.SongTimeChange;
 import funkin.data.song.SongData.SongTimeFormat;
 import funkin.data.song.SongRegistry;
 import funkin.modding.IScriptedClass.IPlayStateScriptedClass;
+import funkin.modding.PsychModRuntime;
 import funkin.modding.events.ScriptEvent;
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 import funkin.data.freeplay.player.PlayerRegistry;
@@ -829,24 +830,25 @@ class SongDifficulty
 
   public function getInstPath(instrumental = ''):String
   {
+    var instrumentalId:String = '';
     if (characters != null)
     {
       if (instrumental != '' && characters.altInstrumentals.contains(instrumental))
       {
-        var instId = '-$instrumental';
-        return Paths.inst(this.song.id, instId);
+        instrumentalId = instrumental;
       }
       else
       {
-        // Fallback to default instrumental.
-        var instId = (characters.instrumental ?? '') != '' ? '-${characters.instrumental}' : '';
-        return Paths.inst(this.song.id, instId);
+        // Fallback to the default instrumental.
+        instrumentalId = characters.instrumental ?? '';
       }
     }
-    else
-    {
-      return Paths.inst(this.song.id);
-    }
+
+    var psychAsset:Null<String> = PsychModRuntime.getInstrumentalAssetPath(this.song.id, instrumentalId);
+    if (psychAsset != null) return psychAsset;
+
+    var instSuffix:String = instrumentalId == '' ? '' : '-$instrumentalId';
+    return Paths.inst(this.song.id, instSuffix);
   }
 
   public function cacheInst(instrumental = ''):Void
@@ -861,8 +863,10 @@ class SongDifficulty
   public function playInst(volume:Float = 1.0, instId:String = '', looped:Bool = false):Void
   {
     var suffix:String = (instId != '') ? '-$instId' : '';
+    var psychAsset:Null<String> = PsychModRuntime.getInstrumentalAssetPath(this.song.id, suffix);
+    var instrumentalPath:String = psychAsset ?? Paths.inst(this.song.id, suffix);
 
-    FlxG.sound.music = FunkinSound.load(Paths.inst(this.song.id, suffix), volume, looped, false, true, false, null, null, true,
+    FlxG.sound.music = FunkinSound.load(instrumentalPath, volume, looped, false, true, false, null, null, true,
       #if web true #else false #end);
 
     // Workaround for a bug where FlxG.sound.music.update() was being called twice.
@@ -909,6 +913,9 @@ class SongDifficulty
   public function buildPlayerVoiceList():Array<String>
   {
     var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
+
+    var psychPlayerVoice:Null<String> = PsychModRuntime.getVoiceAssetPath(this.song.id, characters.player, "player", suffix);
+    if (psychPlayerVoice != null) return [psychPlayerVoice];
 
     if (characters.playerVocals != null)
     {
@@ -960,6 +967,9 @@ class SongDifficulty
   public function buildOpponentVoiceList():Array<String>
   {
     var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
+
+    var psychOpponentVoice:Null<String> = PsychModRuntime.getVoiceAssetPath(this.song.id, characters.opponent, "opponent", suffix);
+    if (psychOpponentVoice != null) return [psychOpponentVoice];
 
     if (characters.opponentVocals != null)
     {
