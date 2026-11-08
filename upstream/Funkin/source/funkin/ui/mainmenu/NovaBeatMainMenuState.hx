@@ -564,6 +564,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     super.update(elapsed);
 
+    if (FlxG.mouse.visible) Cursor.hide();
+
     if (showingTitle)
     {
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
