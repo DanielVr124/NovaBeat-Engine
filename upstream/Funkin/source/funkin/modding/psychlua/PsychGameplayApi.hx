@@ -400,9 +400,14 @@ class PsychGameplayApi
       if (shader == null || imagePath == null || imagePath.length == 0) return false;
       var graphic = FlxG.bitmap.add(Paths.image(imagePath));
       if (graphic == null || graphic.bitmap == null) return false;
-      var setter:Dynamic = Reflect.field(shader, "setSampler2D");
-      if (setter == null) return false;
-      Reflect.callMethod(shader, setter, [property, graphic.bitmap]);
+      // The pinned flixel-addons release may not expose setSampler2D().
+      // Its ShaderInput objects are still available through the OpenFL shader
+      // data map, so update the input directly without depending on that helper.
+      var shaderData:Dynamic = Reflect.field(shader, "data");
+      if (shaderData == null) return false;
+      var shaderInput:Dynamic = Reflect.field(shaderData, property);
+      if (shaderInput == null) return false;
+      Reflect.setField(shaderInput, "input", graphic.bitmap);
       return true;
     });
     #else
