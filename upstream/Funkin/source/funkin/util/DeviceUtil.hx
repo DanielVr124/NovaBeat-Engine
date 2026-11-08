@@ -53,11 +53,16 @@ class DeviceUtil
     final maxTouchPoints:Int = Std.parseInt(Std.string(Reflect.field(Browser.navigator, "maxTouchPoints"))) ?? 0;
     final isIPadOS:Bool = platform == "MacIntel" && maxTouchPoints > 1;
 
-    // Phones can use a desktop-style user agent or a fine-pointer accessory.
-    // maxTouchPoints remains a reliable touch capability signal.
+    // maxTouchPoints is only a capability flag: many Windows laptops and
+    // desktop monitors have touchscreens. Require a coarse primary pointer
+    // and no fine pointer before treating an otherwise unidentified browser
+    // as mobile. A connected mouse/trackpad therefore keeps a desktop browser
+    // on the desktop menu/input path.
     final userAgentData:Dynamic = Reflect.field(Browser.navigator, "userAgentData");
     final userAgentDataMobile:Bool = userAgentData != null && Reflect.field(userAgentData, "mobile") == true;
-    final hasTouchInput:Bool = maxTouchPoints > 0;
+    final hasCoarsePointer:Bool = Browser.window.matchMedia("(pointer: coarse)").matches;
+    final hasFinePointer:Bool = Browser.window.matchMedia("(any-pointer: fine)").matches;
+    final hasTouchOnlyPrimary:Bool = maxTouchPoints > 0 && hasCoarsePointer && !hasFinePointer;
 
     cachedIsMobileBrowser = isQuestBrowser
       || userAgent.indexOf("android") >= 0
@@ -67,7 +72,7 @@ class DeviceUtil
       || userAgent.indexOf("mobile") >= 0
       || isIPadOS
       || userAgentDataMobile
-      || hasTouchInput;
+      || hasTouchOnlyPrimary;
     #else
     cachedIsMobileBrowser = false;
     #end
