@@ -417,7 +417,35 @@ class PsychModRuntime
 
   static function hasPsychCharacterDataFile(modPath:String, characterId:String):Bool
   {
-    return findPsychCharacterDataFile(modPath, characterId) != null;
+    var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, characterId);
+    if (jsonPath == null) return false;
+
+    // Only accept the common Psych Sparrow JSON shape that the native
+    // character converter below can faithfully map into NovaBeat.
+    try
+    {
+      var raw:Dynamic = Json.parse(File.getContent(jsonPath));
+      var image:Dynamic = Reflect.field(raw, "image");
+      var rawAnimations:Dynamic = Reflect.field(raw, "animations");
+      if (image == null || !Std.isOfType(image, String) || StringTools.trim(Std.string(image)).length == 0)
+        return false;
+      if (!Std.isOfType(rawAnimations, Array)) return false;
+
+      var validAnimations:Int = 0;
+      for (rawAnimation in (cast rawAnimations:Array<Dynamic>))
+      {
+        if (rawAnimation == null) continue;
+        var animationName:Dynamic = Reflect.field(rawAnimation, "anim");
+        if (animationName != null && StringTools.trim(Std.string(animationName)).length > 0)
+          validAnimations++;
+      }
+      return validAnimations > 0;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Character JSON did not match the supported Sparrow schema for ' + characterId + ': ' + Std.string(error));
+      return false;
+    }
   }
 
   static function convertPsychCharacterData(characterId:String, raw:Dynamic):Null<CharacterData>
