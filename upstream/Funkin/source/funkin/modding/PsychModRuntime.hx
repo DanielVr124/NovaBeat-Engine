@@ -234,6 +234,7 @@ class PsychModRuntime
   public static function getModSetting(saveTag:String, ?modName:String = null):Dynamic
   {
     if (saveTag == null || StringTools.trim(saveTag).length == 0) return null;
+    if (FlxG.save == null || FlxG.save.data == null) return null;
     #if sys
     var directory:String = modName == null || StringTools.trim(modName).length == 0
       ? PsychScriptRuntime.getExecutingScriptModDirectory()
