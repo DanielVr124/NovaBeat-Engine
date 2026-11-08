@@ -1794,6 +1794,8 @@ class FreeplayState extends MusicBeatSubState
 
   inline function menuSwipeAny():Bool return SwipeUtil.swipeAny;
 
+  inline function menuPointerJustSwipedAny():Bool return SwipeUtil.justSwipedAny;
+
   inline function menuSwipeLeft():Bool return SwipeUtil.swipeLeft;
 
   inline function menuSwipeRight():Bool return SwipeUtil.swipeRight;
@@ -2099,7 +2101,8 @@ class FreeplayState extends MusicBeatSubState
   private function handleTouchCapsuleClick():Void
   {
     if (diffSelRight == null) return;
-    if (menuTouchPressAction() && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
+    if (menuTouchPressAction() && _moveLength <= 0 && !menuPointerJustSwipedAny()
+      && !menuTouchOverlaps(diffSelRight, funnyCam) && !draggingDifficulty)
     {
       curSelected = Math.round(curSelectedFloat);
 
@@ -2110,7 +2113,7 @@ class FreeplayState extends MusicBeatSubState
         if (capsule == null || !capsule.visible) continue;
         if (capsule.capsule == null || !capsule.capsule.visible) continue;
         if (!menuTouchOverlaps(capsule.theActualHitbox, funnyCam)) continue;
-        if (menuSwipeAny()) continue;
+        if (menuSwipeAny() || menuPointerJustSwipedAny()) continue;
 
         if (capsule.selected)
         {
@@ -2134,14 +2137,28 @@ class FreeplayState extends MusicBeatSubState
     }
   }
 
+  function touchOverSongCapsule():Bool
+  {
+    for (capsule in grpCapsules.members)
+    {
+      if (capsule == null || !capsule.exists || !capsule.visible) continue;
+      if (capsule.capsule == null || !capsule.capsule.visible) continue;
+      if (menuTouchOverlaps(capsule.theActualHitbox, funnyCam)) return true;
+    }
+    return false;
+  }
+
   function handleTouchSelectionScroll(elapsed:Float):Void
   {
     if (draggingDifficulty || (ControlsHandler.usingExternalInputDevice && !(DeviceUtil.isQuestBrowser && menuTouchPressed()))) return;
     if (menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
-    if (menuTouchJustPressed() && menuTouchOverlaps(capsuleHitbox, funnyCam))
+    if (menuTouchJustPressed())
     {
-      _pressedOnCapsule = true;
+      // The old fixed capsuleHitbox can miss the real song cards on narrow or
+      // portrait mobile layouts. Start a drag from visible card hitboxes too,
+      // while retaining the wider stock region for gaps between cards.
+      _pressedOnCapsule = menuTouchOverlaps(capsuleHitbox, funnyCam) || touchOverSongCapsule();
     }
 
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
@@ -2149,7 +2166,7 @@ class FreeplayState extends MusicBeatSubState
     // as a complete song selection.
     final scrollPixelsPerSong:Float = Math.max(128, FlxG.height * 0.30);
     #if web
-    if (DeviceUtil.isQuestBrowser && FlxG.touches.list.length == 0)
+    if (DeviceUtil.isMobileBrowser && FlxG.touches.list.length == 0)
     {
       final pointer = menuPointer();
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
