@@ -655,6 +655,13 @@ class PsychGameplayApi
       var character:Null<BaseCharacter> = getCharacterForRole(state, role);
       if (character == null || character.cameraFocusPoint == null) return false;
       state.tweenCameraToPosition(character.cameraFocusPoint.x, character.cameraFocusPoint.y, 0);
+      var normalizedRole:String = switch (StringTools.trim(role).toLowerCase())
+      {
+        case "gf", "girlfriend": "gf";
+        case "dad", "opponent": "dad";
+        default: "boyfriend";
+      };
+      PsychScriptRuntime.dispatch("onMoveCamera", [normalizedRole]);
       return true;
     });
     vars.set("startCountdown", function():Bool
