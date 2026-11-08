@@ -1552,6 +1552,40 @@ class PlayState extends MusicBeatSubState
     }
   }
 
+  /** Convert NovaBeat/Psych event payload shapes into Psych's name/value tuple. */
+  function buildPsychEventArguments(eventData:SongEventData):Array<Dynamic>
+  {
+    var eventName:String = eventData.eventKind;
+    var value1:String = "";
+    var value2:String = "";
+    var rawValue:Dynamic = eventData.value;
+    if (rawValue != null)
+    {
+      if (Std.isOfType(rawValue, Array))
+      {
+        var values:Array<Dynamic> = cast rawValue;
+        if (values.length > 0 && values[0] != null) value1 = Std.string(values[0]);
+        if (values.length > 1 && values[1] != null) value2 = Std.string(values[1]);
+      }
+      else if (Std.isOfType(rawValue, Object))
+      {
+        var originalName:Dynamic = Reflect.field(rawValue, "name");
+        if (eventData.eventKind == "PsychCompatibilityEvent" && originalName != null)
+          eventName = Std.string(originalName);
+        var first:Dynamic = Reflect.field(rawValue, "value1");
+        var second:Dynamic = Reflect.field(rawValue, "value2");
+        if (first == null) first = Reflect.field(rawValue, "value");
+        if (first != null) value1 = Std.string(first);
+        if (second != null) value2 = Std.string(second);
+      }
+      else
+      {
+        value1 = Std.string(rawValue);
+      }
+    }
+    return [eventName, value1, value2];
+  }
+
   /** Dispatch Psych's game-over screen entry callback once the substate exists. */
   public function dispatchPsychGameOverStart():Void
   {
@@ -1588,19 +1622,28 @@ class PlayState extends MusicBeatSubState
           var direction:Int = Std.int(note.direction);
           var noteType:String = note.kind ?? "";
           var isSustain:Bool = note.isHoldNote;
+          var luaNoteArgs:Array<Dynamic> = [noteId, direction, noteType, isSustain];
 
           if (event.type == "NOTE_INCOMING")
           {
-            PsychScriptRuntime.dispatch("onSpawnNote", [noteId, direction, noteType, isSustain]);
+            var spawnArgs:Array<Dynamic> = luaNoteArgs.copy();
+            spawnArgs.push(note.noteData.time);
+            PsychScriptRuntime.dispatchSeparate("onSpawnNote", spawnArgs, [note]);
           }
-          else
+          else if (event.type == "NOTE_HIT")
           {
-            var callback:String = event.type == "NOTE_MISS"
-              ? "noteMiss"
-              : (note.noteData.getStrumlineIndex() == 1 ? "opponentNoteHit" : "goodNoteHit");
-
-            if (PsychScriptRuntime.dispatchStop(callback, [noteId, direction, noteType, isSustain]))
-              event.cancel();
+            var isOpponent:Bool = note.noteData.getStrumlineIndex() == 1;
+            // Botplay notes on the player's side intentionally bypass Psych's
+            // goodNoteHit path in NovaBeat, so they must not emit its pre-hook.
+            if (isOpponent || !isBotPlayMode)
+            {
+              var preCallback:String = isOpponent ? "opponentNoteHitPre" : "goodNoteHitPre";
+              PsychScriptRuntime.dispatchPsychNoteCallback(preCallback, luaNoteArgs, [note]);
+            }
+          }
+          else if (event.type == "NOTE_MISS")
+          {
+            PsychScriptRuntime.dispatchPsychNoteCallback("noteMiss", luaNoteArgs, [note]);
           }
         }
       }
@@ -1608,47 +1651,8 @@ class PlayState extends MusicBeatSubState
       {
         var songEvent:SongEventScriptEvent = cast event;
         var eventData = songEvent.eventData;
-        var value1:String = "";
-        var value2:String = "";
-        var callbackEventName:String = eventData.eventKind;
-        var rawValue:Dynamic = eventData.value;
-        if (rawValue != null)
-        {
-          if (Std.isOfType(rawValue, Array))
-          {
-            var values:Array<Dynamic> = cast rawValue;
-            if (values.length > 0) value1 = Std.string(values[0]);
-            if (values.length > 1) value2 = Std.string(values[1]);
-          }
-          else if (Reflect.isObject(rawValue))
-          {
-            if (eventData.eventKind == "PsychCompatibilityEvent")
-            {
-              var originalName:Dynamic = Reflect.field(rawValue, "name");
-              if (originalName != null) callbackEventName = Std.string(originalName);
-            }
-            var first:Dynamic = Reflect.field(rawValue, "value1");
-            var second:Dynamic = Reflect.field(rawValue, "value2");
-            if (first == null) first = Reflect.field(rawValue, "value");
-            if (first != null) value1 = Std.string(first);
-            if (second != null) value2 = Std.string(second);
-          }
-          else
-          {
-            value1 = Std.string(rawValue);
-          }
-        }
-
-        if (PsychScriptRuntime.dispatchStop("onEvent", [callbackEventName, value1, value2]))
-          event.cancel();
-      }
-      else if (event.type == "SONG_END")
-      {
-        // Psych's official callback is onEndSong. Retain the earlier
-        // onSongEnd spelling as a fallback for scripts already written for
-        // NovaBeat's first compatibility pass.
-        var callback:String = PsychScriptRuntime.hasCallback("onEndSong") ? "onEndSong" : "onSongEnd";
-        if (PsychScriptRuntime.dispatchStop(callback, []))
+        var eventArgs:Array<Dynamic> = buildPsychEventArguments(eventData);
+        if (PsychScriptRuntime.dispatchStop("onEvent", eventArgs))
           event.cancel();
       }
       else if (event.type == "GAME_OVER")
@@ -2771,6 +2775,21 @@ class PlayState extends MusicBeatSubState
     var builtEventData = event.events;
 
     songEvents = builtEventData;
+    // Psych resolves per-event early timing and fires onEventPushed at chart load,
+    // before the runtime event queue is reset or any event is played.
+    for (eventData in songEvents)
+    {
+      var eventArgs:Array<Dynamic> = buildPsychEventArguments(eventData);
+      var earlyTriggerArgs:Array<Dynamic> = eventArgs.copy();
+      earlyTriggerArgs.push(eventData.time);
+      var earlyTrigger:Dynamic = PsychScriptRuntime.callOnScripts("eventEarlyTrigger", earlyTriggerArgs, true, [], [0]);
+      var earlyMs:Float = earlyTrigger == null ? 0 : Std.parseFloat(Std.string(earlyTrigger));
+      if (!Math.isNaN(earlyMs) && earlyMs != 0) eventData.time -= earlyMs;
+
+      var pushedArgs:Array<Dynamic> = eventArgs.copy();
+      pushedArgs.push(eventData.time);
+      PsychScriptRuntime.dispatch("onEventPushed", pushedArgs);
+    }
     SongEventRegistry.resetEvents(songEvents);
 
     // Reset the notes on each strumline.
@@ -3031,9 +3050,10 @@ class PlayState extends MusicBeatSubState
      */
   function onKeyPress(event:PreciseInputEvent):Void
   {
-    if (isGamePaused) return;
+    if (isGamePaused || isInCutscene || disableKeys || isBotPlayMode || isSongEnd || isPlayerDying || !generatedMusic) return;
 
-    // Do the minimal possible work here.
+    var direction:Int = Std.int(event.noteDirection);
+    if (PsychScriptRuntime.dispatchStop("onKeyPressPre", [direction])) return;
     inputPressQueue.push(event);
   }
 
@@ -3042,7 +3062,10 @@ class PlayState extends MusicBeatSubState
      */
   function onKeyRelease(event:PreciseInputEvent):Void
   {
-    // Do the minimal possible work here.
+    if (isGamePaused || isInCutscene || disableKeys || isBotPlayMode || isSongEnd || isPlayerDying || !startedCountdown) return;
+
+    var direction:Int = Std.int(event.noteDirection);
+    if (PsychScriptRuntime.dispatchStop("onKeyReleasePre", [direction])) return;
     inputReleaseQueue.push(event);
   }
 
@@ -3285,23 +3308,25 @@ class PlayState extends MusicBeatSubState
 
     // Generate a list of notes within range.
     var notesInRange:Array<NoteSprite> = playerStrumline.getNotesMayHit();
-
     var notesByDirection:Array<Array<NoteSprite>> = [[], [], [], []];
-
-    for (note in notesInRange) notesByDirection[note.direction].push(note);
+    for (note in notesInRange)
+      notesByDirection[Std.int(note.direction)].push(note);
 
     while (inputPressQueue.length > 0)
     {
       var input:Null<PreciseInputEvent> = inputPressQueue.shift();
       if (input == null) continue;
 
+      var direction:Int = Std.int(input.noteDirection);
+
       // Whether this direction is already held by another key.
       playerStrumline.pressKey(input.noteDirection, input.keyCode);
 
-      // Don't credit or penalize inputs in Bot Play.
+      // Don't credit or penalize inputs in Bot Play, matching Psych's
+      // keyboard callbacks which are disabled while CPU control is active.
       if (isBotPlayMode) continue;
 
-      var notesInDirection:Array<NoteSprite> = notesByDirection[input.noteDirection];
+      var notesInDirection:Array<NoteSprite> = notesByDirection[direction];
 
       #if FEATURE_GHOST_TAPPING
       if ((!playerStrumline.mayGhostTap()) && notesInDirection.length == 0)
@@ -3309,37 +3334,31 @@ class PlayState extends MusicBeatSubState
       if (notesInDirection.length == 0)
       #end
       {
-        // Pressed a wrong key with no notes nearby.
-        // Perform a ghost miss (anti-spam).
+        PsychScriptRuntime.dispatch("onGhostTap", [direction]);
         ghostNoteMiss(input.noteDirection, notesInRange.length > 0);
-
-        // Play the strumline animation.
         playerStrumline.playPress(input.noteDirection);
         trace('PENALTY Score: ${songScore}');
       }
-    else if (notesInDirection.length == 0)
-    {
-      // Press a key with no penalty.
+      else if (notesInDirection.length == 0)
+      {
+        // Ghost tapping is enabled, so this press has no penalty.
+        playerStrumline.playPress(input.noteDirection);
+        trace('NO PENALTY Score: ${songScore}');
+      }
+      else
+      {
+        // Choose the first note, deprioritizing low priority notes.
+        var targetNote:Null<NoteSprite> = notesInDirection.find((note) -> !note.lowPriority);
+        if (targetNote == null) targetNote = notesInDirection[0];
+        if (targetNote != null)
+        {
+          goodNoteHit(targetNote, input);
+          notesInDirection.remove(targetNote);
+          playerStrumline.playConfirm(input.noteDirection);
+        }
+      }
 
-      // Play the strumline animation.
-      playerStrumline.playPress(input.noteDirection);
-      trace('NO PENALTY Score: ${songScore}');
-    }
-    else
-    {
-      // Choose the first note, deprioritizing low priority notes.
-      var targetNote:Null<NoteSprite> = notesInDirection.find((note) -> !note.lowPriority);
-      if (targetNote == null) targetNote = notesInDirection[0];
-      if (targetNote == null) continue;
-
-      // Judge and hit the note.
-      goodNoteHit(targetNote, input);
-
-      notesInDirection.remove(targetNote);
-
-      // Play the strumline animation.
-      playerStrumline.playConfirm(input.noteDirection);
-    }
+      PsychScriptRuntime.dispatch("onKeyPress", [direction]);
     }
 
     while (inputReleaseQueue.length > 0)
@@ -3347,10 +3366,9 @@ class PlayState extends MusicBeatSubState
       var input:Null<PreciseInputEvent> = inputReleaseQueue.shift();
       if (input == null) continue;
 
-      // Play the strumline animation.
       playerStrumline.playStatic(input.noteDirection);
-
       playerStrumline.releaseKey(input.noteDirection, input.keyCode);
+      PsychScriptRuntime.dispatch("onKeyRelease", [Std.int(input.noteDirection)]);
     }
 
     playerStrumline.noteVibrations.tryNoteVibration();
