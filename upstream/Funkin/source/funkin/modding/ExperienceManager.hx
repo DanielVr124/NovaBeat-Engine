@@ -65,7 +65,7 @@ class ExperienceManager
       if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "meta.json"]));
       if (genericMetadata == null) genericMetadata = readJson(Path.join([modPath, "pack.json"]));
 
-      var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata);
+      var engine:EngineDetection = EngineBridge.detectEngine(modPath, polymodMetadata, novaBeatMetadata, genericMetadata);
       var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata);
       var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
