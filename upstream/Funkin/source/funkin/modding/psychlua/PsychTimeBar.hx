@@ -23,7 +23,7 @@ class PsychTimeBar extends FlxSpriteGroup
   public final rightFill:FlxSprite;
   public final timeText:FlxText;
 
-  public var timeBarType:String = "timeLeft";
+  public var timeBarType:String = "Time Left";
   public var percent(default, null):Float = 0;
 
   final owner:PlayState;
@@ -99,13 +99,21 @@ class PsychTimeBar extends FlxSpriteGroup
       leftFill.scale.x = Math.max(0, Math.min(1, filledWidth / halfWidth));
       rightFill.scale.x = Math.max(0, Math.min(1, (filledWidth - halfWidth) / rightWidth));
 
-      var displayTime:Float = timeBarType != null && timeBarType.toLowerCase() == "elapsed"
-        ? Math.max(0, position)
-        : Math.max(0, length - position);
-      var totalSeconds:Int = Std.int(Math.floor(displayTime / 1000));
-      var minutes:Int = Std.int(totalSeconds / 60);
-      var seconds:Int = totalSeconds % 60;
-      timeText.text = Std.string(minutes) + ":" + StringTools.lpad(Std.string(seconds), "0", 2);
+      var displayMode:String = timeBarType == null ? "time left" : StringTools.trim(timeBarType).toLowerCase();
+      visible = displayMode != "disabled";
+      if (displayMode == "song name")
+      {
+        timeText.text = owner.currentSong == null ? "" : owner.currentSong.songName;
+      }
+      else
+      {
+        var elapsed:Bool = displayMode == "time elapsed";
+        var displayTime:Float = elapsed ? Math.max(0, position) : Math.max(0, length - position);
+        var totalSeconds:Int = Std.int(Math.floor(displayTime / 1000));
+        var minutes:Int = Std.int(totalSeconds / 60);
+        var seconds:Int = totalSeconds % 60;
+        timeText.text = Std.string(minutes) + ":" + StringTools.lpad(Std.string(seconds), "0", 2);
+      }
     }
 
     super.update(elapsed);
