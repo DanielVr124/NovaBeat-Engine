@@ -31,6 +31,7 @@ import flixel.addons.display.FlxRuntimeShader;
 import flixel.sound.FlxSound;
 import funkin.Conductor;
 import funkin.Paths;
+import funkin.Assets;
 import funkin.play.PlayState;
 import funkin.Highscore;
 import funkin.Preferences;
@@ -448,6 +449,29 @@ class PsychGameplayApi
       return !ignoreModFolders && PsychModRuntime.deleteModFile(path));
     vars.set("directoryFileList", function(path:String):Array<String>
       return PsychModRuntime.listModDirectory(path));
+ 
+    vars.set("callMethod", function(methodPath:String, ?args:Array<Dynamic> = null):Dynamic
+      return callSafeMethod(state, methodPath, parseInstanceArguments(state, args)));
+    vars.set("callMethodFromClass", function(className:String, methodPath:String, ?args:Array<Dynamic> = null):Dynamic
+      return callSafeClassMethod(className, methodPath, parseInstanceArguments(state, args)));
+    vars.set("createInstance", function(variableToSave:String, className:String, ?args:Array<Dynamic> = null):Bool
+      return createSafeInstance(variableToSave, className, args));
+    vars.set("addInstance", function(objectName:String, ?inFront:Bool = false):Bool
+      return addSafeInstance(state, objectName, inFront));
+    vars.set("instanceArg", function(instanceName:String, ?className:String = null):String
+    {
+      if (instanceName == null || instanceName.length == 0) return "";
+      var token:String = "##PSYCHLUA_STRINGTOOBJ::" + instanceName;
+      if (className != null && className.length > 0) token += "::" + className;
+      return token;
+    });
+
+    // FlxAnimate is an optional Psych dependency and is not bundled by NovaBeat.
+    // Keep the callback names present so scripts can feature-detect cleanly.
+    vars.set("makeFlxAnimateSprite", function(tag:String, ?x:Float = 0, ?y:Float = 0, ?loadFolder:String = null):Bool return false);
+    vars.set("loadAnimateAtlas", function(tag:String, folderOrImg:Dynamic, ?spriteJson:Dynamic = null, ?animationJson:Dynamic = null):Bool return false);
+    vars.set("addAnimationBySymbol", function(tag:String, name:String, symbol:String, ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool return false);
+    vars.set("addAnimationBySymbolIndices", function(tag:String, name:String, symbol:String, ?indices:Dynamic = null, ?framerate:Float = 24, ?loop:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool return false);
     vars.set("getMidpointX", function(variable:String):Float
     {
       var object:Dynamic = getProperty(state, variable);
@@ -1436,6 +1460,8 @@ class PsychGameplayApi
       "getShaderInt", "getShaderIntArray", "getShaderFloat", "getShaderFloatArray",
       "setShaderBool", "setShaderBoolArray", "setShaderInt", "setShaderIntArray",
       "setShaderFloat", "setShaderFloatArray", "setShaderSampler2D",
+      "callMethod", "callMethodFromClass", "createInstance", "addInstance", "instanceArg",
+      "makeFlxAnimateSprite", "loadAnimateAtlas", "addAnimationBySymbol", "addAnimationBySymbolIndices",
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
@@ -2340,6 +2366,151 @@ class PsychGameplayApi
       return Reflect.compare(a.strumTime, b.strumTime);
     });
     return result;
+  }
+
+  static function resolveSafePsychClass(className:String):Class<Dynamic>
+  {
+    if (className == null || className.length == 0) return null;
+    var normalized:String = StringTools.trim(className);
+    var aliases:Map<String, String> = [
+      "FlxG" => "flixel.FlxG",
+      "FlxSprite" => "flixel.FlxSprite",
+      "FlxText" => "flixel.text.FlxText",
+      "FlxObject" => "flixel.FlxObject",
+      "FlxPoint" => "flixel.math.FlxPoint",
+      "FlxMath" => "flixel.math.FlxMath",
+      "FlxTimer" => "flixel.util.FlxTimer",
+      "FlxTween" => "flixel.tweens.FlxTween",
+      "FlxEase" => "flixel.tweens.FlxEase",
+      "Conductor" => "funkin.Conductor",
+      "Paths" => "funkin.Paths",
+      "PlayState" => "funkin.play.PlayState"
+    ];
+    if (aliases.exists(normalized)) normalized = aliases.get(normalized);
+    var allowed:Array<String> = [
+      "flixel.FlxG", "flixel.FlxSprite", "flixel.text.FlxText", "flixel.FlxObject",
+      "flixel.math.FlxPoint", "flixel.math.FlxMath", "flixel.util.FlxTimer",
+      "flixel.tweens.FlxTween", "flixel.tweens.FlxEase", "funkin.Conductor",
+      "funkin.Paths", "funkin.play.PlayState"
+    ];
+    if (allowed.indexOf(normalized) < 0) return null;
+    return Type.resolveClass(normalized);
+  }
+
+  static function parseInstanceArguments(state:PlayState, args:Array<Dynamic>):Array<Dynamic>
+  {
+    var result:Array<Dynamic> = args == null ? [] : args.copy();
+    for (i in 0...result.length)
+    {
+      var value:Dynamic = result[i];
+      if (!Std.isOfType(value, String)) continue;
+      var token:String = cast value;
+      if (!StringTools.startsWith(token, "##PSYCHLUA_STRINGTOOBJ::")) continue;
+      var payload:String = token.substr("##PSYCHLUA_STRINGTOOBJ::".length);
+      var parts:Array<String> = payload.split("::");
+      var path:String = parts[0];
+      var root:Dynamic = state;
+      if (parts.length > 1)
+      {
+        root = resolveSafePsychClass(parts[1]);
+        if (root == null) continue;
+      }
+      result[i] = getFromObject(root, path, true);
+    }
+    return result;
+  }
+
+  static function isSafeReflectedMethod(target:Dynamic, methodName:String):Bool
+  {
+    if (target == null || methodName == null) return false;
+    if (Std.isOfType(target, BaseCharacter))
+      return ["playAnimation", "dance", "setPosition", "setFacingFlip"].contains(methodName);
+    if (Std.isOfType(target, FlxText))
+      return ["setFormat", "setBorderStyle", "setPosition", "setGraphicSize", "updateHitbox",
+        "screenCenter", "setScrollFactor", "setSize", "kill", "destroy", "reset"].contains(methodName);
+    if (Std.isOfType(target, FlxSprite))
+      return ["setPosition", "setGraphicSize", "updateHitbox", "screenCenter", "setScrollFactor",
+        "setSize", "kill", "destroy", "reset", "centerOrigin", "centerOffsets", "setFacingFlip",
+        "makeGraphic", "loadGraphic"].contains(methodName);
+    if (Std.isOfType(target, FlxCamera))
+      return ["shake", "flash", "fade", "follow", "focusOn"].contains(methodName);
+    if (Std.isOfType(target, FlxTimer)) return ["start", "cancel"].contains(methodName);
+    if (Std.isOfType(target, FlxTween)) return ["cancel"].contains(methodName);
+    if (Std.isOfType(target, FlxBasic)) return ["kill", "destroy", "reset"].contains(methodName);
+    if (Std.isOfType(target, PlayState))
+      return ["startCountdown", "endSong", "pause", "resume", "triggerEvent"].contains(methodName);
+    if (Reflect.field(target, "members") != null)
+      return ["add", "remove", "insert", "clear"].contains(methodName);
+    return false;
+  }
+
+  static function callSafeMethod(state:PlayState, methodPath:String, args:Array<Dynamic>):Dynamic
+  {
+    if (methodPath == null || methodPath.length == 0) return null;
+    var parts:Array<String> = methodPath.split(".");
+    var methodName:String = StringTools.trim(parts.pop());
+    if (methodName.length == 0) return null;
+    var target:Dynamic = state;
+    if (parts.length > 0) target = getProperty(state, parts.join("."));
+    if (!isSafeReflectedMethod(target, methodName)) return null;
+    var method:Dynamic = Reflect.field(target, methodName);
+    if (method == null) return null;
+    try return Reflect.callMethod(target, method, args == null ? [] : args) catch (error:Dynamic)
+    {
+      trace('[Psych API] callMethod(' + methodPath + ') failed: ' + Std.string(error));
+      return null;
+    }
+  }
+
+  static function callSafeClassMethod(className:String, methodPath:String, args:Array<Dynamic>):Dynamic
+  {
+    var target:Dynamic = resolveSafePsychClass(className);
+    if (target == null || methodPath == null || methodPath.indexOf(".") >= 0) return null;
+    var safeMethods:Map<String, Array<String>> = [
+      "flixel.math.FlxMath" => ["max", "min", "abs", "floor", "ceil", "round", "roundDecimal", "lerp", "bound", "remapToRange"],
+      "flixel.tweens.FlxEase" => ["linear", "quadIn", "quadOut", "quadInOut", "cubeIn", "cubeOut", "cubeInOut",
+        "quartIn", "quartOut", "quartInOut", "quintIn", "quintOut", "quintInOut", "sineIn", "sineOut", "sineInOut"],
+      "funkin.Conductor" => ["getBPMFromSeconds", "getBPMAtTime"],
+      "funkin.Paths" => ["image", "font", "sound", "music", "video"]
+    ];
+    var normalized:String = StringTools.trim(className);
+    if (normalized == "FlxMath") normalized = "flixel.math.FlxMath";
+    if (normalized == "FlxEase") normalized = "flixel.tweens.FlxEase";
+    if (normalized == "Conductor") normalized = "funkin.Conductor";
+    if (normalized == "Paths") normalized = "funkin.Paths";
+    if (!safeMethods.exists(normalized) || !safeMethods.get(normalized).contains(methodPath)) return null;
+    var method:Dynamic = Reflect.field(target, methodPath);
+    if (method == null) return null;
+    try return Reflect.callMethod(target, method, args == null ? [] : args) catch (error:Dynamic) return null;
+  }
+
+  static function createSafeInstance(tag:String, className:String, args:Array<Dynamic>):Bool
+  {
+    if (!isSafeSaveIdentifier(tag) || scriptVariables.exists(tag)) return false;
+    var constructor:Class<Dynamic> = resolveSafePsychClass(className);
+    if (constructor == null || ["flixel.FlxG", "flixel.math.FlxMath", "flixel.tweens.FlxEase",
+      "funkin.Conductor", "funkin.Paths", "funkin.play.PlayState"].contains(Type.getClassName(constructor))) return false;
+    try
+    {
+      var instance:Dynamic = Type.createInstance(constructor, args == null ? [] : args);
+      if (instance == null) return false;
+      scriptVariables.set(tag, instance);
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] createInstance(' + tag + ') failed: ' + Std.string(error));
+      return false;
+    }
+  }
+
+  static function addSafeInstance(state:PlayState, tag:String, inFront:Bool):Bool
+  {
+    var instance:Dynamic = scriptVariables.get(tag);
+    if (!Std.isOfType(instance, FlxBasic)) return false;
+    if (inFront) state.add(cast instance);
+    else state.insert(0, cast instance);
+    return true;
   }
 
   #if (!flash && sys)
