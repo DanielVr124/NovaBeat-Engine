@@ -79,6 +79,14 @@ class PsychGameplayApi
     });
 
     vars.set("getSongPosition", function():Float return Conductor.instance.songPosition);
+    // Common Psych convenience functions. These mirror direct PlayState
+    // access while keeping scripts independent of the engine's field layout.
+    vars.set("getHealth", function():Float return state.health);
+    vars.set("setHealth", function(?value:Float = 1):Void state.health = value);
+    vars.set("addHealth", function(?value:Float = 0):Void state.health += value);
+    vars.set("getSongName", function():String return state.currentSong == null ? "" : state.currentSong.songName);
+    vars.set("getDifficulty", function():String return state.currentDifficulty);
+    vars.set("getSongLength", function():Float return FlxG.sound.music == null ? 0 : FlxG.sound.music.length);
     vars.set("keyboardJustPressed", function(key:String):Bool return keyboardStatus(key, "justPressed"));
     vars.set("keyboardPressed", function(key:String):Bool return keyboardStatus(key, "pressed"));
     vars.set("keyboardReleased", function(key:String):Bool return keyboardStatus(key, "justReleased"));
