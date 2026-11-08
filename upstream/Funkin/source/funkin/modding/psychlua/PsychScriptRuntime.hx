@@ -128,7 +128,7 @@ class PsychScriptRuntime
     if (script == null || script.closed) return null;
     var previous:Null<PsychScriptInstance> = executingScript;
     executingScript = script;
-    var result:Dynamic = callScriptInstance(script, callback, args == null ? [] : args);
+    var result:Dynamic = script.call(callback, args == null ? [] : args);
     executingScript = previous;
     if (script.closed)
     {
