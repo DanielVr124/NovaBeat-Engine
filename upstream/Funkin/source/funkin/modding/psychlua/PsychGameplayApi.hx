@@ -66,7 +66,7 @@ class PsychGameplayApi
     ensureTimeBar(state);
     if (activeTimeBar != null)
     {
-      vars.set("timeBar", activeTimeBar.background);
+      vars.set("timeBar", activeTimeBar);
       vars.set("timeTxt", activeTimeBar.timeText);
       vars.set("timeBarType", activeTimeBar.timeBarType);
     }
@@ -1176,6 +1176,12 @@ class PsychGameplayApi
   public static function updateGlobals(state:PlayState):Void
   {
     if (state == null) return;
+    if (activeTimeBar != null)
+    {
+      var requestedTimeBarType:Dynamic = PsychScriptRuntime.getGlobal("timeBarType");
+      if (requestedTimeBarType != null)
+        activeTimeBar.timeBarType = Std.string(requestedTimeBarType);
+    }
     PsychScriptRuntime.setGlobal("health", state.health);
     PsychScriptRuntime.setGlobal("score", state.songScore);
     PsychScriptRuntime.setGlobal("misses", Highscore.tallies.missed);
