@@ -312,6 +312,23 @@ class PsychScriptRuntime
     dispatch("onUpdate", [elapsed]);
   }
 
+  /**
+   * Check whether any loaded mod script implements a callback. This allows
+   * version/name aliases to remain mutually exclusive instead of firing both.
+   */
+  public static function hasCallback(callback:String):Bool
+  {
+    if (callback == null || callback.length == 0) return false;
+
+    for (script in scripts)
+      if (script.hasFunction(callback)) return true;
+
+    if (inlineLuaBridge != null && inlineLuaBridge.hasFunction(callback)) return true;
+    if (inlineHScriptBridge != null && inlineHScriptBridge.hasFunction(callback)) return true;
+
+    return false;
+  }
+
   public static function dispatchStop(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Bool
   {
     var result:PsychDispatchResult = dispatchInternal(callback, args, ignoreStops);
