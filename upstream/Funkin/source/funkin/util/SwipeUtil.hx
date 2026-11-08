@@ -264,7 +264,22 @@ class SwipeUtil
   @:noCompletion
   static inline function get_justSwipedAny():Bool
   {
-    return justSwipedDown || justSwipedLeft || justSwipedRight || justSwipedUp;
+    #if FEATURE_TOUCH_CONTROLS
+    // Read the swipe once and narrow away null before inspecting it. Combining
+    // the four nullable direction expressions directly makes Haxe infer a
+    // nullable Bool under strict null-safety, which breaks HTML5 compilation.
+    final swipe:Null<FlxSwipe> = (FlxG.swipes.length > 0) ? FlxG.swipes[0] : null;
+    if (swipe == null) return false;
+    if (swipe.distance <= MIN_SWIPE_DISTANCE) return false;
+
+    final degrees:Float = swipe.degrees;
+    return (degrees > 45 && degrees < 135)
+      || (degrees > -45 && degrees < 45)
+      || (degrees > 135 || degrees < -135)
+      || (degrees > -135 && degrees < -45);
+    #else
+    return false;
+    #end
   }
 
   @:noCompletion
