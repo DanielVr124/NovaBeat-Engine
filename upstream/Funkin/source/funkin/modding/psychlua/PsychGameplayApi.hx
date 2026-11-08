@@ -1595,7 +1595,7 @@ class PsychGameplayApi
 
   public static function hasActiveDialogue():Bool
   {
-    return activeDialogue != null && activeDialogue.exists && !activeDialogue.isDead;
+    return activeDialogue != null && activeDialogue.exists;
   }
 
   public static function advanceDialogue():Void
