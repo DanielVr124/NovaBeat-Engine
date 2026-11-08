@@ -68,14 +68,15 @@ The inline Haxe/Lua helper interpreters are separate from loaded mod scripts: th
 - Named custom substate helpers: `openCustomSubstate`, `closeCustomSubstate`, `insertToCustomSubstate`.
 - Audio: `playSound`, tagged stop/pause/resume/volume, `playMusic`, `stopMusic`, `getSoundVolume/Time/Pitch`, `setSoundTime/Pitch`, `soundFadeIn/Out/Cancel`, `musicFadeIn/Out`, and `luaSoundExists`.
 - Asset helpers: `precacheImage`, `precacheSound`, `precacheMusic`.
-- Song flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), and `startVideo` (uses the platform's existing video player with the default start-cutscene flow; Psych's optional mid-song/loop/skip controls are not mapped).
+- Song and cutscene flow: `startCountdown`, `endSong`, `restartSong`, `loadSong` (only uniquely resolved songs in the active imported Psych packages), `exitSong` (returns to NovaBeat Freeplay), `startDialogue` (reads the active song's `data/<song>/` JSON, supports typed text, basic Sparrow portrait metadata, optional music, and the cutscene-advance input), and `startVideo` (uses the platform's existing video player with the default start-cutscene flow; Psych's optional mid-song/loop/skip controls are not mapped).
+- HUD: `setTimeBarColors` controls a separate live time bar shown only for imported Psych songs. The exposed `timeBar` and `timeTxt` are NovaBeat-backed compatibility objects; the time bar uses two color segments rather than Psych's exact gradient widget.
 
 The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123** registered callbacks, and all **14 of 14** deprecated callbacks in that release are present. The two unimplemented standard callbacks are `startDialogue` (Psych's legacy dialogue JSON/renderer) and `setTimeBarColors` (NovaBeat's current gameplay HUD has no Psych-style time bar). This callback count is a registration comparison, not a claim of perfect semantic parity.
 
 ## Not supported yet
 
-- Psych legacy dialogue JSON and its specific dialogue box/portrait renderer. NovaBeat's own conversation system is a different data format.
-- Psych's separate time bar, `setTimeBarColors`, and every time-bar display option.
+- Exact visual parity for Psych's original dialogue box: the adapter renders the standard dialogue JSON, text typing, optional music, basic Sparrow portrait metadata/expressions/position/scale, and advance flow, but not all original speech-bubble animation, idle/loop offsets, locale fallback, or editor features.
+- Exact parity for all Psych time-bar properties and gradients. The compatibility bar is a NovaBeat-backed two-segment bar with `timeBar`, `timeTxt`, `timeBarType`, and `setTimeBarColors`.
 - Arbitrary custom note classes in `custom_notes/`, custom note-skin rendering, non-standard lane layouts, alternate section types, GF-specific sections, or custom arrow/splash skin metadata.
 - Psych stage JSON and the full stage registry/lifecycle. Matching stage Lua/HScript files can render scripted overlays, but Psych-specific stage JSON, default zoom rules, and all camera behavior are not mapped.
 - All Psych character formats and class implementations. The adapter converts common Sparrow character JSON; Packer, AnimateAtlas, multi-atlas, custom class, and advanced character formats remain gated. Active character replacement is not yet implemented.
@@ -85,7 +86,7 @@ The standard Psych 0.7.3 Lua callback comparison currently covers **121 of 123**
 
 The Lua VM removes filesystem, OS, package-loading, debug, and garbage-collector entry points. Common Lua 5.1/LuaJIT aliases (`unpack`, `loadstring`, `string.gfind`, `math.mod`, `math.atan2`, and `table.maxn`) are supplied where missing. This does not make Fengari a complete LuaJIT replacement.
 
-A successful script parse, API registration smoke test, or compile does not prove that a representative mod plays correctly. Real-mod validation is still required. The API comparison does not measure signature parity, event ordering for every edge case, asset compatibility, or whether a mod-specific chart behaves identically to Psych.
+A successful script parse, API registration smoke test, or compile does not prove that a representative mod plays correctly. Real-mod validation is still required. The API comparison does not measure full signature parity, event ordering for every edge case, asset compatibility, or whether a mod-specific chart behaves identically to Psych. Dialogue file/portrait lookup currently requires native installed-mod filesystem access.
 
 ## Debug smoke test
 
