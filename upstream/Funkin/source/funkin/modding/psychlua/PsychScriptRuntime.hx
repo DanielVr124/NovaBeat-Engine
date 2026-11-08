@@ -129,7 +129,16 @@ class PsychScriptRuntime
     if (script == null || script.closed) return null;
     var previous:Null<PsychScriptInstance> = executingScript;
     executingScript = script;
-    var result:Dynamic = script.call(callback, args == null ? [] : args);
+    var result:Dynamic = null;
+    try
+    {
+      result = script.call(callback, args == null ? [] : args);
+    }
+    catch (error:Dynamic)
+    {
+      executingScript = previous;
+      throw error;
+    }
     executingScript = previous;
     if (script.closed)
     {
@@ -331,7 +340,7 @@ class PsychScriptRuntime
     for (script in scripts)
     {
       if (script.language != "hscript" || !script.hasFunction(name)) continue;
-      return script.call(name, callArgs);
+      return callScriptInstance(script, name, callArgs);
     }
     if (inlineHScriptBridge != null && inlineHScriptBridge.hasFunction(name))
       return inlineHScriptBridge.call(name, callArgs);
@@ -344,7 +353,7 @@ class PsychScriptRuntime
     for (script in scripts)
     {
       if (script.language != "lua" || !script.hasFunction(name)) continue;
-      return script.call(name, callArgs);
+      return callScriptInstance(script, name, callArgs);
     }
     if (inlineLuaBridge != null && inlineLuaBridge.hasFunction(name))
       return inlineLuaBridge.call(name, callArgs);
@@ -548,10 +557,10 @@ class PsychScriptRuntime
   {
     var script:Null<PsychScriptInstance> = findScript(scriptPath, language);
     if (script == null) return false;
-    callScriptInstance(script, "onDestroy", []);
+    if (!script.closed) callScriptInstance(script, "onDestroy", []);
     scripts.remove(script);
     customSubstateScripts.remove(script);
-    script.destroy();
+    if (!script.closed) script.destroy();
     return true;
   }
 
