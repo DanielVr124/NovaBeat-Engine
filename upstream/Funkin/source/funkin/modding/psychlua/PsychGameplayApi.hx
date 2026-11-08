@@ -569,15 +569,54 @@ class PsychGameplayApi
       return PsychScriptRuntime.runLuaCode(code, variablesToBring));
     vars.set("runLuaFunction", function(name:String, ?args:Array<Dynamic>):Dynamic
       return PsychScriptRuntime.runLuaFunction(name, args));
-    vars.set("callOnScripts", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
-      return PsychScriptRuntime.callOnScripts(name, args, ignoreStops));
-    vars.set("callOnLuas", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
-      return PsychScriptRuntime.callOnLuas(name, args, ignoreStops));
-    vars.set("callOnHScript", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
-      return PsychScriptRuntime.callOnHScript(name, args, ignoreStops));
-    vars.set("setOnScripts", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnScripts(name, value));
-    vars.set("setOnLuas", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnLuas(name, value));
-    vars.set("setOnHScript", function(name:String, value:Dynamic):Void PsychScriptRuntime.setOnHScript(name, value));
+    vars.set("callOnScripts", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+        ?ignoreSelf:Bool = true, ?excludeScripts:Array<String> = null, ?excludeValues:Array<Dynamic> = null):Bool
+    {
+      var exclusions:Array<String> = excludeScripts == null ? [] : excludeScripts.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !exclusions.contains(current)) exclusions.push(current);
+      PsychScriptRuntime.callOnScripts(name, args, ignoreStops, exclusions, excludeValues);
+      return true;
+    });
+    vars.set("callOnLuas", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+        ?ignoreSelf:Bool = true, ?excludeScripts:Array<String> = null, ?excludeValues:Array<Dynamic> = null):Bool
+    {
+      var exclusions:Array<String> = excludeScripts == null ? [] : excludeScripts.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !exclusions.contains(current)) exclusions.push(current);
+      PsychScriptRuntime.callOnLuas(name, args, ignoreStops, exclusions, excludeValues);
+      return true;
+    });
+    vars.set("callOnHScript", function(name:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false,
+        ?ignoreSelf:Bool = true, ?excludeScripts:Array<String> = null, ?excludeValues:Array<Dynamic> = null):Bool
+    {
+      var exclusions:Array<String> = excludeScripts == null ? [] : excludeScripts.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !exclusions.contains(current)) exclusions.push(current);
+      PsychScriptRuntime.callOnHScript(name, args, ignoreStops, exclusions, excludeValues);
+      return true;
+    });
+    vars.set("setOnScripts", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null):Void
+    {
+      var ignored:Array<String> = exclusions == null ? [] : exclusions.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !ignored.contains(current)) ignored.push(current);
+      PsychScriptRuntime.setOnScripts(name, value, ignored);
+    });
+    vars.set("setOnLuas", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null):Void
+    {
+      var ignored:Array<String> = exclusions == null ? [] : exclusions.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !ignored.contains(current)) ignored.push(current);
+      PsychScriptRuntime.setOnLuas(name, value, ignored);
+    });
+    vars.set("setOnHScript", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null):Void
+    {
+      var ignored:Array<String> = exclusions == null ? [] : exclusions.copy();
+      var current:String = PsychScriptRuntime.getExecutingScriptPath();
+      if (ignoreSelf && current.length > 0 && !ignored.contains(current)) ignored.push(current);
+      PsychScriptRuntime.setOnHScript(name, value, ignored);
+    });
 
     vars.set("doTweenX", function(tag:String, objectTag:String, value:Float, duration:Float, ?ease:String = "linear"):Bool
       return startTween(state, tag, objectTag, {x: value}, duration, ease));
