@@ -1035,8 +1035,11 @@ class PsychGameplayApi
       "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
-      "cameraSetTarget", "startCountdown", "endSong",
-      "precacheImage", "precacheSound", "precacheMusic", "setHealthBarColors"
+      "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong",
+      "addCharacterToList", "precacheImage", "precacheSound", "precacheMusic", "setHealthBarColors",
+      "addAnimationByIndicesLoop", "characterPlayAnim", "luaSpriteMakeGraphic",
+      "luaSpriteAddAnimationByPrefix", "luaSpriteAddAnimationByIndices", "luaSpritePlayAnimation",
+      "setLuaSpriteCamera", "setLuaSpriteScrollFactor", "scaleLuaSprite", "musicFadeIn", "musicFadeOut"
     ];
 
     var missing:Array<String> = [];
