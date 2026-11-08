@@ -414,7 +414,10 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
     menuItems.cameras = [uiCamera];
-    menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
+    // NovaBeat handles mobile taps on release with this menu's own camera,
+    // avoiding missed or duplicated accepts from browser touch/mouse emulation.
+    menuItems.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
+    menuItems.acceptOnTouchSelection = false;
 
     for (index in 0...visibleItemIndexes.length)
     {
@@ -568,13 +571,18 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
       // Use the same release-based mobile confirm used by the original FNF menus.
       #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (DeviceUtil.isMobileBrowser && TouchUtil.pressAction() && !SwipeUtil.justSwipedAny) pressed = true;
+      var touchPressAction:Bool = TouchUtil.pressAction();
+      #if web
+      touchPressAction = touchPressAction || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased);
+      #end
+      if (DeviceUtil.isMobileBrowser && touchPressAction && !SwipeUtil.justSwipedAny) pressed = true;
       #end
 
       if (pressed) beginMenuTransition();
       return;
     }
 
+    handleMobileMenuTileInput();
     handleHeaderPointerInput();
 
     #if !mobile
@@ -631,6 +639,43 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (transitioning) return;
     playSfx('back', 0.7);
     FlxG.switchState(() -> new TitleState());
+  }
+
+  /**
+   * Use a single release-based hit test for NovaBeat's mobile menu tiles.
+   * Some HTML5 browsers expose the end of a finger tap only as a FlxMouse
+   * release, while others keep it in FlxTouch. Test both without allowing
+   * desktop mouse hover/clicks to drive the primary menus.
+   */
+  function handleMobileMenuTileInput():Void
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (!DeviceUtil.isMobileBrowser || menuItems == null || menuItems.busy) return;
+
+    final touchReleased:Bool = TouchUtil.justReleased;
+    #if web
+    final mouseReleased:Bool = FlxG.mouse.justReleased;
+    #else
+    final mouseReleased:Bool = false;
+    #end
+    if (!touchReleased && !mouseReleased) return;
+
+    for (index in 0...menuItems.members.length)
+    {
+      final item:TextMenuItem = menuItems.members[index];
+      if (item == null || !item.available) continue;
+
+      var hit:Bool = touchReleased && TouchUtil.overlaps(item, uiCamera);
+      #if web
+      if (!hit && mouseReleased) hit = FlxG.mouse.overlaps(item, uiCamera);
+      #end
+      if (!hit) continue;
+
+      menuItems.selectItem(index);
+      menuItems.accept();
+      return;
+    }
+    #end
   }
 
   function handleHeaderPointerInput():Void
