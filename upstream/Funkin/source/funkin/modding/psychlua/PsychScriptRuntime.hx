@@ -192,9 +192,9 @@ class PsychScriptRuntime
     dispatch("onUpdate", [elapsed]);
   }
 
-  public static function dispatchStop(callback:String, ?args:Array<Dynamic>):Bool
+  public static function dispatchStop(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Bool
   {
-    var result:PsychDispatchResult = dispatchInternal(callback, args);
+    var result:PsychDispatchResult = dispatchInternal(callback, args, ignoreStops);
     return result.value == FUNCTION_STOP;
   }
 
@@ -205,7 +205,7 @@ class PsychScriptRuntime
    * dispatch at their respective language boundary; only Function_Stop
    * cancels the gameplay operation itself.
    */
-  static function dispatchInternal(callback:String, ?args:Array<Dynamic>):PsychDispatchResult
+  static function dispatchInternal(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):PsychDispatchResult
   {
     var callArgs:Array<Dynamic> = args == null ? [] : args;
     var results:Array<Dynamic> = [];
@@ -226,7 +226,7 @@ class PsychScriptRuntime
         luaResult = result;
       }
 
-      if (result == FUNCTION_STOP_LUA || result == FUNCTION_STOP_ALL)
+      if (!ignoreStops && (result == FUNCTION_STOP_LUA || result == FUNCTION_STOP_ALL))
         break;
     }
 
@@ -244,7 +244,7 @@ class PsychScriptRuntime
         if (result != null && result != FUNCTION_CONTINUE)
           value = result;
 
-        if (result == FUNCTION_STOP_HSCRIPT || result == FUNCTION_STOP_ALL)
+        if (!ignoreStops && (result == FUNCTION_STOP_HSCRIPT || result == FUNCTION_STOP_ALL))
           break;
       }
     }

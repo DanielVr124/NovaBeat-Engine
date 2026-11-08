@@ -1,6 +1,7 @@
 package funkin.modding.psychlua;
 
 import flixel.FlxG;
+import flixel.FlxBasic;
 import flixel.FlxSprite;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
@@ -11,6 +12,7 @@ import funkin.Paths;
 import funkin.play.PlayState;
 import funkin.play.notes.NoteSprite;
 import funkin.play.character.BaseCharacter;
+import funkin.play.notes.Strumline;
 
 /**
  * Deliberately bounded Psych API surface for the first script-enabled tier.
@@ -207,6 +209,65 @@ class PsychGameplayApi
     vars.set("screenWidth", FlxG.width);
     vars.set("screenHeight", FlxG.height);
     vars.set("songName", state.currentSong == null ? "" : state.currentSong.songName);
+    vars.set("difficulty", state.currentDifficulty);
+    vars.set("game", state);
+    vars.set("stage", state.currentStage);
+    vars.set("camGame", state.camGame);
+    vars.set("camHUD", state.camHUD);
+
+    if (state.currentStage != null)
+    {
+      vars.set("boyfriend", state.currentStage.getBoyfriend());
+      vars.set("dad", state.currentStage.getDad());
+      vars.set("gf", state.currentStage.getGirlfriend());
+    }
+
+    vars.set("add", function(object:Dynamic):Dynamic
+    {
+      if (object != null && Std.isOfType(object, FlxBasic))
+        state.add(cast object);
+      return object;
+    });
+    vars.set("insert", function(index:Int, object:Dynamic):Dynamic
+    {
+      if (object != null && Std.isOfType(object, FlxBasic))
+        state.insert(index, cast object);
+      return object;
+    });
+    vars.set("remove", function(object:Dynamic, ?destroy:Bool = false):Dynamic
+    {
+      if (object != null && Std.isOfType(object, FlxBasic))
+      {
+        state.remove(cast object, true);
+        if (destroy) (cast object:FlxBasic).destroy();
+      }
+      return object;
+    });
+
+    if (state.playerStrumline != null)
+    {
+      for (i in 0...Strumline.DIRECTIONS.length)
+      {
+        var receptor = state.playerStrumline.getByDirection(Strumline.DIRECTIONS[i]);
+        if (receptor != null)
+        {
+          vars.set("defaultPlayerStrumX" + i, receptor.x);
+          vars.set("defaultPlayerStrumY" + i, receptor.y);
+        }
+      }
+    }
+    if (state.opponentStrumline != null)
+    {
+      for (i in 0...Strumline.DIRECTIONS.length)
+      {
+        var receptor = state.opponentStrumline.getByDirection(Strumline.DIRECTIONS[i]);
+        if (receptor != null)
+        {
+          vars.set("defaultOpponentStrumX" + i, receptor.x);
+          vars.set("defaultOpponentStrumY" + i, receptor.y);
+        }
+      }
+    }
     vars.set("Function_Continue", PsychScriptRuntime.getGlobal("Function_Continue"));
     vars.set("Function_Stop", PsychScriptRuntime.getGlobal("Function_Stop"));
     vars.set("Function_StopLua", PsychScriptRuntime.getGlobal("Function_StopLua"));

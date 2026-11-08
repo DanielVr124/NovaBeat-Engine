@@ -2706,7 +2706,7 @@ class PlayState extends MusicBeatSubState
      */
   public function startCountdown():Void
   {
-    if (PsychScriptRuntime.dispatchStop("onStartCountdown", [])) return;
+    if (PsychScriptRuntime.dispatchStop("onStartCountdown", [], true)) return;
 
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
