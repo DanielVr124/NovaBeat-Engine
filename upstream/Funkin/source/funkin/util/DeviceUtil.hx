@@ -7,6 +7,10 @@ import lime.system.System;
 
 class DeviceUtil
 {
+  // Browser capability checks are used by menu update loops. Cache the
+  // stable user-agent/pointer result instead of calling matchMedia every frame.
+  static var cachedIsQuestBrowser:Null<Bool> = null;
+  static var cachedIsMobileBrowser:Null<Bool> = null;
   /**
    * Whether the current HTML5 browser is running on a Meta Quest headset.
    *
@@ -17,14 +21,18 @@ class DeviceUtil
 
   static function get_isQuestBrowser():Bool
   {
+    if (cachedIsQuestBrowser != null) return cachedIsQuestBrowser;
+
     #if web
     final userAgent:String = Browser.navigator.userAgent.toLowerCase();
-    return userAgent.indexOf("oculusbrowser") >= 0
+    cachedIsQuestBrowser = userAgent.indexOf("oculusbrowser") >= 0
       || userAgent.indexOf("quest") >= 0
       || userAgent.indexOf("mobile vr") >= 0;
     #else
-    return false;
+    cachedIsQuestBrowser = false;
     #end
+
+    return cachedIsQuestBrowser ?? false;
   }
 
   /**
@@ -35,8 +43,10 @@ class DeviceUtil
 
   static function get_isMobileBrowser():Bool
   {
+    if (cachedIsMobileBrowser != null) return cachedIsMobileBrowser;
+
     #if mobile
-    return true;
+    cachedIsMobileBrowser = true;
     #elseif web
     final userAgent:String = Browser.navigator.userAgent.toLowerCase();
     final platform:String = Std.string(Reflect.field(Browser.navigator, "platform"));
@@ -64,7 +74,7 @@ class DeviceUtil
     }
     final hasTouchFirstPointer:Bool = maxTouchPoints > 0 && primaryPointerIsCoarse;
 
-    return isQuestBrowser
+    cachedIsMobileBrowser = isQuestBrowser
       || userAgent.indexOf("android") >= 0
       || userAgent.indexOf("iphone") >= 0
       || userAgent.indexOf("ipad") >= 0
@@ -74,8 +84,10 @@ class DeviceUtil
       || userAgentDataMobile
       || hasTouchFirstPointer;
     #else
-    return false;
+    cachedIsMobileBrowser = false;
     #end
+
+    return cachedIsMobileBrowser ?? false;
   }
 
   // --- iPhone Number Detection ---
