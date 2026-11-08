@@ -1301,6 +1301,14 @@ class Project extends HXProject
     }
 
     addHaxelib('polymod'); // Modding framework
+    addHaxelib('SScript'); // Psych Engine HScript interpreter dialect
+    addHaxelib('hxvm-lua'); // Shared Lua VM API for native and browser targets
+    if (isCPP()) addHaxelib('linc_lua'); // Native Lua VM implementation
+    if (isWeb())
+    {
+      addHaxelib('hxjs-fengari'); // Browser Lua VM bindings
+      setHaxedef('fengari_global');
+    }
     addHaxelib('flixel-animate'); // Texture atlas rendering
 
     addHaxelib('json2object'); // JSON parsing

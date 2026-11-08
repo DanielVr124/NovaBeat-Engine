@@ -36,6 +36,7 @@ import funkin.input.PreciseInputManager;
 import funkin.modding.events.ScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
+import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.play.character.BaseCharacter;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.play.components.HealthIcon;
@@ -1963,6 +1964,13 @@ class PlayState extends MusicBeatSubState
     FlxG.console.registerFunction('debugUnbindCameraZoom', () ->
     {
       debugUnbindCameraZoom = !debugUnbindCameraZoom;
+    });
+    FlxG.console.registerFunction('testPsychScriptRuntimes', () ->
+    {
+      var passed:Bool = PsychScriptRuntime.runSmokeTests();
+      trace('[Psych Script Runtime] ' + (passed
+        ? 'HScript and Lua smoke tests passed.'
+        : 'One or more interpreter smoke tests failed.'));
     });
   };
 

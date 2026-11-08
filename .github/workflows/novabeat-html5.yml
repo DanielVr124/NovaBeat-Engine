@@ -217,6 +217,20 @@ jobs:
           set -euo pipefail
           haxelib run lime build html5 -v -release -DGITHUB_BUILD
 
+      - name: Bundle Fengari for browser Lua scripts
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          npm pack fengari-web@0.1.4 --silent
+          mkdir -p "$RUNNER_TEMP/novabeat-fengari"
+          tar -xzf fengari-web-0.1.4.tgz -C "$RUNNER_TEMP/novabeat-fengari"
+          index_file="$(find export -type f -name index.html -print -quit)"
+          test -n "$index_file"
+          web_root="$(dirname "$index_file")"
+          cp "$RUNNER_TEMP/novabeat-fengari/package/dist/fengari-web.js" "$web_root/fengari-web.js"
+          test -s "$web_root/fengari-web.js"
+
       - name: Verify and package browser build
         id: package-web
         shell: bash
@@ -259,6 +273,12 @@ jobs:
           </style>"""
           if "novabeat-mobile-viewport" not in html:
               html = html.replace("</head>", style + "</head>", 1) if "</head>" in html else style + html
+
+          # Load Fengari before the generated Haxe bundle so vm.lua can resolve
+          # the fengari global on browsers without a JavaScript module loader.
+          fengari_script = '<script src="./fengari-web.js"></script>'
+          if "fengari-web.js" not in html and "</head>" in html:
+              html = html.replace("</head>", fengari_script + "</head>", 1)
 
           # Keep service-worker registration in index.html itself so offline
           # reloads can install/update the worker after the page is restored.
