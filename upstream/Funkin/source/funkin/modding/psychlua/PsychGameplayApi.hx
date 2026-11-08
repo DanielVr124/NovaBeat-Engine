@@ -9,6 +9,7 @@ import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
 import funkin.modding.PsychModRuntime;
+import funkin.modding.PsychModRuntime.PsychScriptSource;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxObject;
