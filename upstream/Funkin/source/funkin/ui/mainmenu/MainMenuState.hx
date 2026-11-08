@@ -25,6 +25,7 @@ import funkin.ui.UIStateMachine.UIState;
 import flixel.util.FlxTimer;
 import funkin.ui.AtlasMenuList.AtlasMenuItem;
 import funkin.ui.freeplay.FreeplayState;
+import funkin.modding.ExperienceManager;
 import funkin.ui.MenuList.MenuTypedList;
 import funkin.ui.MenuList.MenuListItem;
 import funkin.ui.title.TitleState;
@@ -198,7 +199,8 @@ class MainMenuState extends MusicBeatState
       }
 
       openSubState(new FreeplayState({
-        character: targetCharacter
+        character: targetCharacter,
+        psychOnly: ExperienceManager.hasActivePsychSongs()
       }));
     });
 
