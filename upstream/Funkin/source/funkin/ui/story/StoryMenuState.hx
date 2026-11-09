@@ -51,6 +51,8 @@ class StoryMenuState extends MusicBeatState
   var highScoreLerp:Int = 12345678;
   var exitingMenu:Bool = false;
   var selectedLevel:Bool = false;
+  var novaBeatBrowserDragActive:Bool = false;
+  var novaBeatBrowserDragAccumulator:Float = 0;
   //
   // RENDER OBJECTS
   //
@@ -521,6 +523,67 @@ class StoryMenuState extends MusicBeatState
 
   inline function menuPointerPressAction(sprite:FlxSprite):Bool return TouchUtil.pressAction(sprite, null, false);
 
+  /**
+   * NovaBeat mobile Story Mode uses the same row-by-row drag behavior as its
+   * Options lists. The gesture must begin on a visible week title so arrows,
+   * difficulty controls, and taps retain their normal behavior.
+   */
+  function handleNovaBeatBrowserLevelDrag():Bool
+  {
+    #if web
+    if (Preferences.menuStyle != "NovaBeat" || !DeviceUtil.isMobileBrowser || selectedLevel || exitingMenu
+      || !TouchUtil.browserPointerBridgeAvailable())
+    {
+      novaBeatBrowserDragActive = false;
+      novaBeatBrowserDragAccumulator = 0;
+      return false;
+    }
+
+    if (!novaBeatBrowserDragActive && TouchUtil.browserPointerIsDown())
+    {
+      for (item in levelTitles.members)
+      {
+        if (TouchUtil.browserPointerPressedOn(item, item.camera))
+        {
+          novaBeatBrowserDragActive = true;
+          novaBeatBrowserDragAccumulator = 0;
+          break;
+        }
+      }
+    }
+
+    if (!novaBeatBrowserDragActive) return false;
+
+    final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
+    if (Math.isFinite(deltaY))
+    {
+      novaBeatBrowserDragAccumulator += deltaY;
+      final rowHeight:Float = currentLevelTitle == null ? 48 : currentLevelTitle.height;
+      final step:Float = Math.max(30, rowHeight * 0.55);
+
+      while (novaBeatBrowserDragAccumulator >= step)
+      {
+        changeLevel(1);
+        novaBeatBrowserDragAccumulator -= step;
+      }
+      while (novaBeatBrowserDragAccumulator <= -step)
+      {
+        changeLevel(-1);
+        novaBeatBrowserDragAccumulator += step;
+      }
+    }
+
+    if (TouchUtil.browserPointerIsDown()) return true;
+
+    final wasDrag:Bool = TouchUtil.browserPointerHasDragged();
+    novaBeatBrowserDragActive = false;
+    novaBeatBrowserDragAccumulator = 0;
+    return wasDrag;
+    #else
+    return false;
+    #end
+  }
+
   function handleKeyPresses():Void
   {
     @:privateAccess
@@ -528,6 +591,9 @@ class StoryMenuState extends MusicBeatState
 
     if (!exitingMenu)
     {
+      // While a week-list drag is active, do not also interpret its release
+      // as a one-shot swipe or a tap on a week title.
+      if (handleNovaBeatBrowserLevelDrag()) return;
       if (!selectedLevel)
       {
         // A completed finger swipe should move the week carousel opposite to
