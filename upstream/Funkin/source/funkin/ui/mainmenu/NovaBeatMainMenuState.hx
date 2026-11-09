@@ -75,9 +75,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   var backgroundSprite:Null<FlxSprite>;
   var backgroundDimmer:Null<FlxSprite>;
+  var titleBackgroundSprite:Null<FlxSprite>;
   var titleLogo:Null<FlxSprite>;
-  var titlePrompt:Null<FlxText>;
-  var titleTapHint:Null<FlxText>;
+  var titlePrompt:Null<FlxSprite>;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
   var homeAudioHitbox:Null<FlxSprite>;
@@ -95,6 +95,13 @@ class NovaBeatMainMenuState extends MusicBeatState
   var bfSprite:Null<FlxSprite> = null;
   var speakerTopY:Float = 0;
   var speakerBounceTargets:Array<FlxSprite> = [];
+  // Drive title-scene vertical motion directly to avoid browser-side y-property tween issues.
+  var boyfriendEntranceActive:Bool = false;
+  var boyfriendEntranceElapsed:Float = 0;
+  var boyfriendEntranceStartY:Float = 0;
+  var boyfriendEntranceLandingY:Float = 0;
+  var boyfriendImpactTriggered:Bool = false;
+  var speakerBounceElapsed:Float = -1;
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -186,9 +193,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     backgroundSprite = null;
     backgroundDimmer = null;
+    titleBackgroundSprite = null;
     titleLogo = null;
     titlePrompt = null;
-    titleTapHint = null;
     homeAudioButton = null;
     homeOptionsButton = null;
     homeAudioHitbox = null;
@@ -211,6 +218,12 @@ class NovaBeatMainMenuState extends MusicBeatState
     bfSprite = null;
     speakerTopY = 0;
     speakerBounceTargets = [];
+    boyfriendEntranceActive = false;
+    boyfriendEntranceElapsed = 0;
+    boyfriendEntranceStartY = 0;
+    boyfriendEntranceLandingY = 0;
+    boyfriendImpactTriggered = false;
+    speakerBounceElapsed = -1;
 
     buildBackdrop();
     if (showingTitle)
@@ -278,66 +291,76 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
+    var portraitLayout:Bool = height > width * 1.12;
+
+    // User-provided NovaBeat Press Enter stage background (1280x720).
+    var stageBackground:FlxSprite = new FlxSprite().loadGraphic(Paths.image('titleBG_1280x720'));
+    var stageScale:Float = Math.max(width / stageBackground.width, height / stageBackground.height);
+    stageBackground.scale.set(stageScale, stageScale);
+    stageBackground.updateHitbox();
+    stageBackground.screenCenter();
+    stageBackground.scrollFactor.set();
+    stageBackground.cameras = [uiCamera];
+    titleBackgroundSprite = stageBackground;
+    add(stageBackground);
 
     buildSpeakerPlatform();
     buildBoyfriend(true);
 
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-    var portraitLayout:Bool = height > width * 1.12;
     var maxLogoWidth:Float = width * (portraitLayout ? 0.90 : 0.82) * interfaceScale();
-    var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.38) * interfaceScale();
+    var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.30) * interfaceScale();
     var logoFit:Float = Math.max(0.01, Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height));
     logo.setGraphicSize(Std.int(logo.width * logoFit), Std.int(logo.height * logoFit));
     logo.updateHitbox();
     logo.x = Math.round((width - logo.width) * 0.5);
-    logo.y = height * (portraitLayout ? 0.28 : 0.30) - logo.height * 0.5;
+    logo.y = height * 0.27 - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
     logo.color = 0xFFF1D9FF;
     titleLogo = logo;
     add(logo);
 
-    var promptSize:Int = titlePromptSize();
-    if (DeviceUtil.isMobileBrowser)
-    {
-      titleTapHint = addLabel(0, height * 0.88, width, 'TAP ANYWHERE TO BEGIN', promptSize, 0xFFFFFFFF,
-        FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
-    }
-    else
-    {
-      titlePrompt = addLabel(0, height * 0.88, width, 'PRESS ENTER TO BEGIN', promptSize, 0xFFFFFFFF,
-        FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
-    }
+    // The supplied atlas contains two idle frames and a two-frame pressed state.
+    var prompt:FlxSprite = new FlxSprite();
+    prompt.frames = Paths.getSparrowAtlas('titleEnter');
+    prompt.animation.addByPrefix('idle', 'ENTER IDLE', 12, true);
+    prompt.animation.addByPrefix('pressed', 'ENTER PRESSED', 24, false);
+    prompt.animation.play('idle', true);
+    prompt.updateHitbox();
+
+    var promptMaxWidth:Float = width * 0.82;
+    var promptMaxHeight:Float = height * 0.18;
+    var promptScale:Float = Math.min(promptMaxWidth / Math.max(1, prompt.width),
+      promptMaxHeight / Math.max(1, prompt.height));
+    prompt.setGraphicSize(Std.int(prompt.width * promptScale), Std.int(prompt.height * promptScale));
+    prompt.updateHitbox();
+    prompt.x = Math.round((width - prompt.width) * 0.5);
+    prompt.y = height * (portraitLayout ? 0.83 : 0.79);
+    prompt.antialiasing = true;
+    prompt.scrollFactor.set();
+    prompt.cameras = [uiCamera];
+    titlePrompt = prompt;
+    add(prompt);
   }
 
-  function titlePromptSize():Int
-  {
-    return FlxG.width < 700 ? 24 : 38;
-  }
-
-  function beginMenuTransition():Void
+    function beginMenuTransition():Void
   {
     if (!showingTitle || transitioning) return;
 
     transitioning = true;
     playSfx('enter', 0.8);
 
+    // Move the existing logo toward its main-menu anchor; sizing is finalized by buildTopBar.
     if (titleLogo != null)
-    {
-      var shrinkX:Float = Math.min((FlxG.width * 0.38) / Math.max(1, titleLogo.width),
-        (FlxG.height * 0.13) / Math.max(1, titleLogo.height));
-      var targetScaleX:Float = titleLogo.scale.x * shrinkX;
-      var targetScaleY:Float = titleLogo.scale.y * shrinkX;
-      FlxTween.tween(titleLogo.scale, {x: targetScaleX, y: targetScaleY}, 0.66,
+      FlxTween.tween(titleLogo, {x: Math.max(20, FlxG.width * 0.035)}, 0.66,
         {ease: FlxEase.quadInOut});
-      FlxTween.tween(titleLogo, {x: Math.max(20, FlxG.width * 0.035), y: 12}, 0.66,
-        {ease: FlxEase.quadInOut});
-    }
 
     if (titlePrompt != null)
-      FlxTween.tween(titlePrompt, {alpha: 0, y: titlePrompt.y + 18}, 0.26, {ease: FlxEase.quadOut});
-    if (titleTapHint != null)
-      FlxTween.tween(titleTapHint, {alpha: 0}, 0.22, {ease: FlxEase.quadOut});
+    {
+      titlePrompt.animation.play('pressed', true);
+      FlxTween.tween(titlePrompt, {alpha: 0}, 0.34, {ease: FlxEase.quadOut});
+    }
 
     startBoyfriendEntrance();
 
@@ -351,15 +374,15 @@ class NovaBeatMainMenuState extends MusicBeatState
     });
   }
 
-  function removeTitleScreen():Void
+    function removeTitleScreen():Void
   {
     if (titlePrompt != null) remove(titlePrompt, true);
-    if (titleTapHint != null) remove(titleTapHint, true);
+    if (titleBackgroundSprite != null) remove(titleBackgroundSprite, true);
     titlePrompt = null;
-    titleTapHint = null;
+    titleBackgroundSprite = null;
   }
 
-  function buildInterface():Void
+    function buildInterface():Void
   {
     var screenW:Int = FlxG.width;
     var screenH:Int = FlxG.height;
@@ -749,6 +772,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (showingTitle)
     {
+      updateTitleEntrance(elapsed);
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
@@ -1115,32 +1139,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (bfSprite == null) buildBoyfriend(true);
     if (bfSprite == null) return;
 
-    var landingY:Float = speakerTopY - bfSprite.height + 8;
-    var landingX:Float = speakerPlatformCenterX() - bfSprite.width * 0.5;
-    bfSprite.x = landingX;
+    boyfriendEntranceStartY = bfSprite.y;
+    boyfriendEntranceLandingY = speakerTopY - bfSprite.height + 8;
+    boyfriendEntranceElapsed = 0;
+    boyfriendEntranceActive = true;
+    boyfriendImpactTriggered = false;
+    speakerBounceElapsed = -1;
+    bfSprite.x = speakerPlatformCenterX() - bfSprite.width * 0.5;
 
-    // The initial fall starts above the viewport and ends just above the
-    // speaker top, followed by a short compression/rebound landing.
-    FlxTween.tween(bfSprite, {y: landingY - 28, angle: -5}, 0.66,
-      {ease: FlxEase.quadIn, onComplete: function(_)
-      {
-        if (bfSprite == null) return;
-        FlxTween.tween(bfSprite, {y: landingY + 5, angle: 6}, 0.10,
-          {ease: FlxEase.quadIn, onComplete: function(_)
-          {
-            if (bfSprite == null) return;
-            bounceSpeakerPlatform();
-            spawnLandingSpark(landingX + bfSprite.width * 0.52, speakerTopY - 24);
-            FlxTween.tween(bfSprite, {y: landingY - 13, angle: -2}, 0.13,
-              {ease: FlxEase.quadOut, onComplete: function(_)
-              {
-                if (bfSprite == null) return;
-                FlxTween.tween(bfSprite, {y: landingY, angle: 0}, 0.14,
-                  {ease: FlxEase.bounceOut});
-              }});
-          }});
-      }});
-
+    // Keep the fall -> squash -> rebound -> settle timing while updating y
+    // numerically each frame instead of routing it through FlxTween on HTML5.
     FlxTimer.wait(1.04, function()
     {
       if (bfSprite == null) return;
@@ -1152,16 +1160,85 @@ class NovaBeatMainMenuState extends MusicBeatState
     });
   }
 
+  function updateTitleEntrance(elapsed:Float):Void
+  {
+    if (boyfriendEntranceActive && bfSprite != null)
+    {
+      boyfriendEntranceElapsed += elapsed;
+      var t:Float = boyfriendEntranceElapsed;
+
+      if (t < 0.66)
+      {
+        var p:Float = Math.max(0, Math.min(1, t / 0.66));
+        var eased:Float = p * p;
+        bfSprite.y = boyfriendEntranceStartY
+          + (boyfriendEntranceLandingY - 28 - boyfriendEntranceStartY) * eased;
+        bfSprite.angle = -5 * p;
+      }
+      else if (t < 0.76)
+      {
+        var p:Float = Math.max(0, Math.min(1, (t - 0.66) / 0.10));
+        var eased:Float = p * p;
+        bfSprite.y = (boyfriendEntranceLandingY - 28) + 33 * eased;
+        bfSprite.angle = -5 + 11 * p;
+      }
+      else if (t < 0.89)
+      {
+        var p:Float = Math.max(0, Math.min(1, (t - 0.76) / 0.13));
+        var eased:Float = 1 - (1 - p) * (1 - p);
+        bfSprite.y = (boyfriendEntranceLandingY + 5) - 18 * eased;
+        bfSprite.angle = 6 - 8 * p;
+      }
+      else if (t < 1.03)
+      {
+        var p:Float = Math.max(0, Math.min(1, (t - 0.89) / 0.14));
+        var eased:Float = Math.sin(p * Math.PI * 0.5);
+        bfSprite.y = (boyfriendEntranceLandingY - 13) + 13 * eased;
+        bfSprite.angle = -2 + 2 * eased;
+      }
+      else
+      {
+        bfSprite.y = boyfriendEntranceLandingY;
+        bfSprite.angle = 0;
+        boyfriendEntranceActive = false;
+      }
+
+      if (t >= 0.76 && !boyfriendImpactTriggered)
+      {
+        boyfriendImpactTriggered = true;
+        bounceSpeakerPlatform();
+        spawnLandingSpark(bfSprite.x + bfSprite.width * 0.52, speakerTopY - 24);
+      }
+    }
+
+    if (speakerBounceElapsed >= 0)
+    {
+      speakerBounceElapsed += elapsed;
+      var bounceY:Float = 1;
+      if (speakerBounceElapsed < 0.09)
+      {
+        bounceY = 1 - 0.12 * (speakerBounceElapsed / 0.09);
+      }
+      else if (speakerBounceElapsed < 0.27)
+      {
+        var p:Float = (speakerBounceElapsed - 0.09) / 0.18;
+        bounceY = 1 - 0.12 * (1 - p) * Math.cos(p * Math.PI * 1.5);
+      }
+      else
+      {
+        speakerBounceElapsed = -1;
+      }
+
+      if (speakerBounceElapsed >= 0)
+        for (part in speakerBounceTargets) part.scale.y = bounceY;
+      else
+        for (part in speakerBounceTargets) part.scale.y = 1;
+    }
+  }
+
   function bounceSpeakerPlatform():Void
   {
-    for (part in speakerBounceTargets)
-    {
-      FlxTween.cancelTweensOf(part.scale);
-      FlxTween.tween(part.scale, {y: 0.88}, 0.09, {ease: FlxEase.quadInOut, onComplete: function(_)
-      {
-        FlxTween.tween(part.scale, {y: 1.0}, 0.18, {ease: FlxEase.elasticOut});
-      }});
-    }
+    speakerBounceElapsed = 0;
   }
 
   function spawnLandingSpark(x:Float, y:Float):Void
@@ -1172,9 +1249,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       var star:FlxText = addLabel(x - 44 + i * 34, y - (i % 2) * 18, 52, glyph,
         34 + i * 7, 0xFFE18BFF, FlxTextAlign.CENTER, 'Arial');
       star.angle = -18 + i * 18;
-      star.scale.set(0.45, 0.45);
-      FlxTween.tween(star.scale, {x: 1.15, y: 1.15}, 0.20, {ease: FlxEase.backOut});
-      FlxTween.tween(star, {alpha: 0, y: star.y - 38}, 0.42,
+      star.scale.set(0.75, 0.75);
+      FlxTween.tween(star, {alpha: 0}, 0.42,
         {ease: FlxEase.quadOut, onComplete: function(_)
         {
           remove(star, true);
@@ -1183,7 +1259,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
   }
 
-  function buildEqualizer(x:Float, y:Float, width:Float):Void
+    function buildEqualizer(x:Float, y:Float, width:Float):Void
   {
     var count:Int = 28;
     var gap:Float = 5;
