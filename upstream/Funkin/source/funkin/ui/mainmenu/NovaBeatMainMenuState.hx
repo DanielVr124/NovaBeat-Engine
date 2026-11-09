@@ -18,7 +18,6 @@ import funkin.save.Save;
 import funkin.audio.FunkinSound;
 import funkin.modding.ExperienceManager;
 import funkin.graphics.FunkinCamera;
-import funkin.graphics.shaders.NovaBeatEdgeDissolveShader;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.MenuList.NavControls;
 import funkin.ui.TextMenuList;
@@ -89,10 +88,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var backgroundDimmer:Null<FlxSprite>;
   var titleLogo:Null<FlxSprite>;
   var titlePrompt:Null<FlxSprite>;
-  var whiteFlashOverlay:Null<FlxSprite>;
-  var titleLogoDissolveShader:Null<NovaBeatEdgeDissolveShader>;
-  var titlePromptDissolveShader:Null<NovaBeatEdgeDissolveShader>;
-  var menuEntrancePending:Bool = false;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
   var homeAudioHitbox:Null<FlxSprite>;
@@ -203,10 +198,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     backgroundDimmer = null;
     titleLogo = null;
     titlePrompt = null;
-    whiteFlashOverlay = null;
-    titleLogoDissolveShader = null;
-    titlePromptDissolveShader = null;
-    menuEntrancePending = false;
     homeAudioButton = null;
     homeOptionsButton = null;
     homeAudioHitbox = null;
@@ -279,9 +270,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
     logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
     logo.animation.play('idle', true);
-    titleLogoDissolveShader = new NovaBeatEdgeDissolveShader();
-    titleLogoDissolveShader.updateFrame(logo.frame);
-    logo.shader = titleLogoDissolveShader;
     logo.antialiasing = true;
     // The reference uses a large, dominant Bumpin mark. Fit by both axes
     // while preserving the atlas aspect ratio; never stretch or crop it.
@@ -304,9 +292,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     prompt.animation.addByIndices('idle', 'pressEnter', [0], '', 12, true);
     prompt.animation.addByIndices('pressed', 'pressEnter', [1, 2, 3], '', 24, false);
     prompt.animation.play('idle', true);
-    titlePromptDissolveShader = new NovaBeatEdgeDissolveShader();
-    titlePromptDissolveShader.updateFrame(prompt.frame);
-    prompt.shader = titlePromptDissolveShader;
     prompt.updateHitbox();
 
     var promptMaxWidth:Float = width * 0.82;
@@ -328,42 +313,15 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     if (!showingTitle || transitioning) return;
 
+    // The title screen now cuts directly to the menu. No dissolve, flash,
+    // shader, delayed handoff, or button entrance animation is used.
     transitioning = true;
     playSfx('enter', 0.8);
-
-    // Both title elements dissolve from their outside edges toward the center.
-    // Sharing one duration keeps the logo and prompt moving together.
-    if (titleLogoDissolveShader != null)
-    {
-      titleLogoDissolveShader.progress = 0;
-      if (titleLogo != null) titleLogoDissolveShader.updateFrame(titleLogo.frame);
-      FlxTween.tween(titleLogoDissolveShader, {progress: 1}, 0.58, {ease: FlxEase.linear});
-    }
-
-    if (titlePromptDissolveShader != null)
-    {
-      if (titlePrompt != null) titlePrompt.animation.play('pressed', true);
-      titlePromptDissolveShader.progress = 0;
-      if (titlePrompt != null) titlePromptDissolveShader.updateFrame(titlePrompt.frame);
-      FlxTween.tween(titlePromptDissolveShader, {progress: 1}, 0.58, {ease: FlxEase.linear});
-    }
-
-    // The main menu is added over the exact same untouched background.
-    // Its buttons begin completely offscreen and slide in with a tight stagger.
-    FlxTimer.wait(0.58, function()
-    {
-      removeTitleScreen();
-      showingTitle = false;
-      menuEntrancePending = true;
-      buildInterface();
-      addNovaBeatMobileBackButton();
-    });
-
-    // Four buttons finish their staggered slide in about 1.25 seconds.
-    FlxTimer.wait(1.30, function()
-    {
-      transitioning = false;
-    });
+    removeTitleScreen();
+    showingTitle = false;
+    buildInterface();
+    addNovaBeatMobileBackButton();
+    transitioning = false;
   }
 
   function removeTitleScreen():Void
@@ -372,11 +330,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (titleLogo != null) remove(titleLogo, true);
     titlePrompt = null;
     titleLogo = null;
-    titlePromptDissolveShader = null;
-    titleLogoDissolveShader = null;
   }
 
-    function buildInterface():Void
+  function buildInterface():Void
   {
     var screenW:Int = FlxG.width;
     var screenH:Int = FlxG.height;
@@ -550,19 +506,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.alpha = 0;
       item.atlasText.visible = false;
 
-      if (menuEntrancePending && Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
-      {
-        // The entire sprite frame starts beyond the left edge; its transparent
-        // atlas padding is included in this offset so no glow appears onscreen early.
-        var delay:Float = index * 0.065;
-        var duration:Float = 0.50;
-        var offscreenX:Float = -scaledFrameWidth - 48;
-        var shiftX:Float = offscreenX - spriteX;
-        button.x = offscreenX;
-        item.x = artX + shiftX;
-        FlxTween.tween(button, {x: spriteX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(item, {x: artX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-      }
     }
 
     menuItems.onChange.add(function(selected:TextMenuItem)
@@ -573,7 +516,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     add(menuItems);
     syncMenuTapTargets();
     updateSelection(0);
-    menuEntrancePending = false;
   }
 
   function buildFeaturePanel(x:Float, y:Float, width:Float, height:Float):Void
@@ -704,7 +646,6 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (showingTitle)
     {
-      updateTitleDissolveFrameInfo();
       if (titleInputCooldown > 0)
       {
         titleInputCooldown = Math.max(0, titleInputCooldown - elapsed);
@@ -1008,15 +949,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     label.cameras = [camera == null ? uiCamera : camera];
     add(label);
     return label;
-  }
-
-  function updateTitleDissolveFrameInfo():Void
-  {
-    if (titleLogoDissolveShader != null && titleLogo != null)
-      titleLogoDissolveShader.updateFrame(titleLogo.frame);
-
-    if (titlePromptDissolveShader != null && titlePrompt != null)
-      titlePromptDissolveShader.updateFrame(titlePrompt.frame);
   }
 
   function buildEqualizer(x:Float, y:Float, width:Float):Void
