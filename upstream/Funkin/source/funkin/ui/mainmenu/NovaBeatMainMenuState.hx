@@ -338,7 +338,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     startBoyfriendEntrance();
 
-    FlxTimer.wait(0.70, function()
+    FlxTimer.wait(1.22, function()
     {
       removeTitleScreen();
       showingTitle = false;
@@ -450,11 +450,11 @@ class NovaBeatMainMenuState extends MusicBeatState
     var buttonH:Float;
 
     if (mobileLandscape)
-      buttonH = Math.max(48, Math.min(62, (height - gap * 3) / 4));
+      buttonH = Math.max(44, Math.min(62, (height - gap * 3) / 4));
     else if (portraitLayout)
-      buttonH = Math.max(58, Math.min(82, (height - gap * 3) / 4));
+      buttonH = Math.max(54, Math.min(82, (height - gap * 3) / 4));
     else
-      buttonH = Math.max(78, Math.min(104, (height - gap * 3) / 4));
+      buttonH = Math.max(74, Math.min(104, (height - gap * 3) / 4));
 
     menuScrollViewportTop = y;
     menuScrollCamera = new FlxCamera(0, Std.int(y), Std.int(FlxG.width), Std.int(Math.max(1, height)));
@@ -797,7 +797,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
-      addBackButton(FlxG.width - 230, FlxG.height - 200, FlxColor.WHITE, goBackToTitle, 1.0);
+      addBackButton(18, FlxG.height - 78, FlxColor.WHITE, goBackToTitle, 1.0);
     #end
   }
 
@@ -992,6 +992,155 @@ class NovaBeatMainMenuState extends MusicBeatState
     label.cameras = [camera == null ? uiCamera : camera];
     add(label);
     return label;
+  }
+
+  function buildSpeakerPlatform():Void
+  {
+    speakerBounceTargets = [];
+    var width:Float = FlxG.width;
+    var height:Float = FlxG.height;
+    var portraitLayout:Bool = height > width * 1.12;
+    var cabinetW:Float = portraitLayout ? width * 0.40 : width * 0.28;
+    var cabinetH:Float = portraitLayout ? height * 0.15 : height * 0.22;
+    var cabinetX:Float = portraitLayout ? width * 0.56 : width * 0.66;
+    speakerTopY = height * (portraitLayout ? 0.81 : 0.72);
+
+    var cabinet:FlxSprite = addRoundRect(cabinetX, speakerTopY, cabinetW, cabinetH,
+      20, 20, 0xFF100B1B);
+    speakerBounceTargets.push(cabinet);
+    var face:FlxSprite = addRoundRect(cabinetX + 9, speakerTopY + 9, cabinetW - 18, cabinetH - 18,
+      15, 15, 0xFF21132F);
+    speakerBounceTargets.push(face);
+    var topGlow:FlxSprite = addRoundRect(cabinetX - 10, speakerTopY - 7, cabinetW + 20, 7,
+      4, 4, 0xFFE16CFF);
+    topGlow.alpha = 0.90;
+
+    var coneSize:Float = Math.min(cabinetH * 0.66, cabinetW * 0.36);
+    var coneY:Float = speakerTopY + cabinetH * 0.22;
+    for (i in 0...2)
+    {
+      var coneX:Float = cabinetX + cabinetW * (i == 0 ? 0.25 : 0.68) - coneSize * 0.5;
+      var outer:FlxSprite = addRoundRect(coneX, coneY, coneSize, coneSize, coneSize * 0.48,
+        coneSize * 0.48, 0xFF0A0711);
+      var ring:FlxSprite = addRoundRect(coneX + coneSize * 0.13, coneY + coneSize * 0.13,
+        coneSize * 0.74, coneSize * 0.74, coneSize * 0.36, coneSize * 0.36, 0xFF8B3AB4);
+      var center:FlxSprite = addRoundRect(coneX + coneSize * 0.34, coneY + coneSize * 0.34,
+        coneSize * 0.32, coneSize * 0.32, coneSize * 0.16, coneSize * 0.16, 0xFFE28BFF);
+      speakerBounceTargets.push(outer);
+      speakerBounceTargets.push(ring);
+      speakerBounceTargets.push(center);
+    }
+
+    var cornerLight:FlxSprite = addRoundRect(cabinetX + 12, speakerTopY + cabinetH - 14,
+      cabinetW - 24, 4, 2, 2, 0xFFB65CFF);
+    cornerLight.alpha = 0.82;
+  }
+
+  function buildBoyfriend(initiallyOffscreen:Bool):Void
+  {
+    var width:Float = FlxG.width;
+    var height:Float = FlxG.height;
+    var portraitLayout:Bool = height > width * 1.12;
+    var bf:FlxSprite = new FlxSprite();
+    bf.frames = Paths.getSparrowAtlas('characters/BOYFRIEND');
+    bf.animation.addByPrefix('idle', 'BF idle dance', 24, true);
+    bf.animation.addByPrefix('hey', 'BF HEY!!', 24, false);
+    bf.animation.play('idle');
+
+    var targetHeight:Float = portraitLayout
+      ? Math.min(height * 0.32, width * 0.52 * (499 / 439))
+      : height * 0.52;
+    bf.setGraphicSize(0, Std.int(targetHeight));
+    bf.updateHitbox();
+    bf.antialiasing = true;
+    bf.scrollFactor.set();
+    bf.cameras = [uiCamera];
+    bf.zIndex = 5;
+    bf.x = speakerPlatformCenterX() - bf.width * 0.5;
+    bf.y = initiallyOffscreen ? -bf.height - 40 : speakerTopY - bf.height + 8;
+    bfSprite = bf;
+    add(bf);
+  }
+
+  function speakerPlatformCenterX():Float
+  {
+    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
+    var cabinetW:Float = portraitLayout ? FlxG.width * 0.40 : FlxG.width * 0.28;
+    var cabinetX:Float = portraitLayout ? FlxG.width * 0.56 : FlxG.width * 0.66;
+    return cabinetX + cabinetW * 0.5;
+  }
+
+  function startBoyfriendEntrance():Void
+  {
+    if (bfSprite == null) buildBoyfriend(true);
+    if (bfSprite == null) return;
+
+    var landingY:Float = speakerTopY - bfSprite.height + 8;
+    var landingX:Float = speakerPlatformCenterX() - bfSprite.width * 0.5;
+    bfSprite.x = landingX;
+
+    // The initial fall starts above the viewport and ends just above the
+    // speaker top, followed by a short compression/rebound landing.
+    FlxTween.tween(bfSprite, {y: landingY - 28, angle: -5}, 0.66,
+      {ease: FlxEase.quadIn, onComplete: function(_)
+      {
+        if (bfSprite == null) return;
+        FlxTween.tween(bfSprite, {y: landingY + 5, angle: 6}, 0.10,
+          {ease: FlxEase.quadIn, onComplete: function(_)
+          {
+            if (bfSprite == null) return;
+            bounceSpeakerPlatform();
+            spawnLandingSpark(landingX + bfSprite.width * 0.52, speakerTopY - 24);
+            FlxTween.tween(bfSprite, {y: landingY - 13, angle: -2}, 0.13,
+              {ease: FlxEase.quadOut, onComplete: function(_)
+              {
+                if (bfSprite == null) return;
+                FlxTween.tween(bfSprite, {y: landingY, angle: 0}, 0.14,
+                  {ease: FlxEase.bounceOut});
+              }});
+          }});
+      }});
+
+    FlxTimer.wait(1.04, function()
+    {
+      if (bfSprite == null) return;
+      bfSprite.animation.play('hey', true);
+      FlxTimer.wait(0.82, function()
+      {
+        if (bfSprite != null) bfSprite.animation.play('idle', true);
+      });
+    });
+  }
+
+  function bounceSpeakerPlatform():Void
+  {
+    for (part in speakerBounceTargets)
+    {
+      FlxTween.cancelTweensOf(part.scale);
+      FlxTween.tween(part.scale, {y: 0.88}, 0.09, {ease: FlxEase.quadInOut, onComplete: function(_)
+      {
+        FlxTween.tween(part.scale, {y: 1.0}, 0.18, {ease: FlxEase.elasticOut});
+      }});
+    }
+  }
+
+  function spawnLandingSpark(x:Float, y:Float):Void
+  {
+    for (i in 0...3)
+    {
+      var glyph:String = i == 0 ? '✦' : (i == 1 ? '✧' : '★');
+      var star:FlxText = addLabel(x - 44 + i * 34, y - (i % 2) * 18, 52, glyph,
+        34 + i * 7, 0xFFE18BFF, FlxTextAlign.CENTER, 'Arial');
+      star.angle = -18 + i * 18;
+      star.scale.set(0.45, 0.45);
+      FlxTween.tween(star.scale, {x: 1.15, y: 1.15}, 0.20, {ease: FlxEase.backOut});
+      FlxTween.tween(star, {alpha: 0, y: star.y - 38}, 0.42,
+        {ease: FlxEase.quadOut, onComplete: function(_)
+        {
+          remove(star, true);
+          star.destroy();
+        }});
+    }
   }
 
   function buildEqualizer(x:Float, y:Float, width:Float):Void
