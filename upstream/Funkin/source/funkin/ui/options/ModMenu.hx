@@ -482,6 +482,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var descriptionBg:FlxSprite = new FlxSprite(rightX, descriptionY);
       descriptionBg.makeGraphic(Std.int(rightWidth), Std.int(descriptionHeight), 0xB80A192B);
       add(descriptionBg);
+      cardDescriptionBackgrounds.push(descriptionBg);
 
       var iconTextValue:String = isBaseGame ? 'FNF' : mod.title.substr(0, Math.min(3, mod.title.length)).toUpperCase();
       var iconText:FlxText = new FlxText(iconX + 2, iconY + 2, iconSize - 4, iconTextValue, 26);

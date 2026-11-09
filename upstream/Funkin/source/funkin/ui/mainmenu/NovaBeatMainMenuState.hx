@@ -457,7 +457,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       var labelX:Float = iconX + iconPlateSize + 22;
       var labelWidth:Float = buttonW - (labelX - itemX) - 24;
-      var title:String = ITEM_TITLES[menuIndex].split('\\n').join(' ');
+      var title:String = ITEM_TITLES[menuIndex].split('\n').join(' ');
       var titleHeight:Float = Math.min(buttonH - 16, labelFontSize + 14);
       var titleY:Float = itemY + (buttonH - titleHeight) * 0.5;
       var label:FlxText = addLabel(labelX, titleY, labelWidth, title,
