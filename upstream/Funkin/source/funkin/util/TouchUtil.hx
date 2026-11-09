@@ -20,6 +20,9 @@ import flixel.input.touch.FlxTouch;
 import flixel.input.mouse.FlxMouse;
 import flixel.math.FlxPoint;
 #if web
+import js.Browser;
+#end
+#if web
 import funkin.util.DeviceUtil;
 #end
 
@@ -28,6 +31,174 @@ import funkin.util.DeviceUtil;
  */
 class TouchUtil
 {
+  #if web
+  // Mobile HTML5 browsers can remove a FlxTouch before the game update sees
+  // its release. Track Pointer Events at the browser boundary so menu input
+  // does not depend on the lifetime of a FlxTouch object.
+  static var browserPointerInitialized:Bool = false;
+  static var browserPointerAvailable:Bool = false;
+  static var browserPointerDown:Bool = false;
+  static var browserPointerMoved:Bool = false;
+  static var browserPointerId:Int = -1;
+  static var browserPointerStartX:Float = 0;
+  static var browserPointerStartY:Float = 0;
+  static var browserPointerGameY:Float = 0;
+  static var browserPointerDeltaY:Float = 0;
+  static var browserPointerReleaseIsTap:Bool = false;
+  static var browserPointerReleaseSerial:Int = 0;
+  static var browserPointerConsumedSerial:Int = 0;
+
+  static function ensureBrowserPointerBridge():Void
+  {
+    if (browserPointerInitialized) return;
+    browserPointerInitialized = true;
+
+    if (!DeviceUtil.isMobileBrowser) return;
+
+    browserPointerAvailable = Reflect.field(Browser.window, "PointerEvent") != null;
+    if (!browserPointerAvailable) return;
+
+    Browser.window.addEventListener("pointerdown", function(event)
+    {
+      final pointer:Dynamic = event;
+      if (browserPointerDown) return;
+
+      final pointerType:String = Std.string(Reflect.field(pointer, "pointerType"));
+      if (pointerType != "touch" && pointerType != "pen" && pointerType != "mouse") return;
+
+      final clientX:Float = browserPointerNumber(pointer, "clientX");
+      final clientY:Float = browserPointerNumber(pointer, "clientY");
+      if (!updateBrowserPointerPosition(clientX, clientY)) return;
+
+      browserPointerId = Std.int(browserPointerNumber(pointer, "pointerId"));
+      browserPointerStartX = clientX;
+      browserPointerStartY = clientY;
+      browserPointerGameY = FlxG.mouse.gameY;
+      browserPointerDeltaY = 0;
+      browserPointerMoved = false;
+      browserPointerDown = true;
+      browserPointerReleaseIsTap = false;
+    }, true);
+
+    Browser.window.addEventListener("pointermove", function(event)
+    {
+      final pointer:Dynamic = event;
+      if (!browserPointerDown || Std.int(browserPointerNumber(pointer, "pointerId")) != browserPointerId) return;
+
+      final clientX:Float = browserPointerNumber(pointer, "clientX");
+      final clientY:Float = browserPointerNumber(pointer, "clientY");
+      if (!updateBrowserPointerPosition(clientX, clientY))
+      {
+        browserPointerMoved = true;
+        return;
+      }
+
+      final nextY:Float = FlxG.mouse.gameY;
+      browserPointerDeltaY += nextY - browserPointerGameY;
+      browserPointerGameY = nextY;
+
+      final dx:Float = clientX - browserPointerStartX;
+      final dy:Float = clientY - browserPointerStartY;
+      if ((dx * dx) + (dy * dy) >= 324) browserPointerMoved = true;
+    }, true);
+
+    Browser.window.addEventListener("pointerup", function(event)
+    {
+      final pointer:Dynamic = event;
+      if (!browserPointerDown || Std.int(browserPointerNumber(pointer, "pointerId")) != browserPointerId) return;
+
+      final clientX:Float = browserPointerNumber(pointer, "clientX");
+      final clientY:Float = browserPointerNumber(pointer, "clientY");
+      if (!updateBrowserPointerPosition(clientX, clientY)) browserPointerMoved = true;
+
+      final dx:Float = clientX - browserPointerStartX;
+      final dy:Float = clientY - browserPointerStartY;
+      if ((dx * dx) + (dy * dy) >= 324) browserPointerMoved = true;
+
+      browserPointerDown = false;
+      browserPointerReleaseIsTap = !browserPointerMoved;
+      browserPointerReleaseSerial++;
+      browserPointerId = -1;
+    }, true);
+
+    Browser.window.addEventListener("pointercancel", function(event)
+    {
+      final pointer:Dynamic = event;
+      if (!browserPointerDown || Std.int(browserPointerNumber(pointer, "pointerId")) != browserPointerId) return;
+      browserPointerDown = false;
+      browserPointerMoved = true;
+      browserPointerReleaseIsTap = false;
+      browserPointerId = -1;
+      browserPointerDeltaY = 0;
+    }, true);
+  }
+
+  static function browserPointerNumber(source:Dynamic, field:String):Float
+  {
+    final value:Dynamic = Reflect.field(source, field);
+    return value == null ? 0 : Std.parseFloat(Std.string(value));
+  }
+
+  static function updateBrowserPointerPosition(clientX:Float, clientY:Float):Bool
+  {
+    var canvas:Dynamic = Browser.document.querySelector("#openfl-content canvas");
+    if (canvas == null) canvas = Browser.document.querySelector("canvas");
+    if (canvas == null) return false;
+
+    final rect:Dynamic = canvas.getBoundingClientRect();
+    final left:Float = browserPointerNumber(rect, "left");
+    final top:Float = browserPointerNumber(rect, "top");
+    final width:Float = browserPointerNumber(rect, "width");
+    final height:Float = browserPointerNumber(rect, "height");
+    if (width <= 0 || height <= 0) return false;
+    if (clientX < left || clientY < top || clientX > left + width || clientY > top + height) return false;
+
+    final gameX:Float = ((clientX - left) / width) * FlxG.width;
+    final gameY:Float = ((clientY - top) / height) * FlxG.height;
+    final scaleX:Float = FlxG.scaleMode.scale.x;
+    final scaleY:Float = FlxG.scaleMode.scale.y;
+
+    // FlxPointer exposes this method specifically for supplying raw screen
+    // coordinates from an external pointer source.
+    FlxG.mouse.setRawPositionUnsafe(gameX * scaleX, gameY * scaleY);
+    return true;
+  }
+
+  public static function browserPointerBridgeAvailable():Bool
+  {
+    ensureBrowserPointerBridge();
+    return browserPointerAvailable;
+  }
+
+  public static function browserPointerIsDown():Bool
+  {
+    ensureBrowserPointerBridge();
+    return browserPointerAvailable && browserPointerDown;
+  }
+
+  public static function consumeBrowserPointerDeltaY():Float
+  {
+    ensureBrowserPointerBridge();
+    final delta:Float = browserPointerDeltaY;
+    browserPointerDeltaY = 0;
+    return delta;
+  }
+
+  /**
+   * Consume one completed, stationary browser pointer tap. The release stays
+   * pending until a menu hitbox matches, so each visible menu can test its rows.
+   */
+  public static function consumeBrowserPointerTap(?object:FlxBasic, ?camera:FlxCamera):Bool
+  {
+    ensureBrowserPointerBridge();
+    if (!browserPointerAvailable || browserPointerReleaseSerial == browserPointerConsumedSerial || !browserPointerReleaseIsTap) return false;
+
+    if (object != null && !FlxG.mouse.overlaps(object, camera)) return false;
+
+    browserPointerConsumedSerial = browserPointerReleaseSerial;
+    return true;
+  }
+  #end
   /**
    * Indicates if any touch is currently pressed.
    */
@@ -144,10 +315,14 @@ class TouchUtil
    */
   public static function pressAction(?object:FlxBasic, ?camera:FlxCamera, useOverlapsComplex:Bool = true):Bool
   {
-    // A touch is a click when it is released over the target. Do not impose
-    // a 200 ms press limit here: slow mobile frames and accessibility taps can
-    // exceed that duration even when the gesture is not a drag. Scroll/swipe
-    // callers already reject completed swipe gestures at their own boundaries.
+    // On mobile HTML5, use the browser's captured PointerEvent release as the
+    // authoritative tap. This avoids losing taps when OpenFL removes FlxTouch
+    // before the next HaxeFlixel update.
+    #if web
+    if (DeviceUtil.isMobileBrowser && browserPointerBridgeAvailable())
+      return consumeBrowserPointerTap(object, camera);
+    #end
+
     if (TouchUtil.touch == null) return false;
 
     if (object == null && camera == null)
