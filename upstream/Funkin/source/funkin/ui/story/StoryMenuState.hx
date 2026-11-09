@@ -539,7 +539,7 @@ class StoryMenuState extends MusicBeatState
       return false;
     }
 
-    if (!novaBeatBrowserDragActive && TouchUtil.browserPointerIsDown())
+    if (!novaBeatBrowserDragActive)
     {
       for (item in levelTitles.members)
       {
