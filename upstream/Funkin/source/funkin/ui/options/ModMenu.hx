@@ -13,6 +13,9 @@ import funkin.ui.Page;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
 import polymod.Polymod.ModMetadata;
+#if !web
+import openfl.display.BitmapData;
+#end
 #if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -31,6 +34,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var rows:Array<ModMenuItem> = [];
   var rowBackgrounds:Array<FlxSprite> = [];
   var cardIconBackgrounds:Array<FlxSprite> = [];
+  var cardIconImages:Array<FlxSprite> = [];
   var cardHeaderBackgrounds:Array<FlxSprite> = [];
   var cardDescriptionBackgrounds:Array<FlxSprite> = [];
   var cardIconLabels:Array<FlxText> = [];
@@ -415,6 +419,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     for (row in rows) remove(row, true);
     for (background in rowBackgrounds) remove(background, true);
     for (sprite in cardIconBackgrounds) remove(sprite, true);
+    for (sprite in cardIconImages) remove(sprite, true);
     for (sprite in cardHeaderBackgrounds) remove(sprite, true);
     for (sprite in cardDescriptionBackgrounds) remove(sprite, true);
     for (label in cardIconLabels) remove(label, true);
@@ -428,6 +433,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rows = [];
     rowBackgrounds = [];
     cardIconBackgrounds = [];
+    cardIconImages = [];
     cardHeaderBackgrounds = [];
     cardDescriptionBackgrounds = [];
     cardIconLabels = [];
@@ -493,6 +499,41 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       iconText.height = iconSize - 4;
       add(iconText);
       cardIconLabels.push(iconText);
+
+      // Polymod exposes an optional _polymod_icon.png as bytes in metadata.
+      // Use the real mod artwork on native targets, retaining the initials as
+      // a safe fallback for mods without an icon. HTML5 currently cannot scan
+      // local mod folders, so its base-game entry keeps the FNF mark.
+      #if !web
+      if (!isBaseGame)
+      {
+        var rawIcon:Dynamic = Reflect.field(mod, 'icon');
+        if (rawIcon != null)
+        {
+          try
+          {
+            var iconBitmap:Null<BitmapData> = BitmapData.fromBytes(cast rawIcon);
+            if (iconBitmap != null)
+            {
+              var iconImage:FlxSprite = new FlxSprite(iconX, iconY);
+              iconImage.loadGraphic(iconBitmap);
+              var iconScale:Float = Math.min(iconSize / Math.max(1, iconBitmap.width), iconSize / Math.max(1, iconBitmap.height));
+              iconImage.setGraphicSize(Std.int(iconBitmap.width * iconScale), Std.int(iconBitmap.height * iconScale));
+              iconImage.updateHitbox();
+              iconImage.setPosition(iconX + (iconSize - iconImage.width) * 0.5,
+                iconY + (iconSize - iconImage.height) * 0.5);
+              add(iconImage);
+              cardIconImages.push(iconImage);
+              iconText.visible = false;
+            }
+          }
+          catch (error:Dynamic)
+          {
+            trace('Could not decode icon for mod ' + mod.title + ': ' + Std.string(error));
+          }
+        }
+      }
+      #end
 
       var title:String = isBaseGame ? "Friday Night Funkin'" : mod.title;
       var tag:String = isBaseGame ? 'BASE GAME' : 'INSTALLED MOD';
