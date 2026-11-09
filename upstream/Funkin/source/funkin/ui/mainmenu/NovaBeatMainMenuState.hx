@@ -18,6 +18,7 @@ import funkin.save.Save;
 import funkin.audio.FunkinSound;
 import funkin.modding.ExperienceManager;
 import funkin.graphics.FunkinCamera;
+import funkin.graphics.shaders.NovaBeatEdgeDissolveShader;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.MenuList.NavControls;
 import funkin.ui.TextMenuList;
@@ -75,9 +76,12 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   var backgroundSprite:Null<FlxSprite>;
   var backgroundDimmer:Null<FlxSprite>;
-  var titleBackgroundSprite:Null<FlxSprite>;
   var titleLogo:Null<FlxSprite>;
   var titlePrompt:Null<FlxSprite>;
+  var whiteFlashOverlay:Null<FlxSprite>;
+  var titleLogoDissolveShader:Null<NovaBeatEdgeDissolveShader>;
+  var titlePromptDissolveShader:Null<NovaBeatEdgeDissolveShader>;
+  var menuEntrancePending:Bool = false;
   var homeAudioButton:Null<FlxText>;
   var homeOptionsButton:Null<FlxText>;
   var homeAudioHitbox:Null<FlxSprite>;
@@ -92,16 +96,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var menuScrollViewportTop:Float = 0;
   var rowTapTargets:Array<FlxObject> = [];
   var rowBorders:Array<FlxSprite> = [];
-  var bfSprite:Null<FlxSprite> = null;
-  var speakerTopY:Float = 0;
-  var speakerBounceTargets:Array<FlxSprite> = [];
-  // Drive title-scene vertical motion directly to avoid browser-side y-property tween issues.
-  var boyfriendEntranceActive:Bool = false;
-  var boyfriendEntranceElapsed:Float = 0;
-  var boyfriendEntranceStartY:Float = 0;
-  var boyfriendEntranceLandingY:Float = 0;
-  var boyfriendImpactTriggered:Bool = false;
-  var speakerBounceElapsed:Float = -1;
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -193,9 +187,12 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     backgroundSprite = null;
     backgroundDimmer = null;
-    titleBackgroundSprite = null;
     titleLogo = null;
     titlePrompt = null;
+    whiteFlashOverlay = null;
+    titleLogoDissolveShader = null;
+    titlePromptDissolveShader = null;
+    menuEntrancePending = false;
     homeAudioButton = null;
     homeOptionsButton = null;
     homeAudioHitbox = null;
@@ -215,15 +212,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     menuScrollViewportTop = 0;
     rowTapTargets = [];
     rowBorders = [];
-    bfSprite = null;
-    speakerTopY = 0;
-    speakerBounceTargets = [];
-    boyfriendEntranceActive = false;
-    boyfriendEntranceElapsed = 0;
-    boyfriendEntranceStartY = 0;
-    boyfriendEntranceLandingY = 0;
-    boyfriendImpactTriggered = false;
-    speakerBounceElapsed = -1;
 
     buildBackdrop();
     if (showingTitle)
@@ -247,14 +235,14 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
 
-    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-    var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 1.08;
+    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('Bg'));
+    var backgroundScale:Float = Math.max(width / background.width, height / background.height);
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
     background.cameras = [uiCamera];
-    background.color = 0xFFB78AFF;
+    background.color = FlxColor.WHITE;
     background.zIndex = -100;
     backgroundSprite = background;
     add(background);
@@ -293,19 +281,12 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
     var portraitLayout:Bool = height > width * 1.12;
 
-    // User-provided NovaBeat Press Enter stage background (1280x720).
-    var stageBackground:FlxSprite = new FlxSprite().loadGraphic(Paths.image('titleBG_1280x720'));
-    var stageScale:Float = Math.max(width / stageBackground.width, height / stageBackground.height);
-    stageBackground.scale.set(stageScale, stageScale);
-    stageBackground.updateHitbox();
-    stageBackground.screenCenter();
-    stageBackground.scrollFactor.set();
-    stageBackground.cameras = [uiCamera];
-    titleBackgroundSprite = stageBackground;
-    add(stageBackground);
-
-    buildSpeakerPlatform();
-    buildBoyfriend(true);
+    // Flash only the backdrop. The same backgroundSprite remains underneath
+    // the title screen and main menu, with no replacement or movement.
+    var flash:FlxSprite = addSolid(0, 0, width, height, FlxColor.WHITE);
+    flash.alpha = 0;
+    flash.zIndex = -50;
+    whiteFlashOverlay = flash;
 
     // Use Claude's animated Bumpin atlas in NovaBeat itself (not only the
     // original FNF title state). Keep the atlas colors un-tinted.
@@ -313,6 +294,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     logo.frames = Paths.getSparrowAtlas('logoBumpin');
     logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
     logo.animation.play('idle', true);
+    titleLogoDissolveShader = new NovaBeatEdgeDissolveShader();
+    titleLogoDissolveShader.updateFrame(logo.frame);
+    logo.shader = titleLogoDissolveShader;
     logo.antialiasing = true;
     var maxLogoWidth:Float = width * (portraitLayout ? 0.90 : 0.82) * interfaceScale();
     var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.30) * interfaceScale();
@@ -332,6 +316,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     prompt.animation.addByPrefix('idle', 'ENTER IDLE', 12, true);
     prompt.animation.addByPrefix('pressed', 'ENTER PRESSED', 24, false);
     prompt.animation.play('idle', true);
+    titlePromptDissolveShader = new NovaBeatEdgeDissolveShader();
+    titlePromptDissolveShader.updateFrame(prompt.frame);
+    prompt.shader = titlePromptDissolveShader;
     prompt.updateHitbox();
 
     var promptMaxWidth:Float = width * 0.82;
@@ -349,42 +336,78 @@ class NovaBeatMainMenuState extends MusicBeatState
     add(prompt);
   }
 
-    function beginMenuTransition():Void
+  function beginMenuTransition():Void
   {
     if (!showingTitle || transitioning) return;
 
     transitioning = true;
     playSfx('enter', 0.8);
 
-    // Move the existing logo toward its main-menu anchor; sizing is finalized by buildTopBar.
-    if (titleLogo != null)
-      FlxTween.tween(titleLogo, {x: Math.max(20, FlxG.width * 0.035)}, 0.66,
-        {ease: FlxEase.quadInOut});
-
-    if (titlePrompt != null)
+    // Both title elements dissolve from their outside edges toward the center.
+    // Sharing one duration keeps the logo and prompt moving together.
+    if (titleLogoDissolveShader != null)
     {
-      titlePrompt.animation.play('pressed', true);
-      FlxTween.tween(titlePrompt, {alpha: 0}, 0.34, {ease: FlxEase.quadOut});
+      titleLogoDissolveShader.progress = 0;
+      if (titleLogo != null) titleLogoDissolveShader.updateFrame(titleLogo.frame);
+      FlxTween.tween(titleLogoDissolveShader, {progress: 1}, 0.58, {ease: FlxEase.linear});
     }
 
-    startBoyfriendEntrance();
+    if (titlePromptDissolveShader != null)
+    {
+      if (titlePrompt != null) titlePrompt.animation.play('pressed', true);
+      titlePromptDissolveShader.progress = 0;
+      if (titlePrompt != null) titlePromptDissolveShader.updateFrame(titlePrompt.frame);
+      FlxTween.tween(titlePromptDissolveShader, {progress: 1}, 0.58, {ease: FlxEase.linear});
+    }
 
-    FlxTimer.wait(1.22, function()
+    // A brief white flash is composited over the backdrop only, then fades
+    // away to reveal the exact same background image beneath it.
+    if (whiteFlashOverlay != null)
+    {
+      whiteFlashOverlay.alpha = 0;
+      FlxTween.tween(whiteFlashOverlay, {alpha: 0.98}, 0.18, {ease: FlxEase.quadOut});
+      FlxTimer.wait(0.18, function()
+      {
+        if (whiteFlashOverlay != null)
+          FlxTween.tween(whiteFlashOverlay, {alpha: 0}, 0.70, {ease: FlxEase.sineInOut});
+      });
+    }
+
+    // Build the main menu while the flash finishes fading. The button
+    // tweens overlap to form one quick cascade from beyond the left edge.
+    FlxTimer.wait(0.58, function()
     {
       removeTitleScreen();
       showingTitle = false;
-      transitioning = false;
+      menuEntrancePending = true;
       buildInterface();
       addNovaBeatMobileBackButton();
     });
+
+    FlxTimer.wait(0.92, function()
+    {
+      if (whiteFlashOverlay != null)
+      {
+        remove(whiteFlashOverlay, true);
+        whiteFlashOverlay = null;
+      }
+    });
+
+    // Four buttons finish their staggered slide in about 1.25 seconds.
+    FlxTimer.wait(1.30, function()
+    {
+      transitioning = false;
+    });
   }
 
-    function removeTitleScreen():Void
+  function removeTitleScreen():Void
   {
     if (titlePrompt != null) remove(titlePrompt, true);
-    if (titleBackgroundSprite != null) remove(titleBackgroundSprite, true);
+    if (titleLogo != null) remove(titleLogo, true);
     titlePrompt = null;
-    titleBackgroundSprite = null;
+    titleLogo = null;
+    titlePromptDissolveShader = null;
+    titleLogoDissolveShader = null;
   }
 
     function buildInterface():Void
@@ -395,8 +418,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     compactLayout = DeviceUtil.isMobileBrowser || screenW < 950 || portraitLayout;
 
     if (backgroundSprite == null) buildBackdrop();
-    if (speakerBounceTargets.length == 0) buildSpeakerPlatform();
-    if (bfSprite == null) buildBoyfriend(false);
 
     var margin:Float = portraitLayout ? Math.max(16, screenW * 0.035) : Math.max(24, screenW * 0.035);
     buildTopBar(margin);
@@ -598,30 +619,48 @@ class NovaBeatMainMenuState extends MusicBeatState
         rowArtwork.push(storyArtwork);
       }
 
-      if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
+        if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
       {
-        var startX:Float = itemX - 34;
-        border.x = startX - 3;
-        panel.x = startX;
-        accent.x = startX + 2;
-        iconPlate.x = startX + 15;
-        icon.x = startX + 15;
-        label.x = labelX - 34;
+        var delay:Float = index * (menuEntrancePending ? 0.065 : 0.075);
+        var duration:Float = menuEntrancePending ? 0.50 : 0.30;
+        var startX:Float = menuEntrancePending ? -buttonW - 48 : itemX - 34;
+        var shift:Float = startX - itemX;
 
-        border.alpha = 0;
-        panel.alpha = 0;
-        accent.alpha = 0;
-        iconPlate.alpha = 0;
-        icon.alpha = 0;
-        label.alpha = 0;
+        border.x += shift;
+        panel.x += shift;
+        accent.x += shift;
+        iconPlate.x += shift;
+        icon.x += shift;
+        label.x += shift;
+        item.x += shift;
 
-        var delay:Float = index * 0.075;
-        FlxTween.tween(border, {x: itemX - 3, alpha: 0.16}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(panel, {x: itemX, alpha: 0.96}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(accent, {x: itemX + 2, alpha: 0.58}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(iconPlate, {x: iconX, alpha: menuIndex == 0 ? 0 : 0.98}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(icon, {x: iconX, alpha: menuIndex == 0 ? 0 : 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(label, {x: labelX, alpha: menuIndex == 0 ? 0 : 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        if (menuEntrancePending && menuIndex == 0 && rowArtwork.length > 0)
+          rowArtwork[rowArtwork.length - 1].x += shift;
+
+        if (!menuEntrancePending)
+        {
+          border.alpha = 0;
+          panel.alpha = 0;
+          accent.alpha = 0;
+          iconPlate.alpha = 0;
+          icon.alpha = 0;
+          label.alpha = 0;
+        }
+
+        FlxTween.tween(border, {x: itemX - 3}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(panel, {x: itemX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(accent, {x: itemX + 2}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(iconPlate, {x: iconX, alpha: menuIndex == 0 ? 0 : 0.98}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(icon, {x: iconX, alpha: menuIndex == 0 ? 0 : 1}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(label, {x: labelX, alpha: menuIndex == 0 ? 0 : 1}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(item, {x: itemX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+
+        if (menuEntrancePending && menuIndex == 0 && rowArtwork.length > 0)
+        {
+          var artwork:FlxSprite = rowArtwork[rowArtwork.length - 1];
+          var artworkTargetX:Float = artwork.x - shift;
+          FlxTween.tween(artwork, {x: artworkTargetX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        }
       }
     }
 
@@ -633,6 +672,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     add(menuItems);
     syncMenuTapTargets();
     updateSelection(0);
+    menuEntrancePending = false;
   }
 
   function buildFeaturePanel(x:Float, y:Float, width:Float, height:Float):Void
@@ -777,7 +817,7 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (showingTitle)
     {
-      updateTitleEntrance(elapsed);
+      updateTitleDissolveFrameInfo();
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
@@ -793,6 +833,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (pressed) beginMenuTransition();
       return;
     }
+
+    if (transitioning) return;
 
     handleHeaderPointerInput();
     handleMobileMenuCardInput();
@@ -832,7 +874,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     var options = Save.instance.options;
     if (backgroundDimmer != null) backgroundDimmer.alpha = backgroundDimmerAlpha();
 
-    if (!options.menuReduceMotion && options.menuAnimatedBackground && backgroundSprite != null)
+    if (!transitioning && !options.menuReduceMotion && options.menuAnimatedBackground && backgroundSprite != null)
     {
       backgroundSprite.alpha = 0.985 + Math.sin(animationClock * 0.45) * 0.015;
     }
@@ -1063,208 +1105,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     return label;
   }
 
-  function buildSpeakerPlatform():Void
+  function updateTitleDissolveFrameInfo():Void
   {
-    speakerBounceTargets = [];
-    var width:Float = FlxG.width;
-    var height:Float = FlxG.height;
-    var portraitLayout:Bool = height > width * 1.12;
-    var cabinetW:Float = portraitLayout ? width * 0.40 : width * 0.28;
-    var cabinetH:Float = portraitLayout ? height * 0.15 : height * 0.22;
-    var cabinetX:Float = portraitLayout ? width * 0.56 : width * 0.66;
-    speakerTopY = height * (portraitLayout ? 0.81 : 0.72);
+    if (titleLogoDissolveShader != null && titleLogo != null)
+      titleLogoDissolveShader.updateFrame(titleLogo.frame);
 
-    var cabinet:FlxSprite = addRoundRect(cabinetX, speakerTopY, cabinetW, cabinetH,
-      20, 20, 0xFF100B1B);
-    speakerBounceTargets.push(cabinet);
-    var face:FlxSprite = addRoundRect(cabinetX + 9, speakerTopY + 9, cabinetW - 18, cabinetH - 18,
-      15, 15, 0xFF21132F);
-    speakerBounceTargets.push(face);
-    var topGlow:FlxSprite = addRoundRect(cabinetX - 10, speakerTopY - 7, cabinetW + 20, 7,
-      4, 4, 0xFFE16CFF);
-    topGlow.alpha = 0.90;
-
-    var coneSize:Float = Math.min(cabinetH * 0.66, cabinetW * 0.36);
-    var coneY:Float = speakerTopY + cabinetH * 0.22;
-    for (i in 0...2)
-    {
-      var coneX:Float = cabinetX + cabinetW * (i == 0 ? 0.25 : 0.68) - coneSize * 0.5;
-      var outer:FlxSprite = addRoundRect(coneX, coneY, coneSize, coneSize, coneSize * 0.48,
-        coneSize * 0.48, 0xFF0A0711);
-      var ring:FlxSprite = addRoundRect(coneX + coneSize * 0.13, coneY + coneSize * 0.13,
-        coneSize * 0.74, coneSize * 0.74, coneSize * 0.36, coneSize * 0.36, 0xFF8B3AB4);
-      var center:FlxSprite = addRoundRect(coneX + coneSize * 0.34, coneY + coneSize * 0.34,
-        coneSize * 0.32, coneSize * 0.32, coneSize * 0.16, coneSize * 0.16, 0xFFE28BFF);
-      speakerBounceTargets.push(outer);
-      speakerBounceTargets.push(ring);
-      speakerBounceTargets.push(center);
-    }
-
-    var cornerLight:FlxSprite = addRoundRect(cabinetX + 12, speakerTopY + cabinetH - 14,
-      cabinetW - 24, 4, 2, 2, 0xFFB65CFF);
-    cornerLight.alpha = 0.82;
+    if (titlePromptDissolveShader != null && titlePrompt != null)
+      titlePromptDissolveShader.updateFrame(titlePrompt.frame);
   }
 
-  function buildBoyfriend(initiallyOffscreen:Bool):Void
-  {
-    var width:Float = FlxG.width;
-    var height:Float = FlxG.height;
-    var portraitLayout:Bool = height > width * 1.12;
-    var bf:FlxSprite = new FlxSprite();
-    bf.frames = Paths.getSparrowAtlas('characters/BOYFRIEND');
-    bf.animation.addByPrefix('idle', 'BF idle dance', 24, true);
-    bf.animation.addByPrefix('hey', 'BF HEY!!', 24, false);
-    bf.animation.play('idle');
-
-    var targetHeight:Float = portraitLayout
-      ? Math.min(height * 0.32, width * 0.52 * (499 / 439))
-      : height * 0.52;
-    bf.setGraphicSize(0, Std.int(targetHeight));
-    bf.updateHitbox();
-    bf.antialiasing = true;
-    bf.scrollFactor.set();
-    bf.cameras = [uiCamera];
-    bf.zIndex = 5;
-    bf.x = speakerPlatformCenterX() - bf.width * 0.5;
-    bf.y = initiallyOffscreen ? -bf.height - 40 : speakerTopY - bf.height + 8;
-    bfSprite = bf;
-    add(bf);
-  }
-
-  function speakerPlatformCenterX():Float
-  {
-    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var cabinetW:Float = portraitLayout ? FlxG.width * 0.40 : FlxG.width * 0.28;
-    var cabinetX:Float = portraitLayout ? FlxG.width * 0.56 : FlxG.width * 0.66;
-    return cabinetX + cabinetW * 0.5;
-  }
-
-  function startBoyfriendEntrance():Void
-  {
-    if (bfSprite == null) buildBoyfriend(true);
-    if (bfSprite == null) return;
-
-    boyfriendEntranceStartY = bfSprite.y;
-    boyfriendEntranceLandingY = speakerTopY - bfSprite.height + 8;
-    boyfriendEntranceElapsed = 0;
-    boyfriendEntranceActive = true;
-    boyfriendImpactTriggered = false;
-    speakerBounceElapsed = -1;
-    bfSprite.x = speakerPlatformCenterX() - bfSprite.width * 0.5;
-
-    // Keep the fall -> squash -> rebound -> settle timing while updating y
-    // numerically each frame instead of routing it through FlxTween on HTML5.
-    FlxTimer.wait(1.04, function()
-    {
-      if (bfSprite == null) return;
-      bfSprite.animation.play('hey', true);
-      FlxTimer.wait(0.82, function()
-      {
-        if (bfSprite != null) bfSprite.animation.play('idle', true);
-      });
-    });
-  }
-
-  function updateTitleEntrance(elapsed:Float):Void
-  {
-    if (boyfriendEntranceActive && bfSprite != null)
-    {
-      boyfriendEntranceElapsed += elapsed;
-      var t:Float = boyfriendEntranceElapsed;
-
-      if (t < 0.66)
-      {
-        var p:Float = Math.max(0, Math.min(1, t / 0.66));
-        var eased:Float = p * p;
-        bfSprite.y = boyfriendEntranceStartY
-          + (boyfriendEntranceLandingY - 28 - boyfriendEntranceStartY) * eased;
-        bfSprite.angle = -5 * p;
-      }
-      else if (t < 0.76)
-      {
-        var p:Float = Math.max(0, Math.min(1, (t - 0.66) / 0.10));
-        var eased:Float = p * p;
-        bfSprite.y = (boyfriendEntranceLandingY - 28) + 33 * eased;
-        bfSprite.angle = -5 + 11 * p;
-      }
-      else if (t < 0.89)
-      {
-        var p:Float = Math.max(0, Math.min(1, (t - 0.76) / 0.13));
-        var eased:Float = 1 - (1 - p) * (1 - p);
-        bfSprite.y = (boyfriendEntranceLandingY + 5) - 18 * eased;
-        bfSprite.angle = 6 - 8 * p;
-      }
-      else if (t < 1.03)
-      {
-        var p:Float = Math.max(0, Math.min(1, (t - 0.89) / 0.14));
-        var eased:Float = Math.sin(p * Math.PI * 0.5);
-        bfSprite.y = (boyfriendEntranceLandingY - 13) + 13 * eased;
-        bfSprite.angle = -2 + 2 * eased;
-      }
-      else
-      {
-        bfSprite.y = boyfriendEntranceLandingY;
-        bfSprite.angle = 0;
-        boyfriendEntranceActive = false;
-      }
-
-      if (t >= 0.76 && !boyfriendImpactTriggered)
-      {
-        boyfriendImpactTriggered = true;
-        bounceSpeakerPlatform();
-        spawnLandingSpark(bfSprite.x + bfSprite.width * 0.52, speakerTopY - 24);
-      }
-    }
-
-    if (speakerBounceElapsed >= 0)
-    {
-      speakerBounceElapsed += elapsed;
-      var bounceY:Float = 1;
-      if (speakerBounceElapsed < 0.09)
-      {
-        bounceY = 1 - 0.12 * (speakerBounceElapsed / 0.09);
-      }
-      else if (speakerBounceElapsed < 0.27)
-      {
-        var p:Float = (speakerBounceElapsed - 0.09) / 0.18;
-        bounceY = 1 - 0.12 * (1 - p) * Math.cos(p * Math.PI * 1.5);
-      }
-      else
-      {
-        speakerBounceElapsed = -1;
-      }
-
-      if (speakerBounceElapsed >= 0)
-        for (part in speakerBounceTargets) part.scale.y = bounceY;
-      else
-        for (part in speakerBounceTargets) part.scale.y = 1;
-    }
-  }
-
-  function bounceSpeakerPlatform():Void
-  {
-    speakerBounceElapsed = 0;
-  }
-
-  function spawnLandingSpark(x:Float, y:Float):Void
-  {
-    for (i in 0...3)
-    {
-      var glyph:String = i == 0 ? '✦' : (i == 1 ? '✧' : '★');
-      var star:FlxText = addLabel(x - 44 + i * 34, y - (i % 2) * 18, 52, glyph,
-        34 + i * 7, 0xFFE18BFF, FlxTextAlign.CENTER, 'Arial');
-      star.angle = -18 + i * 18;
-      star.scale.set(0.75, 0.75);
-      FlxTween.tween(star, {alpha: 0}, 0.42,
-        {ease: FlxEase.quadOut, onComplete: function(_)
-        {
-          remove(star, true);
-          star.destroy();
-        }});
-    }
-  }
-
-    function buildEqualizer(x:Float, y:Float, width:Float):Void
+  function buildEqualizer(x:Float, y:Float, width:Float):Void
   {
     var count:Int = 28;
     var gap:Float = 5;
