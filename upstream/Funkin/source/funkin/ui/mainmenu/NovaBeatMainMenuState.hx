@@ -67,7 +67,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   static inline final MENU_BUTTON_ART_TOP:Float = 0.34;
   static inline final MENU_BUTTON_ART_WIDTH:Float = 0.96;
   static inline final MENU_BUTTON_ART_HEIGHT:Float = 0.32;
-  static inline final MENU_BUTTON_HEIGHT_RATIO:Float = 0.19;
+  static inline final MENU_BUTTON_HEIGHT_RATIO:Float = 0.22;
 
 
 
@@ -731,6 +731,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       if (backButton != null)
       {
         backButton.scrollFactor.set();
+        // Use the same screen-space camera as the NovaBeat UI so the bottom-right
+        // anchor and hit area follow the actual mobile viewport.
+        backButton.cameras = [uiCamera];
         var availableWidth:Float = Math.max(1, FlxG.width - marginX * 2);
         var availableHeight:Float = Math.max(1, FlxG.height - marginY * 2);
         var fitScale:Float = Math.min(1.0,
