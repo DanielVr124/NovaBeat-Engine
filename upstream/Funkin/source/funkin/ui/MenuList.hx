@@ -91,7 +91,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy = new FlxSprite().makeGraphic(10, 10);
     _isMainMenuState = Std.isOfType(FlxG.state, funkin.ui.mainmenu.MainMenuState);
-    final currentStateClass = Type.getClass(FlxG.state);
+    final currentStateClass:Null<Class<Dynamic>> = Type.getClass(FlxG.state);
     _isOptionsMenuState = currentStateClass != null
       && Type.getClassName(currentStateClass) == "funkin.ui.options.OptionsState";
 
