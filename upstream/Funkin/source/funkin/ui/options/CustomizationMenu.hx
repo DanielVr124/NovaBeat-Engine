@@ -198,6 +198,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     // Retain the native TextMenuItem as the focusable hit target, but replace
     // its FNF atlas lettering with NovaBeat's clean sans-serif label.
+    // The visible label is separate, so do not flicker the transparent hitbox
+    // for a full second before switching customization categories.
+    item.fireInstantly = true;
     item.atlasText.visible = false;
     item.makeGraphic(FlxG.width, 62, 0x00000000);
     item.setPosition(0, item.y);
