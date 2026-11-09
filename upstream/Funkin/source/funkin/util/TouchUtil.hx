@@ -43,6 +43,8 @@ class TouchUtil
   static var browserPointerStartX:Float = 0;
   static var browserPointerStartY:Float = 0;
   static var browserPointerGameY:Float = 0;
+  static var browserPointerClientX:Float = 0;
+  static var browserPointerClientY:Float = 0;
   static var browserPointerDeltaY:Float = 0;
   static var browserPointerReleaseIsTap:Bool = false;
   static var browserPointerReleaseSerial:Int = 0;
@@ -153,6 +155,8 @@ class TouchUtil
     if (width <= 0 || height <= 0) return false;
     if (clientX < left || clientY < top || clientX > left + width || clientY > top + height) return false;
 
+    browserPointerClientX = clientX;
+    browserPointerClientY = clientY;
     final gameX:Float = ((clientX - left) / width) * FlxG.width;
     final gameY:Float = ((clientY - top) / height) * FlxG.height;
     final scaleX:Float = FlxG.scaleMode.scale.x;
@@ -193,6 +197,10 @@ class TouchUtil
     ensureBrowserPointerBridge();
     if (!browserPointerAvailable || browserPointerReleaseSerial == browserPointerConsumedSerial || !browserPointerReleaseIsTap) return false;
 
+    // The regular FlxMouse update can overwrite externally supplied pointer
+    // coordinates before the state update runs. Reapply the captured release
+    // position immediately before checking the menu hitbox.
+    if (!updateBrowserPointerPosition(browserPointerClientX, browserPointerClientY)) return false;
     if (object != null && !FlxG.mouse.overlaps(object, camera)) return false;
 
     browserPointerConsumedSerial = browserPointerReleaseSerial;
