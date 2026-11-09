@@ -64,7 +64,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   // Helper variables
   var _isMainMenuState:Bool = false;
-  var _isOptionsMenuState:Bool = false;
   var touchScrollAccumulator:Float = 0;
 
   // Prevent a release-only pointer event from confirming a tap already
@@ -91,9 +90,6 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy = new FlxSprite().makeGraphic(10, 10);
     _isMainMenuState = Std.isOfType(FlxG.state, funkin.ui.mainmenu.MainMenuState);
-    final currentStateClass:Null<Class<Dynamic>> = Type.getClass(FlxG.state);
-    _isOptionsMenuState = currentStateClass != null
-      && Type.getClassName(currentStateClass) == "funkin.ui.options.OptionsState";
 
     super();
   }
@@ -152,9 +148,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
         if (Math.isFinite(deltaY))
         {
-          // FNF Options and NovaBeat lists follow the finger. Other stock FNF
-          // vertical lists retain their existing drag mapping.
-          touchScrollAccumulator += deltaY * ((Preferences.menuStyle == "NovaBeat" || _isOptionsMenuState) ? 1 : -1);
+          // Preserve the original FNF vertical-list direction. NovaBeat keeps
+          // its own finger-following direction.
+          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)
@@ -181,9 +177,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.touch.deltaViewY;
         if (Math.isFinite(deltaY))
         {
-          // FNF Options and NovaBeat lists follow the finger. Other stock FNF
-          // vertical lists retain their existing drag mapping.
-          touchScrollAccumulator += deltaY * ((Preferences.menuStyle == "NovaBeat" || _isOptionsMenuState) ? 1 : -1);
+          // Preserve the original FNF vertical-list direction. NovaBeat keeps
+          // its own finger-following direction.
+          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)
@@ -431,6 +427,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   public function accept():Void
   {
+    if (members.length == 0 || selectedIndex < 0 || selectedIndex >= members.length) return;
+
     var menuItem:T = members[selectedIndex];
 
     if (!menuItem.available) return;
@@ -452,7 +450,8 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   public function cancelAccept():Void
   {
-    FlxFlicker.stopFlickering(members[selectedIndex]);
+    if (members.length > 0 && selectedIndex >= 0 && selectedIndex < members.length)
+      FlxFlicker.stopFlickering(members[selectedIndex]);
     busy = false;
   }
 
@@ -462,25 +461,48 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    */
   public function selectItem(index:Int):Void
   {
-    members[selectedIndex].idle();
+    if (members.length == 0 || index < 0 || index >= members.length) return;
 
-    if (!members[index].available)
+    var targetIndex:Int = index;
+    if (!members[targetIndex].available)
     {
-      if (index < selectedIndex)
+      // Walk toward the current selection first, matching the original
+      // navigation preference, but never recurse beyond the list boundaries.
+      final direction:Int = targetIndex < selectedIndex ? 1 : -1;
+      var candidate:Int = targetIndex + direction;
+      var foundAvailable:Bool = false;
+
+      while (candidate >= 0 && candidate < members.length)
       {
-        final newIndex:Int = (index - 1 < 0) ? index + 1 : index - 1;
-        selectItem(newIndex);
-        return;
+        if (members[candidate].available)
+        {
+          targetIndex = candidate;
+          foundAvailable = true;
+          break;
+        }
+        candidate += direction;
       }
-      else if (index > selectedIndex)
+
+      if (!foundAvailable)
       {
-        final newIndex:Int = (index + 1 > members.length) ? index - 1 : index + 1;
-        selectItem(newIndex);
-        return;
+        for (candidate in 0...members.length)
+        {
+          if (members[candidate].available)
+          {
+            targetIndex = candidate;
+            foundAvailable = true;
+            break;
+          }
+        }
       }
+
+      if (!foundAvailable) return;
     }
 
-    selectedIndex = index;
+    if (selectedIndex >= 0 && selectedIndex < members.length && selectedIndex != targetIndex)
+      members[selectedIndex].idle();
+
+    selectedIndex = targetIndex;
 
     var selectedMenuItem:T = members[selectedIndex];
     selectedMenuItem.select();

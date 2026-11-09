@@ -251,22 +251,17 @@ class TouchUtil
         // FlxObject hitbox starts at x/y. Align the touch area to the graphic
         // and add padding without changing the rendered sprite.
         final sprite:FlxSprite = cast object;
-        final originalX:Float = sprite.x;
-        final originalY:Float = sprite.y;
-        final originalWidth:Float = sprite.width;
-        final originalHeight:Float = sprite.height;
         final hitPadding:Float = Math.max(0, padding);
-
-        sprite.x -= (originalWidth * 0.5) + hitPadding;
-        sprite.y -= (originalHeight * 0.5) + hitPadding;
-        sprite.width = originalWidth + hitPadding * 2;
-        sprite.height = originalHeight + hitPadding * 2;
-        overlaps = FlxG.mouse.overlaps(sprite, camera);
-
-        sprite.x = originalX;
-        sprite.y = originalY;
-        sprite.width = originalWidth;
-        sprite.height = originalHeight;
+        // Use a temporary hitbox rather than resizing the animated menu
+        // sprite. This keeps its scale, frame bounds, and animation state intact.
+        final paddedHitbox:FlxObject = new FlxObject(
+          sprite.x - (sprite.width * 0.5) - hitPadding,
+          sprite.y - (sprite.height * 0.5) - hitPadding,
+          sprite.width + hitPadding * 2,
+          sprite.height + hitPadding * 2
+        );
+        overlaps = FlxG.mouse.overlaps(paddedHitbox, camera);
+        paddedHitbox.destroy();
       }
       else
       {

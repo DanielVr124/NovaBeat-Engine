@@ -263,7 +263,9 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     if (novaBeatLayout) buildNovaBeatLayout();
 
     add(items = new TextMenuList());
-    items.acceptOnTouchSelection = novaBeatLayout;
+    // FNF options/submenus should activate on the first mobile tap rather
+    // than requiring a select-then-confirm double tap.
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
     createItem('PREFERENCES', function() codex.switchPage(Preferences));
     createItem('CUSTOMIZATION', function() codex.switchPage(Customization));

@@ -274,6 +274,7 @@ class FreeplayState extends MusicBeatSubState
   var novaBeatHeaderObjects:Array<FlxSprite> = [];
   var djBaseScaleX:Float = 1;
   var djBaseScaleY:Float = 1;
+  var djBaseFrameWidth:Float = 1;
   var backingImageBaseX:Float = 0;
   var backingImageBaseY:Float = 0;
   var portraitLayoutActive:Bool = false;
@@ -471,6 +472,7 @@ class FreeplayState extends MusicBeatSubState
       {
         djBaseScaleX = dj.scale.x;
         djBaseScaleY = dj.scale.y;
+        djBaseFrameWidth = Math.max(1, dj.frameWidth);
         exitMovers.set([dj], {
           x: -dj.width * 1.6,
           speed: 0.5
@@ -3292,7 +3294,11 @@ class FreeplayState extends MusicBeatSubState
     {
       if (dj != null)
       {
-        var djFit:Float = Math.min(djBaseScaleX, (width * 0.68) / Math.max(1, dj.frameWidth));
+        // The active animation can have frame-to-frame width variation.
+        // Use FNF's stable intro frame measurement so browser viewport changes
+        // do not resize the DJ differently depending on the frame being drawn.
+        var fitFrameWidth:Float = Preferences.menuStyle == "NovaBeat" ? dj.frameWidth : djBaseFrameWidth;
+        var djFit:Float = Math.min(djBaseScaleX, (width * 0.68) / Math.max(1, fitFrameWidth));
         dj.scale.set(djFit, djFit * (djBaseScaleY / Math.max(0.001, djBaseScaleX)));
         dj.updateHitbox();
         dj.setPosition((width - dj.width) * 0.5, height * 0.08);
