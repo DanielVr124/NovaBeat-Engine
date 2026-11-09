@@ -345,7 +345,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     {
       // In portrait, keep the brand above a full-width vertical button stack.
       buildMenuBrandLogo(screenW, screenH, true);
-      buildMenuList(screenW * 0.07, screenH * 0.25, screenW * 0.86, screenH * 0.70, false);
+      // Reserve a clear bottom-right corner for the mobile Back control.
+      // The previous 70%-height list extended behind the Back button and
+      // let the last menu tile compete with its hitbox on portrait screens.
+      buildMenuList(screenW * 0.07, screenH * 0.24, screenW * 0.86, screenH * 0.60, false);
     }
     else
     {
