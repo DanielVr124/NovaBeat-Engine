@@ -2193,7 +2193,7 @@ class FreeplayState extends MusicBeatSubState
       if (capsule == null || !capsule.exists || !capsule.visible) continue;
       if (capsule.capsule == null || !capsule.capsule.visible) continue;
       #if web
-      if (TouchUtil.browserPointerIsDown() && TouchUtil.browserPointerPressedOn(capsule.theActualHitbox, funnyCam)) return true;
+      if (TouchUtil.browserPointerPressedOn(capsule.theActualHitbox, funnyCam)) return true;
       #end
       if (menuTouchOverlaps(capsule.theActualHitbox, funnyCam)) return true;
     }
@@ -2215,7 +2215,7 @@ class FreeplayState extends MusicBeatSubState
     {
       // HaxeFlixel may no longer expose the FlxTouch by the time the game
       // update runs. Start the drag from the captured browser pointer origin.
-      if (TouchUtil.browserPointerIsDown() && !_pressedOnCapsule)
+      if (!_pressedOnCapsule)
         _pressedOnCapsule = TouchUtil.browserPointerPressedOn(capsuleHitbox, funnyCam) || touchOverSongCapsule();
 
       final pointerDelta:Float = TouchUtil.consumeBrowserPointerDeltaY();
