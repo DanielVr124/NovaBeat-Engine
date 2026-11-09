@@ -19,7 +19,6 @@ import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MenuList.NavControls;
 import funkin.util.SwipeUtil;
 import funkin.util.DeviceUtil;
-import funkin.util.TouchUtil;
 #if FEATURE_TOUCH_CONTROLS
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -132,10 +131,11 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     items = new TextMenuList(NavControls.Vertical);
     // Draw and hit-test the visible NovaBeat rows through the same camera.
     items.cameras = [FlxG.camera];
-    // This page has its own release-based touch handler below. Do not let
-    // MenuList also accept the same touch on press, or settings can fire twice.
-    items.ignoreTouchPointerSelection = novaBeatLayout;
-    items.acceptOnTouchSelection = false;
+    // Use MenuList's shared touch path for browser and native touch input.
+    // Tapping any visible row should activate it immediately, even when it
+    // is not already selected; this keeps touch behavior aligned with FNF.
+    items.ignoreTouchPointerSelection = false;
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
     descriptions = [
       'Choose the primary NovaBeat highlight and selection colour.',
@@ -559,32 +559,6 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (!enabled || optionRows.length == 0) return;
 
-    #if FEATURE_TOUCH_CONTROLS
-    if (novaBeatLayout)
-    {
-      for (index in 0...optionRows.length)
-      {
-        var item:TextMenuItem = optionRows[index];
-        // These are transparent rectangular hit targets, so use the same
-        // camera as the visible NovaBeat page and a bounds-based overlap.
-        // Pixel-perfect hit-testing against an empty transparent graphic
-        // makes the rows impossible to select reliably on touch screens.
-        var rowTapped:Bool = TouchUtil.pressAction(item, FlxG.camera, false);
-        #if web
-        // HTML5 can report the completed finger tap through FlxMouse after
-        // the FlxTouch object has already been removed from the active list.
-        if (!rowTapped && DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased)
-          rowTapped = FlxG.mouse.overlaps(item, FlxG.camera);
-        #end
-        if (rowTapped && !SwipeUtil.justSwipedAny && !items.busy)
-        {
-          if (items.selectedIndex != index) items.selectItem(index);
-          items.accept();
-          break;
-        }
-      }
-    }
-    #end
 
     if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
     if (controls.UI_RIGHT_P || SwipeUtil.swipeRight) adjustSelected(1);
