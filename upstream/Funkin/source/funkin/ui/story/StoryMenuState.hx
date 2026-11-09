@@ -498,6 +498,15 @@ class StoryMenuState extends MusicBeatState
     for (index in 0...levelTitles.members.length)
     {
       var item:LevelTitle = levelTitles.members[index];
+
+      // NovaBeat week artwork must stay inside the black carousel panel.
+      // LevelTitle clips both its title graphic and lock sprite in local frame
+      // coordinates, updating every frame as the carousel eases between rows.
+      if (novaBeatWeekPanel != null)
+        item.clipToPanel(novaBeatWeekPanel.y, novaBeatWeekPanel.y + novaBeatWeekPanel.height);
+      else
+        item.clearPanelClip();
+
       var baseAlpha:Float = index == selectedIndex ? 1.0 : 0.6;
       var fadeRange:Float = fadeDistance + item.height;
       var fadeAmount:Float = Math.max(0, Math.min(1, (item.y + item.height - fadeStart) / fadeRange));
