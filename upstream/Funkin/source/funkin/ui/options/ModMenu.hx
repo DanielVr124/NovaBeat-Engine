@@ -48,7 +48,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var mobileListDragActive:Bool = false;
   var mobileListDragMoved:Bool = false;
   var mobileListDragAccumulator:Float = 0;
-  var mobileNovaBeatLayout:Bool = false;
+  var mobileLibraryRedesign:Bool = false;
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -85,13 +85,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if mobile
     usesTouchControls = true;
     #end
-    mobileNovaBeatLayout = usesTouchControls && Preferences.menuStyle == "NovaBeat";
+    // The redesigned full-screen Mod Library is shared by NovaBeat and
+    // Normal FNF on touch devices. Style-specific sounds/navigation remain
+    // driven by Preferences.menuStyle elsewhere in this page.
+    mobileLibraryRedesign = usesTouchControls;
     if (usesTouchControls)
     {
-      if (mobileNovaBeatLayout)
-        buildNovaBeatMobileLayout(width, height);
-      else
-        buildMobileLayout(width, height);
+      buildTouchMobileLayout(width, height);
       return;
     }
 
@@ -166,7 +166,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
    * space; details become an intentional empty-state message when the list
    * has nothing to show.
    */
-  function buildNovaBeatMobileLayout(width:Float, height:Float):Void
+  function buildTouchMobileLayout(width:Float, height:Float):Void
   {
     portraitLayout = height > width * 1.12;
     var margin:Float = portraitLayout ? 18 : 22;
@@ -407,7 +407,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (detectedMods.length == 0)
     {
-      if (!mobileNovaBeatLayout)
+      if (!mobileLibraryRedesign)
       {
         #if web
         emptyStateText = addLabel(rowX, rowY + 8, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
@@ -436,7 +436,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       rowBackgrounds.push(bg);
 
       var marker:String = enabled ? '[ENABLED]' : '[DISABLED]';
-      var rowFontSize:Int = mobileNovaBeatLayout
+      var rowFontSize:Int = mobileLibraryRedesign
         ? (portraitLayout ? 16 : 14)
         : (usesTouchControls ? 13 : (portraitLayout ? 13 : 16));
       var rowText:String;
@@ -444,7 +444,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         var author:String = metadataValue(mod, 'author', 'Unknown author');
         var description:String = metadataValue(mod, 'description', 'No description provided.');
-        var maxDescriptionLength:Int = mobileNovaBeatLayout ? 56 : 72;
+        var maxDescriptionLength:Int = mobileLibraryRedesign ? 56 : 72;
         if (description.length > maxDescriptionLength)
           description = description.substr(0, maxDescriptionLength - 3) + '...';
         rowText = marker + '  •  v' + Std.string(mod.modVersion)
@@ -463,7 +463,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         row.wordWrap = true;
         row.autoSize = false;
-        row.fieldHeight = rowHeight - (mobileNovaBeatLayout ? 14 : 10);
+        row.fieldHeight = rowHeight - (mobileLibraryRedesign ? 14 : 10);
       }
       add(row);
       rows.push(row);
@@ -472,7 +472,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function renderDetails():Void
   {
-    if (mobileNovaBeatLayout)
+    if (mobileLibraryRedesign)
     {
       if (detectedMods.length == 0)
       {
@@ -759,8 +759,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (width <= 0 || height <= 0) return;
     if (usesTouchControls)
     {
-      if (mobileNovaBeatLayout)
-        layoutNovaBeatMobileViewport(width, height);
+      if (mobileLibraryRedesign)
+        layoutTouchMobileViewport(width, height);
       else
         layoutMobileViewport(width, height);
       return;
@@ -840,7 +840,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
   }
 
-  function layoutNovaBeatMobileViewport(width:Int, height:Int):Void
+  function layoutTouchMobileViewport(width:Int, height:Int):Void
   {
     portraitLayout = height > width * 1.12;
     var margin:Float = portraitLayout ? 18 : 22;
