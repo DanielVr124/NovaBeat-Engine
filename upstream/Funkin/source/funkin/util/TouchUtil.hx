@@ -111,7 +111,16 @@ class TouchUtil
 
       final clientX:Float = browserPointerNumber(pointer, "clientX");
       final clientY:Float = browserPointerNumber(pointer, "clientY");
-      if (!updateBrowserPointerPosition(clientX, clientY)) browserPointerMoved = true;
+      if (updateBrowserPointerPosition(clientX, clientY))
+      {
+        final releaseY:Float = FlxG.mouse.gameY;
+        browserPointerDeltaY += releaseY - browserPointerGameY;
+        browserPointerGameY = releaseY;
+      }
+      else
+      {
+        browserPointerMoved = true;
+      }
 
       final dx:Float = clientX - browserPointerStartX;
       final dy:Float = clientY - browserPointerStartY;
@@ -178,6 +187,29 @@ class TouchUtil
   {
     ensureBrowserPointerBridge();
     return browserPointerAvailable && browserPointerDown;
+  }
+
+  public static function browserPointerHasDragged():Bool
+  {
+    ensureBrowserPointerBridge();
+    return browserPointerAvailable && browserPointerMoved;
+  }
+
+  /**
+   * Tests where the current browser pointer gesture began. This is used by
+   * scrollable screens to begin a drag only when the finger starts on the list.
+   */
+  public static function browserPointerPressedOn(object:FlxBasic, ?camera:FlxCamera):Bool
+  {
+    ensureBrowserPointerBridge();
+    if (!browserPointerAvailable || !browserPointerDown || object == null) return false;
+
+    final currentX:Float = browserPointerClientX;
+    final currentY:Float = browserPointerClientY;
+    if (!updateBrowserPointerPosition(browserPointerStartX, browserPointerStartY)) return false;
+    final pressedOnObject:Bool = FlxG.mouse.overlaps(object, camera);
+    updateBrowserPointerPosition(currentX, currentY);
+    return pressedOnObject;
   }
 
   public static function consumeBrowserPointerDeltaY():Float
