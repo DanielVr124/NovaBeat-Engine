@@ -335,11 +335,12 @@ class MainMenuState extends MusicBeatState
     if (menuItems == null || menuItems.length == 0) return;
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    var mobileBrowser:Bool = DeviceUtil.isMobileBrowser;
     var spacing:Float = portrait
-      ? Math.min(122, (FlxG.height * 0.54) / Math.max(1, menuItems.length - 1))
-      : Math.min(160, (FlxG.height - 140) / Math.max(1, menuItems.length - 1));
+      ? Math.min(mobileBrowser ? 124 : 122, (FlxG.height * (mobileBrowser ? 0.60 : 0.54)) / Math.max(1, menuItems.length - 1))
+      : Math.min(160, (FlxG.height - (mobileBrowser ? 110 : 140)) / Math.max(1, menuItems.length - 1));
     var top:Float = portrait
-      ? FlxG.height * 0.23
+      ? FlxG.height * (mobileBrowser ? 0.20 : 0.23)
       : (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)

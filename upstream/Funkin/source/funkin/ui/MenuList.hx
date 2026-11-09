@@ -64,6 +64,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
   // Helper variables
   var _isMainMenuState:Bool = false;
+  var _isOptionsMenuState:Bool = false;
   var touchScrollAccumulator:Float = 0;
 
   // Prevent a release-only pointer event from confirming a tap already
@@ -90,6 +91,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     touchBuddy = new FlxSprite().makeGraphic(10, 10);
     _isMainMenuState = Std.isOfType(FlxG.state, funkin.ui.mainmenu.MainMenuState);
+    final currentStateClass = Type.getClass(FlxG.state);
+    _isOptionsMenuState = currentStateClass != null
+      && Type.getClassName(currentStateClass) == "funkin.ui.options.OptionsState";
 
     super();
   }
@@ -148,9 +152,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
         if (Math.isFinite(deltaY))
         {
-          // NovaBeat follows the finger directly: dragging downward moves
-          // the highlighted list downward. Keep stock FNF scrolling unchanged.
-          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
+          // FNF Options and NovaBeat lists follow the finger. Other stock FNF
+          // vertical lists retain their existing drag mapping.
+          touchScrollAccumulator += deltaY * ((Preferences.menuStyle == "NovaBeat" || _isOptionsMenuState) ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)
@@ -177,9 +181,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.touch.deltaViewY;
         if (Math.isFinite(deltaY))
         {
-          // NovaBeat follows the finger directly: dragging downward moves
-          // the highlighted list downward. Keep stock FNF scrolling unchanged.
-          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
+          // FNF Options and NovaBeat lists follow the finger. Other stock FNF
+          // vertical lists retain their existing drag mapping.
+          touchScrollAccumulator += deltaY * ((Preferences.menuStyle == "NovaBeat" || _isOptionsMenuState) ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)
@@ -257,7 +261,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
       {
         final item = members[i];
         final touchCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : item.camera;
-        if (!item.available || !TouchUtil.consumeBrowserPointerTap(item, touchCamera)) continue;
+        if (!item.available || !TouchUtil.consumeBrowserPointerTap(item, touchCamera, _isMainMenuState, _isMainMenuState ? 14 : 0)) continue;
 
         final prevIndex:Int = selectedIndex;
         if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
