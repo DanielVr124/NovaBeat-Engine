@@ -49,6 +49,8 @@ class TouchUtil
   static var browserPointerReleaseIsTap:Bool = false;
   static var browserPointerReleaseSerial:Int = 0;
   static var browserPointerConsumedSerial:Int = 0;
+  static var browserPointerStartSerial:Int = 0;
+  static var browserPointerStartConsumedSerial:Int = 0;
 
   static function ensureBrowserPointerBridge():Void
   {
@@ -76,6 +78,7 @@ class TouchUtil
       browserPointerStartX = clientX;
       browserPointerStartY = clientY;
       browserPointerGameY = FlxG.mouse.gameY;
+      browserPointerStartSerial++;
       browserPointerDeltaY = 0;
       browserPointerMoved = false;
       browserPointerDown = true;
@@ -196,19 +199,22 @@ class TouchUtil
   }
 
   /**
-   * Tests where the current browser pointer gesture began. This is used by
-   * scrollable screens to begin a drag only when the finger starts on the list.
+   * Tests where the current or just-completed browser pointer gesture began.
+   * The start is consumed by the first matching scrollable surface, so a quick
+   * drag that begins and ends between game frames is still recognized.
    */
   public static function browserPointerPressedOn(object:FlxBasic, ?camera:FlxCamera):Bool
   {
     ensureBrowserPointerBridge();
-    if (!browserPointerAvailable || !browserPointerDown || object == null) return false;
+    if (!browserPointerAvailable || object == null || browserPointerStartSerial == browserPointerStartConsumedSerial) return false;
 
     final currentX:Float = browserPointerClientX;
     final currentY:Float = browserPointerClientY;
     if (!updateBrowserPointerPosition(browserPointerStartX, browserPointerStartY)) return false;
     final pressedOnObject:Bool = FlxG.mouse.overlaps(object, camera);
     updateBrowserPointerPosition(currentX, currentY);
+
+    if (pressedOnObject) browserPointerStartConsumedSerial = browserPointerStartSerial;
     return pressedOnObject;
   }
 
