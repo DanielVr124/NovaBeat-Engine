@@ -388,7 +388,7 @@ jobs:
             html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;min-height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
             #openfl-content{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-width:none!important;max-height:none!important;overflow:hidden!important}
             #openfl-content canvas,canvas{display:block!important}
-            html,body,canvas,#openfl-content{cursor:none!important}
+            html,body,canvas,#openfl-content{cursor:none!important;touch-action:none!important;-webkit-user-select:none!important;user-select:none!important}
           }
           </style>"""
           if "novabeat-mobile-viewport" not in html:
