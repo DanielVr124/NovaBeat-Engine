@@ -307,7 +307,13 @@ class NovaBeatMainMenuState extends MusicBeatState
     buildSpeakerPlatform();
     buildBoyfriend(true);
 
-    var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
+    // Use Claude's animated Bumpin atlas in NovaBeat itself (not only the
+    // original FNF title state). Keep the atlas colors un-tinted.
+    var logo:FlxSprite = new FlxSprite();
+    logo.frames = Paths.getSparrowAtlas('logoBumpin');
+    logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
+    logo.animation.play('idle', true);
+    logo.antialiasing = true;
     var maxLogoWidth:Float = width * (portraitLayout ? 0.90 : 0.82) * interfaceScale();
     var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.30) * interfaceScale();
     var logoFit:Float = Math.max(0.01, Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height));
@@ -317,7 +323,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     logo.y = height * 0.27 - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
-    logo.color = 0xFFF1D9FF;
     titleLogo = logo;
     add(logo);
 
