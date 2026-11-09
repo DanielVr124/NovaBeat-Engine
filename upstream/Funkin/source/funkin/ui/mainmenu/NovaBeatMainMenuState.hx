@@ -263,9 +263,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     rightBeam.alpha = 0.09;
     rightBeam.zIndex = -80;
 
-    var bottomShade:FlxSprite = addSolid(0, height * 0.76, width, height * 0.24, 0xA3030615);
-    bottomShade.zIndex = -70;
-
     var graffitiStar:FlxText = addLabel(width * 0.79, height * 0.12, 90, '✦', 66, 0xFFB968FF,
       FlxTextAlign.CENTER, 'Arial');
     graffitiStar.alpha = 0.44;
