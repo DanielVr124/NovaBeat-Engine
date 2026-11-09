@@ -240,7 +240,9 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     // FNF-style customization uses a dedicated scrolling camera. Keep the
     // touch list and its hit targets on that same camera so taps map correctly.
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = novaBeatLayout;
+    // These rows advertise TAP A ROW TO CHANGE; on mobile the first tap
+    // must activate the selected row in both visual themes.
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     descriptions = [

@@ -165,9 +165,10 @@ class StoryMenuState extends MusicBeatState
     updateData();
 
     levelTitles = new FlxTypedGroup<LevelTitle>();
-    // The original FNF black panel sits at zIndex 99. Keep its week artwork
-    // above the panel in FNF mode, while preserving NovaBeat's own layering.
-    levelTitles.zIndex = Preferences.menuStyle == "NovaBeat" ? 15 : 101;
+    // The stock FNF black mask is at zIndex 99. Week artwork belongs below
+    // it so titles naturally disappear as they move above the carousel edge.
+    // NovaBeat keeps its own panel/title layering.
+    levelTitles.zIndex = Preferences.menuStyle == "NovaBeat" ? 15 : 98;
     add(levelTitles);
 
     updateBackground();
@@ -620,7 +621,9 @@ class StoryMenuState extends MusicBeatState
     final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
     if (Math.isFinite(deltaY))
     {
-      fnfBrowserDragAccumulator += deltaY;
+      // Match the original FNF Options list: drag-down moves toward the
+      // previous week; drag-up moves toward the next week.
+      fnfBrowserDragAccumulator -= deltaY;
       final rowHeight:Float = currentLevelTitle == null ? 48 : currentLevelTitle.height;
       final step:Float = Math.max(30, rowHeight * 0.55);
 
@@ -665,11 +668,13 @@ class StoryMenuState extends MusicBeatState
         // so a long drag cannot advance several weeks in consecutive frames.
         // Leave the original FNF per-frame gesture path unchanged.
         final novaBeatMobileSwipe:Bool = Preferences.menuStyle == "NovaBeat" && DeviceUtil.isMobileBrowser;
-        // FlxSwipe's positive 90 degrees is physically downward, while the
-        // legacy helper names use the opposite labels. Map a finger-up gesture
-        // to the previous week so the carousel content moves down under it.
-        final swipeToPrevious:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedDown : menuSwipeUp();
-        final swipeToNext:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedUp : menuSwipeDown();
+        final fnfMobileBrowserSwipe:Bool = Preferences.menuStyle != "NovaBeat" && DeviceUtil.isMobileBrowser;
+        // NovaBeat retains its established swipe mapping. Normal FNF mobile
+        // Story Mode now follows the same direction as the restored FNF lists.
+        final swipeToPrevious:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedDown
+          : (fnfMobileBrowserSwipe ? menuSwipeDown() : menuSwipeUp());
+        final swipeToNext:Bool = novaBeatMobileSwipe ? SwipeUtil.justSwipedUp
+          : (fnfMobileBrowserSwipe ? menuSwipeUp() : menuSwipeDown());
         if (controls.UI_UP_P || swipeToPrevious)
         {
           changeLevel(-1);
