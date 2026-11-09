@@ -83,6 +83,10 @@ class NovaBeatMainMenuState extends MusicBeatState
   var menuAudioMuted:Bool = false;
   var previousMenuMusicVolume:Float = 0.82;
   var featureTitle:Null<FlxText> = null;
+  var menuScrollCamera:Null<FlxCamera> = null;
+  var menuScrollCardHeight:Float = 0;
+  var menuScrollStep:Float = 0;
+  var menuScrollViewportHeight:Float = 0;
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -156,6 +160,12 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (interfaceLayer == null || transitioning) return;
 
     var selectedIndex:Int = menuItems == null ? 0 : menuItems.selectedIndex;
+    if (menuScrollCamera != null)
+    {
+      // CameraFrontEnd.remove destroys the camera by default.
+      FlxG.cameras.remove(menuScrollCamera);
+      menuScrollCamera = null;
+    }
     for (child in interfaceLayer.members.copy())
     {
       if (child == null) continue;
@@ -181,6 +191,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     rowIcons = [];
     equalizerBars = [];
     featureTitle = null;
+    menuScrollCardHeight = 0;
+    menuScrollStep = 0;
+    menuScrollViewportHeight = 0;
 
     buildBackdrop();
     if (showingTitle)
@@ -300,11 +313,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var screenW:Int = FlxG.width;
     var screenH:Int = FlxG.height;
-    // Quest Browser reports a landscape desktop viewport in its default mode.
-    // Force the touch-friendly tile layout for Quest/mobile browsers anyway.
     compactLayout = DeviceUtil.isMobileBrowser || screenW < 950 || screenH > screenW * 1.12;
 
-    // Preserve the V4 full-screen composition, not the upstream menuBG scene.
     if (backgroundSprite == null) buildBackdrop();
 
     var margin:Float = compactLayout ? Math.max(20, screenW * 0.035) : screenW * 0.042;
@@ -314,37 +324,24 @@ class NovaBeatMainMenuState extends MusicBeatState
     var frameY:Float = compactLayout ? screenH * 0.125 : screenH * 0.16;
     var frameW:Float = screenW - frameX * 2;
     var frameH:Float = screenH - frameY - (compactLayout ? screenH * 0.03 : screenH * 0.053);
-
     addPanel(frameX, frameY, frameW, frameH, 0xFF537FFF);
 
     var navX:Float = frameX + (compactLayout ? 18 : 38);
-    var navY:Float = frameY + (compactLayout ? 18 : 28);
-    var navW:Float = compactLayout ? frameW - 36 : frameW * 0.445;
-    addLabel(navX + (compactLayout ? 0 : 4), navY, navW, 'NOVABEAT ENGINE', 11, 0xFF48E7FF, FlxTextAlign.LEFT, 'Arial');
-    addLabel(navX + (compactLayout ? 0 : 4), navY + 19, navW, 'MAIN MENU', compactLayout ? 24 : 34, 0xFFF4F7FF, FlxTextAlign.LEFT, 'Arial Black');
+    var navW:Float = frameW - (compactLayout ? 36 : 76);
+    addLabel(navX, frameY + (compactLayout ? 17 : 24), navW,
+      'NOVABEAT ENGINE', compactLayout ? 11 : 13, 0xFF48E7FF, FlxTextAlign.LEFT, 'Arial');
+    addLabel(navX, frameY + (compactLayout ? 36 : 48), navW,
+      'MAIN MENU', compactLayout ? 23 : 32, 0xFFF4F7FF, FlxTextAlign.LEFT, 'Arial Black');
 
-    var listTop:Float = navY + (compactLayout ? 70 : 84);
-    var listBottom:Float = frameY + frameH - (compactLayout ? 38 : 46);
+    var listTop:Float = frameY + (compactLayout ? 83 : 106);
+    var listBottom:Float = frameY + frameH - (compactLayout ? 42 : 48);
+    buildMenuList(navX, listTop, navW, listBottom - listTop, true);
 
-    if (!compactLayout)
-    {
-      var featureX:Float = frameX + frameW * 0.515;
-      var featureY:Float = frameY + 24;
-      var featureW:Float = frameX + frameW - margin - featureX;
-      var featureH:Float = frameH - 48;
-
-      buildFeaturePanel(featureX, featureY, featureW, featureH);
-      buildMenuList(navX, listTop, navW, listBottom - listTop, false);
-      addLabel(frameX + 28, screenH - 27, frameW - 56, 'UP / DOWN   NAVIGATE       ENTER   SELECT', 10, 0xFF8297C2, FlxTextAlign.LEFT, 'Arial');
-    }
-    else
-    {
-      buildMenuList(navX, listTop, navW, listBottom - listTop, true);
-      var menuHint:String = DeviceUtil.isMobileBrowser
-        ? 'TAP A TILE TO OPEN'
-        : 'TAP A TILE TO SELECT   •   ENTER TO OPEN';
-      addLabel(navX, frameY + frameH - 26, navW, menuHint, 9, 0xFF8DA8D8, FlxTextAlign.LEFT, 'Arial');
-    }
+    var hint:String = DeviceUtil.isMobileBrowser
+      ? 'DRAG OR SWIPE TO BROWSE   •   TAP AN OPTION TO OPEN'
+      : 'UP / DOWN   NAVIGATE       ENTER   SELECT       SCROLL   BROWSE';
+    addLabel(frameX + 28, screenH - 27, frameW - 56, hint, compactLayout ? 8 : 10,
+      0xFF8297C2, FlxTextAlign.LEFT, 'Arial');
   }
 
   function buildTopBar(margin:Float):Void
@@ -385,105 +382,86 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function buildMenuList(x:Float, y:Float, width:Float, height:Float, tileLayout:Bool):Void
   {
-    // Keep a visible but compact gap between tap targets so neighboring
-    // tiles no longer look merged together on portrait screens.
-    var mobileLandscape:Bool = DeviceUtil.isMobileBrowser && FlxG.height <= FlxG.width * 1.12;
-    var gap:Float = tileLayout
-      ? (mobileLandscape ? 7 : Math.max(12, FlxG.width * 0.022))
-      : Math.max(9, FlxG.height * 0.018);
-    gap = Math.max(mobileLandscape ? 6 : (tileLayout ? 12 : 9), gap * densityMultiplier());
-
-    // The active experience changes which songs this single Freeplay route loads.
+    // NovaBeat uses one continuous, full-width vertical list on every screen.
+    // The dedicated camera clips the cards to the frame and scrolls smoothly.
     visibleItemIndexes = [0, 1, 2, 3, 4];
 
+    var mobileLandscape:Bool = DeviceUtil.isMobileBrowser && FlxG.height <= FlxG.width * 1.12;
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    // Touch layouts always use one continuous vertical menu. A landscape
-    // phone should not switch back into a two-column grid.
-    var columns:Int = tileLayout ? ((DeviceUtil.isMobileBrowser || portraitLayout) ? 1 : 2) : 1;
-    var entryCount:Int = visibleItemIndexes.length;
-    var rows:Int = Std.int(Math.ceil(entryCount / columns));
-    var buttonW:Float = tileLayout ? (width - gap * (columns + 1)) / columns : width - 20;
+    var gap:Float = mobileLandscape ? 10 : (compactLayout ? 13 : 16);
+    var buttonW:Float = Math.max(1, width - gap * 2);
     var buttonH:Float;
-    if (tileLayout)
-    {
-      // Fill the available mobile menu area with large, thumb-friendly tiles.
-      // Tall portrait viewports can use more height; shorter screens still
-      // shrink to fit rather than overflowing the panel.
-      var minTileHeight:Float = mobileLandscape ? 30 : 52;
-      var maxTileHeight:Float = mobileLandscape ? 46 : (portraitLayout ? 156 : 112);
-      buttonH = Math.max(minTileHeight, Math.min(maxTileHeight, (height - gap * (rows - 1)) / rows));
-    }
+    if (mobileLandscape)
+      buttonH = Math.max(58, Math.min(82, height * 0.36));
+    else if (portraitLayout)
+      buttonH = Math.max(90, Math.min(126, height * 0.21));
     else
-    {
-      buttonH = Math.max(54, Math.min(82, (height - gap * (rows - 1)) / rows));
-    }
+      buttonH = Math.max(96, Math.min(128, height * 0.25));
 
-    var firstX:Float = tileLayout ? x + gap : x + 6;
-    var firstY:Float = y + (tileLayout ? 0 : 10);
+    menuScrollCamera = new FlxCamera(0, Std.int(y), Std.int(FlxG.width), Std.int(Math.max(1, height)));
+    menuScrollCamera.bgColor = FlxColor.TRANSPARENT;
+    menuScrollCamera.scroll.set(0, 0);
+    FlxG.cameras.add(menuScrollCamera, false);
+    menuScrollViewportHeight = height;
+    menuScrollCardHeight = buttonH;
+    menuScrollStep = buttonH + gap;
 
-    menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
-    menuItems.cameras = [uiCamera];
-    // On touch-first NovaBeat layouts, one tap should open the selected tile.
-    // The separate FNF-style menu keeps its original select-then-confirm flow.
+    menuItems = new TextMenuList(NavControls.Vertical);
+    menuItems.cameras = [menuScrollCamera];
     menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
+
+    var iconPlateSize:Float = Math.min(buttonH - 18, mobileLandscape ? 52 : (portraitLayout ? 82 : 88));
+    var iconFontSize:Int = mobileLandscape ? 23 : (portraitLayout ? 38 : 40);
+    var labelFontSize:Int = mobileLandscape ? 17 : (portraitLayout ? 24 : 27);
 
     for (index in 0...visibleItemIndexes.length)
     {
       var menuIndex:Int = visibleItemIndexes[index];
-      var column:Int = tileLayout ? index % columns : 0;
-      var row:Int = tileLayout ? Std.int(index / columns) : index;
-      var itemX:Float = tileLayout ? firstX + column * (buttonW + gap) : firstX;
-      var itemY:Float = firstY + row * (buttonH + gap);
+      var itemX:Float = x + gap;
+      var itemY:Float = index * menuScrollStep;
 
-      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 14, 14, 0xFF0D1935);
-      panel.alpha = 0.93;
+      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 16, 16, 0xFF0D1935, menuScrollCamera);
+      panel.alpha = 0.94;
       rowBackgrounds.push(panel);
 
-      var accent:FlxSprite = addRoundRect(itemX, itemY + buttonH * 0.16, 4, buttonH * 0.68, 3, 3, accentColor());
-      accent.alpha = 0.38;
+      var accent:FlxSprite = addRoundRect(itemX + 2, itemY + 13, 5, buttonH - 26, 3, 3, accentColor(), menuScrollCamera);
+      accent.alpha = 0.46;
       rowAccents.push(accent);
 
       var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
-      item.cameras = [uiCamera];
-      // The transparent MenuList sprite is the real tap target. Give it a
-      // small invisible safety margin around the visual card, while leaving
-      // enough gap that adjacent targets never overlap.
-      var hitboxPadding:Float = DeviceUtil.isMobileBrowser ? 6 : 0;
+      item.cameras = [menuScrollCamera];
+      var hitboxPadding:Float = DeviceUtil.isMobileBrowser ? 5 : 0;
       item.makeGraphic(Std.int(buttonW + hitboxPadding * 2), Std.int(buttonH + hitboxPadding * 2), FlxColor.TRANSPARENT);
       item.setPosition(itemX - hitboxPadding, itemY - hitboxPadding);
       item.origin.set(0, 0);
       item.offset.set(0, 0);
       item.updateHitbox();
       item.scrollFactor.set();
-      // Keep the upstream FNF bitmap label hidden. Its parent alpha changes
-      // when selected, so alpha alone is not enough to prevent it drawing.
       item.atlasText.alpha = 0;
       item.atlasText.visible = false;
 
-      // Use a shared badge so the menu symbols remain legible and aligned.
-      var iconPlateSize:Float = tileLayout ? (mobileLandscape ? 30 : (portraitLayout ? 56 : 46)) : 46;
-      var iconX:Float = itemX + (tileLayout ? 10 : 14);
+      var iconX:Float = itemX + 18;
       var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
-      var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize, 12, 12, 0xFF142B49);
-      iconPlate.alpha = 0.96;
+      var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize,
+        10, 10, 0xFF142B49, menuScrollCamera);
+      iconPlate.alpha = 0.98;
       rowIconPlates.push(iconPlate);
 
-      var iconSize:Int = tileLayout ? (mobileLandscape ? 17 : (portraitLayout ? 28 : 24)) : 25;
-      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[menuIndex], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
-      icon.scrollFactor.set();
+      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[menuIndex],
+        iconFontSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial', menuScrollCamera);
       icon.autoSize = false;
       icon.fieldWidth = iconPlateSize;
       icon.height = iconPlateSize - 2;
+      icon.scrollFactor.set();
       rowIcons.push(icon);
 
-      var labelX:Float = iconX + iconPlateSize + (tileLayout ? 10 : 14);
-      var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
+      var labelX:Float = iconX + iconPlateSize + 22;
+      var labelWidth:Float = buttonW - (labelX - itemX) - 24;
       var title:String = ITEM_TITLES[menuIndex].split('\n').join(' ');
-      var titleHeight:Float = tileLayout ? (mobileLandscape ? 20 : (portraitLayout ? 25 : 22)) : 23;
+      var titleHeight:Float = Math.min(buttonH - 16, labelFontSize + 14);
       var titleY:Float = itemY + (buttonH - titleHeight) * 0.5;
       var label:FlxText = addLabel(labelX, titleY, labelWidth, title,
-        tileLayout ? (mobileLandscape ? 13 : (portraitLayout ? 19 : 16)) : 18,
-        0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
+        labelFontSize, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black', menuScrollCamera);
       label.autoSize = false;
       label.wordWrap = false;
       label.fieldWidth = labelWidth;
@@ -498,9 +476,9 @@ class NovaBeatMainMenuState extends MusicBeatState
         iconPlate.alpha = 0;
         icon.alpha = 0;
         label.alpha = 0;
-        FlxTween.tween(panel, {alpha: 0.93}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(accent, {alpha: 0.38}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(iconPlate, {alpha: 0.96}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(panel, {alpha: 0.94}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(accent, {alpha: 0.46}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+        FlxTween.tween(iconPlate, {alpha: 0.98}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
         FlxTween.tween(icon, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
         FlxTween.tween(label, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
       }
@@ -573,8 +551,27 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     var selectedMenuIndex:Int = visibleItemIndexes[index];
     if (featureTitle != null) featureTitle.text = ITEM_NAMES[selectedMenuIndex];
+    scrollMenuSelectionIntoView(index);
 
     // MenuTypedList owns navigation sounds for keyboard, controller, and mouse.
+  }
+
+  function scrollMenuSelectionIntoView(index:Int):Void
+  {
+    if (menuScrollCamera == null || menuScrollStep <= 0) return;
+    var target:Float = menuScrollCamera.scroll.y;
+    var itemTop:Float = index * menuScrollStep;
+    var itemBottom:Float = itemTop + menuScrollCardHeight;
+    if (itemTop < target)
+      target = itemTop;
+    else if (itemBottom > target + menuScrollViewportHeight)
+      target = itemBottom - menuScrollViewportHeight;
+    var totalHeight:Float = visibleItemIndexes.length * menuScrollStep;
+    var maxScroll:Float = Math.max(0, totalHeight - menuScrollViewportHeight);
+    target = Math.max(0, Math.min(maxScroll, target));
+    if (Math.abs(target - menuScrollCamera.scroll.y) < 1) return;
+    FlxTween.cancelTweensOf(menuScrollCamera.scroll);
+    FlxTween.tween(menuScrollCamera.scroll, {y: target}, 0.24, {ease: FlxEase.quadOut});
   }
 
   override function update(elapsed:Float):Void
@@ -602,6 +599,22 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
 
     handleHeaderPointerInput();
+
+    // Mobile swipes and desktop mouse-wheel input move the selected row; the
+    // selection handler eases the clipped list camera to keep that row visible.
+    if (menuItems != null && !menuItems.busy)
+    {
+      if (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedUp)
+        menuItems.selectItem(Std.int(Math.min(menuItems.length - 1, menuItems.selectedIndex + 1)));
+      else if (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedDown)
+        menuItems.selectItem(Std.int(Math.max(0, menuItems.selectedIndex - 1)));
+      var wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
+      if (wheelAmount != 0)
+      {
+        var nextIndex:Int = menuItems.selectedIndex - wheelAmount;
+        menuItems.selectItem(Std.int(Math.max(0, Math.min(menuItems.length - 1, nextIndex))));
+      }
+    }
 
     #if !mobile
     // Fallback to raw desktop keys when a custom binding is absent.
@@ -785,7 +798,16 @@ class NovaBeatMainMenuState extends MusicBeatState
     addRoundRect(x + 2, y + 2, width - 4, height - 4, 26, 26, 0xF0061028);
   }
 
-  function addRoundRect(x:Float, y:Float, width:Float, height:Float, radiusX:Float, radiusY:Float, color:FlxColor):FlxSprite
+  function addRoundRect(
+    x:Float,
+    y:Float,
+    width:Float,
+    height:Float,
+    radiusX:Float,
+    radiusY:Float,
+    color:FlxColor,
+    camera:FlxCamera = null
+  ):FlxSprite
   {
     var sprite:FlxSprite = new FlxSprite(x, y);
     // FlxSpriteUtil draws into sprite.pixels; a fresh FlxSprite has no bitmap yet.
@@ -796,7 +818,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     // below labels, icons, and transparent menu hit targets.
     sprite.zIndex = -10;
     sprite.scrollFactor.set();
-    sprite.cameras = [uiCamera];
+    sprite.cameras = [camera == null ? uiCamera : camera];
     add(sprite);
     return sprite;
   }
@@ -819,14 +841,15 @@ class NovaBeatMainMenuState extends MusicBeatState
     size:Int,
     color:FlxColor,
     alignment:FlxTextAlign = FlxTextAlign.LEFT,
-    fontName:String = 'Arial'
+    fontName:String = 'Arial',
+    camera:FlxCamera = null
   ):FlxText
   {
     var scaledSize:Int = Std.int(Math.max(8, size * interfaceScale() * (Save.instance.options.menuLargeText ? 1.12 : 1.0)));
     var label:FlxText = new FlxText(x, y, width, value, scaledSize);
     label.setFormat(fontName, scaledSize, color, alignment, null, FlxColor.TRANSPARENT, false);
     label.scrollFactor.set();
-    label.cameras = [uiCamera];
+    label.cameras = [camera == null ? uiCamera : camera];
     add(label);
     return label;
   }

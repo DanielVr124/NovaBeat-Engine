@@ -13,6 +13,9 @@ import funkin.ui.Page;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
 import polymod.Polymod.ModMetadata;
+#if !web
+import openfl.display.BitmapData;
+#end
 #if (mobile || FEATURE_TOUCH_CONTROLS)
 import funkin.mobile.ui.FunkinBackButton;
 #end
@@ -30,6 +33,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var detectedMods:Array<ModMetadata> = [];
   var rows:Array<ModMenuItem> = [];
   var rowBackgrounds:Array<FlxSprite> = [];
+  var cardIconBackgrounds:Array<FlxSprite> = [];
+  var cardIconImages:Array<FlxSprite> = [];
+  var cardHeaderBackgrounds:Array<FlxSprite> = [];
+  var cardDescriptionBackgrounds:Array<FlxSprite> = [];
+  var cardIconLabels:Array<FlxText> = [];
+  var cardDescriptionLabels:Array<FlxText> = [];
   var selectedIndex:Int = 0;
   var firstVisibleIndex:Int = 0;
   var visibleRows:Int = 0;
@@ -85,15 +94,11 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if mobile
     usesTouchControls = true;
     #end
-    // The redesigned full-screen Mod Library is shared by NovaBeat and
-    // Normal FNF on touch devices. Style-specific sounds/navigation remain
-    // driven by Preferences.menuStyle elsewhere in this page.
-    mobileLibraryRedesign = usesTouchControls;
-    if (usesTouchControls)
-    {
-      buildTouchMobileLayout(width, height);
-      return;
-    }
+    // The full-size card library is shared by NovaBeat and Normal FNF on
+    // desktop, mobile, and HTML5. The menu style only changes navigation SFX.
+    mobileLibraryRedesign = true;
+    buildTouchMobileLayout(width, height);
+    return;
 
     var compactLandscapeTouch:Bool = false;
     var margin:Float = portraitLayout ? 22 : 48;
@@ -160,71 +165,87 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
   }
 
+  inline function libraryEntryCount():Int
+  {
+    // Friday Night Funkin' is a permanent, non-removable first entry.
+    return detectedMods.length + 1;
+  }
+
+  function libraryCardHeight(height:Int, portrait:Bool):Float
+  {
+    if (!portrait && height < 470)
+      return Math.max(96, Math.min(116, height * 0.28));
+    return Math.max(126, Math.min(184, height * 0.22));
+  }
+
   /**
-   * NovaBeat's mobile Mod Library is a dedicated full-screen list, not a
-   * compressed two-pane desktop manager. The installed mod cards own the
-   * space; details become an intentional empty-state message when the list
-   * has nothing to show.
+   * The Mod Library uses full-size cards on every platform. The base game
+   * occupies the first slot, with installed Polymod entries following it.
    */
   function buildTouchMobileLayout(width:Float, height:Float):Void
   {
     portraitLayout = height > width * 1.12;
+    var compactLandscape:Bool = !portraitLayout && height < 470;
     var margin:Float = portraitLayout ? 18 : 22;
-    heading = addLabel(margin, 13, width - 160, 'MOD LIBRARY', portraitLayout ? 28 : 25, 0xFFFFFFFF);
-    countText = addLabel(margin, 49, width - margin * 2, 'CHECKING YOUR MOD LIBRARY...', 11, 0xFF54DDF4);
+    heading = addLabel(margin, compactLandscape ? 8 : 13, width - 160, 'MOD LIBRARY',
+      portraitLayout ? 28 : (compactLandscape ? 22 : 25), 0xFFFFFFFF);
+    countText = addLabel(margin, compactLandscape ? 36 : 49, width - margin * 2,
+      'BASE GAME + INSTALLED MODS', compactLandscape ? 9 : 11, 0xFF54DDF4);
 
-    mobileBackButton = new FlxSprite(width - 132, 12);
-    mobileBackButton.makeGraphic(116, 46, 0xFF183B59);
+    mobileBackButton = new FlxSprite(width - 132, compactLandscape ? 7 : 12);
+    mobileBackButton.makeGraphic(116, compactLandscape ? 38 : 46, 0xFF183B59);
     mobileBackButton.scrollFactor.set();
     add(mobileBackButton);
-    mobileBackLabel = new FlxText(width - 128, 27, 108, 'BACK', 14);
-    mobileBackLabel.setFormat(Paths.font('vcr.ttf'), 14, 0xFFFFFFFF, FlxTextAlign.CENTER);
+    mobileBackLabel = new FlxText(width - 128, compactLandscape ? 18 : 27, 108, 'BACK', compactLandscape ? 12 : 14);
+    mobileBackLabel.setFormat(Paths.font('vcr.ttf'), compactLandscape ? 12 : 14, 0xFFFFFFFF, FlxTextAlign.CENTER);
     mobileBackLabel.scrollFactor.set();
     add(mobileBackLabel);
 
-    var panelY:Float = portraitLayout ? 94 : 82;
+    var panelY:Float = compactLandscape ? 58 : (portraitLayout ? 94 : 82);
     var panelHeight:Float = Math.max(150, height - panelY - 48);
     var panelWidth:Float = width - margin * 2;
     addPanel(margin, panelY, panelWidth, panelHeight);
 
     var innerX:Float = margin + 16;
     var innerWidth:Float = panelWidth - 32;
-    listHeading = addLabel(innerX + 2, panelY + 16, innerWidth - 4,
-      mobileModActionsEnabled() ? 'INSTALLED MODS' : 'YOUR MOD LIBRARY',
-      15, 0xFF54DDF4);
-    statusText = addLabel(innerX + 2, panelY + 39, innerWidth - 4, '', 9, 0xFF9DB7D8);
+    listHeading = addLabel(innerX + 2, panelY + 13, innerWidth - 4,
+      'BASE GAME FIRST  •  INSTALLED MODS BELOW', compactLandscape ? 9 : 13, 0xFF54DDF4);
+    statusText = addLabel(innerX + 2, panelY + (compactLandscape ? 30 : 39), innerWidth - 4, '', 9, 0xFF9DB7D8);
 
     rowX = innerX + 2;
-    rowY = panelY + 63;
+    rowY = panelY + (compactLandscape ? 48 : 63);
     rowWidth = innerWidth - 4;
-    rowHeight = portraitLayout ? 102 : 88;
+    rowHeight = libraryCardHeight(Std.int(height), portraitLayout);
 
-    var actionDockHeight:Float = mobileModActionsEnabled() ? 90 : 0;
+    var actionButtonHeight:Float = compactLandscape ? 24 : 38;
+    var actionGap:Float = compactLandscape ? 4 : 8;
+    var actionDockHeight:Float = mobileModActionsEnabled() ? (compactLandscape ? 52 : 90) : 0;
     var listBottom:Float = panelY + panelHeight - 14 - actionDockHeight;
     visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
     if (mobileModActionsEnabled())
     {
       var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
-      layoutMobileTouchActions(innerX, actionY, innerWidth, 38, 8, portraitLayout);
+      layoutMobileTouchActions(innerX, actionY, innerWidth, actionButtonHeight, actionGap, portraitLayout);
     }
 
-    detailTitle = addLabel(rowX + 10, rowY + 54, rowWidth - 20, '', 20, 0xFFFFFFFF);
+    detailTitle = addLabel(rowX + 10, rowY + 54, rowWidth - 20, '', 18, 0xFFFFFFFF);
     detailTitle.alignment = FlxTextAlign.CENTER;
     detailTitle.autoSize = false;
     detailTitle.fieldWidth = rowWidth - 20;
-
-    detailText = addLabel(rowX + 20, rowY + 98, rowWidth - 40, '', 14, 0xFFB8CBE6);
+    detailText = addLabel(rowX + 20, rowY + 98, rowWidth - 40, '', 13, 0xFFB8CBE6);
     detailText.alignment = FlxTextAlign.CENTER;
     detailText.wordWrap = true;
     detailText.autoSize = false;
     detailText.fieldWidth = rowWidth - 40;
-    detailText.fieldHeight = Math.max(80, listBottom - rowY - 112);
+    detailText.fieldHeight = Math.max(60, listBottom - rowY - 112);
+    detailTitle.visible = false;
+    detailText.visible = false;
 
     helpText = addLabel(margin, height - 28, width - margin * 2,
-      mobileModActionsEnabled()
-        ? 'TAP A MOD CARD  •  DRAG TO BROWSE  •  ACTIONS BELOW'
-        : 'BROWSER BUILDS CANNOT SCAN LOCAL MOD FOLDERS',
-      9, 0xFF91A9CC);
+      DeviceUtil.isMobileBrowser
+        ? 'TAP A CARD  •  DRAG TO SCROLL  •  USE THE ACTIONS BELOW'
+        : 'UP / DOWN SELECT  •  ENTER ENABLE / DISABLE  •  MOUSE WHEEL SCROLL  •  ESC BACK',
+      compactLandscape ? 7 : 9, 0xFF91A9CC);
   }
 
   function buildMobileLayout(width:Float, height:Float):Void
@@ -360,8 +381,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // and explain the limitation instead of presenting it as an empty or broken library.
     detectedMods = [];
     selectedIndex = 0;
-    countText.text = 'BROWSER BUILD • LOCAL MOD SCANNING UNAVAILABLE';
-    statusText.text = 'BROWSER BUILD  •  LOCAL MOD FOLDER ACCESS IS RESTRICTED';
+    countText.text = '1 BASE GAME  •  LOCAL MOD SCANNING UNAVAILABLE IN HTML5';
+    statusText.text = 'THE BASE GAME IS ALWAYS AVAILABLE. BROWSER STORAGE CANNOT BE SCANNED FOR MOD FOLDERS.';
     renderRows();
     renderDetails();
     return;
@@ -383,10 +404,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       return Reflect.compare(a.title, b.title);
     });
 
-    if (selectedIndex >= detectedMods.length) selectedIndex = detectedMods.length - 1;
+    if (selectedIndex > detectedMods.length) selectedIndex = detectedMods.length;
     if (selectedIndex < 0) selectedIndex = 0;
 
-    countText.text = detectedMods.length + ' MOD(S) FOUND  •  ' + loadOrder.length + ' ENABLED';
+    countText.text = '1 BASE GAME  •  ' + detectedMods.length + ' INSTALLED MOD(S)  •  ' + loadOrder.length + ' ENABLED';
     statusText.text = 'Changes are saved immediately. Restart the game to reload enabled mods and their assets.';
     renderRows();
     renderDetails();
@@ -397,139 +418,171 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     for (row in rows) remove(row, true);
     for (background in rowBackgrounds) remove(background, true);
+    for (sprite in cardIconBackgrounds) remove(sprite, true);
+    for (sprite in cardIconImages) remove(sprite, true);
+    for (sprite in cardHeaderBackgrounds) remove(sprite, true);
+    for (sprite in cardDescriptionBackgrounds) remove(sprite, true);
+    for (label in cardIconLabels) remove(label, true);
+    for (label in cardDescriptionLabels) remove(label, true);
     if (emptyStateText != null)
     {
       remove(emptyStateText, true);
       emptyStateText = null;
     }
+
     rows = [];
     rowBackgrounds = [];
+    cardIconBackgrounds = [];
+    cardIconImages = [];
+    cardHeaderBackgrounds = [];
+    cardDescriptionBackgrounds = [];
+    cardIconLabels = [];
+    cardDescriptionLabels = [];
 
-    if (detectedMods.length == 0)
-    {
-      if (!mobileLibraryRedesign)
-      {
-        #if web
-        emptyStateText = addLabel(rowX, rowY + 8, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
-        #else
-        emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
-        #end
-      }
-      return;
-    }
-
-    firstVisibleIndex = Std.int(Math.max(0, Math.min(selectedIndex, detectedMods.length - visibleRows)));
+    var entryCount:Int = libraryEntryCount();
+    firstVisibleIndex = Std.int(Math.max(0, Math.min(selectedIndex, entryCount - visibleRows)));
 
     for (visibleIndex in 0...visibleRows)
     {
-      var modIndex:Int = firstVisibleIndex + visibleIndex;
-      if (modIndex >= detectedMods.length) break;
+      var entryIndex:Int = firstVisibleIndex + visibleIndex;
+      if (entryIndex >= entryCount) break;
 
-      var mod:ModMetadata = detectedMods[modIndex];
-      var enabled:Bool = Save.instance.enabledModDirs.value.indexOf(mod.dirName) != -1;
+      var isBaseGame:Bool = entryIndex == 0;
+      var mod:ModMetadata = isBaseGame ? null : detectedMods[entryIndex - 1];
+      var enabled:Bool = isBaseGame || Save.instance.enabledModDirs.value.indexOf(mod.dirName) != -1;
       var y:Float = rowY + visibleIndex * rowHeight;
+      var cardHeight:Float = Math.max(1, rowHeight - 8);
+      var selected:Bool = entryIndex == selectedIndex;
 
-      var bg:FlxSprite = new FlxSprite(rowX, y);
-      bg.makeGraphic(Std.int(rowWidth), Std.int(rowHeight - 7), modIndex == selectedIndex ? 0xFF164B78 : 0xFF0D1935);
-      bg.alpha = modIndex == selectedIndex ? 1 : 0.88;
-      add(bg);
-      rowBackgrounds.push(bg);
+      var outer:FlxSprite = new FlxSprite(rowX, y);
+      outer.makeGraphic(Std.int(rowWidth), Std.int(cardHeight), selected ? 0xFF55DDF4 : 0xFF315B83);
+      outer.alpha = selected ? 1 : 0.88;
+      add(outer);
+      rowBackgrounds.push(outer);
 
-      var marker:String = enabled ? '[ENABLED]' : '[DISABLED]';
-      var rowFontSize:Int = mobileLibraryRedesign
-        ? (portraitLayout ? 16 : 14)
-        : (usesTouchControls ? 13 : (portraitLayout ? 13 : 16));
-      var rowText:String;
-      if (usesTouchControls)
+      var inner:FlxSprite = new FlxSprite(rowX + 3, y + 3);
+      inner.makeGraphic(Std.int(Math.max(1, rowWidth - 6)), Std.int(Math.max(1, cardHeight - 6)),
+        selected ? 0xF014304E : 0xF009172C);
+      add(inner);
+      cardDescriptionBackgrounds.push(inner);
+
+      var iconSize:Float = Math.min(cardHeight - 22, Math.max(72, cardHeight * 0.76));
+      var iconX:Float = rowX + 12;
+      var iconY:Float = y + (cardHeight - iconSize) * 0.5;
+      var iconPlate:FlxSprite = new FlxSprite(iconX, iconY);
+      iconPlate.makeGraphic(Std.int(iconSize), Std.int(iconSize), isBaseGame ? 0xFF203E61 : 0xFF193B57);
+      add(iconPlate);
+      cardIconBackgrounds.push(iconPlate);
+
+      var rightX:Float = iconX + iconSize + 14;
+      var rightWidth:Float = Math.max(1, rowWidth - (rightX - rowX) - 12);
+      var headerY:Float = y + 10;
+      var headerHeight:Float = Math.min(38, Math.max(28, cardHeight * 0.25));
+      var headerBg:FlxSprite = new FlxSprite(rightX, headerY);
+      headerBg.makeGraphic(Std.int(rightWidth), Std.int(headerHeight), selected ? 0xFF1C5275 : 0xFF173650);
+      add(headerBg);
+      cardHeaderBackgrounds.push(headerBg);
+
+      var descriptionY:Float = headerY + headerHeight + 7;
+      var descriptionHeight:Float = Math.max(26, y + cardHeight - 10 - descriptionY);
+      var descriptionBg:FlxSprite = new FlxSprite(rightX, descriptionY);
+      descriptionBg.makeGraphic(Std.int(rightWidth), Std.int(descriptionHeight), 0xB80A192B);
+      add(descriptionBg);
+      cardDescriptionBackgrounds.push(descriptionBg);
+
+      var iconTextValue:String = isBaseGame ? 'FNF' : mod.title.substr(0, Std.int(Math.min(3, mod.title.length))).toUpperCase();
+      var iconText:FlxText = new FlxText(iconX + 2, iconY + 2, iconSize - 4, iconTextValue, 26);
+      iconText.setFormat(Paths.font('vcr.ttf'), Std.int(Math.max(14, Math.min(30, iconSize * 0.22))),
+        0xFFFFFFFF, FlxTextAlign.CENTER);
+      iconText.autoSize = false;
+      iconText.fieldWidth = iconSize - 4;
+      iconText.height = iconSize - 4;
+      add(iconText);
+      cardIconLabels.push(iconText);
+
+      // Polymod exposes an optional _polymod_icon.png as bytes in metadata.
+      // Use the real mod artwork on native targets, retaining the initials as
+      // a safe fallback for mods without an icon. HTML5 currently cannot scan
+      // local mod folders, so its base-game entry keeps the FNF mark.
+      #if !web
+      if (!isBaseGame)
       {
-        var author:String = metadataValue(mod, 'author', 'Unknown author');
-        var description:String = metadataValue(mod, 'description', 'No description provided.');
-        var maxDescriptionLength:Int = mobileLibraryRedesign ? 56 : 72;
-        if (description.length > maxDescriptionLength)
-          description = description.substr(0, maxDescriptionLength - 3) + '...';
-        rowText = marker + '  •  v' + Std.string(mod.modVersion)
-          + '\n' + mod.title
-          + '\n' + author + '  —  ' + description;
+        var rawIcon:Dynamic = Reflect.field(mod, 'icon');
+        if (rawIcon != null)
+        {
+          try
+          {
+            var iconBitmap:Null<BitmapData> = BitmapData.fromBytes(cast rawIcon);
+            if (iconBitmap != null)
+            {
+              var iconImage:FlxSprite = new FlxSprite(iconX, iconY);
+              iconImage.loadGraphic(iconBitmap);
+              var iconScale:Float = Math.min(iconSize / Math.max(1, iconBitmap.width), iconSize / Math.max(1, iconBitmap.height));
+              iconImage.setGraphicSize(Std.int(iconBitmap.width * iconScale), Std.int(iconBitmap.height * iconScale));
+              iconImage.updateHitbox();
+              iconImage.setPosition(iconX + (iconSize - iconImage.width) * 0.5,
+                iconY + (iconSize - iconImage.height) * 0.5);
+              add(iconImage);
+              cardIconImages.push(iconImage);
+              iconText.visible = false;
+            }
+          }
+          catch (error:Dynamic)
+          {
+            trace('Could not decode icon for mod ' + mod.title + ': ' + Std.string(error));
+          }
+        }
+      }
+      #end
+
+      var title:String = isBaseGame ? "Friday Night Funkin'" : mod.title;
+      var tag:String = isBaseGame ? 'BASE GAME' : 'INSTALLED MOD';
+      var headerText:String = tag + '  •  ' + title;
+      var titleSize:Int = portraitLayout ? 14 : 16;
+      var titleLabel:ModMenuItem = new ModMenuItem(rightX + 10, headerY + 4, rightWidth - 20,
+        headerText, titleSize, entryIndex);
+      titleLabel.setFormat(Paths.font('vcr.ttf'), titleSize, selected ? 0xFFFFFFFF : 0xFFD5E1F6, FlxTextAlign.LEFT);
+      titleLabel.wordWrap = true;
+      titleLabel.autoSize = false;
+      titleLabel.fieldWidth = rightWidth - 20;
+      titleLabel.fieldHeight = headerHeight - 6;
+      add(titleLabel);
+      rows.push(titleLabel);
+
+      var description:String;
+      if (isBaseGame)
+      {
+        description = "The original Friday Night Funkin' experience included with NovaBeat.\nAlways available — it cannot be disabled or reordered.";
       }
       else
       {
-        rowText = (enabled ? '[ON]  ' : '[OFF] ') + mod.title;
+        var author:String = metadataValue(mod, 'author', 'Unknown author');
+        var version:String = Std.string(mod.modVersion);
+        var modDescription:String = metadataValue(mod, 'description', 'No description was provided.');
+        var maxDescriptionLength:Int = portraitLayout ? 104 : 190;
+        if (modDescription.length > maxDescriptionLength)
+          modDescription = modDescription.substr(0, maxDescriptionLength - 3) + '...';
+        description = 'AUTHOR: ' + author + '  •  VERSION: ' + version
+          + '  •  STATUS: ' + (enabled ? 'ENABLED' : 'DISABLED') + '\n' + modDescription;
       }
-      var row:ModMenuItem = new ModMenuItem(rowX + 12, y + (usesTouchControls ? 6 : (rowHeight - rowFontSize - 4) * 0.5),
-        rowWidth - 24, rowText, rowFontSize, modIndex);
-      row.setFormat(Paths.font('vcr.ttf'), rowFontSize,
-        modIndex == selectedIndex ? 0xFF48E7FF : 0xFFD5E1F6, FlxTextAlign.LEFT);
-      if (usesTouchControls)
-      {
-        row.wordWrap = true;
-        row.autoSize = false;
-        row.fieldHeight = rowHeight - (mobileLibraryRedesign ? 14 : 10);
-      }
-      add(row);
-      rows.push(row);
+
+      var descriptionSize:Int = portraitLayout ? 10 : 12;
+      var descriptionLabel:FlxText = new FlxText(rightX + 10, descriptionY + 4, rightWidth - 20,
+        description, descriptionSize);
+      descriptionLabel.setFormat(Paths.font('vcr.ttf'), descriptionSize, 0xFFB8CBE6, FlxTextAlign.LEFT);
+      descriptionLabel.wordWrap = true;
+      descriptionLabel.autoSize = false;
+      descriptionLabel.fieldWidth = rightWidth - 20;
+      descriptionLabel.fieldHeight = descriptionHeight - 8;
+      add(descriptionLabel);
+      cardDescriptionLabels.push(descriptionLabel);
     }
   }
 
   function renderDetails():Void
   {
-    if (mobileLibraryRedesign)
-    {
-      if (detectedMods.length == 0)
-      {
-        detailTitle.visible = true;
-        detailText.visible = true;
-        #if web
-        detailTitle.text = 'BROWSER BUILD LIMITATION';
-        detailText.text = 'This browser cannot scan your device storage for installed mod folders. The Mod Library is available here, but local mod management requires the Android or Windows build.';
-        #else
-        detailTitle.text = 'YOUR LIBRARY IS EMPTY';
-        detailText.text = 'Add a Polymod-compatible mod folder to the game, then use RESCAN to find it. Installed mods will appear here as full-size cards you can manage.';
-        #end
-        detailTitle.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFFFFF, FlxTextAlign.CENTER);
-        detailText.setFormat(Paths.font('vcr.ttf'), 14, 0xFFB8CBE6, FlxTextAlign.CENTER);
-      }
-      else
-      {
-        // Each card already shows the selected mod's author, version, and
-        // description. Keep the separate empty-state message out of the list.
-        detailTitle.visible = false;
-        detailText.visible = false;
-      }
-      return;
-    }
-
-    if (detectedMods.length == 0)
-    {
-      #if web
-      detailTitle.text = usesTouchControls ? 'NO MODS TO DISPLAY YET' : 'BROWSER BUILD LIMITATION';
-      detailText.text = usesTouchControls
-        ? 'This browser build cannot scan your device storage for mod folders. Your library will appear here when browser-based mod importing is supported. You can return to the main menu with the BACK button above.'
-        : 'Web browsers cannot read the game\'s local mods folder. Use the Windows or Android build to detect, enable, and load installed mods.';
-      #else
-      detailTitle.text = 'NO MODS INSTALLED';
-      detailText.text = 'Put a Polymod-compatible mod folder inside the game mods folder, then press R to scan again.\n\nThe manager will show detected mods here.';
-      #end
-      return;
-    }
-
-    var mod:ModMetadata = detectedMods[selectedIndex];
-    var enabled:Bool = Save.instance.enabledModDirs.value.indexOf(mod.dirName) != -1;
-    var author:String = metadataValue(mod, 'author', 'Unknown author');
-    var description:String = metadataValue(mod, 'description', 'No description was provided.');
-    detailTitle.text = mod.title;
-    detailText.text = usesTouchControls
-      ? 'AUTHOR: ' + author
-        + '\nVERSION: ' + Std.string(mod.modVersion)
-        + '\nSTATUS: ' + (enabled ? 'ENABLED' : 'DISABLED')
-        + '\n\n' + description
-      : 'AUTHOR: ' + author
-        + '\nVERSION: ' + Std.string(mod.modVersion)
-        + '\nID: ' + mod.id
-        + '\nFOLDER: ' + mod.dirName
-        + '\nSTATUS: ' + (enabled ? 'ENABLED' : 'DISABLED')
-        + '\n\n' + description
-        + '\n\nACCEPT / SPACE: ' + (enabled ? 'DISABLE MOD' : 'ENABLE MOD')
-        + '\nLEFT / RIGHT: CHANGE LOAD PRIORITY';
+    if (detailTitle != null) detailTitle.visible = false;
+    if (detailText != null) detailText.visible = false;
   }
 
   function metadataValue(mod:ModMetadata, field:String, fallback:String):String
@@ -541,9 +594,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function toggleSelectedMod():Void
   {
-    if (selectedIndex < 0 || selectedIndex >= detectedMods.length) return;
+    if (selectedIndex == 0)
+    {
+      statusText.text = 'THE BASE GAME IS ALWAYS INCLUDED AND CANNOT BE DISABLED.';
+      return;
+    }
+    if (selectedIndex < 1 || selectedIndex > detectedMods.length) return;
 
-    var mod:ModMetadata = detectedMods[selectedIndex];
+    var mod:ModMetadata = detectedMods[selectedIndex - 1];
     var enabledDirs:Array<String> = Save.instance.enabledModDirs.value.copy();
     var index:Int = enabledDirs.indexOf(mod.dirName);
 
@@ -566,9 +624,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function moveSelectedMod(direction:Int):Void
   {
-    if (selectedIndex < 0 || selectedIndex >= detectedMods.length) return;
+    if (selectedIndex == 0)
+    {
+      statusText.text = 'THE BASE GAME ALWAYS STAYS FIRST.';
+      return;
+    }
+    if (selectedIndex < 1 || selectedIndex > detectedMods.length) return;
 
-    var mod:ModMetadata = detectedMods[selectedIndex];
+    var mod:ModMetadata = detectedMods[selectedIndex - 1];
     var order:Array<String> = Save.instance.enabledModDirs.value.copy();
     var current:Int = order.indexOf(mod.dirName);
 
@@ -596,7 +659,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function selectMod(index:Int, toggleIfAlreadySelected:Bool):Void
   {
-    if (index < 0 || index >= detectedMods.length) return;
+    if (index < 0 || index >= libraryEntryCount()) return;
 
     if (toggleIfAlreadySelected && selectedIndex == index)
     {
@@ -619,11 +682,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   inline function mobilePointerOverlaps(sprite:FlxSprite):Bool
   {
     if (TouchUtil.overlaps(sprite)) return true;
-    #if web
-    if (DeviceUtil.isMobileBrowser
-      && (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased))
+    if (FlxG.mouse.justPressed || FlxG.mouse.pressed || FlxG.mouse.justReleased)
       return FlxG.mouse.overlaps(sprite);
-    #end
     return false;
   }
 
@@ -645,13 +705,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // hidden behind the native mobile compile flags. Otherwise the visible
     // BACK target is drawn but can never receive a tap in the web build.
     // Use release-overlap directly; pressAction has a 200ms age filter.
-    final mobilePointerReleased:Bool = TouchUtil.justReleased
-      || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased);
+    final mobilePointerReleased:Bool = TouchUtil.justReleased || FlxG.mouse.justReleased;
     final mobileBackTapped:Bool = mobileBackButton != null
       && ((TouchUtil.justReleased && TouchUtil.overlaps(mobileBackButton))
-        || (DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased && FlxG.mouse.overlaps(mobileBackButton)));
+        || (FlxG.mouse.justReleased && FlxG.mouse.overlaps(mobileBackButton)));
 
-    if (usesTouchControls && mobilePointerReleased && mobileBackTapped)
+    if (mobilePointerReleased && mobileBackTapped)
     {
       FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? "novabeat/back" : "cancelMenu"));
       onExit.dispatch();
@@ -663,7 +722,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // Runtime-detected HTML5 touch devices need the same pointer handling
     // as native mobile builds. Keep this outside compile-time mobile flags.
     var listDragReleased:Bool = false;
-    if (usesTouchControls)
+    if (mobileLibraryRedesign)
     {
       var pointer:Dynamic = TouchUtil.touch;
       final mobilePointerPressed:Bool = TouchUtil.justPressed
@@ -741,7 +800,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       }
     }
 
-    if (detectedMods.length > 0)
+    if (libraryEntryCount() > 0)
     {
       if (controls.UI_UP_P || (!mobileListDragActive && SwipeUtil.swipeUp))
         selectMod(selectedIndex - 1, false);
@@ -751,18 +810,18 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       if (controls.UI_LEFT_P) moveSelectedMod(-1);
       if (controls.UI_RIGHT_P) moveSelectedMod(1);
     }
+
+    if (mobileLibraryRedesign && FlxG.mouse.deltaWheel.y != 0)
+      selectMod(selectedIndex + (FlxG.mouse.deltaWheel.y < 0 ? 1 : -1), false);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
     if (width <= 0 || height <= 0) return;
-    if (usesTouchControls)
+    if (mobileLibraryRedesign)
     {
-      if (mobileLibraryRedesign)
-        layoutTouchMobileViewport(width, height);
-      else
-        layoutMobileViewport(width, height);
+      layoutTouchMobileViewport(width, height);
       return;
     }
     portraitLayout = height > width * 1.12;
@@ -843,22 +902,23 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function layoutTouchMobileViewport(width:Int, height:Int):Void
   {
     portraitLayout = height > width * 1.12;
+    var compactLandscape:Bool = !portraitLayout && height < 470;
     var margin:Float = portraitLayout ? 18 : 22;
-    heading.setPosition(margin, 13);
+    heading.setPosition(margin, compactLandscape ? 8 : 13);
     heading.fieldWidth = width - 160;
-    heading.size = portraitLayout ? 28 : 25;
-    countText.setPosition(margin, 49);
+    heading.size = portraitLayout ? 28 : (compactLandscape ? 22 : 25);
+    countText.setPosition(margin, compactLandscape ? 36 : 49);
     countText.fieldWidth = width - margin * 2;
 
     if (mobileBackButton != null)
     {
-      mobileBackButton.setPosition(width - 132, 12);
-      mobileBackButton.makeGraphic(116, 46, 0xFF183B59);
-      mobileBackLabel.setPosition(width - 128, 27);
+      mobileBackButton.setPosition(width - 132, compactLandscape ? 7 : 12);
+      mobileBackButton.makeGraphic(116, compactLandscape ? 38 : 46, 0xFF183B59);
+      mobileBackLabel.setPosition(width - 128, compactLandscape ? 18 : 27);
       mobileBackLabel.fieldWidth = 108;
     }
 
-    var panelY:Float = portraitLayout ? 94 : 82;
+    var panelY:Float = compactLandscape ? 58 : (portraitLayout ? 94 : 82);
     var panelHeight:Float = Math.max(150, height - panelY - 48);
     var panelWidth:Float = width - margin * 2;
     var innerX:Float = margin + 16;
@@ -872,34 +932,31 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       layoutPanels[1].makeGraphic(Std.int(panelWidth - 4), Std.int(panelHeight - 4), 0xF0061028);
     }
 
-    listHeading.setPosition(innerX + 2, panelY + 16);
+    listHeading.setPosition(innerX + 2, panelY + 13);
     listHeading.fieldWidth = innerWidth - 4;
-    statusText.setPosition(innerX + 2, panelY + 39);
+    statusText.setPosition(innerX + 2, panelY + (compactLandscape ? 30 : 39));
     statusText.fieldWidth = innerWidth - 4;
 
     rowX = innerX + 2;
-    rowY = panelY + 63;
+    rowY = panelY + (compactLandscape ? 48 : 63);
     rowWidth = innerWidth - 4;
-    rowHeight = portraitLayout ? 102 : 88;
-    var actionDockHeight:Float = mobileModActionsEnabled() ? 90 : 0;
+    rowHeight = libraryCardHeight(height, portraitLayout);
+    var actionButtonHeight:Float = compactLandscape ? 24 : 38;
+    var actionGap:Float = compactLandscape ? 4 : 8;
+    var actionDockHeight:Float = mobileModActionsEnabled() ? (compactLandscape ? 52 : 90) : 0;
     var listBottom:Float = panelY + panelHeight - 14 - actionDockHeight;
     visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
     if (mobileModActionsEnabled())
     {
       var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
-      layoutMobileTouchActions(innerX, actionY, innerWidth, 38, 8, portraitLayout);
+      layoutMobileTouchActions(innerX, actionY, innerWidth, actionButtonHeight, actionGap, portraitLayout);
     }
 
-    detailTitle.setPosition(rowX + 10, rowY + 54);
-    detailTitle.fieldWidth = rowWidth - 20;
-    detailTitle.size = 20;
-    detailText.setPosition(rowX + 20, rowY + 98);
-    detailText.fieldWidth = rowWidth - 40;
-    detailText.fieldHeight = Math.max(80, listBottom - rowY - 112);
-    detailText.size = 14;
-
+    detailTitle.visible = false;
+    detailText.visible = false;
     helpText.setPosition(margin, height - 28);
     helpText.fieldWidth = width - margin * 2;
+    helpText.size = compactLandscape ? 7 : 9;
 
     renderRows();
     renderDetails();
