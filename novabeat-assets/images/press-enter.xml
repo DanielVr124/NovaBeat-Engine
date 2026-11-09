@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="press-enter.png">
+    <SubTexture name="pressEnter0000" x="14" y="286" width="519" height="160" />
+    <SubTexture name="pressEnter0001" x="552" y="273" width="528" height="190" />
+    <SubTexture name="pressEnter0002" x="1095" y="263" width="530" height="206" />
+    <SubTexture name="pressEnter0003" x="1640" y="258" width="526" height="207" />
+</TextureAtlas>

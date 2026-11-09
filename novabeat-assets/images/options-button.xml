@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<TextureAtlas imagePath="options-button.png" width="2172" height="724"><SubTexture name="options0000" x="0" y="0" width="543" height="724" /><SubTexture name="options0001" x="543" y="0" width="543" height="724" /><SubTexture name="options0002" x="1086" y="0" width="543" height="724" /><SubTexture name="options0003" x="1629" y="0" width="543" height="724" /></TextureAtlas>

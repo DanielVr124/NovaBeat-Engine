@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<TextureAtlas imagePath="freeplay-button.png" width="2172" height="724"><SubTexture name="freeplay0000" x="0" y="0" width="543" height="724" /><SubTexture name="freeplay0001" x="543" y="0" width="543" height="724" /><SubTexture name="freeplay0002" x="1086" y="0" width="543" height="724" /><SubTexture name="freeplay0003" x="1629" y="0" width="543" height="724" /></TextureAtlas>
