@@ -24,7 +24,6 @@ import funkin.ui.MenuList.NavControls;
 import funkin.ui.TextMenuList;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.ui.MusicBeatState;
-import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.credits.CreditsState;
@@ -235,7 +234,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
 
-    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('Bg'));
+    // This is the supplied NovaBeat background, staged under its own namespace.
+    // Never fall back to the original FNF "Bg" asset or modify it.
+    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/Bg'));
     var backgroundScale:Float = Math.max(width / background.width, height / background.height);
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
@@ -245,31 +246,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     background.color = FlxColor.WHITE;
     background.zIndex = -100;
     backgroundSprite = background;
+    backgroundDimmer = null;
     add(background);
-
-    backgroundDimmer = addSolid(0, 0, width, height, 0xE5070416);
-    backgroundDimmer.zIndex = -90;
-    backgroundDimmer.alpha = backgroundDimmerAlpha();
-
-    var leftBeam:FlxSprite = addRoundRect(width * 0.50, -height * 0.18, width * 0.055, height * 1.22,
-      32, 32, 0xFFB44DFF);
-    leftBeam.angle = 17;
-    leftBeam.alpha = 0.10;
-    leftBeam.zIndex = -80;
-
-    var rightBeam:FlxSprite = addRoundRect(width * 0.80, -height * 0.16, width * 0.045, height * 1.18,
-      26, 26, 0xFF7B48FF);
-    rightBeam.angle = -14;
-    rightBeam.alpha = 0.09;
-    rightBeam.zIndex = -80;
-
-    var graffitiStar:FlxText = addLabel(width * 0.79, height * 0.12, 90, '✦', 66, 0xFFB968FF,
-      FlxTextAlign.CENTER, 'Arial');
-    graffitiStar.alpha = 0.44;
-    graffitiStar.angle = -12;
-    var graffitiSpark:FlxText = addLabel(width * 0.56, height * 0.70, 54, '✧', 42, 0xFFEE7BFF,
-      FlxTextAlign.CENTER, 'Arial');
-    graffitiSpark.alpha = 0.42;
   }
 
   function buildTitleScreen():Void
@@ -278,13 +256,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
     var portraitLayout:Bool = height > width * 1.12;
 
-    // Flash only the backdrop. The same backgroundSprite remains underneath
-    // the title screen and main menu, with no replacement or movement.
-    var flash:FlxSprite = addSolid(0, 0, width, height, FlxColor.WHITE);
-    flash.alpha = 0;
-    flash.zIndex = -50;
-    whiteFlashOverlay = flash;
-
+    // The same background remains visible at identical scale, position and
+    // brightness for the entire title-to-menu transition. No flash overlay.
     // Load the NovaBeat Bumpin atlas from its own namespace. This prevents
     // the original FNF logo atlas from being replaced or modified.
     var logo:FlxSprite = new FlxSprite();
@@ -295,13 +268,15 @@ class NovaBeatMainMenuState extends MusicBeatState
     titleLogoDissolveShader.updateFrame(logo.frame);
     logo.shader = titleLogoDissolveShader;
     logo.antialiasing = true;
-    var maxLogoWidth:Float = width * (portraitLayout ? 0.90 : 0.82) * interfaceScale();
-    var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.30) * interfaceScale();
+    // The reference uses a large, dominant Bumpin mark. Fit by both axes
+    // while preserving the atlas aspect ratio; never stretch or crop it.
+    var maxLogoWidth:Float = width * (portraitLayout ? 0.94 : 0.96) * interfaceScale();
+    var maxLogoHeight:Float = height * (portraitLayout ? 0.48 : 0.63) * interfaceScale();
     var logoFit:Float = Math.max(0.01, Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height));
     logo.setGraphicSize(Std.int(logo.width * logoFit), Std.int(logo.height * logoFit));
     logo.updateHitbox();
     logo.x = Math.round((width - logo.width) * 0.5);
-    logo.y = height * 0.27 - logo.height * 0.5;
+    logo.y = height * (portraitLayout ? 0.31 : 0.36) - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
     titleLogo = logo;
@@ -358,21 +333,8 @@ class NovaBeatMainMenuState extends MusicBeatState
       FlxTween.tween(titlePromptDissolveShader, {progress: 1}, 0.58, {ease: FlxEase.linear});
     }
 
-    // A brief white flash is composited over the backdrop only, then fades
-    // away to reveal the exact same background image beneath it.
-    if (whiteFlashOverlay != null)
-    {
-      whiteFlashOverlay.alpha = 0;
-      FlxTween.tween(whiteFlashOverlay, {alpha: 0.98}, 0.18, {ease: FlxEase.quadOut});
-      FlxTimer.wait(0.18, function()
-      {
-        if (whiteFlashOverlay != null)
-          FlxTween.tween(whiteFlashOverlay, {alpha: 0}, 0.70, {ease: FlxEase.sineInOut});
-      });
-    }
-
-    // Build the main menu while the flash finishes fading. The button
-    // tweens overlap to form one quick cascade from beyond the left edge.
+    // The main menu is added over the exact same untouched background.
+    // Its buttons begin completely offscreen and slide in with a tight stagger.
     FlxTimer.wait(0.58, function()
     {
       removeTitleScreen();
@@ -380,15 +342,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       menuEntrancePending = true;
       buildInterface();
       addNovaBeatMobileBackButton();
-    });
-
-    FlxTimer.wait(0.92, function()
-    {
-      if (whiteFlashOverlay != null)
-      {
-        remove(whiteFlashOverlay, true);
-        whiteFlashOverlay = null;
-      }
     });
 
     // Four buttons finish their staggered slide in about 1.25 seconds.
@@ -417,67 +370,62 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (backgroundSprite == null) buildBackdrop();
 
-    var margin:Float = portraitLayout ? Math.max(16, screenW * 0.035) : Math.max(24, screenW * 0.035);
+    var margin:Float = Math.max(18, screenW * 0.035);
     buildTopBar(margin);
 
-    var frameX:Float = margin;
-    var frameY:Float = screenH * (portraitLayout ? 0.205 : 0.19);
-    var frameW:Float = portraitLayout ? screenW - margin * 2 : screenW * (compactLayout ? 0.54 : 0.47);
-    var frameH:Float = screenH * (portraitLayout ? 0.43 : 0.67);
-    if (DeviceUtil.isMobileBrowser && !portraitLayout)
+    if (portraitLayout)
     {
-      frameY = screenH * 0.16;
-      frameH = screenH * 0.70;
-      frameW = screenW * 0.53;
+      // In portrait, keep the brand above a full-width vertical button stack.
+      buildMenuBrandLogo(screenW, screenH, true);
+      buildMenuList(screenW * 0.07, screenH * 0.25, screenW * 0.86, screenH * 0.70, false);
     }
+    else
+    {
+      // Landscape uses the same vertical navigation on the left, leaving the
+      // right side open for the large Bumpin brand mark.
+      buildMenuBrandLogo(screenW, screenH, false);
+      buildMenuList(screenW * 0.045, screenH * 0.04, screenW * 0.42, screenH * 0.92, false);
+    }
+  }
 
-    addPanel(frameX, frameY, frameW, frameH, 0xFFB75CFF);
-    var navX:Float = frameX + (portraitLayout ? 12 : 28);
-    var navW:Float = frameW - (portraitLayout ? 24 : 56);
+  function buildMenuBrandLogo(screenW:Float, screenH:Float, portraitLayout:Bool):Void
+  {
+    var logo:FlxSprite = new FlxSprite();
+    logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
+    logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
+    logo.animation.play('idle', true);
+    logo.antialiasing = true;
+    logo.scrollFactor.set();
+    logo.cameras = [uiCamera];
 
-    addLabel(navX + 4, frameY + 16, navW - 8, 'SELECT A MODE', compactLayout ? 20 : 27,
-      0xFFFFFFFF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'));
+    var maxWidth:Float = screenW * (portraitLayout ? 0.80 : 0.46);
+    var maxHeight:Float = screenH * (portraitLayout ? 0.16 : 0.38);
+    var scale:Float = Math.min(maxWidth / Math.max(1, logo.width), maxHeight / Math.max(1, logo.height));
+    logo.scale.set(scale, scale);
+    logo.updateHitbox();
 
-    var listTop:Float = frameY + (portraitLayout ? 58 : 72);
-    var listBottom:Float = frameY + frameH - (portraitLayout ? 20 : 28);
-    buildMenuList(navX, listTop, navW, listBottom - listTop, true);
-
-    var hint:String = DeviceUtil.isMobileBrowser
-      ? 'TAP AN OPTION TO OPEN'
-      : 'UP / DOWN  SELECT     ENTER  CONFIRM     ESC  BACK';
-    addLabel(frameX + 16, screenH - 28, Math.max(1, frameW - 32), hint, compactLayout ? 9 : 11,
-      0xFFE0C9FF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'));
-
-    if (!portraitLayout)
-      addLabel(screenW * 0.62, screenH * 0.12, screenW * 0.32, 'THE STAGE IS YOURS',
-        compactLayout ? 15 : 19, 0xFFE2BDFF, FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
+    if (portraitLayout)
+    {
+      logo.x = (screenW - logo.width) * 0.5;
+      logo.y = screenH * 0.065;
+    }
+    else
+    {
+      logo.x = screenW * 0.53 + (screenW * 0.42 - logo.width) * 0.5;
+      logo.y = screenH * 0.47 - logo.height * 0.5;
+    }
+    add(logo);
   }
 
   function buildTopBar(margin:Float):Void
   {
-    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var logo:FlxSprite = titleLogo;
-    if (logo == null)
-    {
-      logo = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
-      logo.scrollFactor.set();
-      logo.cameras = [uiCamera];
-      logo.color = 0xFFF1D9FF;
-      titleLogo = logo;
-      add(logo);
-    }
+    var buttonSize:Float = FlxG.height > FlxG.width * 1.12 ? 38 : 46;
+    var buttonX:Float = FlxG.width - margin - buttonSize;
+    var buttonY:Float = Math.max(14, FlxG.height * 0.025);
 
-    logo.setGraphicSize(0, Std.int((portraitLayout ? 48 : 76) * interfaceScale()));
-    logo.updateHitbox();
-    logo.setPosition(margin, 10);
-
-    var buttonSize:Float = portraitLayout ? 38 : 46;
-    var buttonY:Float = 18;
-    var audioX:Float = FlxG.width - margin - buttonSize;
-    homeAudioButton = addLabel(audioX, buttonY, buttonSize, menuAudioMuted ? '♪' : '♫',
-      buttonSize > 42 ? 25 : 21, 0xFFF0D7FF, FlxTextAlign.CENTER, 'Arial');
-    addRoundRect(audioX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xD20A0719);
-    homeAudioHitbox = addSolid(audioX, buttonY - 3, buttonSize, buttonSize, 0x00000000);
+    homeAudioButton = addLabel(buttonX, buttonY, buttonSize, menuAudioMuted ? '♪' : '♫',
+      buttonSize > 42 ? 25 : 21, 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial');
+    homeAudioHitbox = addSolid(buttonX, buttonY, buttonSize, buttonSize, 0x00000000);
     homeOptionsButton = null;
     homeOptionsHitbox = null;
     bringToFront(homeAudioButton);
@@ -491,69 +439,91 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function buildMenuList(x:Float, y:Float, width:Float, height:Float, tileLayout:Bool):Void
   {
-    visibleItemIndexes = [0, 1, 2, 3];
+    // The reference's navigation order is Story, Freeplay, Mods, Options.
+    // Item IDs remain mapped to the existing gameplay callbacks.
+    visibleItemIndexes = [0, 1, 3, 2];
 
-    var mobileLandscape:Bool = DeviceUtil.isMobileBrowser && FlxG.height <= FlxG.width * 1.12;
-    var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var gap:Float = portraitLayout ? 8 : (mobileLandscape ? 8 : (compactLayout ? 10 : 13));
-    var buttonW:Float = Math.max(1, width - gap * 2);
-    var buttonH:Float;
+    final frameWidth:Float = 543;
+    final frameHeight:Float = 724;
+    final artLeft:Float = 0.02;
+    final artTop:Float = 0.34;
+    final artWidth:Float = 0.96;
+    final artHeight:Float = 0.32;
+    final artAspect:Float = (frameWidth * artWidth) / (frameHeight * artHeight);
 
-    if (mobileLandscape)
-      buttonH = Math.max(44, Math.min(62, (height - gap * 3) / 4));
-    else if (portraitLayout)
-      buttonH = Math.max(54, Math.min(82, (height - gap * 3) / 4));
-    else
-      buttonH = Math.max(74, Math.min(104, (height - gap * 3) / 4));
+    var gap:Float = Math.max(6, Math.min(18, FlxG.height * 0.012));
+    var availableArtHeight:Float = Math.max(1, (height - gap * 3) / 4);
+    var targetArtHeight:Float = Math.min(height * 0.22, availableArtHeight);
+    var targetArtWidth:Float = targetArtHeight * artAspect;
+    var maxArtWidth:Float = Math.max(1, width * 0.96);
+    if (targetArtWidth > maxArtWidth)
+    {
+      targetArtWidth = maxArtWidth;
+      targetArtHeight = targetArtWidth / artAspect;
+    }
 
-    menuScrollViewportTop = y;
-    menuScrollCamera = new FlxCamera(0, Std.int(y), Std.int(FlxG.width), Std.int(Math.max(1, height)));
+    var buttonScale:Float = targetArtWidth / (frameWidth * artWidth);
+    var scaledFrameWidth:Float = frameWidth * buttonScale;
+    var scaledFrameHeight:Float = frameHeight * buttonScale;
+    var listHeight:Float = targetArtHeight * 4 + gap * 3;
+    var firstArtY:Float = y + Math.max(0, (height - listHeight) * 0.5);
+    var firstArtX:Float = x + (width - targetArtWidth) * 0.5;
+
+    menuScrollCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height);
     menuScrollCamera.bgColor = FlxColor.TRANSPARENT;
     menuScrollCamera.scroll.set(0, 0);
     FlxG.cameras.add(menuScrollCamera, false);
-    menuScrollViewportHeight = height;
-    menuScrollCardHeight = buttonH;
-    menuScrollStep = buttonH + gap;
+    menuScrollViewportTop = 0;
+    menuScrollViewportHeight = FlxG.height;
+    menuScrollCardHeight = targetArtHeight;
+    menuScrollStep = targetArtHeight + gap;
 
     menuItems = new TextMenuList(NavControls.Vertical);
     menuItems.cameras = [menuScrollCamera];
     menuItems.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
-    var iconPlateSize:Float = Math.min(buttonH - 12, portraitLayout ? 58 : (mobileLandscape ? 46 : 72));
-    var iconFontSize:Int = mobileLandscape ? 22 : (portraitLayout ? 29 : 34);
-    var labelFontSize:Int = mobileLandscape ? 16 : (portraitLayout ? 19 : 24);
+    var atlasPaths:Array<String> = [
+      'novabeat/story-mode-button',
+      'novabeat/freeplay-button',
+      'novabeat/options-button',
+      'novabeat/mods-button'
+    ];
+    var framePrefixes:Array<String> = ['storymode', 'freeplay', 'options', 'mods'];
 
     for (index in 0...visibleItemIndexes.length)
     {
       var menuIndex:Int = visibleItemIndexes[index];
-      var itemX:Float = x + gap;
-      var itemY:Float = index * menuScrollStep;
+      var artX:Float = firstArtX;
+      var artY:Float = firstArtY + index * menuScrollStep;
+      var spriteX:Float = artX - scaledFrameWidth * artLeft;
+      var spriteY:Float = artY - scaledFrameHeight * artTop;
 
-      var border:FlxSprite = addRoundRect(itemX - 3, itemY - 3, buttonW + 6, buttonH + 6,
-        19, 19, 0xFFB968FF, menuScrollCamera);
-      border.alpha = 0.16;
-      rowBorders.push(border);
+      var button:FlxSprite = new FlxSprite();
+      button.frames = Paths.getSparrowAtlas(atlasPaths[menuIndex]);
+      var prefix:String = framePrefixes[menuIndex];
+      button.animation.addByIndices('idle', prefix, [0], '', 24, true);
+      button.animation.addByIndices('selected', prefix, [1], '', 24, true);
+      button.animation.addByIndices('pressed', prefix, [2, 3], '', 24, false);
+      button.animation.play('idle', true);
+      button.scale.set(buttonScale, buttonScale);
+      button.updateHitbox();
+      button.setPosition(spriteX, spriteY);
+      button.antialiasing = true;
+      button.scrollFactor.set();
+      button.cameras = [menuScrollCamera];
+      add(button);
+      rowArtwork.push(button);
 
-      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 16, 16,
-        0xFF100B1C, menuScrollCamera);
-      panel.alpha = 0.96;
-      rowBackgrounds.push(panel);
-
-      var tapTarget:FlxObject = new FlxObject(itemX, y + itemY, buttonW, buttonH);
+      var tapTarget:FlxObject = new FlxObject(artX, artY, targetArtWidth, targetArtHeight);
       tapTarget.active = false;
       add(tapTarget);
       rowTapTargets.push(tapTarget);
 
-      var accent:FlxSprite = addRoundRect(itemX + 2, itemY + 12, 5, buttonH - 24,
-        3, 3, 0xFFCE74FF, menuScrollCamera);
-      accent.alpha = 0.58;
-      rowAccents.push(accent);
-
-      var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
+      var item:TextMenuItem = menuItems.createItem(artX, artY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
       item.cameras = [menuScrollCamera];
-      item.makeGraphic(Std.int(buttonW), Std.int(buttonH), FlxColor.TRANSPARENT);
-      item.setPosition(itemX, itemY);
+      item.makeGraphic(Std.int(Math.ceil(targetArtWidth)), Std.int(Math.ceil(targetArtHeight)), FlxColor.TRANSPARENT);
+      item.setPosition(artX, artY);
       item.origin.set(0, 0);
       item.offset.set(0, 0);
       item.updateHitbox();
@@ -561,104 +531,18 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.alpha = 0;
       item.atlasText.visible = false;
 
-      var iconX:Float = itemX + 15;
-      var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
-      var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize,
-        12, 12, 0xFF241333, menuScrollCamera);
-      iconPlate.alpha = 0.98;
-      rowIconPlates.push(iconPlate);
-
-      var icon:FlxText = addLabel(iconX, iconY, iconPlateSize, ITEM_ICONS[menuIndex],
-        iconFontSize, 0xFFCF8AFF, FlxTextAlign.CENTER, 'Arial', menuScrollCamera);
-      icon.autoSize = false;
-      icon.fieldWidth = iconPlateSize;
-      icon.height = iconPlateSize;
-      icon.scrollFactor.set();
-      rowIcons.push(icon);
-
-      var labelX:Float = iconX + iconPlateSize + 18;
-      var labelWidth:Float = buttonW - (labelX - itemX) - 18;
-      var title:String = ITEM_TITLES[menuIndex];
-      var titleHeight:Float = Math.min(buttonH - 8, labelFontSize + 18);
-      var titleY:Float = itemY + (buttonH - titleHeight) * 0.5;
-      var label:FlxText = addLabel(labelX, titleY, labelWidth, title,
-        labelFontSize, 0xFFF1E8FF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'), menuScrollCamera);
-      label.autoSize = false;
-      label.wordWrap = false;
-      label.fieldWidth = labelWidth;
-      label.height = titleHeight;
-      label.scrollFactor.set();
-      rowLabels.push(label);
-
-      // The first NovaBeat menu entry uses the user-provided Sparrow atlas.
-      // Keep the existing card panel as a fallback/backplate, but hide the
-      // generic icon and label so the custom artwork is the visible control.
-      if (menuIndex == 0)
+      if (menuEntrancePending && Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
       {
-        iconPlate.alpha = 0;
-        icon.alpha = 0;
-        label.alpha = 0;
-
-        var storyArtwork:FlxSprite = new FlxSprite();
-        storyArtwork.frames = Paths.getSparrowAtlas('story_mode_sheet');
-        storyArtwork.animation.addByPrefix('idle', 'story mode idle', 24, true);
-        storyArtwork.animation.addByPrefix('selected', 'story mode selected', 24, true);
-        storyArtwork.animation.addByPrefix('click', 'story mode click', 24, false);
-        storyArtwork.animation.play('idle', true);
-        var artworkScale:Float = Math.min(buttonW / storyArtwork.width, buttonH / storyArtwork.height);
-        storyArtwork.setGraphicSize(Std.int(storyArtwork.width * artworkScale), Std.int(storyArtwork.height * artworkScale));
-        storyArtwork.updateHitbox();
-        storyArtwork.setPosition(itemX + (buttonW - storyArtwork.width) * 0.5,
-          itemY + (buttonH - storyArtwork.height) * 0.5);
-        storyArtwork.antialiasing = true;
-        storyArtwork.scrollFactor.set();
-        storyArtwork.cameras = [menuScrollCamera];
-        add(storyArtwork);
-        rowArtwork.push(storyArtwork);
-      }
-
-        if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
-      {
-        var delay:Float = index * (menuEntrancePending ? 0.065 : 0.075);
-        var duration:Float = menuEntrancePending ? 0.50 : 0.30;
-        var startX:Float = menuEntrancePending ? -buttonW - 48 : itemX - 34;
-        var shift:Float = startX - itemX;
-
-        border.x += shift;
-        panel.x += shift;
-        accent.x += shift;
-        iconPlate.x += shift;
-        icon.x += shift;
-        label.x += shift;
-        item.x += shift;
-
-        if (menuEntrancePending && menuIndex == 0 && rowArtwork.length > 0)
-          rowArtwork[rowArtwork.length - 1].x += shift;
-
-        if (!menuEntrancePending)
-        {
-          border.alpha = 0;
-          panel.alpha = 0;
-          accent.alpha = 0;
-          iconPlate.alpha = 0;
-          icon.alpha = 0;
-          label.alpha = 0;
-        }
-
-        FlxTween.tween(border, {x: itemX - 3}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(panel, {x: itemX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(accent, {x: itemX + 2}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(iconPlate, {x: iconX, alpha: menuIndex == 0 ? 0 : 0.98}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(icon, {x: iconX, alpha: menuIndex == 0 ? 0 : 1}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(label, {x: labelX, alpha: menuIndex == 0 ? 0 : 1}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(item, {x: itemX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-
-        if (menuEntrancePending && menuIndex == 0 && rowArtwork.length > 0)
-        {
-          var artwork:FlxSprite = rowArtwork[rowArtwork.length - 1];
-          var artworkTargetX:Float = artwork.x - shift;
-          FlxTween.tween(artwork, {x: artworkTargetX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
-        }
+        // The entire sprite frame starts beyond the left edge; its transparent
+        // atlas padding is included in this offset so no glow appears onscreen early.
+        var delay:Float = index * 0.065;
+        var duration:Float = 0.50;
+        var offscreenX:Float = -scaledFrameWidth - 48;
+        var shiftX:Float = offscreenX - spriteX;
+        button.x = offscreenX;
+        item.x = artX + shiftX;
+        FlxTween.tween(button, {x: spriteX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(item, {x: artX}, duration, {ease: FlxEase.quadOut, startDelay: delay});
       }
     }
 
@@ -699,35 +583,10 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     if (index < 0 || index >= visibleItemIndexes.length) return;
 
-    for (i in 0...visibleItemIndexes.length)
+    for (i in 0...rowArtwork.length)
     {
-      var selected:Bool = i == index;
-      if (i < rowBorders.length)
-      {
-        rowBorders[i].alpha = selected ? 0.96 : 0.12;
-        rowBorders[i].color = selected ? 0xFFE38CFF : 0xFF8C4CC7;
-      }
-      if (i < rowBackgrounds.length)
-      {
-        rowBackgrounds[i].color = selected ? 0xFF25133A : 0xFF100B1C;
-        rowBackgrounds[i].alpha = selected ? 1.0 : 0.88;
-      }
-      if (i < rowIconPlates.length)
-      {
-        rowIconPlates[i].color = selected ? 0xFF3B1B58 : 0xFF241333;
-        rowIconPlates[i].alpha = selected ? 1.0 : 0.90;
-      }
-      if (i < rowAccents.length)
-      {
-        rowAccents[i].color = selected ? 0xFFE077FF : 0xFF9B54D0;
-        rowAccents[i].alpha = selected ? 1.0 : 0.42;
-      }
-      if (i < rowLabels.length)
-        rowLabels[i].color = selected ? 0xFFFFFFFF : 0xFFD5C4E8;
-      if (i < rowIcons.length)
-        rowIcons[i].color = selected ? 0xFFFFA4FF : 0xFFB783D9;
-      if (i == 0 && rowArtwork.length > 0 && rowArtwork[0] != null)
-        rowArtwork[0].animation.play(selected ? 'selected' : 'idle', true);
+      if (rowArtwork[i] == null) continue;
+      rowArtwork[i].animation.play(i == index ? 'selected' : 'idle', true);
     }
 
     var selectedMenuIndex:Int = visibleItemIndexes[index];
@@ -763,19 +622,24 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     for (index in 0...rowTapTargets.length)
     {
-      if (index >= rowBackgrounds.length) continue;
-      final card:FlxSprite = rowBackgrounds[index];
+      if (index >= rowArtwork.length) continue;
+      final button:FlxSprite = rowArtwork[index];
       final target:FlxObject = rowTapTargets[index];
-      final cardScreenTop:Float = viewportTop + card.y - scrollY;
-      final visibleTop:Float = Math.max(viewportTop, cardScreenTop);
-      final visibleBottom:Float = Math.min(viewportBottom, cardScreenTop + card.height);
-      final visibleHeight:Float = visibleBottom - visibleTop;
 
-      target.visible = visibleHeight > 0;
+      final visibleLeft:Float = button.x + button.width * 0.02;
+      final hitTop:Float = button.y + button.height * 0.34;
+      final hitWidth:Float = button.width * 0.96;
+      final hitHeight:Float = button.height * 0.32;
+      final screenTop:Float = viewportTop + hitTop - scrollY;
+      final clippedTop:Float = Math.max(viewportTop, screenTop);
+      final clippedBottom:Float = Math.min(viewportBottom, screenTop + hitHeight);
+      final clippedHeight:Float = clippedBottom - clippedTop;
+
+      target.visible = clippedHeight > 0;
       if (target.visible)
       {
-        target.setPosition(card.x, visibleTop);
-        target.setSize(card.width, visibleHeight);
+        target.setPosition(visibleLeft, clippedTop);
+        target.setSize(hitWidth, clippedHeight);
       }
     }
   }
@@ -870,13 +734,6 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     animationClock += elapsed;
     var options = Save.instance.options;
-    if (backgroundDimmer != null) backgroundDimmer.alpha = backgroundDimmerAlpha();
-
-    if (!transitioning && !options.menuReduceMotion && options.menuAnimatedBackground && backgroundSprite != null)
-    {
-      backgroundSprite.alpha = 0.985 + Math.sin(animationClock * 0.45) * 0.015;
-    }
-
     if (!options.menuReduceMotion && options.menuShowEqualizer && options.menuAudioVisualizer)
     {
       for (index in 0...equalizerBars.length)
@@ -898,7 +755,18 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
-      addBackButton(18, FlxG.height - 78, FlxColor.WHITE, goBackToTitle, 1.0);
+    {
+      var marginX:Float = Math.max(18, Math.min(30, FlxG.width * 0.035));
+      var marginY:Float = Math.max(18, Math.min(30, FlxG.height * 0.035));
+      addBackButton(0, 0, FlxColor.WHITE, goBackToTitle, 1.0);
+      if (backButton != null)
+      {
+        backButton.setPosition(
+          Math.max(8, FlxG.width - backButton.width - marginX),
+          Math.max(8, FlxG.height - backButton.height - marginY)
+        );
+      }
+    }
     #end
   }
 
@@ -906,7 +774,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     if (transitioning) return;
     playSfx('back', 0.7);
-    FlxG.switchState(() -> new TitleState());
+    FlxG.switchState(() -> new NovaBeatMainMenuState(true));
   }
 
   function handleHeaderPointerInput():Void
@@ -966,18 +834,14 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     return function()
     {
+      var visualIndex:Int = visibleItemIndexes.indexOf(index);
+      if (visualIndex >= 0 && visualIndex < rowArtwork.length && rowArtwork[visualIndex] != null)
+        rowArtwork[visualIndex].animation.play('pressed', true);
+
       switch (index)
       {
         case 0:
-          if (rowArtwork.length > 0 && rowArtwork[0] != null)
-          {
-            rowArtwork[0].animation.play('click', true);
-            FlxTimer.wait(0.18, function() FlxG.switchState(() -> new StoryMenuState()));
-          }
-          else
-          {
-            FlxG.switchState(() -> new StoryMenuState());
-          }
+          FlxTimer.wait(0.18, function() FlxG.switchState(() -> new StoryMenuState()));
         case 1:
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,

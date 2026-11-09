@@ -61,23 +61,27 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      - name: Stage NovaBeat title-screen atlases without replacing FNF originals
+      - name: Stage NovaBeat menu and title assets without replacing FNF originals
         shell: bash
         run: |
           set -euo pipefail
           source_images="novabeat-assets/images"
           # project.hxp imports assets/preload into the default runtime library.
+          # Keep every NovaBeat asset namespaced so original FNF assets are untouched.
           destination_images="upstream/Funkin/assets/preload/images/novabeat"
           mkdir -p "$destination_images"
 
-          for atlas in logoBumpin press-enter; do
+          test -s "$source_images/Bg.png"
+          cp "$source_images/Bg.png" "$destination_images/Bg.png"
+
+          for atlas in logoBumpin press-enter story-mode-button freeplay-button mods-button options-button; do
             test -s "$source_images/$atlas.png"
             test -s "$source_images/$atlas.xml"
             cp "$source_images/$atlas.png" "$destination_images/$atlas.png"
             cp "$source_images/$atlas.xml" "$destination_images/$atlas.xml"
           done
 
-          echo "Staged NovaBeat logoBumpin and press-enter atlases in the isolated novabeat asset namespace."
+          echo "Staged the NovaBeat background, Bumpin title art, Press Enter art, and four main-menu button atlases in the isolated novabeat asset namespace."
 
       - name: Restore Neko 2.4.0 tool cache
         if: runner.os == 'Linux'
