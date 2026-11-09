@@ -305,6 +305,31 @@ jobs:
           set -euo pipefail
           haxelib run lime rebuild cpp -64
 
+      # The upstream asset repository includes ~144 MiB of cutscene videos.
+      # They are not needed to validate menu/touch input, and GitHub Pages
+      # times out while syncing the full video-inclusive preview.
+      # Keep all songs and audio; disable only video playback for this web preview.
+      - name: Exclude cutscene videos from the HTML5 preview
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          project = Path("project.hxp")
+          source = 'FEATURE_VIDEO_PLAYBACK.apply(this, true);'
+          replacement = 'FEATURE_VIDEO_PLAYBACK.apply(this, false);'
+          content = project.read_text(encoding="utf-8")
+          count = content.count(source)
+          if count != 1:
+              raise SystemExit(
+                  f"Expected exactly one upstream video feature flag in {project}, found {count}"
+              )
+          project.write_text(content.replace(source, replacement, 1), encoding="utf-8")
+          print("Cutscene video assets disabled for this HTML5 preview build; song/audio assets remain enabled.")
+          PY
+
       - name: Build HTML5 release
         shell: bash
         working-directory: upstream/Funkin
@@ -670,6 +695,8 @@ jobs:
 
           Browser-only limitations may apply. Editors and features that depend on
           native desktop APIs are not expected to be available in this test build.
+          Cutscene video playback is omitted from this web preview to keep the
+          GitHub Pages download small enough to publish; song and music audio remain included.
           EOF
 
           package="$PWD/export/NovaBeat-HTML5.zip"
