@@ -81,7 +81,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
   var titleInputCooldown:Float = 0;
-  var menuExitStarted:Bool = false;
   var compactLayout:Bool = false;
   var animationClock:Float = 0;
 
@@ -666,8 +665,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
 
 
-    if (menuExitStarted) return;
-
     handleHeaderPointerInput();
     handleMobileMenuCardInput();
 
@@ -834,7 +831,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       switch (index)
       {
         case 0:
-          exitMenuTo(() -> FlxG.switchState(() -> new StoryMenuState()));
+          FlxTimer.wait(0.18, function() FlxG.switchState(() -> new StoryMenuState()));
         case 1:
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,
@@ -844,42 +841,15 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 2:
           openOptions();
         case 3:
-          exitMenuTo(() -> FlxG.switchState(() -> new NovaBeatModsMenuState()));
+          FlxG.switchState(() -> new NovaBeatModsMenuState());
         default:
       }
     };
   }
 
-  /**
-   * Mirrors the original FNF menu's exit timing: fade the menu controls,
-   * then hand off to the destination state using the standard screen wipe.
-   */
-  function exitMenuTo(switchAction:Void->Void):Void
-  {
-    if (menuExitStarted) return;
-    menuExitStarted = true;
-
-    final fadeDuration:Float = 0.4;
-    for (button in rowArtwork)
-    {
-      if (button != null)
-        FlxTween.tween(button, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
-    }
-
-    if (homeAudioButton != null)
-      FlxTween.tween(homeAudioButton, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
-
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser && backButton != null)
-      FlxTween.tween(backButton, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
-    #end
-
-    FlxTimer.wait(fadeDuration, switchAction);
-  }
-
   function openOptions():Void
   {
-    exitMenuTo(() -> FlxG.switchState(() -> new OptionsState()));
+    FlxG.switchState(() -> new OptionsState());
   }
 
   function interfaceScale():Float
