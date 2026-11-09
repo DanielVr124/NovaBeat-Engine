@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="titleEnter.png">
+	<SubTexture name="ENTER IDLE0000" x="0" y="0" width="958" height="136" frameX="0" frameY="0" frameWidth="958" frameHeight="136"/>
+	<SubTexture name="ENTER IDLE0001" x="960" y="0" width="958" height="136" frameX="0" frameY="0" frameWidth="958" frameHeight="136"/>
+	<SubTexture name="ENTER PRESSED0000" x="1920" y="0" width="958" height="136" frameX="0" frameY="0" frameWidth="958" frameHeight="136"/>
+	<SubTexture name="ENTER PRESSED0001" x="2880" y="0" width="958" height="136" frameX="0" frameY="0" frameWidth="958" frameHeight="136"/>
+</TextureAtlas>
