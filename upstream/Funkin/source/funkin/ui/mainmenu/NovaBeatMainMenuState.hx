@@ -5,6 +5,7 @@ import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
+import flixel.addons.transition.FlxTransitionableState;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
@@ -80,6 +81,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
   var titleInputCooldown:Float = 0;
+  var menuExitStarted:Bool = false;
   var compactLayout:Bool = false;
   var animationClock:Float = 0;
 
@@ -118,7 +120,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     showTitleOnCreate = showTitle;
     // The confirm/back input that created this state must not also dismiss
     // the title screen. Require a fresh input after this short handoff guard.
-    titleInputCooldown = returningFromMenu ? 0.30 : 0.0;
+    titleInputCooldown = returningFromMenu ? 0.75 : 0.0;
   }
 
   override function create():Void
@@ -126,6 +128,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     // Story/Options can disable raw keyboard input before switching states.
     FlxG.keys.enabled = true;
     Cursor.hide();
+    // Use the same screen-transition pair as the original FNF main menu.
+    transIn = FlxTransitionableState.defaultTransIn;
+    transOut = FlxTransitionableState.defaultTransOut;
     FlxG.cameras.reset(new FunkinCamera('novaBeatMainMenu'));
     uiCamera = new FunkinCamera('novaBeatMenuUI');
     FlxG.cameras.add(uiCamera, false);
@@ -267,7 +272,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     // the original FNF logo atlas from being replaced or modified.
     var logo:FlxSprite = new FlxSprite();
     logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
-    logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
+    logo.animation.addByPrefix('idle', 'logo bumpin', 12, true);
     logo.animation.play('idle', true);
     logo.antialiasing = true;
     // The reference uses a large, dominant Bumpin mark. Fit by both axes
@@ -311,13 +316,10 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     if (!showingTitle) return;
 
-    // The title screen now cuts directly to the menu. No dissolve, flash,
-    // shader, delayed handoff, or button entrance animation is used.
+    // Match FNF's state-to-state handoff instead of cutting directly between
+    // the title and menu. Both states use the standard FNF transition pair.
     playSfx('enter', 0.8);
-    removeTitleScreen();
-    showingTitle = false;
-    buildInterface();
-    addNovaBeatMobileBackButton();
+    FlxG.switchState(() -> new NovaBeatMainMenuState(false));
   }
 
   function removeTitleScreen():Void
@@ -359,7 +361,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var logo:FlxSprite = new FlxSprite();
     logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
-    logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
+    logo.animation.addByPrefix('idle', 'logo bumpin', 12, true);
     logo.animation.play('idle', true);
     logo.antialiasing = true;
     logo.scrollFactor.set();
@@ -664,6 +666,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
 
 
+    if (menuExitStarted) return;
+
     handleHeaderPointerInput();
     handleMobileMenuCardInput();
 
@@ -754,6 +758,14 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function goBackToTitle():Void
   {
+    // The mobile browser's pointer bridge retains a completed tap until a UI
+    // surface consumes it. FunkinBackButton handles the same release through
+    // FlxMouse, so consume its queued copy before the title screen can mistake
+    // it for a fresh Enter press.
+    #if web
+    if (DeviceUtil.isMobileBrowser) TouchUtil.pressAction();
+    #end
+
     playSfx('back', 0.7);
     FlxG.switchState(() -> new NovaBeatMainMenuState(true, true));
   }
@@ -822,7 +834,7 @@ class NovaBeatMainMenuState extends MusicBeatState
       switch (index)
       {
         case 0:
-          FlxTimer.wait(0.18, function() FlxG.switchState(() -> new StoryMenuState()));
+          exitMenuTo(() -> FlxG.switchState(() -> new StoryMenuState()));
         case 1:
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,
@@ -832,15 +844,42 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 2:
           openOptions();
         case 3:
-          FlxG.switchState(() -> new NovaBeatModsMenuState());
+          exitMenuTo(() -> FlxG.switchState(() -> new NovaBeatModsMenuState()));
         default:
       }
     };
   }
 
+  /**
+   * Mirrors the original FNF menu's exit timing: fade the menu controls,
+   * then hand off to the destination state using the standard screen wipe.
+   */
+  function exitMenuTo(switchAction:Void->Void):Void
+  {
+    if (menuExitStarted) return;
+    menuExitStarted = true;
+
+    final fadeDuration:Float = 0.4;
+    for (button in rowArtwork)
+    {
+      if (button != null)
+        FlxTween.tween(button, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
+    }
+
+    if (homeAudioButton != null)
+      FlxTween.tween(homeAudioButton, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (DeviceUtil.isMobileBrowser && backButton != null)
+      FlxTween.tween(backButton, {alpha: 0}, fadeDuration, {ease: FlxEase.quadOut});
+    #end
+
+    FlxTimer.wait(fadeDuration, switchAction);
+  }
+
   function openOptions():Void
   {
-    FlxG.switchState(() -> new OptionsState());
+    exitMenuTo(() -> FlxG.switchState(() -> new OptionsState()));
   }
 
   function interfaceScale():Float
