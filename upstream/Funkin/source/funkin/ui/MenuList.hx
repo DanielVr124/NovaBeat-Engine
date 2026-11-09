@@ -65,9 +65,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   var _isMainMenuState:Bool = false;
   var touchScrollAccumulator:Float = 0;
 
-  // Prevent a mobile browser's synthesized mouse-down and mouse-up from
-  // becoming two separate menu activations. Used only by the release-only fallback.
-  var _browserMousePressObserved:Bool = false;
+  // Prevent a release-only pointer event from confirming a tap already
+  // handled on its press frame.
+  var _touchPressObserved:Bool = false;
 
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
@@ -189,32 +189,19 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     };
 
     #if FEATURE_TOUCH_CONTROLS
-    // Keep official FNF touch handling as the primary path. On some mobile
-    // HTML5 browsers, finger taps are surfaced only as a synthesized mouse-up;
-    // accept that event only when TouchUtil is actually backed by FlxG.mouse.
-    final browserMouseSource:Bool = DeviceUtil.isMobileBrowser && TouchUtil.touch == FlxG.mouse;
-    final browserMouseJustPressed:Bool = browserMouseSource && FlxG.mouse.justPressed;
-    final browserMouseJustReleased:Bool = browserMouseSource && FlxG.mouse.justReleased;
+    // TouchUtil selects the active finger on native/mobile browsers and
+    // the FlxMouse pointer when a web browser exposes a tap only through
+    // synthesized mouse events. Keep one shared path for both input sources.
+    final touchJustPressed:Bool = TouchUtil.justPressed;
+    final touchJustReleased:Bool = TouchUtil.justReleased;
+    if (touchJustPressed) _touchPressObserved = true;
+    final touchReleaseFallback:Bool = touchJustReleased && !_touchPressObserved;
+    if (touchJustReleased) _touchPressObserved = false;
 
-    if (browserMouseJustPressed) _browserMousePressObserved = true;
-    final browserMouseReleaseFallback:Bool = browserMouseJustReleased && !_browserMousePressObserved;
-    if (browserMouseJustReleased) _browserMousePressObserved = false;
+    final touchActive:Bool = TouchUtil.pressed || touchJustPressed || touchReleaseFallback;
 
-    final browserPointerActive:Bool = browserMouseSource
-      && (FlxG.mouse.pressed || browserMouseJustPressed || browserMouseReleaseFallback);
-    final browserPointerTap:Bool = browserMouseJustPressed || browserMouseReleaseFallback;
-    final touchActive:Bool = TouchUtil.pressed || TouchUtil.justPressed || browserPointerActive;
-    final touchJustPressed:Bool = TouchUtil.justPressed || browserPointerTap;
-
-    // Update touch position using whichever pointer TouchUtil selected.
-    if (TouchUtil.pressed || TouchUtil.justPressed)
-    {
+    if (touchActive && TouchUtil.touch != null)
       touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
-    }
-    else if (browserPointerActive)
-    {
-      touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
-    }
 
     if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
     {
@@ -233,13 +220,12 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         // not guaranteed to be the camera used by a custom menu page.
         final touchCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : item.camera;
 
-        final itemOverlaps:Bool = !_isMainMenuState
-          && (browserMouseSource ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
+        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
         final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
         final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
 
-        if (item.available && isTouchingItem && touchJustPressed)
+        if (item.available && isTouchingItem && (touchJustPressed || touchReleaseFallback))
         {
           var prevIndex:Int = selectedIndex;
 
