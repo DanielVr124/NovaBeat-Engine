@@ -220,7 +220,9 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
     {
-      responsiveBackButton = new FunkinBackButton(FlxG.width - 92, 16, FlxColor.WHITE, goBack, 1.0, true);
+      responsiveBackButton = new FunkinBackButton(0, 0, FlxColor.WHITE, goBack, 1.0, true);
+      responsiveBackButton.setPosition(FlxG.width - responsiveBackButton.width - 18,
+        FlxG.height - responsiveBackButton.height - 18);
       add(responsiveBackButton);
     }
     #end
