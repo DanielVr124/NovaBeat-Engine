@@ -79,7 +79,6 @@ class NovaBeatMainMenuState extends MusicBeatState
   var visibleItemIndexes:Array<Int> = [];
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
-  var transitioning:Bool = false;
   var titleInputCooldown:Float = 0;
   var compactLayout:Bool = false;
   var animationClock:Float = 0;
@@ -177,7 +176,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
-    if (interfaceLayer == null || transitioning) return;
+    if (interfaceLayer == null) return;
 
     var selectedIndex:Int = menuItems == null ? 0 : menuItems.selectedIndex;
     if (menuScrollCamera != null)
@@ -290,7 +289,6 @@ class NovaBeatMainMenuState extends MusicBeatState
     var prompt:FlxSprite = new FlxSprite();
     prompt.frames = Paths.getSparrowAtlas('novabeat/press-enter');
     prompt.animation.addByIndices('idle', 'pressEnter', [0], '', 12, true);
-    prompt.animation.addByIndices('pressed', 'pressEnter', [1, 2, 3], '', 24, false);
     prompt.animation.play('idle', true);
     prompt.updateHitbox();
 
@@ -311,17 +309,15 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function beginMenuTransition():Void
   {
-    if (!showingTitle || transitioning) return;
+    if (!showingTitle) return;
 
     // The title screen now cuts directly to the menu. No dissolve, flash,
     // shader, delayed handoff, or button entrance animation is used.
-    transitioning = true;
     playSfx('enter', 0.8);
     removeTitleScreen();
     showingTitle = false;
     buildInterface();
     addNovaBeatMobileBackButton();
-    transitioning = false;
   }
 
   function removeTitleScreen():Void
@@ -667,7 +663,6 @@ class NovaBeatMainMenuState extends MusicBeatState
       return;
     }
 
-    if (transitioning) return;
 
     handleHeaderPointerInput();
     handleMobileMenuCardInput();
@@ -756,7 +751,6 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function goBackToTitle():Void
   {
-    if (transitioning) return;
     playSfx('back', 0.7);
     FlxG.switchState(() -> new NovaBeatMainMenuState(true, true));
   }
