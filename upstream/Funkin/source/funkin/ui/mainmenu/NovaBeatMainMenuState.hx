@@ -59,6 +59,17 @@ class NovaBeatMainMenuState extends MusicBeatState
     'MODS'
   ];
 
+  // Each supplied button atlas is a 543x724 frame. These normalized bounds
+  // describe the visible button artwork inside that transparent frame, and
+  // are shared by layout, desktop item hitboxes, and mobile touch targets.
+  static inline final MENU_BUTTON_FRAME_WIDTH:Float = 543;
+  static inline final MENU_BUTTON_FRAME_HEIGHT:Float = 724;
+  static inline final MENU_BUTTON_ART_LEFT:Float = 0.02;
+  static inline final MENU_BUTTON_ART_TOP:Float = 0.34;
+  static inline final MENU_BUTTON_ART_WIDTH:Float = 0.96;
+  static inline final MENU_BUTTON_ART_HEIGHT:Float = 0.32;
+  static inline final MENU_BUTTON_HEIGHT_RATIO:Float = 0.19;
+
 
 
   var uiCamera:FlxCamera;
@@ -70,6 +81,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   var showTitleOnCreate:Bool;
   var showingTitle:Bool = false;
   var transitioning:Bool = false;
+  var titleInputCooldown:Float = 0;
   var compactLayout:Bool = false;
   var animationClock:Float = 0;
 
@@ -106,10 +118,13 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   var equalizerBars:Array<FlxSprite> = [];
 
-  public function new(showTitle:Bool = false)
+  public function new(showTitle:Bool = false, returningFromMenu:Bool = false)
   {
     super();
     showTitleOnCreate = showTitle;
+    // The confirm/back input that created this state must not also dismiss
+    // the title screen. Require a fresh input after this short handoff guard.
+    titleInputCooldown = returningFromMenu ? 0.30 : 0.0;
   }
 
   override function create():Void
@@ -443,17 +458,19 @@ class NovaBeatMainMenuState extends MusicBeatState
     // Item IDs remain mapped to the existing gameplay callbacks.
     visibleItemIndexes = [0, 1, 3, 2];
 
-    final frameWidth:Float = 543;
-    final frameHeight:Float = 724;
-    final artLeft:Float = 0.02;
-    final artTop:Float = 0.34;
-    final artWidth:Float = 0.96;
-    final artHeight:Float = 0.32;
+    final frameWidth:Float = MENU_BUTTON_FRAME_WIDTH;
+    final frameHeight:Float = MENU_BUTTON_FRAME_HEIGHT;
+    final artLeft:Float = MENU_BUTTON_ART_LEFT;
+    final artTop:Float = MENU_BUTTON_ART_TOP;
+    final artWidth:Float = MENU_BUTTON_ART_WIDTH;
+    final artHeight:Float = MENU_BUTTON_ART_HEIGHT;
     final artAspect:Float = (frameWidth * artWidth) / (frameHeight * artHeight);
 
     var gap:Float = Math.max(6, Math.min(18, FlxG.height * 0.012));
     var availableArtHeight:Float = Math.max(1, (height - gap * 3) / 4);
-    var targetArtHeight:Float = Math.min(height * 0.22, availableArtHeight);
+    // Match the supplied reference proportions at the 1280x720 design size,
+    // then scale proportionally with the viewport while preserving the art ratio.
+    var targetArtHeight:Float = Math.min(height * MENU_BUTTON_HEIGHT_RATIO, availableArtHeight);
     var targetArtWidth:Float = targetArtHeight * artAspect;
     var maxArtWidth:Float = Math.max(1, width * 0.96);
     if (targetArtWidth > maxArtWidth)
@@ -517,6 +534,8 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       var tapTarget:FlxObject = new FlxObject(artX, artY, targetArtWidth, targetArtHeight);
       tapTarget.active = false;
+      tapTarget.scrollFactor.set();
+      tapTarget.cameras = [uiCamera];
       add(tapTarget);
       rowTapTargets.push(tapTarget);
 
@@ -626,20 +645,26 @@ class NovaBeatMainMenuState extends MusicBeatState
       final button:FlxSprite = rowArtwork[index];
       final target:FlxObject = rowTapTargets[index];
 
-      final visibleLeft:Float = button.x + button.width * 0.02;
-      final hitTop:Float = button.y + button.height * 0.34;
-      final hitWidth:Float = button.width * 0.96;
-      final hitHeight:Float = button.height * 0.32;
-      final screenTop:Float = viewportTop + hitTop - scrollY;
+      // The touch target tracks the visible artwork, not the full transparent
+      // atlas frame. Use the same normalized bounds used to place and scale it.
+      final artLeft:Float = button.x + button.width * MENU_BUTTON_ART_LEFT;
+      final artTop:Float = button.y + button.height * MENU_BUTTON_ART_TOP;
+      final artRight:Float = artLeft + button.width * MENU_BUTTON_ART_WIDTH;
+      final artBottom:Float = artTop + button.height * MENU_BUTTON_ART_HEIGHT;
+      final screenTop:Float = viewportTop + artTop - scrollY;
+      final screenBottom:Float = viewportTop + artBottom - scrollY;
+      final clippedLeft:Float = Math.max(0, artLeft);
+      final clippedRight:Float = Math.min(FlxG.width, artRight);
       final clippedTop:Float = Math.max(viewportTop, screenTop);
-      final clippedBottom:Float = Math.min(viewportBottom, screenTop + hitHeight);
+      final clippedBottom:Float = Math.min(viewportBottom, screenBottom);
+      final clippedWidth:Float = clippedRight - clippedLeft;
       final clippedHeight:Float = clippedBottom - clippedTop;
 
-      target.visible = clippedHeight > 0;
+      target.visible = clippedWidth > 0 && clippedHeight > 0;
       if (target.visible)
       {
-        target.setPosition(visibleLeft, clippedTop);
-        target.setSize(hitWidth, clippedHeight);
+        target.setPosition(clippedLeft, clippedTop);
+        target.setSize(clippedWidth, clippedHeight);
       }
     }
   }
@@ -680,6 +705,11 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (showingTitle)
     {
       updateTitleDissolveFrameInfo();
+      if (titleInputCooldown > 0)
+      {
+        titleInputCooldown = Math.max(0, titleInputCooldown - elapsed);
+        return;
+      }
       var pressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
       var gamepad = FlxG.gamepads.lastActive;
       if (gamepad != null && (gamepad.justPressed.START || gamepad.justPressed.ACCEPT)) pressed = true;
@@ -756,15 +786,28 @@ class NovaBeatMainMenuState extends MusicBeatState
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
     {
-      var marginX:Float = Math.max(18, Math.min(30, FlxG.width * 0.035));
-      var marginY:Float = Math.max(18, Math.min(30, FlxG.height * 0.035));
+      // Anchor to the actual viewport, leaving a clean inset from both edges.
+      // On very narrow/short mobile viewports, scale the control down first so
+      // the visible button and its own hitbox remain entirely on-screen.
+      var marginX:Float = Math.max(12, Math.min(28, Math.min(FlxG.width, FlxG.height) * 0.035));
+      var marginY:Float = marginX;
       addBackButton(0, 0, FlxColor.WHITE, goBackToTitle, 1.0);
       if (backButton != null)
       {
-        backButton.setPosition(
-          Math.max(8, FlxG.width - backButton.width - marginX),
-          Math.max(8, FlxG.height - backButton.height - marginY)
-        );
+        backButton.scrollFactor.set();
+        var availableWidth:Float = Math.max(1, FlxG.width - marginX * 2);
+        var availableHeight:Float = Math.max(1, FlxG.height - marginY * 2);
+        var fitScale:Float = Math.min(1.0,
+          Math.min(availableWidth / Math.max(1, backButton.width), availableHeight / Math.max(1, backButton.height)));
+        if (fitScale < 1.0)
+        {
+          backButton.scale.set(backButton.scale.x * fitScale, backButton.scale.y * fitScale);
+          backButton.updateHitbox();
+        }
+
+        var backX:Float = FlxG.width - backButton.width - marginX;
+        var backY:Float = FlxG.height - backButton.height - marginY;
+        backButton.setPosition(Math.max(marginX, backX), Math.max(marginY, backY));
       }
     }
     #end
@@ -774,7 +817,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     if (transitioning) return;
     playSfx('back', 0.7);
-    FlxG.switchState(() -> new NovaBeatMainMenuState(true));
+    FlxG.switchState(() -> new NovaBeatMainMenuState(true, true));
   }
 
   function handleHeaderPointerInput():Void
