@@ -577,6 +577,29 @@ class MainMenuState extends MusicBeatState
   {
     if (!canInteract) return;
 
+    // Desktop safety net: keep the original FNF control bindings as the
+    // primary path, but still accept raw keyboard navigation if a binding
+    // fails to emit its just-pressed signal (for example after a menu-style
+    // handoff). The checks below avoid double-moving when the binding fired.
+    #if !mobile
+    if (menuItems != null && !menuItems.busy && menuItems.length > 0)
+    {
+      if ((FlxG.keys.justPressed.UP || FlxG.keys.justPressed.W) && !controls.UI_UP_P)
+      {
+        menuItems.selectItem(menuItems.selectedIndex <= 0 ? menuItems.length - 1 : menuItems.selectedIndex - 1);
+      }
+      else if ((FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.S) && !controls.UI_DOWN_P)
+      {
+        menuItems.selectItem(menuItems.selectedIndex >= menuItems.length - 1 ? 0 : menuItems.selectedIndex + 1);
+      }
+
+      if ((FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE) && !controls.ACCEPT_P)
+      {
+        menuItems.accept();
+      }
+    }
+    #end
+
     #if FEATURE_DEBUG_MENU
     // Open the debug menu, defaults to ` / ~
     // This includes stuff like the Chart Editor, so it should be present on all builds.
