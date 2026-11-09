@@ -414,7 +414,9 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     menuItems = new TextMenuList(tileLayout && columns > 1 ? NavControls.Columns(columns) : NavControls.Vertical);
     menuItems.cameras = [uiCamera];
-    // Use MenuTypedList's normal FNF selection/accept rules on every platform.
+    // On touch-first NovaBeat layouts, one tap should open the selected tile.
+    // The separate FNF-style menu keeps its original select-then-confirm flow.
+    menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
     for (index in 0...visibleItemIndexes.length)
     {
