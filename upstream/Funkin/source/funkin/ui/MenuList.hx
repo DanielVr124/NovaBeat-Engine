@@ -61,8 +61,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    * Why is it needed? Because touch control's a bitch. Thats why. */
   public var currentPage:Null<PageName>;
 
-  // Helper variable
+  // Helper variables
   var _isMainMenuState:Bool = false;
+  var touchScrollAccumulator:Float = 0;
 
   // Prevent a mobile browser's synthesized mouse-down and mouse-up from
   // becoming two separate menu activations. Used only by the release-only fallback.
@@ -131,9 +132,43 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     var newIndex = 0;
 
+    // A vertical swipe across a long mobile settings list should move
+    // through the rows continuously, not require repeated short flicks.
+    var touchDragUp:Bool = false;
+    var touchDragDown:Bool = false;
+    #if FEATURE_TOUCH_CONTROLS
+    if (DeviceUtil.isMobileBrowser && navControls == Vertical && members.length > 0)
+    {
+      if (TouchUtil.pressed && TouchUtil.touch != null)
+      {
+        final deltaY:Float = TouchUtil.touch.deltaViewY;
+        if (Math.isFinite(deltaY))
+        {
+          touchScrollAccumulator -= deltaY;
+          final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
+          final step:Float = Math.max(30, rowHeight * 0.55);
+          if (touchScrollAccumulator >= step)
+          {
+            touchDragDown = true;
+            touchScrollAccumulator -= step;
+          }
+          else if (touchScrollAccumulator <= -step)
+          {
+            touchDragUp = true;
+            touchScrollAccumulator += step;
+          }
+        }
+      }
+      else if (TouchUtil.justReleased)
+      {
+        touchScrollAccumulator = 0;
+      }
+    }
+    #end
+
     // Define unified input handlers
-    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState && SwipeUtil.swipeUp);
-    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState && SwipeUtil.swipeDown);
+    final inputUp:Bool = controls.UI_UP_P || touchDragUp || (!_isMainMenuState && SwipeUtil.swipeUp);
+    final inputDown:Bool = controls.UI_DOWN_P || touchDragDown || (!_isMainMenuState && SwipeUtil.swipeDown);
     final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState && SwipeUtil.swipeLeft);
     final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState && SwipeUtil.swipeRight);
 
@@ -189,7 +224,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         selectItem(newIndex);
       }
     }
-    else if (touchActive)
+    else if (touchActive && !ignoreTouchPointerSelection)
     {
       for (i in 0...members.length)
       {
@@ -208,7 +243,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         {
           var prevIndex:Int = selectedIndex;
 
-          if (!_isMainMenuState && selectedIndex != i)
+          if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
           {
             newIndex = i;
             break;
