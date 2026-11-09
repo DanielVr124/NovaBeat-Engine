@@ -48,6 +48,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var mobileListDragActive:Bool = false;
   var mobileListDragMoved:Bool = false;
   var mobileListDragAccumulator:Float = 0;
+  var mobileNovaBeatLayout:Bool = false;
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -84,9 +85,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if mobile
     usesTouchControls = true;
     #end
+    mobileNovaBeatLayout = usesTouchControls && Preferences.menuStyle == "NovaBeat";
     if (usesTouchControls)
     {
-      buildMobileLayout(width, height);
+      if (mobileNovaBeatLayout)
+        buildNovaBeatMobileLayout(width, height);
+      else
+        buildMobileLayout(width, height);
       return;
     }
 
@@ -153,6 +158,73 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #else
     return true;
     #end
+  }
+
+  /**
+   * NovaBeat's mobile Mod Library is a dedicated full-screen list, not a
+   * compressed two-pane desktop manager. The installed mod cards own the
+   * space; details become an intentional empty-state message when the list
+   * has nothing to show.
+   */
+  function buildNovaBeatMobileLayout(width:Float, height:Float):Void
+  {
+    portraitLayout = height > width * 1.12;
+    var margin:Float = portraitLayout ? 18 : 22;
+    heading = addLabel(margin, 13, width - 160, 'MOD LIBRARY', portraitLayout ? 28 : 25, 0xFFFFFFFF);
+    countText = addLabel(margin, 49, width - margin * 2, 'CHECKING YOUR MOD LIBRARY...', 11, 0xFF54DDF4);
+
+    mobileBackButton = new FlxSprite(width - 132, 12);
+    mobileBackButton.makeGraphic(116, 46, 0xFF183B59);
+    mobileBackButton.scrollFactor.set();
+    add(mobileBackButton);
+    mobileBackLabel = new FlxText(width - 128, 27, 108, 'BACK', 14);
+    mobileBackLabel.setFormat(Paths.font('vcr.ttf'), 14, 0xFFFFFFFF, FlxTextAlign.CENTER);
+    mobileBackLabel.scrollFactor.set();
+    add(mobileBackLabel);
+
+    var panelY:Float = portraitLayout ? 94 : 82;
+    var panelHeight:Float = Math.max(150, height - panelY - 48);
+    var panelWidth:Float = width - margin * 2;
+    addPanel(margin, panelY, panelWidth, panelHeight);
+
+    var innerX:Float = margin + 16;
+    var innerWidth:Float = panelWidth - 32;
+    listHeading = addLabel(innerX + 2, panelY + 16, innerWidth - 4,
+      mobileModActionsEnabled() ? 'INSTALLED MODS' : 'YOUR MOD LIBRARY',
+      15, 0xFF54DDF4);
+    statusText = addLabel(innerX + 2, panelY + 39, innerWidth - 4, '', 9, 0xFF9DB7D8);
+
+    rowX = innerX + 2;
+    rowY = panelY + 63;
+    rowWidth = innerWidth - 4;
+    rowHeight = portraitLayout ? 102 : 88;
+
+    var actionDockHeight:Float = mobileModActionsEnabled() ? 90 : 0;
+    var listBottom:Float = panelY + panelHeight - 14 - actionDockHeight;
+    visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+    if (mobileModActionsEnabled())
+    {
+      var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
+      layoutMobileTouchActions(innerX, actionY, innerWidth, 38, 8, portraitLayout);
+    }
+
+    detailTitle = addLabel(rowX + 10, rowY + 54, rowWidth - 20, '', 20, 0xFFFFFFFF);
+    detailTitle.alignment = FlxTextAlign.CENTER;
+    detailTitle.autoSize = false;
+    detailTitle.fieldWidth = rowWidth - 20;
+
+    detailText = addLabel(rowX + 20, rowY + 98, rowWidth - 40, '', 14, 0xFFB8CBE6);
+    detailText.alignment = FlxTextAlign.CENTER;
+    detailText.wordWrap = true;
+    detailText.autoSize = false;
+    detailText.fieldWidth = rowWidth - 40;
+    detailText.fieldHeight = Math.max(80, listBottom - rowY - 112);
+
+    helpText = addLabel(margin, height - 28, width - margin * 2,
+      mobileModActionsEnabled()
+        ? 'TAP A MOD CARD  •  DRAG TO BROWSE  •  ACTIONS BELOW'
+        : 'BROWSER BUILDS CANNOT SCAN LOCAL MOD FOLDERS',
+      9, 0xFF91A9CC);
   }
 
   function buildMobileLayout(width:Float, height:Float):Void
@@ -335,11 +407,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (detectedMods.length == 0)
     {
-      #if web
-      emptyStateText = addLabel(rowX, rowY + 8, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
-      #else
-      emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
-      #end
+      if (!mobileNovaBeatLayout)
+      {
+        #if web
+        emptyStateText = addLabel(rowX, rowY + 8, rowWidth, 'LOCAL MOD SCANNING IS UNAVAILABLE IN THIS BROWSER BUILD', 11, 0xFFB5C6E4);
+        #else
+        emptyStateText = addLabel(rowX, rowY + 20, rowWidth, 'NO MODS FOUND', 18, 0xFFFFFFFF);
+        #end
+      }
       return;
     }
 
@@ -361,13 +436,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       rowBackgrounds.push(bg);
 
       var marker:String = enabled ? '[ENABLED]' : '[DISABLED]';
-      var rowFontSize:Int = usesTouchControls ? 13 : (portraitLayout ? 13 : 16);
+      var rowFontSize:Int = mobileNovaBeatLayout
+        ? (portraitLayout ? 16 : 14)
+        : (usesTouchControls ? 13 : (portraitLayout ? 13 : 16));
       var rowText:String;
       if (usesTouchControls)
       {
         var author:String = metadataValue(mod, 'author', 'Unknown author');
         var description:String = metadataValue(mod, 'description', 'No description provided.');
-        if (description.length > 72) description = description.substr(0, 69) + '...';
+        var maxDescriptionLength:Int = mobileNovaBeatLayout ? 56 : 72;
+        if (description.length > maxDescriptionLength)
+          description = description.substr(0, maxDescriptionLength - 3) + '...';
         rowText = marker + '  •  v' + Std.string(mod.modVersion)
           + '\n' + mod.title
           + '\n' + author + '  —  ' + description;
@@ -384,7 +463,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         row.wordWrap = true;
         row.autoSize = false;
-        row.fieldHeight = rowHeight - 10;
+        row.fieldHeight = rowHeight - (mobileNovaBeatLayout ? 14 : 10);
       }
       add(row);
       rows.push(row);
@@ -393,6 +472,32 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function renderDetails():Void
   {
+    if (mobileNovaBeatLayout)
+    {
+      if (detectedMods.length == 0)
+      {
+        detailTitle.visible = true;
+        detailText.visible = true;
+        #if web
+        detailTitle.text = 'BROWSER BUILD LIMITATION';
+        detailText.text = 'This browser cannot scan your device storage for installed mod folders. The Mod Library is available here, but local mod management requires the Android or Windows build.';
+        #else
+        detailTitle.text = 'YOUR LIBRARY IS EMPTY';
+        detailText.text = 'Add a Polymod-compatible mod folder to the game, then use RESCAN to find it. Installed mods will appear here as full-size cards you can manage.';
+        #end
+        detailTitle.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFFFFF, FlxTextAlign.CENTER);
+        detailText.setFormat(Paths.font('vcr.ttf'), 14, 0xFFB8CBE6, FlxTextAlign.CENTER);
+      }
+      else
+      {
+        // Each card already shows the selected mod's author, version, and
+        // description. Keep the separate empty-state message out of the list.
+        detailTitle.visible = false;
+        detailText.visible = false;
+      }
+      return;
+    }
+
     if (detectedMods.length == 0)
     {
       #if web
@@ -654,7 +759,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (width <= 0 || height <= 0) return;
     if (usesTouchControls)
     {
-      layoutMobileViewport(width, height);
+      if (mobileNovaBeatLayout)
+        layoutNovaBeatMobileViewport(width, height);
+      else
+        layoutMobileViewport(width, height);
       return;
     }
     portraitLayout = height > width * 1.12;
@@ -730,6 +838,71 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (responsiveBackButton != null)
       responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, 18);
     #end
+  }
+
+  function layoutNovaBeatMobileViewport(width:Int, height:Int):Void
+  {
+    portraitLayout = height > width * 1.12;
+    var margin:Float = portraitLayout ? 18 : 22;
+    heading.setPosition(margin, 13);
+    heading.fieldWidth = width - 160;
+    heading.size = portraitLayout ? 28 : 25;
+    countText.setPosition(margin, 49);
+    countText.fieldWidth = width - margin * 2;
+
+    if (mobileBackButton != null)
+    {
+      mobileBackButton.setPosition(width - 132, 12);
+      mobileBackButton.makeGraphic(116, 46, 0xFF183B59);
+      mobileBackLabel.setPosition(width - 128, 27);
+      mobileBackLabel.fieldWidth = 108;
+    }
+
+    var panelY:Float = portraitLayout ? 94 : 82;
+    var panelHeight:Float = Math.max(150, height - panelY - 48);
+    var panelWidth:Float = width - margin * 2;
+    var innerX:Float = margin + 16;
+    var innerWidth:Float = panelWidth - 32;
+
+    if (layoutPanels.length >= 2)
+    {
+      layoutPanels[0].setPosition(margin, panelY);
+      layoutPanels[0].makeGraphic(Std.int(panelWidth), Std.int(panelHeight), 0xFF4269B5);
+      layoutPanels[1].setPosition(margin + 2, panelY + 2);
+      layoutPanels[1].makeGraphic(Std.int(panelWidth - 4), Std.int(panelHeight - 4), 0xF0061028);
+    }
+
+    listHeading.setPosition(innerX + 2, panelY + 16);
+    listHeading.fieldWidth = innerWidth - 4;
+    statusText.setPosition(innerX + 2, panelY + 39);
+    statusText.fieldWidth = innerWidth - 4;
+
+    rowX = innerX + 2;
+    rowY = panelY + 63;
+    rowWidth = innerWidth - 4;
+    rowHeight = portraitLayout ? 102 : 88;
+    var actionDockHeight:Float = mobileModActionsEnabled() ? 90 : 0;
+    var listBottom:Float = panelY + panelHeight - 14 - actionDockHeight;
+    visibleRows = Std.int(Math.max(1, Math.floor((listBottom - rowY) / rowHeight)));
+    if (mobileModActionsEnabled())
+    {
+      var actionY:Float = panelY + panelHeight - actionDockHeight - 8;
+      layoutMobileTouchActions(innerX, actionY, innerWidth, 38, 8, portraitLayout);
+    }
+
+    detailTitle.setPosition(rowX + 10, rowY + 54);
+    detailTitle.fieldWidth = rowWidth - 20;
+    detailTitle.size = 20;
+    detailText.setPosition(rowX + 20, rowY + 98);
+    detailText.fieldWidth = rowWidth - 40;
+    detailText.fieldHeight = Math.max(80, listBottom - rowY - 112);
+    detailText.size = 14;
+
+    helpText.setPosition(margin, height - 28);
+    helpText.fieldWidth = width - margin * 2;
+
+    renderRows();
+    renderDetails();
   }
 
   function layoutMobileViewport(width:Int, height:Int):Void

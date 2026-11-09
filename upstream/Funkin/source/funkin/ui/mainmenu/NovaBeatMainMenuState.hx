@@ -387,14 +387,19 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     // Keep a visible but compact gap between tap targets so neighboring
     // tiles no longer look merged together on portrait screens.
-    var gap:Float = (tileLayout ? Math.max(14, FlxG.width * 0.026) : Math.max(9, FlxG.height * 0.018));
-    gap = Math.max(tileLayout ? 14 : 9, gap * densityMultiplier() * 1.06);
+    var mobileLandscape:Bool = DeviceUtil.isMobileBrowser && FlxG.height <= FlxG.width * 1.12;
+    var gap:Float = tileLayout
+      ? (mobileLandscape ? 7 : Math.max(12, FlxG.width * 0.022))
+      : Math.max(9, FlxG.height * 0.018);
+    gap = Math.max(mobileLandscape ? 6 : (tileLayout ? 12 : 9), gap * densityMultiplier());
 
     // The active experience changes which songs this single Freeplay route loads.
     visibleItemIndexes = [0, 1, 2, 3, 4];
 
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var columns:Int = tileLayout ? (portraitLayout ? 1 : 2) : 1;
+    // Touch layouts always use one continuous vertical menu. A landscape
+    // phone should not switch back into a two-column grid.
+    var columns:Int = tileLayout ? ((DeviceUtil.isMobileBrowser || portraitLayout) ? 1 : 2) : 1;
     var entryCount:Int = visibleItemIndexes.length;
     var rows:Int = Std.int(Math.ceil(entryCount / columns));
     var buttonW:Float = tileLayout ? (width - gap * (columns + 1)) / columns : width - 20;
@@ -404,7 +409,9 @@ class NovaBeatMainMenuState extends MusicBeatState
       // Fill the available mobile menu area with large, thumb-friendly tiles.
       // Tall portrait viewports can use more height; shorter screens still
       // shrink to fit rather than overflowing the panel.
-      buttonH = Math.max(52, Math.min(portraitLayout ? 156 : 112, (height - gap * (rows - 1)) / rows));
+      var minTileHeight:Float = mobileLandscape ? 30 : 52;
+      var maxTileHeight:Float = mobileLandscape ? 46 : (portraitLayout ? 156 : 112);
+      buttonH = Math.max(minTileHeight, Math.min(maxTileHeight, (height - gap * (rows - 1)) / rows));
     }
     else
     {
@@ -454,14 +461,14 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.visible = false;
 
       // Use a shared badge so the menu symbols remain legible and aligned.
-      var iconPlateSize:Float = tileLayout ? (portraitLayout ? 56 : 46) : 46;
+      var iconPlateSize:Float = tileLayout ? (mobileLandscape ? 30 : (portraitLayout ? 56 : 46)) : 46;
       var iconX:Float = itemX + (tileLayout ? 10 : 14);
       var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
       var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize, 12, 12, 0xFF142B49);
       iconPlate.alpha = 0.96;
       rowIconPlates.push(iconPlate);
 
-      var iconSize:Int = tileLayout ? (portraitLayout ? 28 : 24) : 25;
+      var iconSize:Int = tileLayout ? (mobileLandscape ? 17 : (portraitLayout ? 28 : 24)) : 25;
       var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[menuIndex], iconSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial');
       icon.scrollFactor.set();
       icon.autoSize = false;
@@ -472,9 +479,11 @@ class NovaBeatMainMenuState extends MusicBeatState
       var labelX:Float = iconX + iconPlateSize + (tileLayout ? 10 : 14);
       var labelWidth:Float = buttonW - (labelX - itemX) - (tileLayout ? 10 : 16);
       var title:String = ITEM_TITLES[menuIndex].split('\n').join(' ');
-      var titleHeight:Float = tileLayout ? (portraitLayout ? 25 : 22) : 23;
+      var titleHeight:Float = tileLayout ? (mobileLandscape ? 20 : (portraitLayout ? 25 : 22)) : 23;
       var titleY:Float = itemY + (buttonH - titleHeight) * 0.5;
-      var label:FlxText = addLabel(labelX, titleY, labelWidth, title, tileLayout ? (portraitLayout ? 19 : 16) : 18, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
+      var label:FlxText = addLabel(labelX, titleY, labelWidth, title,
+        tileLayout ? (mobileLandscape ? 13 : (portraitLayout ? 19 : 16)) : 18,
+        0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black');
       label.autoSize = false;
       label.wordWrap = false;
       label.fieldWidth = labelWidth;

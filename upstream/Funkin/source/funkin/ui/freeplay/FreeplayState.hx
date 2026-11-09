@@ -2224,11 +2224,8 @@ class FreeplayState extends MusicBeatSubState
       {
         var pointerDpiScale:Float = FlxG.stage.window.display.dpi / 160;
         pointerDpiScale = pointerDpiScale.clamp(0.5, 2);
-        // Preserve stock FNF's 60 FPS-normalized song-list speed. NovaBeat
-        // keeps its separate one-row-per-drag scaling.
-        final moveLength:Float = Preferences.menuStyle == "NovaBeat"
-          ? pointerDelta / pointerDpiScale / Math.max(128, FlxG.height * 0.30)
-          : pointerDelta / 60.0 / pointerDpiScale;
+        // Match the Normal FNF menu's finger-proportional drag speed.
+        final moveLength:Float = pointerDelta / 60.0 / pointerDpiScale;
         _moveLength += Math.abs(moveLength);
         curSelectedFloat -= moveLength;
         updateSongsScroll();
@@ -2255,29 +2252,18 @@ class FreeplayState extends MusicBeatSubState
     }
 
     final framerateMultiplier:Float = (FlxG.updateFramerate / 60);
-    // Scale the drag against a song row rather than treating each screen pixel
-    // as a complete song selection.
-    final scrollPixelsPerSong:Float = Math.max(128, FlxG.height * 0.30);
     #if web
     if (DeviceUtil.isMobileBrowser && !browserPointerActive)
     {
       final pointer = menuPointer();
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
       {
-        #if web
-        final delta:Float = Preferences.menuStyle == "NovaBeat"
-          ? pointer.deltaViewY
-          : pointer.deltaViewY * framerateMultiplier;
-        #else
         final delta:Float = pointer.deltaViewY * framerateMultiplier;
-        #end
         if (Math.isFinite(delta) && Math.abs(delta) >= 2)
         {
           var dpiScale = FlxG.stage.window.display.dpi / 160;
           dpiScale = dpiScale.clamp(0.5, 2);
-          var moveLength:Float = Preferences.menuStyle == "NovaBeat"
-            ? (delta / dpiScale / scrollPixelsPerSong)
-            : (delta / dpiScale);
+          var moveLength:Float = delta / dpiScale;
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
@@ -2301,13 +2287,7 @@ class FreeplayState extends MusicBeatSubState
         // deltaViewY is already a per-frame pixel delta. Browser touch input
         // must not be divided by the target frame rate again; doing so made
         // Freeplay scrolling dozens of times weaker than a normal finger drag.
-        #if web
-        final delta:Float = Preferences.menuStyle == "NovaBeat"
-          ? touch.deltaViewY
-          : touch.deltaViewY * framerateMultiplier;
-        #else
         final delta:Float = touch.deltaViewY * framerateMultiplier;
-        #end
         if (!Math.isFinite(delta)) continue;
         if (Math.abs(delta) >= 2)
         {
@@ -2315,13 +2295,7 @@ class FreeplayState extends MusicBeatSubState
 
           dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
 
-          #if web
-          var moveLength:Float = Preferences.menuStyle == "NovaBeat"
-            ? (delta / dpiScale / scrollPixelsPerSong)
-            : (delta / FlxG.updateFramerate / dpiScale);
-          #else
           var moveLength:Float = delta / FlxG.updateFramerate / dpiScale;
-          #end
           _moveLength += Math.abs(moveLength);
           curSelectedFloat -= moveLength;
           updateSongsScroll();
@@ -2349,9 +2323,7 @@ class FreeplayState extends MusicBeatSubState
         var dpiScale = FlxG.stage.window.display.dpi / 160;
 
         dpiScale = dpiScale.clamp(0.5, #if android 1 #else 2 #end);
-        var velocityMove:Float = Preferences.menuStyle == "NovaBeat"
-          ? (flickVelocity * elapsed / dpiScale / scrollPixelsPerSong)
-          : (flickVelocity * elapsed / dpiScale);
+        var velocityMove:Float = flickVelocity * elapsed / dpiScale;
         _moveLength += Math.abs(velocityMove);
         curSelectedFloat -= velocityMove;
         updateSongsScroll();
