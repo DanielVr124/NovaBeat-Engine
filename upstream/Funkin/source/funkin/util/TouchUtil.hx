@@ -242,6 +242,7 @@ class TouchUtil
     if (object != null && !FlxG.mouse.overlaps(object, camera)) return false;
 
     browserPointerConsumedSerial = browserPointerReleaseSerial;
+    browserPointerStartConsumedSerial = browserPointerStartSerial;
     return true;
   }
   #end
