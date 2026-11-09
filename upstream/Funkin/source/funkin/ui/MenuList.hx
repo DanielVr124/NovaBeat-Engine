@@ -139,7 +139,37 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser && navControls == Vertical && members.length > 0)
     {
-      if (TouchUtil.pressed && TouchUtil.touch != null)
+      var browserPointerActive:Bool = false;
+      #if web
+      browserPointerActive = TouchUtil.browserPointerBridgeAvailable();
+      if (browserPointerActive && TouchUtil.browserPointerIsDown())
+      {
+        final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
+        if (Math.isFinite(deltaY))
+        {
+          touchScrollAccumulator -= deltaY;
+          final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
+          final step:Float = Math.max(30, rowHeight * 0.55);
+          if (touchScrollAccumulator >= step)
+          {
+            touchDragDown = true;
+            touchScrollAccumulator -= step;
+          }
+          else if (touchScrollAccumulator <= -step)
+          {
+            touchDragUp = true;
+            touchScrollAccumulator += step;
+          }
+        }
+      }
+      else if (browserPointerActive)
+      {
+        // Clear any remainder after a finger/mouse drag ends.
+        touchScrollAccumulator = 0;
+      }
+      #end
+
+      if (!browserPointerActive && TouchUtil.pressed && TouchUtil.touch != null)
       {
         final deltaY:Float = TouchUtil.touch.deltaViewY;
         if (Math.isFinite(deltaY))
@@ -159,7 +189,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
           }
         }
       }
-      else if (TouchUtil.justReleased)
+      else if (!browserPointerActive && TouchUtil.justReleased)
       {
         touchScrollAccumulator = 0;
       }
@@ -203,12 +233,60 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     if (touchActive && TouchUtil.touch != null)
       touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
 
-    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
+    var useBrowserPointer:Bool = false;
+    #if web
+    useBrowserPointer = DeviceUtil.isMobileBrowser && TouchUtil.browserPointerBridgeAvailable();
+    #end
+
+    if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice && !useBrowserPointer)
     {
       if (newIndex != selectedIndex)
       {
         FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
         selectItem(newIndex);
+      }
+    }
+    else if (useBrowserPointer && !ignoreTouchPointerSelection)
+    {
+      for (i in 0...members.length)
+      {
+        final item = members[i];
+        final touchCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : item.camera;
+        if (!item.available || !TouchUtil.consumeBrowserPointerTap(item, touchCamera)) continue;
+
+        final prevIndex:Int = selectedIndex;
+        if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
+        {
+          newIndex = i;
+        }
+        else
+        {
+          FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
+          selectItem(i);
+          if (_isMainMenuState)
+          {
+            if (prevIndex == i)
+            {
+              FlxTween.cancelTweensOf(item);
+              item.scale.set(1.1, 1.1);
+              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+              HapticUtil.vibrate(0, 0.05, 1);
+              accept();
+            }
+            else
+            {
+              FlxTween.cancelTweensOf(item);
+              item.scale.set(0.94, 0.94);
+              FlxTween.tween(item.scale, {x: 1, y: 1}, 0.3, {ease: FlxEase.backOut});
+              HapticUtil.vibrate(0, 0.01, 0.5);
+            }
+          }
+          else
+          {
+            accept();
+          }
+        }
+        break;
       }
     }
     else if (touchActive && !ignoreTouchPointerSelection)
