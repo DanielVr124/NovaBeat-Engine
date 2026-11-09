@@ -7,6 +7,7 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.audio.FunkinSound;
 import funkin.util.TouchUtil;
+import funkin.Preferences;
 import funkin.util.DeviceUtil;
 import funkin.util.SwipeUtil;
 import funkin.ui.Page.PageName;
@@ -147,7 +148,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
         if (Math.isFinite(deltaY))
         {
-          touchScrollAccumulator -= deltaY;
+          // NovaBeat follows the finger directly: dragging downward moves
+          // the highlighted list downward. Keep stock FNF scrolling unchanged.
+          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)
@@ -174,7 +177,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         final deltaY:Float = TouchUtil.touch.deltaViewY;
         if (Math.isFinite(deltaY))
         {
-          touchScrollAccumulator -= deltaY;
+          // NovaBeat follows the finger directly: dragging downward moves
+          // the highlighted list downward. Keep stock FNF scrolling unchanged.
+          touchScrollAccumulator += deltaY * (Preferences.menuStyle == "NovaBeat" ? 1 : -1);
           final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
           final step:Float = Math.max(30, rowHeight * 0.55);
           if (touchScrollAccumulator >= step)

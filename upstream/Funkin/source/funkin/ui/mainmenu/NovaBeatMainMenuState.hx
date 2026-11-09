@@ -385,8 +385,10 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function buildMenuList(x:Float, y:Float, width:Float, height:Float, tileLayout:Bool):Void
   {
-    var gap:Float = (tileLayout ? Math.max(8, FlxG.width * 0.018) : Math.max(9, FlxG.height * 0.018));
-    gap *= densityMultiplier() * 1.06;
+    // Keep a visible but compact gap between tap targets so neighboring
+    // tiles no longer look merged together on portrait screens.
+    var gap:Float = (tileLayout ? Math.max(14, FlxG.width * 0.026) : Math.max(9, FlxG.height * 0.018));
+    gap = Math.max(tileLayout ? 14 : 9, gap * densityMultiplier() * 1.06);
 
     // The active experience changes which songs this single Freeplay route loads.
     visibleItemIndexes = [0, 1, 2, 3, 4];
@@ -436,7 +438,14 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
       item.cameras = [uiCamera];
-      item.makeGraphic(Std.int(buttonW), Std.int(buttonH), FlxColor.TRANSPARENT);
+      // The transparent MenuList sprite is the real tap target. Give it a
+      // small invisible safety margin around the visual card, while leaving
+      // enough gap that adjacent targets never overlap.
+      var hitboxPadding:Float = DeviceUtil.isMobileBrowser ? 6 : 0;
+      item.makeGraphic(Std.int(buttonW + hitboxPadding * 2), Std.int(buttonH + hitboxPadding * 2), FlxColor.TRANSPARENT);
+      item.setPosition(itemX - hitboxPadding, itemY - hitboxPadding);
+      item.origin.set(0, 0);
+      item.offset.set(0, 0);
       item.updateHitbox();
       item.scrollFactor.set();
       // Keep the upstream FNF bitmap label hidden. Its parent alpha changes

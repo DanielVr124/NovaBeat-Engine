@@ -49,6 +49,8 @@ class TouchUtil
   static var browserPointerReleaseIsTap:Bool = false;
   static var browserPointerReleaseSerial:Int = 0;
   static var browserPointerConsumedSerial:Int = 0;
+  static var browserPointerStartSerial:Int = 0;
+  static var browserPointerStartConsumedSerial:Int = 0;
 
   static function ensureBrowserPointerBridge():Void
   {
@@ -76,6 +78,7 @@ class TouchUtil
       browserPointerStartX = clientX;
       browserPointerStartY = clientY;
       browserPointerGameY = FlxG.mouse.gameY;
+      browserPointerStartSerial++;
       browserPointerDeltaY = 0;
       browserPointerMoved = false;
       browserPointerDown = true;
@@ -111,7 +114,16 @@ class TouchUtil
 
       final clientX:Float = browserPointerNumber(pointer, "clientX");
       final clientY:Float = browserPointerNumber(pointer, "clientY");
-      if (!updateBrowserPointerPosition(clientX, clientY)) browserPointerMoved = true;
+      if (updateBrowserPointerPosition(clientX, clientY))
+      {
+        final releaseY:Float = FlxG.mouse.gameY;
+        browserPointerDeltaY += releaseY - browserPointerGameY;
+        browserPointerGameY = releaseY;
+      }
+      else
+      {
+        browserPointerMoved = true;
+      }
 
       final dx:Float = clientX - browserPointerStartX;
       final dy:Float = clientY - browserPointerStartY;
@@ -180,6 +192,32 @@ class TouchUtil
     return browserPointerAvailable && browserPointerDown;
   }
 
+  public static function browserPointerHasDragged():Bool
+  {
+    ensureBrowserPointerBridge();
+    return browserPointerAvailable && browserPointerMoved;
+  }
+
+  /**
+   * Tests where the current or just-completed browser pointer gesture began.
+   * The start is consumed by the first matching scrollable surface, so a quick
+   * drag that begins and ends between game frames is still recognized.
+   */
+  public static function browserPointerPressedOn(object:FlxBasic, ?camera:FlxCamera):Bool
+  {
+    ensureBrowserPointerBridge();
+    if (!browserPointerAvailable || object == null || browserPointerStartSerial == browserPointerStartConsumedSerial) return false;
+
+    final currentX:Float = browserPointerClientX;
+    final currentY:Float = browserPointerClientY;
+    if (!updateBrowserPointerPosition(browserPointerStartX, browserPointerStartY)) return false;
+    final pressedOnObject:Bool = FlxG.mouse.overlaps(object, camera);
+    updateBrowserPointerPosition(currentX, currentY);
+
+    if (pressedOnObject) browserPointerStartConsumedSerial = browserPointerStartSerial;
+    return pressedOnObject;
+  }
+
   public static function consumeBrowserPointerDeltaY():Float
   {
     ensureBrowserPointerBridge();
@@ -204,6 +242,7 @@ class TouchUtil
     if (object != null && !FlxG.mouse.overlaps(object, camera)) return false;
 
     browserPointerConsumedSerial = browserPointerReleaseSerial;
+    browserPointerStartConsumedSerial = browserPointerStartSerial;
     return true;
   }
   #end
