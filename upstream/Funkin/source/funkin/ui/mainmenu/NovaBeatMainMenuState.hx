@@ -8,6 +8,7 @@ import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
+import flixel.text.FlxText.FlxTextBorderStyle;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxColor;
@@ -45,20 +46,20 @@ class NovaBeatMainMenuState extends MusicBeatState
   static final ITEM_NAMES:Array<String> = [
     'STORY MODE',
     'FREEPLAY',
-    'MODS',
     'OPTIONS',
-    'CREDITS'
+    'MODS'
   ];
 
-  static final ITEM_ICONS:Array<String> = ['▤', '♫', '✣', '⚙', '★'];
+  static final ITEM_ICONS:Array<String> = ['▶', '♫', '⚙', '✦'];
 
   static final ITEM_TITLES:Array<String> = [
-    'STORY\nMODE',
+    'STORY MODE',
     'FREEPLAY',
-    'MODS',
     'OPTIONS',
-    'CREDITS'
+    'MODS'
   ];
+
+
 
   var uiCamera:FlxCamera;
   var interfaceLayer:FlxTypedGroup<FlxBasic>;
@@ -90,6 +91,10 @@ class NovaBeatMainMenuState extends MusicBeatState
   var menuScrollViewportHeight:Float = 0;
   var menuScrollViewportTop:Float = 0;
   var rowTapTargets:Array<FlxObject> = [];
+  var rowBorders:Array<FlxSprite> = [];
+  var bfSprite:Null<FlxSprite> = null;
+  var speakerTopY:Float = 0;
+  var speakerBounceTargets:Array<FlxSprite> = [];
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -199,6 +204,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     menuScrollViewportHeight = 0;
     menuScrollViewportTop = 0;
     rowTapTargets = [];
+    rowBorders = [];
+    bfSprite = null;
+    speakerTopY = 0;
+    speakerBounceTargets = [];
 
     buildBackdrop();
     if (showingTitle)
@@ -223,56 +232,79 @@ class NovaBeatMainMenuState extends MusicBeatState
     var height:Int = FlxG.height;
 
     var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/menu-background'));
-    // Overscan the artwork so no uncovered edges appear on the title screen
-    // or the main menu, including wide and portrait viewports.
     var backgroundScale:Float = Math.max(width / background.width, height / background.height) * 1.08;
     background.scale.set(backgroundScale, backgroundScale);
     background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
     background.cameras = [uiCamera];
+    background.color = 0xFFB78AFF;
     background.zIndex = -100;
     backgroundSprite = background;
     add(background);
 
-    // Explicit depth order keeps the artwork/dimmer/panels behind every
-    // interactive label and menu tile, including in portrait browser builds.
-    backgroundDimmer = addSolid(0, 0, width, height, 0xFF050817);
+    backgroundDimmer = addSolid(0, 0, width, height, 0xE5070416);
     backgroundDimmer.zIndex = -90;
     backgroundDimmer.alpha = backgroundDimmerAlpha();
-    var bottomShade:FlxSprite = addSolid(0, height * 0.72, width, height * 0.28, 0x3902081C);
-    bottomShade.zIndex = -80;
+
+    var leftBeam:FlxSprite = addRoundRect(width * 0.50, -height * 0.18, width * 0.055, height * 1.22,
+      32, 32, 0xFFB44DFF);
+    leftBeam.angle = 17;
+    leftBeam.alpha = 0.10;
+    leftBeam.zIndex = -80;
+
+    var rightBeam:FlxSprite = addRoundRect(width * 0.80, -height * 0.16, width * 0.045, height * 1.18,
+      26, 26, 0xFF7B48FF);
+    rightBeam.angle = -14;
+    rightBeam.alpha = 0.09;
+    rightBeam.zIndex = -80;
+
+    var bottomShade:FlxSprite = addSolid(0, height * 0.76, width, height * 0.24, 0xA3030615);
+    bottomShade.zIndex = -70;
+
+    var graffitiStar:FlxText = addLabel(width * 0.79, height * 0.12, 90, '✦', 66, 0xFFB968FF,
+      FlxTextAlign.CENTER, 'Arial');
+    graffitiStar.alpha = 0.44;
+    graffitiStar.angle = -12;
+    var graffitiSpark:FlxText = addLabel(width * 0.56, height * 0.70, 54, '✧', 42, 0xFFEE7BFF,
+      FlxTextAlign.CENTER, 'Arial');
+    graffitiSpark.alpha = 0.42;
   }
 
   function buildTitleScreen():Void
   {
     var width:Int = FlxG.width;
     var height:Int = FlxG.height;
+
+    buildSpeakerPlatform();
+    buildBoyfriend(true);
+
     var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
     var portraitLayout:Bool = height > width * 1.12;
-    // Give the wide NovaBeat wordmark more room while keeping it clear of the
-    // screen edges. Portrait viewports use a slightly shorter title footprint.
-    var maxLogoWidth:Float = width * (portraitLayout ? 0.86 : 0.88) * interfaceScale();
-    var maxLogoHeight:Float = height * (portraitLayout ? 0.30 : 0.48) * interfaceScale();
+    var maxLogoWidth:Float = width * (portraitLayout ? 0.90 : 0.82) * interfaceScale();
+    var maxLogoHeight:Float = height * (portraitLayout ? 0.27 : 0.38) * interfaceScale();
     var logoFit:Float = Math.max(0.01, Math.min(maxLogoWidth / logo.width, maxLogoHeight / logo.height));
     logo.setGraphicSize(Std.int(logo.width * logoFit), Std.int(logo.height * logoFit));
     logo.updateHitbox();
     logo.x = Math.round((width - logo.width) * 0.5);
-    logo.y = height * (portraitLayout ? 0.40 : 0.43) - logo.height * 0.5;
+    logo.y = height * (portraitLayout ? 0.28 : 0.30) - logo.height * 0.5;
     logo.scrollFactor.set();
     logo.cameras = [uiCamera];
+    logo.color = 0xFFF1D9FF;
     titleLogo = logo;
     add(logo);
 
+    var promptSize:Int = titlePromptSize();
     if (DeviceUtil.isMobileBrowser)
     {
-      titleTapHint = addLabel(0, height * 0.865, width, 'TAP ANYWHERE TO BEGIN', 20, 0xFF9FB7E6, FlxTextAlign.CENTER, 'Arial');
+      titleTapHint = addLabel(0, height * 0.88, width, 'TAP ANYWHERE TO BEGIN', promptSize, 0xFFFFFFFF,
+        FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
     }
     else
     {
-      titlePrompt = addLabel(0, height * 0.865, width, 'PRESS ENTER TO BEGIN', titlePromptSize(), 0xFFFFFFFF, FlxTextAlign.CENTER, 'Arial Black');
+      titlePrompt = addLabel(0, height * 0.88, width, 'PRESS ENTER TO BEGIN', promptSize, 0xFFFFFFFF,
+        FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
     }
-
   }
 
   function titlePromptSize():Int
@@ -289,27 +321,37 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     if (titleLogo != null)
     {
-      FlxTween.tween(titleLogo, {alpha: 0.16, y: titleLogo.y - 14}, 0.72, {ease: FlxEase.quadOut});
+      var shrinkX:Float = Math.min((FlxG.width * 0.38) / Math.max(1, titleLogo.width),
+        (FlxG.height * 0.13) / Math.max(1, titleLogo.height));
+      var targetScaleX:Float = titleLogo.scale.x * shrinkX;
+      var targetScaleY:Float = titleLogo.scale.y * shrinkX;
+      FlxTween.tween(titleLogo.scale, {x: targetScaleX, y: targetScaleY}, 0.66,
+        {ease: FlxEase.quadInOut});
+      FlxTween.tween(titleLogo, {x: Math.max(20, FlxG.width * 0.035), y: 12}, 0.66,
+        {ease: FlxEase.quadInOut});
     }
-    if (titlePrompt != null) FlxTween.tween(titlePrompt, {alpha: 0, y: titlePrompt.y + 12}, 0.32, {ease: FlxEase.quadOut});
-    if (titleTapHint != null) FlxTween.tween(titleTapHint, {alpha: 0}, 0.24, {ease: FlxEase.quadOut});
 
-    FlxTimer.wait(0.72, function()
+    if (titlePrompt != null)
+      FlxTween.tween(titlePrompt, {alpha: 0, y: titlePrompt.y + 18}, 0.26, {ease: FlxEase.quadOut});
+    if (titleTapHint != null)
+      FlxTween.tween(titleTapHint, {alpha: 0}, 0.22, {ease: FlxEase.quadOut});
+
+    startBoyfriendEntrance();
+
+    FlxTimer.wait(0.70, function()
     {
       removeTitleScreen();
       showingTitle = false;
       transitioning = false;
       buildInterface();
+      addNovaBeatMobileBackButton();
     });
   }
 
   function removeTitleScreen():Void
   {
-    if (titleLogo != null) remove(titleLogo, true);
     if (titlePrompt != null) remove(titlePrompt, true);
     if (titleTapHint != null) remove(titleTapHint, true);
-
-    titleLogo = null;
     titlePrompt = null;
     titleTapHint = null;
   }
@@ -318,65 +360,77 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var screenW:Int = FlxG.width;
     var screenH:Int = FlxG.height;
-    compactLayout = DeviceUtil.isMobileBrowser || screenW < 950 || screenH > screenW * 1.12;
+    var portraitLayout:Bool = screenH > screenW * 1.12;
+    compactLayout = DeviceUtil.isMobileBrowser || screenW < 950 || portraitLayout;
 
     if (backgroundSprite == null) buildBackdrop();
+    if (speakerBounceTargets.length == 0) buildSpeakerPlatform();
+    if (bfSprite == null) buildBoyfriend(false);
 
-    var margin:Float = compactLayout ? Math.max(20, screenW * 0.035) : screenW * 0.042;
+    var margin:Float = portraitLayout ? Math.max(16, screenW * 0.035) : Math.max(24, screenW * 0.035);
     buildTopBar(margin);
 
-    var frameX:Float = compactLayout ? margin * 0.72 : screenW * 0.042;
-    var frameY:Float = compactLayout ? screenH * 0.125 : screenH * 0.16;
-    var frameW:Float = screenW - frameX * 2;
-    var frameH:Float = screenH - frameY - (compactLayout ? screenH * 0.03 : screenH * 0.053);
-    addPanel(frameX, frameY, frameW, frameH, 0xFF537FFF);
+    var frameX:Float = margin;
+    var frameY:Float = screenH * (portraitLayout ? 0.205 : 0.19);
+    var frameW:Float = portraitLayout ? screenW - margin * 2 : screenW * (compactLayout ? 0.54 : 0.47);
+    var frameH:Float = screenH * (portraitLayout ? 0.43 : 0.67);
+    if (DeviceUtil.isMobileBrowser && !portraitLayout)
+    {
+      frameY = screenH * 0.16;
+      frameH = screenH * 0.70;
+      frameW = screenW * 0.53;
+    }
 
-    var navX:Float = frameX + (compactLayout ? 18 : 38);
-    var navW:Float = frameW - (compactLayout ? 36 : 76);
-    addLabel(navX, frameY + (compactLayout ? 17 : 24), navW,
-      'NOVABEAT ENGINE', compactLayout ? 11 : 13, 0xFF48E7FF, FlxTextAlign.LEFT, 'Arial');
-    addLabel(navX, frameY + (compactLayout ? 36 : 48), navW,
-      'MAIN MENU', compactLayout ? 23 : 32, 0xFFF4F7FF, FlxTextAlign.LEFT, 'Arial Black');
+    addPanel(frameX, frameY, frameW, frameH, 0xFFB75CFF);
+    var navX:Float = frameX + (portraitLayout ? 12 : 28);
+    var navW:Float = frameW - (portraitLayout ? 24 : 56);
 
-    var listTop:Float = frameY + (compactLayout ? 83 : 106);
-    var listBottom:Float = frameY + frameH - (compactLayout ? 42 : 48);
+    addLabel(navX + 4, frameY + 16, navW - 8, 'SELECT A MODE', compactLayout ? 20 : 27,
+      0xFFFFFFFF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'));
+
+    var listTop:Float = frameY + (portraitLayout ? 58 : 72);
+    var listBottom:Float = frameY + frameH - (portraitLayout ? 20 : 28);
     buildMenuList(navX, listTop, navW, listBottom - listTop, true);
 
     var hint:String = DeviceUtil.isMobileBrowser
-      ? 'DRAG OR SWIPE TO BROWSE   •   TAP AN OPTION TO OPEN'
-      : 'UP / DOWN   NAVIGATE       ENTER   SELECT       SCROLL   BROWSE';
-    addLabel(frameX + 28, screenH - 27, frameW - 56, hint, compactLayout ? 8 : 10,
-      0xFF8297C2, FlxTextAlign.LEFT, 'Arial');
+      ? 'TAP AN OPTION TO OPEN'
+      : 'UP / DOWN  SELECT     ENTER  CONFIRM     ESC  BACK';
+    addLabel(frameX + 16, screenH - 28, Math.max(1, frameW - 32), hint, compactLayout ? 9 : 11,
+      0xFFE0C9FF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'));
+
+    if (!portraitLayout)
+      addLabel(screenW * 0.62, screenH * 0.12, screenW * 0.32, 'THE STAGE IS YOURS',
+        compactLayout ? 15 : 19, 0xFFE2BDFF, FlxTextAlign.CENTER, Paths.font('vcr.ttf'));
   }
 
   function buildTopBar(margin:Float):Void
   {
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var logo:FlxSprite = new FlxSprite(margin, 12).loadGraphic(Paths.image('novabeat/title-logo'));
-    logo.setGraphicSize(0, Std.int((portraitLayout ? 54 : 78) * interfaceScale()));
+    var logo:FlxSprite = titleLogo;
+    if (logo == null)
+    {
+      logo = new FlxSprite().loadGraphic(Paths.image('novabeat/title-logo'));
+      logo.scrollFactor.set();
+      logo.cameras = [uiCamera];
+      logo.color = 0xFFF1D9FF;
+      titleLogo = logo;
+      add(logo);
+    }
+
+    logo.setGraphicSize(0, Std.int((portraitLayout ? 48 : 76) * interfaceScale()));
     logo.updateHitbox();
-    logo.scrollFactor.set();
-    logo.cameras = [uiCamera];
-    add(logo);
+    logo.setPosition(margin, 10);
 
+    var buttonSize:Float = portraitLayout ? 38 : 46;
     var buttonY:Float = 18;
-    var buttonSize:Float = portraitLayout ? 40 : 48;
-    var buttonGap:Float = 10;
-    var audioX:Float = FlxG.width - margin - buttonSize * 2 - buttonGap;
-    var optionsX:Float = FlxG.width - margin - buttonSize;
-    homeAudioButton = addLabel(audioX, buttonY, buttonSize, '♫', buttonSize > 44 ? 25 : 21, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
-    homeOptionsButton = addLabel(optionsX, buttonY, buttonSize, '⚙', buttonSize > 44 ? 25 : 21, 0xFFDCE8FF, FlxTextAlign.CENTER, 'Arial');
-
-    addRoundRect(audioX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
-    addRoundRect(optionsX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xB806102D);
-    // The icons have matching full-size invisible hit areas; the text glyph
-    // itself is too short to be a comfortable mobile target.
+    var audioX:Float = FlxG.width - margin - buttonSize;
+    homeAudioButton = addLabel(audioX, buttonY, buttonSize, menuAudioMuted ? '♪' : '♫',
+      buttonSize > 42 ? 25 : 21, 0xFFF0D7FF, FlxTextAlign.CENTER, 'Arial');
+    addRoundRect(audioX, buttonY - 3, buttonSize, buttonSize, 13, 13, 0xD20A0719);
     homeAudioHitbox = addSolid(audioX, buttonY - 3, buttonSize, buttonSize, 0x00000000);
-    homeOptionsHitbox = addSolid(optionsX, buttonY - 3, buttonSize, buttonSize, 0x00000000);
-    // Draw the glyphs after their button plates so they stay on top.
+    homeOptionsButton = null;
+    homeOptionsHitbox = null;
     bringToFront(homeAudioButton);
-    bringToFront(homeOptionsButton);
-    homeAudioButton.text = menuAudioMuted ? '♪' : '♫';
   }
 
   function bringToFront(sprite:FlxSprite):Void
@@ -387,21 +441,20 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function buildMenuList(x:Float, y:Float, width:Float, height:Float, tileLayout:Bool):Void
   {
-    // NovaBeat uses one continuous, full-width vertical list on every screen.
-    // The dedicated camera clips the cards to the frame and scrolls smoothly.
-    visibleItemIndexes = [0, 1, 2, 3, 4];
+    visibleItemIndexes = [0, 1, 2, 3];
 
     var mobileLandscape:Bool = DeviceUtil.isMobileBrowser && FlxG.height <= FlxG.width * 1.12;
     var portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    var gap:Float = mobileLandscape ? 10 : (compactLayout ? 13 : 16);
+    var gap:Float = portraitLayout ? 8 : (mobileLandscape ? 8 : (compactLayout ? 10 : 13));
     var buttonW:Float = Math.max(1, width - gap * 2);
     var buttonH:Float;
+
     if (mobileLandscape)
-      buttonH = Math.max(58, Math.min(82, height * 0.36));
+      buttonH = Math.max(48, Math.min(62, (height - gap * 3) / 4));
     else if (portraitLayout)
-      buttonH = Math.max(90, Math.min(126, height * 0.21));
+      buttonH = Math.max(58, Math.min(82, (height - gap * 3) / 4));
     else
-      buttonH = Math.max(96, Math.min(128, height * 0.25));
+      buttonH = Math.max(78, Math.min(104, (height - gap * 3) / 4));
 
     menuScrollViewportTop = y;
     menuScrollCamera = new FlxCamera(0, Std.int(y), Std.int(FlxG.width), Std.int(Math.max(1, height)));
@@ -414,15 +467,12 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     menuItems = new TextMenuList(NavControls.Vertical);
     menuItems.cameras = [menuScrollCamera];
-    // Mobile taps are handled by screen-space card hitboxes below. Using the
-    // scrolling camera for pointer hit tests caused a horizontal offset on
-    // some browser viewports while the cards themselves rendered correctly.
     menuItems.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
-    var iconPlateSize:Float = Math.min(buttonH - 18, mobileLandscape ? 52 : (portraitLayout ? 82 : 88));
-    var iconFontSize:Int = mobileLandscape ? 23 : (portraitLayout ? 38 : 40);
-    var labelFontSize:Int = mobileLandscape ? 17 : (portraitLayout ? 24 : 27);
+    var iconPlateSize:Float = Math.min(buttonH - 12, portraitLayout ? 58 : (mobileLandscape ? 46 : 72));
+    var iconFontSize:Int = mobileLandscape ? 22 : (portraitLayout ? 29 : 34);
+    var labelFontSize:Int = mobileLandscape ? 16 : (portraitLayout ? 19 : 24);
 
     for (index in 0...visibleItemIndexes.length)
     {
@@ -430,26 +480,30 @@ class NovaBeatMainMenuState extends MusicBeatState
       var itemX:Float = x + gap;
       var itemY:Float = index * menuScrollStep;
 
-      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 16, 16, 0xFF0D1935, menuScrollCamera);
-      panel.alpha = 0.94;
+      var border:FlxSprite = addRoundRect(itemX - 3, itemY - 3, buttonW + 6, buttonH + 6,
+        19, 19, 0xFFB968FF, menuScrollCamera);
+      border.alpha = 0.16;
+      rowBorders.push(border);
+
+      var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 16, 16,
+        0xFF100B1C, menuScrollCamera);
+      panel.alpha = 0.96;
       rowBackgrounds.push(panel);
 
-      // A non-rendering hitbox is positioned in full-screen UI coordinates
-      // each frame, matching the visible portion of this card after scrolling.
       var tapTarget:FlxObject = new FlxObject(itemX, y + itemY, buttonW, buttonH);
       tapTarget.active = false;
       add(tapTarget);
       rowTapTargets.push(tapTarget);
 
-      var accent:FlxSprite = addRoundRect(itemX + 2, itemY + 13, 5, buttonH - 26, 3, 3, accentColor(), menuScrollCamera);
-      accent.alpha = 0.46;
+      var accent:FlxSprite = addRoundRect(itemX + 2, itemY + 12, 5, buttonH - 24,
+        3, 3, 0xFFCE74FF, menuScrollCamera);
+      accent.alpha = 0.58;
       rowAccents.push(accent);
 
       var item:TextMenuItem = menuItems.createItem(itemX, itemY, ITEM_NAMES[menuIndex], AtlasFont.BOLD, makeCallback(menuIndex));
       item.cameras = [menuScrollCamera];
-      var hitboxPadding:Float = DeviceUtil.isMobileBrowser ? 5 : 0;
-      item.makeGraphic(Std.int(buttonW + hitboxPadding * 2), Std.int(buttonH + hitboxPadding * 2), FlxColor.TRANSPARENT);
-      item.setPosition(itemX - hitboxPadding, itemY - hitboxPadding);
+      item.makeGraphic(Std.int(buttonW), Std.int(buttonH), FlxColor.TRANSPARENT);
+      item.setPosition(itemX, itemY);
       item.origin.set(0, 0);
       item.offset.set(0, 0);
       item.updateHitbox();
@@ -457,28 +511,28 @@ class NovaBeatMainMenuState extends MusicBeatState
       item.atlasText.alpha = 0;
       item.atlasText.visible = false;
 
-      var iconX:Float = itemX + 18;
+      var iconX:Float = itemX + 15;
       var iconY:Float = itemY + (buttonH - iconPlateSize) * 0.5;
       var iconPlate:FlxSprite = addRoundRect(iconX, iconY, iconPlateSize, iconPlateSize,
-        10, 10, 0xFF142B49, menuScrollCamera);
+        12, 12, 0xFF241333, menuScrollCamera);
       iconPlate.alpha = 0.98;
       rowIconPlates.push(iconPlate);
 
-      var icon:FlxText = addLabel(iconX, iconY + 1, iconPlateSize, ITEM_ICONS[menuIndex],
-        iconFontSize, 0xFF8AA1D0, FlxTextAlign.CENTER, 'Arial', menuScrollCamera);
+      var icon:FlxText = addLabel(iconX, iconY, iconPlateSize, ITEM_ICONS[menuIndex],
+        iconFontSize, 0xFFCF8AFF, FlxTextAlign.CENTER, 'Arial', menuScrollCamera);
       icon.autoSize = false;
       icon.fieldWidth = iconPlateSize;
-      icon.height = iconPlateSize - 2;
+      icon.height = iconPlateSize;
       icon.scrollFactor.set();
       rowIcons.push(icon);
 
-      var labelX:Float = iconX + iconPlateSize + 22;
-      var labelWidth:Float = buttonW - (labelX - itemX) - 24;
-      var title:String = ITEM_TITLES[menuIndex].split('\n').join(' ');
-      var titleHeight:Float = Math.min(buttonH - 16, labelFontSize + 14);
+      var labelX:Float = iconX + iconPlateSize + 18;
+      var labelWidth:Float = buttonW - (labelX - itemX) - 18;
+      var title:String = ITEM_TITLES[menuIndex];
+      var titleHeight:Float = Math.min(buttonH - 8, labelFontSize + 18);
       var titleY:Float = itemY + (buttonH - titleHeight) * 0.5;
       var label:FlxText = addLabel(labelX, titleY, labelWidth, title,
-        labelFontSize, 0xFFDBE4FA, FlxTextAlign.LEFT, 'Arial Black', menuScrollCamera);
+        labelFontSize, 0xFFF1E8FF, FlxTextAlign.LEFT, Paths.font('vcr.ttf'), menuScrollCamera);
       label.autoSize = false;
       label.wordWrap = false;
       label.fieldWidth = labelWidth;
@@ -488,16 +542,28 @@ class NovaBeatMainMenuState extends MusicBeatState
 
       if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
       {
+        var startX:Float = itemX - 34;
+        border.x = startX - 3;
+        panel.x = startX;
+        accent.x = startX + 2;
+        iconPlate.x = startX + 15;
+        icon.x = startX + 15;
+        label.x = labelX - 34;
+
+        border.alpha = 0;
         panel.alpha = 0;
         accent.alpha = 0;
         iconPlate.alpha = 0;
         icon.alpha = 0;
         label.alpha = 0;
-        FlxTween.tween(panel, {alpha: 0.94}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(accent, {alpha: 0.46}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(iconPlate, {alpha: 0.98}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(icon, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
-        FlxTween.tween(label, {alpha: 1}, 0.28, {ease: FlxEase.quadOut, startDelay: index * 0.045});
+
+        var delay:Float = index * 0.075;
+        FlxTween.tween(border, {x: itemX - 3, alpha: 0.16}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(panel, {x: itemX, alpha: 0.96}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(accent, {x: itemX + 2, alpha: 0.58}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(iconPlate, {x: iconX, alpha: 0.98}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(icon, {x: iconX, alpha: 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(label, {x: labelX, alpha: 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
       }
     }
 
@@ -540,38 +606,35 @@ class NovaBeatMainMenuState extends MusicBeatState
     for (i in 0...visibleItemIndexes.length)
     {
       var selected:Bool = i == index;
+      if (i < rowBorders.length)
+      {
+        rowBorders[i].alpha = selected ? 0.96 : 0.12;
+        rowBorders[i].color = selected ? 0xFFE38CFF : 0xFF8C4CC7;
+      }
       if (i < rowBackgrounds.length)
       {
-        rowBackgrounds[i].color = selected
-          ? (Save.instance.options.menuReduceFlashing ? 0xFF10283D : 0xFF12375A)
-          : 0xFF0D1935;
-        rowBackgrounds[i].alpha = selected ? 1 : 0.84;
+        rowBackgrounds[i].color = selected ? 0xFF25133A : 0xFF100B1C;
+        rowBackgrounds[i].alpha = selected ? 1.0 : 0.88;
       }
       if (i < rowIconPlates.length)
       {
-        rowIconPlates[i].color = selected ? 0xFF1A4261 : 0xFF142B49;
-        rowIconPlates[i].alpha = selected ? 1.0 : 0.88;
+        rowIconPlates[i].color = selected ? 0xFF3B1B58 : 0xFF241333;
+        rowIconPlates[i].alpha = selected ? 1.0 : 0.90;
       }
       if (i < rowAccents.length)
       {
-        rowAccents[i].color = selected ? accentColor() : 0xFF267CFF;
-        rowAccents[i].alpha = selected ? (Save.instance.options.menuReduceFlashing ? 0.58 : 1) : 0.34;
+        rowAccents[i].color = selected ? 0xFFE077FF : 0xFF9B54D0;
+        rowAccents[i].alpha = selected ? 1.0 : 0.42;
       }
       if (i < rowLabels.length)
-      {
-        rowLabels[i].color = selected ? 0xFFFFFFFF : 0xFFB9C8E3;
-      }
+        rowLabels[i].color = selected ? 0xFFFFFFFF : 0xFFD5C4E8;
       if (i < rowIcons.length)
-      {
-        rowIcons[i].color = selected ? accentColor() : 0xFF8297C2;
-      }
+        rowIcons[i].color = selected ? 0xFFFFA4FF : 0xFFB783D9;
     }
 
     var selectedMenuIndex:Int = visibleItemIndexes[index];
     if (featureTitle != null) featureTitle.text = ITEM_NAMES[selectedMenuIndex];
     scrollMenuSelectionIntoView(index);
-
-    // MenuTypedList owns navigation sounds for keyboard, controller, and mouse.
   }
 
   function scrollMenuSelectionIntoView(index:Int):Void
@@ -807,19 +870,15 @@ class NovaBeatMainMenuState extends MusicBeatState
         case 0:
           FlxG.switchState(() -> new StoryMenuState());
         case 1:
-          // Keep one Freeplay slot. When a Psych experience is active, its
-          // imported songs replace the normal song list in this same screen.
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,
             psychOnly: ExperienceManager.hasActivePsychSongs()
           }));
           persistentUpdate = false;
         case 2:
-          FlxG.switchState(() -> new NovaBeatModsMenuState());
-        case 3:
           openOptions();
-        case 4:
-          FlxG.switchState(() -> new CreditsState());
+        case 3:
+          FlxG.switchState(() -> new NovaBeatModsMenuState());
         default:
       }
     };
@@ -920,7 +979,15 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var scaledSize:Int = Std.int(Math.max(8, size * interfaceScale() * (Save.instance.options.menuLargeText ? 1.12 : 1.0)));
     var label:FlxText = new FlxText(x, y, width, value, scaledSize);
-    label.setFormat(fontName, scaledSize, color, alignment, null, FlxColor.TRANSPARENT, false);
+    if (fontName == Paths.font('vcr.ttf'))
+    {
+      label.setFormat(fontName, scaledSize, color, alignment, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, true);
+      label.borderSize = Math.max(2, scaledSize * 0.08);
+    }
+    else
+    {
+      label.setFormat(fontName, scaledSize, color, alignment, null, FlxColor.TRANSPARENT, false);
+    }
     label.scrollFactor.set();
     label.cameras = [camera == null ? uiCamera : camera];
     add(label);
