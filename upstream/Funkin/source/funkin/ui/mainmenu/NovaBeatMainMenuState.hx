@@ -605,9 +605,9 @@ class NovaBeatMainMenuState extends MusicBeatState
     if (menuItems != null && !menuItems.busy)
     {
       if (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedUp)
-        menuItems.selectItem(Math.min(menuItems.length - 1, menuItems.selectedIndex + 1));
+        menuItems.selectItem(Std.int(Math.min(menuItems.length - 1, menuItems.selectedIndex + 1)));
       else if (DeviceUtil.isMobileBrowser && SwipeUtil.justSwipedDown)
-        menuItems.selectItem(Math.max(0, menuItems.selectedIndex - 1));
+        menuItems.selectItem(Std.int(Math.max(0, menuItems.selectedIndex - 1)));
       var wheelAmount:Int = Math.round(FlxG.mouse.deltaWheel.y);
       if (wheelAmount != 0)
       {

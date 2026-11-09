@@ -484,7 +484,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       add(descriptionBg);
       cardDescriptionBackgrounds.push(descriptionBg);
 
-      var iconTextValue:String = isBaseGame ? 'FNF' : mod.title.substr(0, Math.min(3, mod.title.length)).toUpperCase();
+      var iconTextValue:String = isBaseGame ? 'FNF' : mod.title.substr(0, Std.int(Math.min(3, mod.title.length))).toUpperCase();
       var iconText:FlxText = new FlxText(iconX + 2, iconY + 2, iconSize - 4, iconTextValue, 26);
       iconText.setFormat(Paths.font('vcr.ttf'), Std.int(Math.max(14, Math.min(30, iconSize * 0.22))),
         0xFFFFFFFF, FlxTextAlign.CENTER);
