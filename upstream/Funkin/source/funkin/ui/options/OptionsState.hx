@@ -587,7 +587,9 @@ class OptionsMenu extends Page<OptionsMenuPageName>
       var index:Int = items.length;
       var y:Float = novaBeatListY + index * novaBeatRowHeight;
       var item:TextMenuItem = items.createItem(novaBeatListX + 8, y + 3, name, BOLD, callback);
-      item.fireInstantly = fireInstantly;
+      // NovaBeat draws each row label separately from this transparent
+      // TextMenuItem hit target. Avoid a delayed invisible flicker on confirm.
+      item.fireInstantly = fireInstantly || novaBeatLayout;
       item.makeGraphic(Std.int(novaBeatListWidth - 16), Std.int(novaBeatRowHeight - 6), FlxColor.TRANSPARENT);
       item.updateHitbox();
       item.atlasText.visible = false;
