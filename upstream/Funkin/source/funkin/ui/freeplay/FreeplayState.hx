@@ -2209,8 +2209,7 @@ class FreeplayState extends MusicBeatSubState
 
     var browserPointerActive:Bool = false;
     #if web
-    browserPointerActive = Preferences.menuStyle == "NovaBeat"
-      && DeviceUtil.isMobileBrowser && TouchUtil.browserPointerBridgeAvailable();
+    browserPointerActive = DeviceUtil.isMobileBrowser && TouchUtil.browserPointerBridgeAvailable();
     if (browserPointerActive)
     {
       // HaxeFlixel may no longer expose the FlxTouch by the time the game
@@ -2223,7 +2222,11 @@ class FreeplayState extends MusicBeatSubState
       {
         var pointerDpiScale:Float = FlxG.stage.window.display.dpi / 160;
         pointerDpiScale = pointerDpiScale.clamp(0.5, 2);
-        final moveLength:Float = pointerDelta / pointerDpiScale / Math.max(128, FlxG.height * 0.30);
+        // Preserve stock FNF's 60 FPS-normalized song-list speed. NovaBeat
+        // keeps its separate one-row-per-drag scaling.
+        final moveLength:Float = Preferences.menuStyle == "NovaBeat"
+          ? pointerDelta / pointerDpiScale / Math.max(128, FlxG.height * 0.30)
+          : pointerDelta / 60.0 / pointerDpiScale;
         _moveLength += Math.abs(moveLength);
         curSelectedFloat -= moveLength;
         updateSongsScroll();

@@ -53,6 +53,8 @@ class StoryMenuState extends MusicBeatState
   var selectedLevel:Bool = false;
   var novaBeatBrowserDragActive:Bool = false;
   var novaBeatBrowserDragAccumulator:Float = 0;
+  var fnfBrowserDragActive:Bool = false;
+  var fnfBrowserDragAccumulator:Float = 0;
   //
   // RENDER OBJECTS
   //
@@ -584,6 +586,67 @@ class StoryMenuState extends MusicBeatState
     #end
   }
 
+  /**
+   * FNF mobile Story Mode uses the same continuous row-by-row drag model as
+   * its Options list. A drag must begin on a visible week title so taps and
+   * the difficulty arrows keep their normal behavior.
+   */
+  function handleFNFBrowserLevelDrag():Bool
+  {
+    #if web
+    if (Preferences.menuStyle == "NovaBeat" || !DeviceUtil.isMobileBrowser || selectedLevel || exitingMenu
+      || !TouchUtil.browserPointerBridgeAvailable())
+    {
+      fnfBrowserDragActive = false;
+      fnfBrowserDragAccumulator = 0;
+      return false;
+    }
+
+    if (!fnfBrowserDragActive)
+    {
+      for (item in levelTitles.members)
+      {
+        if (TouchUtil.browserPointerPressedOn(item, item.camera))
+        {
+          fnfBrowserDragActive = true;
+          fnfBrowserDragAccumulator = 0;
+          break;
+        }
+      }
+    }
+
+    if (!fnfBrowserDragActive) return false;
+
+    final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
+    if (Math.isFinite(deltaY))
+    {
+      fnfBrowserDragAccumulator += deltaY;
+      final rowHeight:Float = currentLevelTitle == null ? 48 : currentLevelTitle.height;
+      final step:Float = Math.max(30, rowHeight * 0.55);
+
+      while (fnfBrowserDragAccumulator >= step)
+      {
+        changeLevel(1);
+        fnfBrowserDragAccumulator -= step;
+      }
+      while (fnfBrowserDragAccumulator <= -step)
+      {
+        changeLevel(-1);
+        fnfBrowserDragAccumulator += step;
+      }
+    }
+
+    if (TouchUtil.browserPointerIsDown()) return true;
+
+    final wasDrag:Bool = TouchUtil.browserPointerHasDragged();
+    fnfBrowserDragActive = false;
+    fnfBrowserDragAccumulator = 0;
+    return wasDrag;
+    #else
+    return false;
+    #end
+  }
+
   function handleKeyPresses():Void
   {
     @:privateAccess
@@ -594,6 +657,7 @@ class StoryMenuState extends MusicBeatState
       // While a week-list drag is active, do not also interpret its release
       // as a one-shot swipe or a tap on a week title.
       if (handleNovaBeatBrowserLevelDrag()) return;
+      if (handleFNFBrowserLevelDrag()) return;
       if (!selectedLevel)
       {
         // A completed finger swipe should move the week carousel opposite to

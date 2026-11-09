@@ -14,6 +14,7 @@ import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxObject;
+import flixel.FlxSprite;
 #if FLX_TOUCH
 import flixel.input.touch.FlxTouch;
 #end
@@ -230,16 +231,50 @@ class TouchUtil
    * Consume one completed, stationary browser pointer tap. The release stays
    * pending until a menu hitbox matches, so each visible menu can test its rows.
    */
-  public static function consumeBrowserPointerTap(?object:FlxBasic, ?camera:FlxCamera):Bool
+  public static function consumeBrowserPointerTap(?object:FlxBasic, ?camera:FlxCamera, alignToSpriteCenter:Bool = false,
+      padding:Float = 0):Bool
   {
     ensureBrowserPointerBridge();
     if (!browserPointerAvailable || browserPointerReleaseSerial == browserPointerConsumedSerial || !browserPointerReleaseIsTap) return false;
 
     // The regular FlxMouse update can overwrite externally supplied pointer
-    // coordinates before the state update runs. Reapply the captured release
+    // coordinates before the game update runs. Reapply the captured release
     // position immediately before checking the menu hitbox.
     if (!updateBrowserPointerPosition(browserPointerClientX, browserPointerClientY)) return false;
-    if (object != null && !FlxG.mouse.overlaps(object, camera)) return false;
+
+    if (object != null)
+    {
+      var overlaps:Bool = false;
+      if (alignToSpriteCenter && Std.isOfType(object, FlxSprite))
+      {
+        // FNF's atlas menu sprites are drawn around their x/y center, while the
+        // FlxObject hitbox starts at x/y. Align the touch area to the graphic
+        // and add padding without changing the rendered sprite.
+        final sprite:FlxSprite = cast object;
+        final originalX:Float = sprite.x;
+        final originalY:Float = sprite.y;
+        final originalWidth:Float = sprite.width;
+        final originalHeight:Float = sprite.height;
+        final hitPadding:Float = Math.max(0, padding);
+
+        sprite.x -= (originalWidth * 0.5) + hitPadding;
+        sprite.y -= (originalHeight * 0.5) + hitPadding;
+        sprite.width = originalWidth + hitPadding * 2;
+        sprite.height = originalHeight + hitPadding * 2;
+        overlaps = FlxG.mouse.overlaps(sprite, camera);
+
+        sprite.x = originalX;
+        sprite.y = originalY;
+        sprite.width = originalWidth;
+        sprite.height = originalHeight;
+      }
+      else
+      {
+        overlaps = FlxG.mouse.overlaps(object, camera);
+      }
+
+      if (!overlaps) return false;
+    }
 
     browserPointerConsumedSerial = browserPointerReleaseSerial;
     browserPointerStartConsumedSerial = browserPointerStartSerial;
