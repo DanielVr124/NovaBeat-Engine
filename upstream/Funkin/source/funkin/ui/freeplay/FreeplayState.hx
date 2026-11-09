@@ -2192,6 +2192,9 @@ class FreeplayState extends MusicBeatSubState
     {
       if (capsule == null || !capsule.exists || !capsule.visible) continue;
       if (capsule.capsule == null || !capsule.capsule.visible) continue;
+      #if web
+      if (TouchUtil.browserPointerIsDown() && TouchUtil.browserPointerPressedOn(capsule.theActualHitbox, funnyCam)) return true;
+      #end
       if (menuTouchOverlaps(capsule.theActualHitbox, funnyCam)) return true;
     }
     return false;
@@ -2204,7 +2207,41 @@ class FreeplayState extends MusicBeatSubState
     // A drag that ends over that card must still reach the scroll cleanup below.
     if (_moveLength <= 0 && menuTouchPressAction(currentCapsule.theActualHitbox, funnyCam)) return;
 
-    if (menuTouchJustPressed())
+    var browserPointerActive:Bool = false;
+    #if web
+    browserPointerActive = Preferences.menuStyle == "NovaBeat"
+      && DeviceUtil.isMobileBrowser && TouchUtil.browserPointerBridgeAvailable();
+    if (browserPointerActive)
+    {
+      // HaxeFlixel may no longer expose the FlxTouch by the time the game
+      // update runs. Start the drag from the captured browser pointer origin.
+      if (TouchUtil.browserPointerIsDown() && !_pressedOnCapsule)
+        _pressedOnCapsule = TouchUtil.browserPointerPressedOn(capsuleHitbox, funnyCam) || touchOverSongCapsule();
+
+      final pointerDelta:Float = TouchUtil.consumeBrowserPointerDeltaY();
+      if (_pressedOnCapsule && Math.isFinite(pointerDelta) && Math.abs(pointerDelta) >= 2)
+      {
+        var pointerDpiScale:Float = FlxG.stage.window.display.dpi / 160;
+        pointerDpiScale = pointerDpiScale.clamp(0.5, 2);
+        final moveLength:Float = pointerDelta / pointerDpiScale / Math.max(128, FlxG.height * 0.30);
+        _moveLength += Math.abs(moveLength);
+        curSelectedFloat -= moveLength;
+        updateSongsScroll();
+      }
+
+      if (!TouchUtil.browserPointerIsDown())
+      {
+        if (_moveLength > 0)
+        {
+          _moveLength = 0.0;
+          changeSelection(0);
+        }
+        _pressedOnCapsule = false;
+      }
+    }
+    #end
+
+    if (!browserPointerActive && menuTouchJustPressed())
     {
       // The old fixed capsuleHitbox can miss the real song cards on narrow or
       // portrait mobile layouts. Start a drag from visible card hitboxes too,
@@ -2217,7 +2254,7 @@ class FreeplayState extends MusicBeatSubState
     // as a complete song selection.
     final scrollPixelsPerSong:Float = Math.max(128, FlxG.height * 0.30);
     #if web
-    if (DeviceUtil.isMobileBrowser)
+    if (DeviceUtil.isMobileBrowser && !browserPointerActive)
     {
       final pointer = menuPointer();
       if (pointer != null && pointer.pressed && _pressedOnCapsule)
