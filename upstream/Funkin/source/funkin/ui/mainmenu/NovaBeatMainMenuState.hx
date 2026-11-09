@@ -162,8 +162,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     var selectedIndex:Int = menuItems == null ? 0 : menuItems.selectedIndex;
     if (menuScrollCamera != null)
     {
+      // CameraFrontEnd.remove destroys the camera by default.
       FlxG.cameras.remove(menuScrollCamera);
-      menuScrollCamera.destroy();
       menuScrollCamera = null;
     }
     for (child in interfaceLayer.members.copy())
