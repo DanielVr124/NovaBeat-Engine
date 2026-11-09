@@ -591,9 +591,9 @@ class NovaBeatMainMenuState extends MusicBeatState
         FlxTween.tween(border, {x: itemX - 3, alpha: 0.16}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
         FlxTween.tween(panel, {x: itemX, alpha: 0.96}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
         FlxTween.tween(accent, {x: itemX + 2, alpha: 0.58}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(iconPlate, {x: iconX, alpha: 0.98}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(icon, {x: iconX, alpha: 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
-        FlxTween.tween(label, {x: labelX, alpha: 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(iconPlate, {x: iconX, alpha: menuIndex == 0 ? 0 : 0.98}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(icon, {x: iconX, alpha: menuIndex == 0 ? 0 : 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
+        FlxTween.tween(label, {x: labelX, alpha: menuIndex == 0 ? 0 : 1}, 0.30, {ease: FlxEase.quadOut, startDelay: delay});
       }
     }
 
