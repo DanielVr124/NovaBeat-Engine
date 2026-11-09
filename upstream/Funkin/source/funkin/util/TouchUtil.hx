@@ -260,6 +260,10 @@ class TouchUtil
           sprite.width + hitPadding * 2,
           sprite.height + hitPadding * 2
         );
+        // The stock FNF menu items are centered on their x/y position and
+        // parallax with the menu camera. Match their scroll factor so this
+        // temporary screen hitbox follows the rendered sprite exactly.
+        paddedHitbox.scrollFactor.copyFrom(sprite.scrollFactor);
         overlaps = FlxG.mouse.overlaps(paddedHitbox, camera);
         paddedHitbox.destroy();
       }
