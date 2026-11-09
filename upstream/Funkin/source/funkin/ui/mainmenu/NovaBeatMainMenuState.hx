@@ -101,6 +101,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   var rowAccents:Array<FlxSprite> = [];
   var rowLabels:Array<FlxText> = [];
   var rowIcons:Array<FlxText> = [];
+  // NovaBeat-only artwork atlas for the custom Story Mode menu card.
+  var rowArtwork:Array<FlxSprite> = [];
 
   var equalizerBars:Array<FlxSprite> = [];
 
@@ -197,6 +199,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     rowAccents = [];
     rowLabels = [];
     rowIcons = [];
+    rowArtwork = [];
     equalizerBars = [];
     featureTitle = null;
     menuScrollCardHeight = 0;
@@ -540,6 +543,33 @@ class NovaBeatMainMenuState extends MusicBeatState
       label.scrollFactor.set();
       rowLabels.push(label);
 
+      // The first NovaBeat menu entry uses the user-provided Sparrow atlas.
+      // Keep the existing card panel as a fallback/backplate, but hide the
+      // generic icon and label so the custom artwork is the visible control.
+      if (menuIndex == 0)
+      {
+        iconPlate.alpha = 0;
+        icon.alpha = 0;
+        label.alpha = 0;
+
+        var storyArtwork:FlxSprite = new FlxSprite();
+        storyArtwork.frames = Paths.getSparrowAtlas('story_mode_sheet');
+        storyArtwork.animation.addByPrefix('idle', 'story mode idle', 24, true);
+        storyArtwork.animation.addByPrefix('selected', 'story mode selected', 24, true);
+        storyArtwork.animation.addByPrefix('click', 'story mode click', 24, false);
+        storyArtwork.animation.play('idle', true);
+        var artworkScale:Float = Math.min(buttonW / storyArtwork.width, buttonH / storyArtwork.height);
+        storyArtwork.setGraphicSize(Std.int(storyArtwork.width * artworkScale), Std.int(storyArtwork.height * artworkScale));
+        storyArtwork.updateHitbox();
+        storyArtwork.setPosition(itemX + (buttonW - storyArtwork.width) * 0.5,
+          itemY + (buttonH - storyArtwork.height) * 0.5);
+        storyArtwork.antialiasing = true;
+        storyArtwork.scrollFactor.set();
+        storyArtwork.cameras = [menuScrollCamera];
+        add(storyArtwork);
+        rowArtwork.push(storyArtwork);
+      }
+
       if (Save.instance.options.menuEntryAnimations && !Save.instance.options.menuReduceMotion)
       {
         var startX:Float = itemX - 34;
@@ -630,6 +660,8 @@ class NovaBeatMainMenuState extends MusicBeatState
         rowLabels[i].color = selected ? 0xFFFFFFFF : 0xFFD5C4E8;
       if (i < rowIcons.length)
         rowIcons[i].color = selected ? 0xFFFFA4FF : 0xFFB783D9;
+      if (i == 0 && rowArtwork.length > 0 && rowArtwork[0] != null)
+        rowArtwork[0].animation.play(selected ? 'selected' : 'idle', true);
     }
 
     var selectedMenuIndex:Int = visibleItemIndexes[index];
@@ -868,7 +900,15 @@ class NovaBeatMainMenuState extends MusicBeatState
       switch (index)
       {
         case 0:
-          FlxG.switchState(() -> new StoryMenuState());
+          if (rowArtwork.length > 0 && rowArtwork[0] != null)
+          {
+            rowArtwork[0].animation.play('click', true);
+            FlxTimer.wait(0.18, function() FlxG.switchState(() -> new StoryMenuState()));
+          }
+          else
+          {
+            FlxG.switchState(() -> new StoryMenuState());
+          }
         case 1:
           openSubState(new FreeplayState({
             character: FreeplayState.rememberedCharacterId,
