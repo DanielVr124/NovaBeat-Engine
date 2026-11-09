@@ -574,7 +574,7 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
         if (!rowTapped && DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased)
           rowTapped = FlxG.mouse.overlaps(item, menuCamera);
         #end
-        if (rowTapped && !items.busy)
+        if (rowTapped && !SwipeUtil.justSwipedAny && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();

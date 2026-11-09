@@ -61,12 +61,13 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
    * Why is it needed? Because touch control's a bitch. Thats why. */
   public var currentPage:Null<PageName>;
 
-  // Helper variable
+  // Helper variables
   var _isMainMenuState:Bool = false;
+  var touchScrollAccumulator:Float = 0;
 
-  // Prevent a mobile browser's synthesized mouse-down and mouse-up from
-  // becoming two separate menu activations. Used only by the release-only fallback.
-  var _browserMousePressObserved:Bool = false;
+  // Prevent a release-only pointer event from confirming a tap already
+  // handled on its press frame.
+  var _touchPressObserved:Bool = false;
 
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
@@ -131,9 +132,43 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
 
     var newIndex = 0;
 
+    // A vertical swipe across a long mobile settings list should move
+    // through the rows continuously, not require repeated short flicks.
+    var touchDragUp:Bool = false;
+    var touchDragDown:Bool = false;
+    #if FEATURE_TOUCH_CONTROLS
+    if (DeviceUtil.isMobileBrowser && navControls == Vertical && members.length > 0)
+    {
+      if (TouchUtil.pressed && TouchUtil.touch != null)
+      {
+        final deltaY:Float = TouchUtil.touch.deltaViewY;
+        if (Math.isFinite(deltaY))
+        {
+          touchScrollAccumulator -= deltaY;
+          final rowHeight:Float = selectedItem == null ? 48 : selectedItem.height;
+          final step:Float = Math.max(30, rowHeight * 0.55);
+          if (touchScrollAccumulator >= step)
+          {
+            touchDragDown = true;
+            touchScrollAccumulator -= step;
+          }
+          else if (touchScrollAccumulator <= -step)
+          {
+            touchDragUp = true;
+            touchScrollAccumulator += step;
+          }
+        }
+      }
+      else if (TouchUtil.justReleased)
+      {
+        touchScrollAccumulator = 0;
+      }
+    }
+    #end
+
     // Define unified input handlers
-    final inputUp:Bool = controls.UI_UP_P || (!_isMainMenuState && SwipeUtil.swipeUp);
-    final inputDown:Bool = controls.UI_DOWN_P || (!_isMainMenuState && SwipeUtil.swipeDown);
+    final inputUp:Bool = controls.UI_UP_P || touchDragUp || (!_isMainMenuState && SwipeUtil.swipeUp);
+    final inputDown:Bool = controls.UI_DOWN_P || touchDragDown || (!_isMainMenuState && SwipeUtil.swipeDown);
     final inputLeft:Bool = controls.UI_LEFT_P || (!_isMainMenuState && SwipeUtil.swipeLeft);
     final inputRight:Bool = controls.UI_RIGHT_P || (!_isMainMenuState && SwipeUtil.swipeRight);
 
@@ -154,32 +189,19 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     };
 
     #if FEATURE_TOUCH_CONTROLS
-    // Keep official FNF touch handling as the primary path. On some mobile
-    // HTML5 browsers, finger taps are surfaced only as a synthesized mouse-up;
-    // accept that event only when TouchUtil is actually backed by FlxG.mouse.
-    final browserMouseSource:Bool = DeviceUtil.isMobileBrowser && TouchUtil.touch == FlxG.mouse;
-    final browserMouseJustPressed:Bool = browserMouseSource && FlxG.mouse.justPressed;
-    final browserMouseJustReleased:Bool = browserMouseSource && FlxG.mouse.justReleased;
+    // TouchUtil selects the active finger on native/mobile browsers and
+    // the FlxMouse pointer when a web browser exposes a tap only through
+    // synthesized mouse events. Keep one shared path for both input sources.
+    final touchJustPressed:Bool = TouchUtil.justPressed;
+    final touchJustReleased:Bool = TouchUtil.justReleased;
+    if (touchJustPressed) _touchPressObserved = true;
+    final touchReleaseFallback:Bool = touchJustReleased && !_touchPressObserved;
+    if (touchJustReleased) _touchPressObserved = false;
 
-    if (browserMouseJustPressed) _browserMousePressObserved = true;
-    final browserMouseReleaseFallback:Bool = browserMouseJustReleased && !_browserMousePressObserved;
-    if (browserMouseJustReleased) _browserMousePressObserved = false;
+    final touchActive:Bool = TouchUtil.pressed || touchJustPressed || touchReleaseFallback;
 
-    final browserPointerActive:Bool = browserMouseSource
-      && (FlxG.mouse.pressed || browserMouseJustPressed || browserMouseReleaseFallback);
-    final browserPointerTap:Bool = browserMouseJustPressed || browserMouseReleaseFallback;
-    final touchActive:Bool = TouchUtil.pressed || TouchUtil.justPressed || browserPointerActive;
-    final touchJustPressed:Bool = TouchUtil.justPressed || browserPointerTap;
-
-    // Update touch position using whichever pointer TouchUtil selected.
-    if (TouchUtil.pressed || TouchUtil.justPressed)
-    {
+    if (touchActive && TouchUtil.touch != null)
       touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
-    }
-    else if (browserPointerActive)
-    {
-      touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
-    }
 
     if (funkin.mobile.input.ControlsHandler.usingExternalInputDevice)
     {
@@ -189,7 +211,7 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         selectItem(newIndex);
       }
     }
-    else if (touchActive)
+    else if (touchActive && !ignoreTouchPointerSelection)
     {
       for (i in 0...members.length)
       {
@@ -198,17 +220,16 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         // not guaranteed to be the camera used by a custom menu page.
         final touchCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : item.camera;
 
-        final itemOverlaps:Bool = !_isMainMenuState
-          && (browserMouseSource ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
+        final itemOverlaps:Bool = !_isMainMenuState && TouchUtil.overlaps(item, touchCamera);
         final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
         final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
 
-        if (item.available && isTouchingItem && touchJustPressed)
+        if (item.available && isTouchingItem && (touchJustPressed || touchReleaseFallback))
         {
           var prevIndex:Int = selectedIndex;
 
-          if (!_isMainMenuState && selectedIndex != i)
+          if (!_isMainMenuState && selectedIndex != i && !acceptOnTouchSelection)
           {
             newIndex = i;
             break;

@@ -240,13 +240,17 @@ class TouchUtil
       for (touch in FlxG.touches.list)
       {
         if (touch == null) continue;
-        if (touch.pressed || touch.justPressed || touch.justReleased || touch.justMoved) return touch;
-        if (firstTouch == null) firstTouch = touch;
+
+        // A live finger contact wins over synthesized mouse events. A mere
+        // justMoved flag does not: browsers can leave that marker on an older
+        // touch while the actual tap arrives through FlxMouse.
+        if (touch.pressed || touch.justPressed || touch.justReleased) return touch;
+        if (firstTouch == null && touch.justMoved) firstTouch = touch;
       }
 
       var retainedTouch:Dynamic = FlxG.touches.getFirst();
       if (retainedTouch != null
-        && (retainedTouch.pressed || retainedTouch.justPressed || retainedTouch.justReleased || retainedTouch.justMoved))
+        && (retainedTouch.pressed || retainedTouch.justPressed || retainedTouch.justReleased))
         return retainedTouch;
 
       if (FlxG.mouse.pressed || FlxG.mouse.justPressed || FlxG.mouse.justReleased || FlxG.mouse.justMoved)

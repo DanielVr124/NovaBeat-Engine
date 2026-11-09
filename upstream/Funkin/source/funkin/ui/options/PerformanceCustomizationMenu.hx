@@ -122,7 +122,10 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
     items = new TextMenuList(NavControls.Vertical);
     items.cameras = [FlxG.camera];
-    items.acceptOnTouchSelection = novaBeatLayout;
+    // This layout uses its own release-based row handler below. Keep the
+    // central MenuList from accepting the same touch a second time.
+    items.ignoreTouchPointerSelection = novaBeatLayout;
+    items.acceptOnTouchSelection = false;
     descriptions = [
       'Choose a graphics preset. Custom is selected automatically when you change an individual option.',
       'Display the animated splash effect when notes are hit. Turning this off reduces extra sprite and draw work.',
@@ -518,7 +521,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
       for (index in 0...optionRows.length)
       {
         var item:TextMenuItem = optionRows[index];
-        if (TouchUtil.pressAction(item, null, true) && !items.busy)
+        if (!SwipeUtil.justSwipedAny && TouchUtil.pressAction(item, null, true) && !items.busy)
         {
           if (items.selectedIndex != index) items.selectItem(index);
           items.accept();
