@@ -288,10 +288,10 @@ class NovaBeatMainMenuState extends MusicBeatState
     flash.zIndex = -50;
     whiteFlashOverlay = flash;
 
-    // Use Claude's animated Bumpin atlas in NovaBeat itself (not only the
-    // original FNF title state). Keep the atlas colors un-tinted.
+    // Load the NovaBeat Bumpin atlas from its own namespace. This prevents
+    // the original FNF logo atlas from being replaced or modified.
     var logo:FlxSprite = new FlxSprite();
-    logo.frames = Paths.getSparrowAtlas('logoBumpin');
+    logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
     logo.animation.addByPrefix('idle', 'logo bumpin', 24, true);
     logo.animation.play('idle', true);
     titleLogoDissolveShader = new NovaBeatEdgeDissolveShader();
@@ -310,11 +310,12 @@ class NovaBeatMainMenuState extends MusicBeatState
     titleLogo = logo;
     add(logo);
 
-    // The supplied atlas contains two idle frames and a two-frame pressed state.
+    // Use the requested press-enter atlas. Frame 0000 is the static idle
+    // frame; frames 0001-0003 are played once as the pressed animation.
     var prompt:FlxSprite = new FlxSprite();
-    prompt.frames = Paths.getSparrowAtlas('titleEnter');
-    prompt.animation.addByPrefix('idle', 'ENTER IDLE', 12, true);
-    prompt.animation.addByPrefix('pressed', 'ENTER PRESSED', 24, false);
+    prompt.frames = Paths.getSparrowAtlas('novabeat/press-enter');
+    prompt.animation.addByIndices('idle', 'pressEnter', [0], '', 12, true);
+    prompt.animation.addByIndices('pressed', 'pressEnter', [1, 2, 3], '', 24, false);
     prompt.animation.play('idle', true);
     titlePromptDissolveShader = new NovaBeatEdgeDissolveShader();
     titlePromptDissolveShader.updateFrame(prompt.frame);
