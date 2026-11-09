@@ -64,6 +64,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   // Helper variable
   var _isMainMenuState:Bool = false;
 
+  // Prevent a mobile browser's synthesized mouse-down and mouse-up from
+  // becoming two separate menu activations. Used only by the release-only fallback.
+  var _browserMousePressObserved:Bool = false;
+
   public function new(navControls:NavControls = Vertical, ?wrapMode:WrapMode)
   {
     this.navControls = navControls;
@@ -91,6 +95,10 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   public function addItem(name:String, item:T):T
   {
     if (length == selectedIndex) item.select();
+
+    // A list may render on a dedicated UI camera. Keep the hit target on the
+    // same camera instead of relying on the global camera ordering.
+    if (cameras != null && cameras.length > 0) item.cameras = cameras;
 
     byName[name] = item;
     return add(item);
@@ -146,17 +154,29 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     };
 
     #if FEATURE_TOUCH_CONTROLS
-    // Update touch position
-    // Keep the official FNF TouchUtil path. A small HTML5-only adapter maps
-    // browsers that synthesize mouse events for finger input onto that same
-    // press/selection flow without enabling mouse control on desktop.
-    final browserTouchPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.pressed;
-    final browserTouchJustPressed:Bool = DeviceUtil.isMobileBrowser && FlxG.mouse.justPressed;
-    if (TouchUtil.pressed)
+    // Keep official FNF touch handling as the primary path. On some mobile
+    // HTML5 browsers, finger taps are surfaced only as a synthesized mouse-up;
+    // accept that event only when TouchUtil is actually backed by FlxG.mouse.
+    final browserMouseSource:Bool = DeviceUtil.isMobileBrowser && TouchUtil.touch == FlxG.mouse;
+    final browserMouseJustPressed:Bool = browserMouseSource && FlxG.mouse.justPressed;
+    final browserMouseJustReleased:Bool = browserMouseSource && FlxG.mouse.justReleased;
+
+    if (browserMouseJustPressed) _browserMousePressObserved = true;
+    final browserMouseReleaseFallback:Bool = browserMouseJustReleased && !_browserMousePressObserved;
+    if (browserMouseJustReleased) _browserMousePressObserved = false;
+
+    final browserPointerActive:Bool = browserMouseSource
+      && (FlxG.mouse.pressed || browserMouseJustPressed || browserMouseReleaseFallback);
+    final browserPointerTap:Bool = browserMouseJustPressed || browserMouseReleaseFallback;
+    final touchActive:Bool = TouchUtil.pressed || TouchUtil.justPressed || browserPointerActive;
+    final touchJustPressed:Bool = TouchUtil.justPressed || browserPointerTap;
+
+    // Update touch position using whichever pointer TouchUtil selected.
+    if (TouchUtil.pressed || TouchUtil.justPressed)
     {
       touchBuddy.setPosition(TouchUtil.touch.x, TouchUtil.touch.y);
     }
-    else if (browserTouchPressed || browserTouchJustPressed)
+    else if (browserPointerActive)
     {
       touchBuddy.setPosition(FlxG.mouse.x, FlxG.mouse.y);
     }
@@ -169,19 +189,22 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
         selectItem(newIndex);
       }
     }
-    else if (TouchUtil.pressed || browserTouchPressed)
+    else if (touchActive)
     {
       for (i in 0...members.length)
       {
         final item = members[i];
-        final menuCamera = FlxG.cameras.list[1];
+        // Prefer the list/item's assigned camera; the global [1] camera is
+        // not guaranteed to be the camera used by a custom menu page.
+        final touchCamera = (item.cameras != null && item.cameras.length > 0) ? item.cameras[0] : item.camera;
 
-        final itemOverlaps:Bool = !_isMainMenuState && (browserTouchPressed ? FlxG.mouse.overlaps(item, menuCamera) : TouchUtil.overlaps(item, menuCamera));
+        final itemOverlaps:Bool = !_isMainMenuState
+          && (browserMouseSource ? FlxG.mouse.overlaps(item, touchCamera) : TouchUtil.overlaps(item, touchCamera));
         final itemPixelOverlap:Bool = _isMainMenuState && FlxG.pixelPerfectOverlap(touchBuddy, item, 0);
 
         final isTouchingItem:Bool = itemOverlaps || itemPixelOverlap;
 
-        if (item.available && isTouchingItem && (TouchUtil.justPressed || browserTouchJustPressed))
+        if (item.available && isTouchingItem && touchJustPressed)
         {
           var prevIndex:Int = selectedIndex;
 
