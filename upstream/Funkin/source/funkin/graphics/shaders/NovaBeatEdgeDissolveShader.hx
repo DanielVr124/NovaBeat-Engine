@@ -13,9 +13,9 @@ class NovaBeatEdgeDissolveShader extends FlxShader
 
   function set_progress(value:Float):Float
   {
-    progress = Math.max(0, Math.min(1, value));
-    edgeProgress.value = [progress];
-    return value;
+    var clamped:Float = Math.max(0, Math.min(1, value));
+    edgeProgress.value = [clamped];
+    return clamped;
   }
 
   public function updateFrame(frame:FlxFrame):Void
@@ -67,18 +67,17 @@ class NovaBeatEdgeDissolveShader extends FlxShader
       vec2 uv = clamp((openfl_TextureCoordv - edgeFrameBounds.xy) / frameSize, 0.0, 1.0);
       vec4 color = flixel_texture2D(bitmap, openfl_TextureCoordv);
 
-      // The distance field is zero at all four edges and reaches its maximum
-      // at the center, so the middle is always the final region to disappear.
+      // Zero at all four edges; maximum at the center, which disappears last.
       float edgeDistance = 2.0 * min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
 
-      // Low-frequency noise breaks up the moving boundary. It changes the
-      // shape of the dissolve front, not the direction or overall progression.
+      // Low-frequency noise gives the moving dissolve boundary an organic edge
+      // without changing its overall direction or allowing the center to lead.
       float breakup = (valueNoise(uv * 26.0) - 0.5) * 0.14;
       float feather = 0.035;
       float threshold = mix(-feather, 1.12, edgeProgress) + breakup * smoothstep(0.0, 0.18, edgeProgress);
-      float visibility = 1.0 - smoothstep(threshold, threshold + feather, edgeDistance);
+      float visibility = smoothstep(threshold, threshold + feather, edgeDistance);
 
-      // At completion force every pixel transparent, including the exact center.
+      // Ensure the exact center is also transparent on the final frame.
       visibility *= 1.0 - step(0.9999, edgeProgress);
 
       gl_FragColor = vec4(color.rgb, color.a * visibility);
