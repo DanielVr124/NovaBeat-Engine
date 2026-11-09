@@ -171,6 +171,9 @@ class MenuCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         activate(itemIndex);
       });
+      // The visible row is rendered separately; flickering this transparent
+      // hit target gives no feedback and delays the setting change.
+      item.fireInstantly = true;
       item.makeGraphic(Std.int(listW - 10), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
       item.updateHitbox();
       item.cameras = [FlxG.camera];
