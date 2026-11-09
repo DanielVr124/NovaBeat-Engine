@@ -3,6 +3,7 @@ package funkin.ui.mainmenu;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxG;
+import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
@@ -87,6 +88,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   var menuScrollCardHeight:Float = 0;
   var menuScrollStep:Float = 0;
   var menuScrollViewportHeight:Float = 0;
+  var menuScrollViewportTop:Float = 0;
+  var rowTapTargets:Array<FlxObject> = [];
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -194,6 +197,8 @@ class NovaBeatMainMenuState extends MusicBeatState
     menuScrollCardHeight = 0;
     menuScrollStep = 0;
     menuScrollViewportHeight = 0;
+    menuScrollViewportTop = 0;
+    rowTapTargets = [];
 
     buildBackdrop();
     if (showingTitle)
@@ -398,6 +403,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     else
       buttonH = Math.max(96, Math.min(128, height * 0.25));
 
+    menuScrollViewportTop = y;
     menuScrollCamera = new FlxCamera(0, Std.int(y), Std.int(FlxG.width), Std.int(Math.max(1, height)));
     menuScrollCamera.bgColor = FlxColor.TRANSPARENT;
     menuScrollCamera.scroll.set(0, 0);
@@ -408,6 +414,10 @@ class NovaBeatMainMenuState extends MusicBeatState
 
     menuItems = new TextMenuList(NavControls.Vertical);
     menuItems.cameras = [menuScrollCamera];
+    // Mobile taps are handled by screen-space card hitboxes below. Using the
+    // scrolling camera for pointer hit tests caused a horizontal offset on
+    // some browser viewports while the cards themselves rendered correctly.
+    menuItems.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     menuItems.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
 
     var iconPlateSize:Float = Math.min(buttonH - 18, mobileLandscape ? 52 : (portraitLayout ? 82 : 88));
@@ -423,6 +433,13 @@ class NovaBeatMainMenuState extends MusicBeatState
       var panel:FlxSprite = addRoundRect(itemX, itemY, buttonW, buttonH, 16, 16, 0xFF0D1935, menuScrollCamera);
       panel.alpha = 0.94;
       rowBackgrounds.push(panel);
+
+      // A non-rendering hitbox is positioned in full-screen UI coordinates
+      // each frame, matching the visible portion of this card after scrolling.
+      var tapTarget:FlxObject = new FlxObject(itemX, y + itemY, buttonW, buttonH);
+      tapTarget.active = false;
+      add(tapTarget);
+      rowTapTargets.push(tapTarget);
 
       var accent:FlxSprite = addRoundRect(itemX + 2, itemY + 13, 5, buttonH - 26, 3, 3, accentColor(), menuScrollCamera);
       accent.alpha = 0.46;
@@ -490,6 +507,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     });
 
     add(menuItems);
+    syncMenuTapTargets();
     updateSelection(0);
   }
 
@@ -574,9 +592,63 @@ class NovaBeatMainMenuState extends MusicBeatState
     FlxTween.tween(menuScrollCamera.scroll, {y: target}, 0.24, {ease: FlxEase.quadOut});
   }
 
+  function syncMenuTapTargets():Void
+  {
+    if (menuScrollCamera == null || rowTapTargets.length == 0) return;
+
+    final viewportTop:Float = menuScrollViewportTop;
+    final viewportBottom:Float = viewportTop + menuScrollViewportHeight;
+    final scrollY:Float = menuScrollCamera.scroll.y;
+
+    for (index in 0...rowTapTargets.length)
+    {
+      if (index >= rowBackgrounds.length) continue;
+      final card:FlxSprite = rowBackgrounds[index];
+      final target:FlxObject = rowTapTargets[index];
+      final cardScreenTop:Float = viewportTop + card.y - scrollY;
+      final visibleTop:Float = Math.max(viewportTop, cardScreenTop);
+      final visibleBottom:Float = Math.min(viewportBottom, cardScreenTop + card.height);
+      final visibleHeight:Float = visibleBottom - visibleTop;
+
+      target.visible = visibleHeight > 0;
+      if (target.visible)
+      {
+        target.setPosition(card.x, visibleTop);
+        target.setSize(card.width, visibleHeight);
+      }
+    }
+  }
+
+  function handleMobileMenuCardInput():Void
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (!DeviceUtil.isMobileBrowser || menuItems == null || menuItems.busy) return;
+
+    for (index in 0...rowTapTargets.length)
+    {
+      final target:FlxObject = rowTapTargets[index];
+      if (!target.exists || !target.visible) continue;
+
+      var tapped:Bool = TouchUtil.pressAction(target, uiCamera, false);
+      #if web
+      if (!tapped && FlxG.mouse.justReleased)
+        tapped = FlxG.mouse.overlaps(target, uiCamera);
+      #end
+
+      if (!tapped || SwipeUtil.justSwipedAny) continue;
+
+      menuItems.selectItem(index);
+      playSfx('select', 0.45);
+      menuItems.accept();
+      return;
+    }
+    #end
+  }
+
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+    syncMenuTapTargets();
 
     if (FlxG.mouse.visible) Cursor.hide();
 
@@ -599,6 +671,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     }
 
     handleHeaderPointerInput();
+    handleMobileMenuCardInput();
 
     // Mobile swipes and desktop mouse-wheel input move the selected row; the
     // selection handler eases the clipped list camera to keep that row visible.

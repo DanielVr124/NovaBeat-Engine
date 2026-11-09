@@ -182,7 +182,7 @@ class StoryMenuState extends MusicBeatState
     updateNovaBeatWeekPanel(FlxG.width, FlxG.height);
 
     levelProps = new FlxTypedGroup<LevelProp>();
-    levelProps.zIndex = 1000;
+    levelProps.zIndex = Preferences.menuStyle == "NovaBeat" ? 13 : 1000;
     add(levelProps);
 
     updateProps();
@@ -1079,10 +1079,12 @@ class StoryMenuState extends MusicBeatState
   {
     for (ind => prop in currentLevel.buildProps(levelProps.members))
     {
-      // Tutorial data sets danceEvery: 2; normalize only this preview.
-      if (currentLevelId == "tutorial") prop.danceEvery = 1.0;
+      // Story Mode previews use one consistent beat cadence in both menu styles.
+      // Gameplay stage props keep their own data-defined cadence.
+      prop.danceEvery = 1.0;
       prop.x += (FullScreenScaleMode.gameCutoutSize.x / 4);
-      prop.zIndex = 1000;
+      // Keep character artwork behind NovaBeat's opaque lower carousel panel.
+      prop.zIndex = Preferences.menuStyle == "NovaBeat" ? 13 : 1000;
       if (levelProps.members[ind] != prop) levelProps.replace(levelProps.members[ind], prop) ?? levelProps.add(prop);
     }
 
@@ -1152,7 +1154,20 @@ class StoryMenuState extends MusicBeatState
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     var targetY:Float = 480;
     if (Preferences.menuStyle == "NovaBeat")
-      targetY = portrait ? FlxG.height * 0.36 : Math.min(480, FlxG.height * 0.67);
+    {
+      if (portrait)
+      {
+        // The portrait carousel panel starts in the lower third; place the
+        // selected title inside it instead of clipping it from an upper-screen
+        // target position.
+        var panelTop:Float = novaBeatWeekPanel == null ? FlxG.height * 0.66 : novaBeatWeekPanel.y;
+        targetY = panelTop + 14;
+      }
+      else
+      {
+        targetY = Math.min(480, FlxG.height * 0.67);
+      }
+    }
 
     levelTitles.members[currentIndex].targetY = targetY;
 

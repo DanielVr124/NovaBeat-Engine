@@ -200,10 +200,36 @@ class Main extends Sprite
     #if !html5
     FlxG.scaleMode = new FullScreenScaleMode();
     #elseif web
-    // The HTML5 build normally keeps the fixed 1280x720 logical viewport.
-    // Apply the same responsive scale mode on mobile browsers so portrait
-    // devices expand the logical game height to match the available screen.
-    if (funkin.util.DeviceUtil.isMobileBrowser) FlxG.scaleMode = new FullScreenScaleMode();
+    // Mobile browsers need an expandable logical viewport so portrait
+    // orientation fills the screen instead of letterboxing the old landscape
+    // dimensions inside a small box.
+    if (funkin.util.DeviceUtil.isMobileBrowser)
+    {
+      final mobileScaleMode:FullScreenScaleMode = new FullScreenScaleMode();
+      FlxG.scaleMode = mobileScaleMode;
+
+      var lastViewportWidth:Int = FlxG.stage.stageWidth;
+      var lastViewportHeight:Int = FlxG.stage.stageHeight;
+      var synchronizeMobileViewport = function(?event:Dynamic):Void
+      {
+        if (FlxG.stage == null) return;
+
+        final viewportWidth:Int = FlxG.stage.stageWidth;
+        final viewportHeight:Int = FlxG.stage.stageHeight;
+        if (viewportWidth <= 0 || viewportHeight <= 0) return;
+        if (viewportWidth == lastViewportWidth && viewportHeight == lastViewportHeight) return;
+
+        lastViewportWidth = viewportWidth;
+        lastViewportHeight = viewportHeight;
+        mobileScaleMode.onMeasureInstant(viewportWidth, viewportHeight);
+        FlxG.signals.gameResized.dispatch(viewportWidth, viewportHeight);
+      };
+
+      // Listen to both events: orientationchange may fire before the browser
+      // updates its viewport, while resize fires once the new dimensions land.
+      js.Browser.window.addEventListener("orientationchange", synchronizeMobileViewport);
+      js.Browser.window.addEventListener("resize", synchronizeMobileViewport);
+    }
     #end
 
     #if mobile
