@@ -46,8 +46,7 @@ class TitleState extends MusicBeatState
   {
     super.create();
 
-    // Both menu styles share the original randomized black-screen intro.
-    // NovaBeat branches to its own V4 title screen only after the intro ends.
+    // Run the original randomized black-screen intro before the FNF title screen.
     swagShader = new ColorSwap();
 
     curWacky = FlxG.random.getObject(getIntroTextShit());
@@ -251,8 +250,7 @@ class TitleState extends MusicBeatState
 
   override function update(elapsed:Float):Void
   {
-    // The original title-state update drives the shared randomized intro
-    // for both FNF and NovaBeat before either style reaches its own title UI.
+    // The original title-state update drives the randomized FNF intro.
     FlxG.bitmapLog.add(FlxG.camera.buffer);
 
     #if (desktop || android)
