@@ -577,12 +577,13 @@ jobs:
         shell: bash
         working-directory: upstream/Funkin
         env:
-          # Avoid concurrent NDK clang worker crashes while compiling the
-          # generated HScript/Lua support objects on the Android runner.
+          # Keep HXCPP's Android C++ compiler serial and avoid the NDK Clang
+          # precompiled-header path that crashed during generated-code builds.
           HXCPP_COMPILE_THREADS: "1"
         run: |
           set -euo pipefail
-          haxelib run lime build android -v -debug -DGITHUB_BUILD
+          test "${HXCPP_COMPILE_THREADS}" = "1"
+          haxelib run lime build android -v -debug -DGITHUB_BUILD -DNO_PRECOMPILED_HEADERS
 
       - name: Verify Android APK
         shell: bash
