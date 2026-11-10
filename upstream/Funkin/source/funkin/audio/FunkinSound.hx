@@ -472,7 +472,7 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
     // Sets `exists = true` as a side effect.
     #if web
     if (streamed)
-      sound.loadStreamedEmbedded(embeddedSound, looped, autoDestroy, onComplete);
+      sound.loadStreamedEmbedded(embeddedSound, looped, autoDestroy, onComplete, onLoad);
     else
     #end
       sound.loadEmbedded(embeddedSound, looped, autoDestroy, onComplete);
@@ -569,7 +569,7 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
     if (shouldLoadFromURL)
     {
-      final streamURL:String = assetURL;
+      final streamURL:String = assetURL ?? '';
       AudioBuffer.loadFromFile(streamURL)
         .onComplete(function(buffer:AudioBuffer)
         {
@@ -664,6 +664,17 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
     return promise;
   }
+
+  #if web
+  override public function kill():Void
+  {
+    // A stopped/recycled sound must not be resurrected by a late download.
+    streamedLoadGeneration++;
+    streamedLoadPending = false;
+    streamedStartPending = false;
+    super.kill();
+  }
+  #end
 
   @:nullSafety(Off)
   override public function destroy():Void
