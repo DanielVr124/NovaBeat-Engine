@@ -1185,6 +1185,8 @@ class PsychModRuntime
       case "psychhey": "Hey!";
       case "psychgfsing": "GF Sing";
       case "psychhurt": "Hurt Note";
+      case "psychgfsection": "";
+      case "psychgfsectionalt": "Alt Animation";
       default: noteType;
     };
   }
@@ -1382,7 +1384,12 @@ class PsychModRuntime
               return "custom note type '" + noteType + "' has no matching custom_notetypes script";
           }
           if (Reflect.field(note, "g") == true || Reflect.field(note, "gfNote") == true)
-            return "GF-specific note ownership";
+          {
+            var gfNoteType:String = rawType == null ? "" : StringTools.trim(Std.string(rawType));
+            if (gfNoteType.length == 0 && Reflect.field(note, "a") == true) gfNoteType = "alt";
+            if (!isSupportedPsychGFSectionNoteType(gfNoteType))
+              return "GF-owned notes combined with note type '" + gfNoteType + "' are not supported yet";
+          }
         }
 
         var sections:Dynamic = Reflect.field(root, "sections");
@@ -1619,6 +1626,32 @@ class PsychModRuntime
     };
   }
 
+  /**
+   * GF-section ownership can be represented natively for ordinary GF sings,
+   * Alt Animation, and the explicit GF Sing note type. Other combinations
+   * are rejected rather than silently losing their note behavior.
+   */
+  static function isSupportedPsychGFSectionNoteType(name:String):Bool
+  {
+    if (name == null) return true;
+    return switch (StringTools.trim(name).toLowerCase())
+    {
+      case "", "alt", "alt animation", "gf sing": true;
+      default: false;
+    };
+  }
+
+  static function normalizePsychGFSectionNoteType(name:Null<String>):String
+  {
+    var normalized:String = normalizePsychNoteType(name == null ? "" : name);
+    return switch (normalized.toLowerCase())
+    {
+      case "": "psychgfsection";
+      case "alt": "psychgfsectionalt";
+      default: normalized;
+    };
+  }
+
   /** Convert Psych display names to the built-in note-kind IDs used in gameplay. */
   static function normalizePsychNoteType(name:String):String
   {
@@ -1680,10 +1713,7 @@ class PsychModRuntime
       if (sectionType != null && Std.int(sectionType) != 0)
         return "alternate section type metadata";
 
-      var gfSection:Dynamic = Reflect.field(section, "gfSection");
-      if (gfSection == true)
-        return "GF-specific section ownership";
-
+      var gfSection:Bool = Reflect.field(section, "gfSection") == true;
       var rows:Dynamic = Reflect.field(section, "sectionNotes");
       if (!Std.isOfType(rows, Array)) continue;
 
@@ -1697,29 +1727,87 @@ class PsychModRuntime
         if (Math.isNaN(lane) || lane < 0 || lane > 7)
           return "event or non-standard note-lane data";
 
-        if (values.length > 3 && values[3] != null)
+        var noteType:Dynamic = values.length > 3 ? values[3] : null;
+        var noteTypeName:String = "";
+        if (Std.isOfType(noteType, Bool))
         {
-          var noteType:Dynamic = values[3];
-          if (Std.isOfType(noteType, Bool))
-          {
-            // The vanilla alternate-animation note flag is preserved by the
-            // legacy adapter and maps to NovaBeat's built-in "alt" note kind.
-            continue;
-          }
-          if (Std.isOfType(noteType, String))
-          {
-            var customType:String = StringTools.trim(cast noteType);
-            if (customType.length == 0 || isSupportedBuiltinPsychNoteType(customType)) continue;
-            if (!hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), customType))
-              return "custom note type '" + customType + "' has no matching custom_notetypes script";
-            continue;
-          }
+          // The legacy boolean flag denotes Alt Animation when true.
+          if (noteType == true) noteTypeName = "alt";
+        }
+        else if (Std.isOfType(noteType, String))
+        {
+          noteTypeName = StringTools.trim(cast noteType);
+        }
+        else if (noteType != null)
+        {
           return "unrecognized Psych note-type metadata";
         }
+
+        if (gfSection && !isSupportedPsychGFSectionNoteType(noteTypeName))
+          return "GF sections combined with note type '" + noteTypeName + "' are not supported yet";
+
+        if (noteTypeName.length > 0 && !isSupportedBuiltinPsychNoteType(noteTypeName)
+          && !hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), noteTypeName))
+          return "custom note type '" + noteTypeName + "' has no matching custom_notetypes script";
       }
     }
 
     return null;
+  }
+
+  /**
+   * Reapply Psych's GF-section ownership to notes produced by the legacy
+   * importer. It preserves the same note ordering and lane flip rules.
+   */
+  static function applyPsychGFSectionOwnership(
+    sections:Array<Dynamic>,
+    notes:Array<funkin.data.song.SongData.SongNoteData>
+  ):Void
+  {
+    var noteIndex:Int = 0;
+    for (section in sections)
+    {
+      if (section == null) continue;
+      var gfSection:Bool = Reflect.field(section, "gfSection") == true;
+      var mustHitSection:Bool = Reflect.field(section, "mustHitSection") == true;
+      var rows:Dynamic = Reflect.field(section, "sectionNotes");
+      if (!Std.isOfType(rows, Array)) continue;
+
+      for (rawNote in (cast rows:Array<Dynamic>))
+      {
+        if (!Std.isOfType(rawNote, Array)) continue;
+        var values:Array<Dynamic> = cast rawNote;
+        if (values.length < 2 || values[1] == null) continue;
+
+        var lane:Float = Std.parseFloat(Std.string(values[1]));
+        if (Math.isNaN(lane)) continue;
+        var noteData:Int = Std.int(lane);
+        if (noteData < 0) continue; // Psych event notes are excluded by the importer.
+        if (noteData > 8) noteData = noteData % 8;
+        if (!mustHitSection)
+        {
+          if (noteData >= 4) noteData -= 4;
+          else noteData += 4;
+        }
+
+        if (noteIndex >= notes.length) return;
+        var importedNote:funkin.data.song.SongData.SongNoteData = notes[noteIndex];
+        noteIndex++;
+        if (!gfSection) continue;
+
+        var noteType:Dynamic = values.length > 3 ? values[3] : null;
+        var noteTypeName:String = "";
+        if (Std.isOfType(noteType, Bool))
+        {
+          if (noteType == true) noteTypeName = "alt";
+        }
+        else if (Std.isOfType(noteType, String))
+        {
+          noteTypeName = StringTools.trim(cast noteType);
+        }
+        importedNote.kind = normalizePsychGFSectionNoteType(noteTypeName);
+      }
+    }
   }
 
   static function readPsychString(source:Dynamic, field:String, fallback:String):String
@@ -1809,6 +1897,16 @@ class PsychModRuntime
           if (note.kind != null && note.kind.length > 0)
             note.kind = normalizePsychNoteType(note.kind);
         }
+
+        // FNFLegacyImporter ignores Psych's gfSection flag; reapply it using
+        // the same flattened note order and legacy lane flip after conversion.
+        var rawLegacyNotes:Dynamic = Reflect.field(chartSong, "notes");
+        var rawDifficultySections:Dynamic = rawLegacyNotes;
+        if (!Std.isOfType(rawLegacyNotes, Array))
+          rawDifficultySections = Reflect.field(rawLegacyNotes, difficulty);
+        if (Std.isOfType(rawDifficultySections, Array))
+          applyPsychGFSectionOwnership(cast rawDifficultySections, importedNotes);
+
         combinedNotes.set(difficulty, importedNotes);
         combinedSpeeds.set(difficulty, importedChart.getScrollSpeed(difficulty));
       }
@@ -1934,7 +2032,10 @@ class PsychModRuntime
       var noteLength:Float = readPsychFloat(note, "l", 0);
       var kind:String = readPsychString(note, "k", readPsychString(note, "type", ""));
       if (kind.length == 0 && Reflect.field(note, "a") == true) kind = "alt";
-      kind = normalizePsychNoteType(kind);
+      if (Reflect.field(note, "g") == true || Reflect.field(note, "gfNote") == true)
+        kind = normalizePsychGFSectionNoteType(kind);
+      else
+        kind = normalizePsychNoteType(kind);
       notes.push(new funkin.data.song.SongData.SongNoteData(noteTime, data, noteLength, kind));
     }
 
@@ -2034,7 +2135,8 @@ class PsychModRuntime
         '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true},' +
         '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"},' +
         '{"t":1750,"s":0,"d":0,"k":"Hey!"},{"t":2000,"s":1,"d":0,"k":"GF Sing"},' +
-        '{"t":2250,"s":1,"d":2,"k":"Hurt Note"}],' +
+        '{"t":2250,"s":1,"d":2,"k":"Hurt Note"},' +
+        '{"t":2500,"s":0,"d":2,"g":true},{"t":2750,"s":1,"d":3,"k":"Alt Animation","g":true}],' +
         '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]},' +
         '{"t":1800,"e":"Change Scroll Speed","v":["1.5","2"]}],' +
         '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
@@ -2047,12 +2149,13 @@ class PsychModRuntime
         "smoke-test"
       );
       if (converted == null) return false;
-      if (converted.notes.length != 7) return false;
+      if (converted.notes.length != 9) return false;
       if (converted.notes[0].data != 5 || converted.notes[0].length != 250) return false;
       if (converted.notes[1].data != 2 || converted.notes[1].kind != "alt") return false;
       if (converted.notes[2].kind != "alt" || converted.notes[3].kind != "noanim") return false;
       if (converted.notes[4].kind != "psychhey" || converted.notes[5].kind != "psychgfsing") return false;
       if (converted.notes[6].kind != "psychhurt") return false;
+      if (converted.notes[7].kind != "psychgfsection" || converted.notes[8].kind != "psychgfsectionalt") return false;
       if (!isSupportedBuiltinPsychNoteType("Alt Animation")
         || !isSupportedBuiltinPsychNoteType("No Animation")
         || !isSupportedBuiltinPsychNoteType("Hey!")
@@ -2067,6 +2170,8 @@ class PsychModRuntime
       if (getPsychNoteTypeName("psychhey") != "Hey!"
         || getPsychNoteTypeName("psychgfsing") != "GF Sing"
         || getPsychNoteTypeName("psychhurt") != "Hurt Note"
+        || getPsychNoteTypeName("psychgfsection") != ""
+        || getPsychNoteTypeName("psychgfsectionalt") != "Alt Animation"
         || getPsychNoteTypeName("alt") != "Alt Animation"
         || getPsychNoteTypeName("noanim") != "No Animation") return false;
 
@@ -2075,12 +2180,24 @@ class PsychModRuntime
       var gfSingKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychGFSingNoteKind");
       var altKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.AltAnimNoteKind");
       var hurtKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychHurtNoteKind");
-      if (heyKindClass == null || gfSingKindClass == null || altKindClass == null || hurtKindClass == null) return false;
+      var gfSectionKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychGFSectionNoteKind");
+      var gfSectionAltKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychGFSectionAltNoteKind");
+      if (heyKindClass == null || gfSingKindClass == null || altKindClass == null || hurtKindClass == null
+        || gfSectionKindClass == null || gfSectionAltKindClass == null) return false;
       var heyKind:Dynamic = Type.createInstance(heyKindClass, []);
       var gfSingKind:Dynamic = Type.createInstance(gfSingKindClass, []);
       var hurtKind:Dynamic = Type.createInstance(hurtKindClass, []);
+      var gfSectionKind:Dynamic = Type.createInstance(gfSectionKindClass, []);
+      var gfSectionAltKind:Dynamic = Type.createInstance(gfSectionAltKindClass, []);
       if (Reflect.field(heyKind, "hey") != true || Reflect.field(gfSingKind, "gfSing") != true
-        || Reflect.field(hurtKind, "hurt") != true || Reflect.field(hurtKind, "scoreable") != false) return false;
+        || Reflect.field(hurtKind, "hurt") != true || Reflect.field(hurtKind, "scoreable") != false
+        || Reflect.field(gfSectionKind, "gfSing") != true
+        || Reflect.field(gfSectionAltKind, "gfSing") != true
+        || Reflect.field(gfSectionAltKind, "suffix") != "alt") return false;
+      if (!isSupportedPsychGFSectionNoteType("")
+        || !isSupportedPsychGFSectionNoteType("Alt Animation")
+        || !isSupportedPsychGFSectionNoteType("GF Sing")
+        || isSupportedPsychGFSectionNoteType("Hurt Note")) return false;
 
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
