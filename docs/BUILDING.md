@@ -132,7 +132,9 @@ The browser build is intentionally separate from the native platform workflow. I
 
 The current Psych package layouts, supported chart subset, script/runtime scope, limitations, and verification checklist are documented in [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md). Native Windows builds are required to compile and test the filesystem-based Psych adapter; a green HTML5 build does not establish Psych mod compatibility.
 
-The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations. Story-menu back navigation now returns only to the original FNF main menu; no NovaBeat custom-menu state is referenced.
+The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations.
+
+For chart events, NovaBeat applies native built-in behavior and then dispatches Psych's `onEvent(name, value1, value2)` callback so matching `custom_events/` scripts can handle their events. Native video cutscenes also recover the song flow when a requested video asset is missing or fails to load, rather than leaving a stopped countdown blocked. These paths still require a Windows runtime test with the actual mod; compilation alone does not verify playback or script behavior. Story-menu back navigation now returns only to the original FNF main menu; no NovaBeat custom-menu state is referenced.
 
 Story Mode and the shared menu-page framework no longer contain the removed NovaBeat presentation or options-chrome references; the original FNF Story Mode presentation is the only active implementation.
 
