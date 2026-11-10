@@ -1,5 +1,7 @@
 name: NovaBeat platform build checks
 
+# [full-build-windows] Compile-check conditional Psych Freeplay implementation.
+
 # [full-build-android] Verify APK compilation without HXCPP precompiled headers.
 
 # [full-build] Build Windows and Android for the current native test pass.
@@ -74,14 +76,6 @@ jobs:
             Get-ChildItem -LiteralPath $sourceFolder -File | Copy-Item -Destination $destinationFolder -Force
           }
           if (!(Test-Path "upstream/Funkin/assets/fonts/vcr.ttf")) { throw "VCR font is missing from the pinned FNF assets." }
-      - name: Install Psych Freeplay menu soundtrack
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $destination = "upstream/Funkin/assets/shared/music/freakyMenu.ogg"
-          New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/ShadowMario/FNF-PsychEngine/2dfa27773a3668e0c1b043a3fb4348942c8a6fb3/assets/shared/music/freakyMenu.ogg" -OutFile $destination
-          if ((Get-Item $destination).Length -lt 1000000) { throw "Psych Freeplay menu soundtrack download is incomplete." }
 
       - name: Restore Neko 2.4.0 tool cache
         if: runner.os == 'Linux'
@@ -259,14 +253,6 @@ jobs:
           cp "$source/images/"* "$destination/images/"
           cp "$source/sounds/"* "$destination/sounds/"
           test -s upstream/Funkin/assets/fonts/vcr.ttf
-      - name: Install Psych Freeplay menu soundtrack
-        shell: bash
-        run: |
-          set -euo pipefail
-          destination="upstream/Funkin/assets/shared/music/freakyMenu.ogg"
-          mkdir -p "$(dirname "$destination")"
-          curl -fL --retry 5 --retry-all-errors --retry-delay 3 "https://raw.githubusercontent.com/ShadowMario/FNF-PsychEngine/2dfa27773a3668e0c1b043a3fb4348942c8a6fb3/assets/shared/music/freakyMenu.ogg" -o "$destination"
-          test "$(wc -c < "$destination")" -gt 1000000
 
       - name: Configure patched Haxe libraries and install pinned dependencies
         shell: bash

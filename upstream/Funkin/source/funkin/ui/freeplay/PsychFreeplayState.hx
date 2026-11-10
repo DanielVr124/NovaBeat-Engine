@@ -429,8 +429,8 @@ class PsychFreeplayState extends MusicBeatSubState
   function updateSongRows(elapsed:Float):Void
   {
     lerpSelected = FlxMath.lerp(selected, lerpSelected, Math.exp(-elapsed * 9.6));
-    var min:Int = Math.floor(Math.max(0, lerpSelected - DRAW_DISTANCE));
-    var max:Int = Math.ceil(Math.min(songs.length, lerpSelected + DRAW_DISTANCE + 1));
+    var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - DRAW_DISTANCE)));
+    var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + DRAW_DISTANCE)));
 
     for (i in 0...songTexts.length)
     {
