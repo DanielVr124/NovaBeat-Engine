@@ -429,6 +429,35 @@ class PsychModRuntime
   }
   #end
 
+  /**
+   * Resolve a Psych startVideo() request inside the owning mod's videos folder.
+   * Returns a native filesystem path; traversal and absolute paths are rejected.
+   */
+  public static function resolvePsychVideoPath(songId:String, requestedPath:String):Null<String>
+  {
+    #if sys
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (modRoot == null || requestedPath == null || StringTools.trim(requestedPath).length == 0) return null;
+
+    var relative:String = StringTools.replace(StringTools.trim(requestedPath), "\\", "/");
+    while (StringTools.startsWith(relative, "/")) relative = relative.substr(1);
+    if (~/^[a-zA-Z]:/.match(relative)) return null;
+    for (part in relative.split("/"))
+      if (part == ".." || part == "." || part.length == 0) return null;
+
+    if (Path.extension(relative).length == 0) relative += ".mp4";
+
+    var videosRoot:String = Path.normalize(Path.join([modRoot, "videos"]));
+    var prefix:String = StringTools.endsWith(videosRoot, "/") ? videosRoot : videosRoot + "/";
+    var videoPath:String = Path.normalize(Path.join([videosRoot, relative]));
+    if (!StringTools.startsWith(videoPath, prefix)) return null;
+    if (!FileSystem.exists(videoPath) || FileSystem.isDirectory(videoPath)) return null;
+    return videoPath;
+    #else
+    return null;
+    #end
+  }
+
   /** True only for a song imported by this Psych compatibility loader. */
   public static function isImportedSong(songId:String):Bool
   {
