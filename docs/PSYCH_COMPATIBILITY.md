@@ -33,7 +33,7 @@ The compatibility runtime can discover global and song-local Lua/HScript files, 
 
 A package using the legacy `custom_notes/` runtime is currently rejected. Custom stages still need a matching stage script, and custom character data must be in a format that the current character adapter can convert.
 
-Psych's built-in event list is not yet complete. Events are either translated by the current built-in event adapter or must have a matching custom-event script. Unknown or unhandled behavior must not be silently dropped.
+The built-in event adapter currently handles camera zoom, screen shake, property changes, camera follow position, character animation, Hey!, GF dance speed, and Change Character (BF/GF/DAD swaps). The built-in event list is not yet complete. Other events must have a matching custom-event script. Unknown or unhandled behavior must not be silently dropped.
 
 ## Platform scope
 
