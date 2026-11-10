@@ -78,6 +78,8 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
     #end
 
+    items.onChange.add(updateCategoryDescription);
+    if (items.selectedItem != null) updateCategoryDescription(items.selectedItem);
     layoutFNFCategoryItems(FlxG.width, FlxG.height);
 
     itemDescBox = new FunkinSprite();
@@ -108,6 +110,19 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
   }
 
+  function updateCategoryDescription(selected:TextMenuItem):Void
+  {
+    if (itemDesc == null) return;
+    var selectedIndex:Int = items == null ? 0 : items.selectedIndex;
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    itemDesc.text = selectedIndex == 1
+      ? 'Choose your mobile controls and screen orientation.'
+      : 'Adjust graphics and performance settings.';
+    #else
+    itemDesc.text = 'Adjust graphics and performance settings.';
+    #end
+  }
+
   /**
    * Center the original FNF category entries as a single group in the
    * available menu area. All entries fit at once, so the camera must not
@@ -115,7 +130,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function layoutFNFCategoryItems(width:Int, height:Int):Void
   {
-    if (categoryItems.length == 0 || width <= 0 || height <= 0) return;
+    if (items == null || categoryItems.length == 0 || width <= 0 || height <= 0) return;
 
     var portrait:Bool = height > width * 1.12;
     // Keep the stock FNF left-column alignment, but center the complete short
@@ -154,6 +169,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.setSize(width, height);
     var portrait:Bool = height > width * 1.12;
     layoutFNFCategoryItems(width, height);
+    if (itemDesc == null || itemDescBox == null) return;
     itemDesc.visible = true;
     itemDescBox.visible = true;
     itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 18 : 32, FlxColor.WHITE,

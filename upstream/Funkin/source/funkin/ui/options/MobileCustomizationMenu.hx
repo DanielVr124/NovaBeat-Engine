@@ -122,6 +122,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (!MobileOrientationUtil.isSupported()) return;
 
+    if (Save.instance == null || Save.instance.mobileOptions == null) return;
     var saved:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
     var targetValue:Bool = !(saved && MobileOrientationUtil.isCurrentlyLocked);
     if (!targetValue && !MobileOrientationUtil.isCurrentlyLocked && saved) targetValue = true;
@@ -130,6 +131,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       if (success)
       {
+        if (Save.instance == null || Save.instance.mobileOptions == null) return;
         Save.instance.mobileOptions.lockCurrentOrientation = targetValue;
         Save.system.flush();
         updateValues();
@@ -153,6 +155,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #end
 
     var nextOrientationLabel:String = "LOCK ORIENTATION: " + orientationValue;
+    if (items == null || controlSchemeItem == null || orientationLockItem == null) return;
     if (schemeLabel != controlSchemeLabel)
     {
       items.resetItem(controlSchemeLabel, schemeLabel, function()

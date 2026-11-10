@@ -140,6 +140,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
   function activate(index:Int):Void
   {
+    if (Save.instance == null || Save.instance.options == null) return;
     var options = Save.instance.options;
     switch (index)
     {
@@ -169,6 +170,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
   function applyPreset(preset:String):Void
   {
+    if (Save.instance == null || Save.instance.options == null) return;
     var options = Save.instance.options;
     options.performancePreset = preset;
 
@@ -199,6 +201,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
   function refreshLabels():Void
   {
+    if (Save.instance == null || Save.instance.options == null) return;
     var options = Save.instance.options;
     var values:Array<String> = [
       options.performancePreset.toUpperCase(),
@@ -220,6 +223,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     {
       var item:TextMenuItem = optionRows[index];
       var value:AtlasText = fnfValueLabels[index];
+      if (item == null || value == null) continue;
       var valueWidth:Int = value.getWidth();
       var portrait:Bool = FlxG.height > FlxG.width * 1.12;
       var notch:Float = funkin.ui.FullScreenScaleMode.gameNotchSize.x;
@@ -243,12 +247,15 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     if (itemDesc != null)
     {
       itemDesc.setPosition(18, height - (portrait ? 116 : 200));
-      itemDesc.fieldWidth = width - 36;
+      itemDesc.fieldWidth = Math.max(120, width - 36);
       itemDesc.size = portrait ? 18 : 32;
       itemDesc.alignment = FlxTextAlign.CENTER;
-      itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
-      itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 22));
-      itemDescBox.updateHitbox();
+      if (itemDescBox != null)
+      {
+        itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+        itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 22));
+        itemDescBox.updateHitbox();
+      }
     }
     if (camFollow != null && items != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
     layoutFNFItems();
