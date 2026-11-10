@@ -1554,6 +1554,13 @@ class PlayState extends MusicBeatSubState
     }
   }
 
+  /** Internal section markers update Psych globals but are not mod-authored events. */
+  function isPsychSectionStateEvent(eventData:SongEventData):Bool
+  {
+    return eventData != null && eventData.eventKind == "PsychCompatibilityEvent"
+      && eventData.value != null && Reflect.field(eventData.value, "name") == "__PsychSectionState";
+  }
+
   /** Convert NovaBeat/Psych event payload shapes into Psych's name/value tuple. */
   function buildPsychEventArguments(eventData:SongEventData):Array<Dynamic>
   {
@@ -1653,9 +1660,12 @@ class PlayState extends MusicBeatSubState
       {
         var songEvent:SongEventScriptEvent = cast event;
         var eventData = songEvent.eventData;
-        var eventArgs:Array<Dynamic> = buildPsychEventArguments(eventData);
-        if (PsychScriptRuntime.dispatchStop("onEvent", eventArgs))
-          event.cancel();
+        if (!isPsychSectionStateEvent(eventData))
+        {
+          var eventArgs:Array<Dynamic> = buildPsychEventArguments(eventData);
+          if (PsychScriptRuntime.dispatchStop("onEvent", eventArgs))
+            event.cancel();
+        }
       }
       else if (event.type == "GAME_OVER")
       {
@@ -2797,6 +2807,7 @@ class PlayState extends MusicBeatSubState
     // before the runtime event queue is reset or any event is played.
     for (eventData in songEvents)
     {
+      if (isPsychSectionStateEvent(eventData)) continue;
       var eventArgs:Array<Dynamic> = buildPsychEventArguments(eventData);
       var earlyTriggerArgs:Array<Dynamic> = eventArgs.copy();
       earlyTriggerArgs.push(eventData.time);
