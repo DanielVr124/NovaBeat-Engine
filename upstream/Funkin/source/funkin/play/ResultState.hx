@@ -101,6 +101,7 @@ class ResultState extends MusicBeatSubState
   final cameraScroll:FunkinCamera;
   final cameraEverything:FunkinCamera;
   var blackTopBar:FlxSprite = new FlxSprite();
+  var cameraScrollRotation:Float = -3.8;
   var busy:Bool = false;
 
   public var isChartingMode(get, never):Bool;
@@ -162,7 +163,8 @@ class ResultState extends MusicBeatSubState
     if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
     // We need multiple cameras so we can put one at an angle.
-    cameraScroll.canvas.rotation = -3.8;
+    // The render canvas may be recreated during mobile viewport changes.
+    applyScrollCameraRotation();
 
     cameraBG.bgColor = FlxColor.MAGENTA;
     cameraScroll.bgColor = FlxColor.TRANSPARENT;
@@ -557,6 +559,12 @@ class ResultState extends MusicBeatSubState
     super.create();
   }
 
+  function applyScrollCameraRotation():Void
+  {
+    var scrollCanvas = cameraScroll.canvas;
+    if (scrollCanvas != null) scrollCanvas.rotation = cameraScrollRotation;
+  }
+
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
@@ -569,7 +577,8 @@ class ResultState extends MusicBeatSubState
     cameraBG.setSize(width, height);
     cameraEverything.setSize(width, height);
     cameraScroll.setSize(width, Math.round(height * 1.2));
-    cameraScroll.canvas.rotation = portrait ? -1.8 : -3.8;
+    cameraScrollRotation = portrait ? -1.8 : -3.8;
+    applyScrollCameraRotation();
 
     if (resultsBackground != null)
     {
@@ -1146,6 +1155,8 @@ class ResultState extends MusicBeatSubState
     }
 
     super.update(elapsed);
+    // Reapply after Flixel has had a chance to recreate the camera canvas.
+    applyScrollCameraRotation();
   }
 
   function transitionToState(targetState:FlxState, targetStateFactory:Null<Void->StickerSubState>, shouldTween:Bool, shouldUseSubstate:Bool):Void
