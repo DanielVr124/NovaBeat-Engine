@@ -6,8 +6,6 @@ import flixel.FlxSubState;
 import flixel.util.FlxSignal;
 import funkin.input.Controls;
 import funkin.audio.FunkinSound;
-import funkin.Preferences;
-import funkin.ui.options.NovaBeatOptionsChrome;
 
 /**
  * A page in a menu system.
@@ -78,7 +76,7 @@ class Page<T:PageName> extends FlxGroup
 
   public function onViewportResize(width:Int, height:Int):Void
   {
-    NovaBeatOptionsChrome.reflow(this, width, height);
+    // Subclasses can provide their own responsive layout.
   }
 
   function updateEnabled(elapsed:Float)
@@ -86,7 +84,7 @@ class Page<T:PageName> extends FlxGroup
     if (canExit && controls.BACK_P)
     {
       exit();
-      FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == 'NovaBeat' ? 'novabeat/back' : 'cancelMenu'));
+      FunkinSound.playOnce(Paths.sound('cancelMenu'));
     }
   }
 
@@ -110,7 +108,6 @@ class Page<T:PageName> extends FlxGroup
   override function destroy()
   {
     FlxG.signals.gameResized.remove(onGameResized);
-    NovaBeatOptionsChrome.forget(this);
     super.destroy();
     onSwitch.removeAll();
   }
