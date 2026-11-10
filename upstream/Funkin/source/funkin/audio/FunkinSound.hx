@@ -534,35 +534,28 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
     }
     else if ((EmbeddedSound is String))
     {
-      #if (openfl >= "8.0.0")
-      final assetExists:Bool = Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC);
-      #else
-      final assetExists:Bool = Assets.exists(EmbeddedSound);
-      #end
-
-      if (assetExists)
+      // The songs library is intentionally not preloaded on HTML5 to avoid
+      // decoding every full-length track at startup. Assets.exists() reports
+      // only synchronously-local assets, so it can return false for a valid
+      // manifest entry in this library. Resolve the file path directly first.
+      assetURL = Assets.getPath(EmbeddedSound);
+      if (assetURL != null && assetURL != '')
       {
-        // Assets.getMusic() resolves embedded MP3 bytes into a data URI. That
-        // is fragile for long tracks on mobile browsers and defeats streaming.
-        // Resolve the published file URL and let Howler load it as a real file.
-        assetURL = Assets.getPath(EmbeddedSound);
-        if (assetURL != null && assetURL != '')
-        {
-          shouldLoadFromURL = true;
-          streamedLoadPending = true;
-        }
-        else
-        {
-          // Keep the embedded-asset path as a fallback for platforms which do
-          // not expose a separately addressable file.
-          _sound = Assets.getMusic(EmbeddedSound);
-          if (_sound == null)
-            FlxG.log.error('Could not load embedded streaming music asset with ID \'$EmbeddedSound\'.');
-        }
+        shouldLoadFromURL = true;
+        streamedLoadPending = true;
       }
       else
       {
-        FlxG.log.error('Could not find a streaming music asset with an ID of \'$EmbeddedSound\'.');
+        // Retain an embedded fallback for assets which are already available
+        // locally but do not expose a separate URL.
+        #if (openfl >= "8.0.0")
+        final assetExists:Bool = Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC);
+        #else
+        final assetExists:Bool = Assets.exists(EmbeddedSound);
+        #end
+        if (assetExists) _sound = Assets.getMusic(EmbeddedSound);
+        if (_sound == null)
+          FlxG.log.error('Could not find a streaming music asset with an accessible path: \'$EmbeddedSound\'.');
       }
     }
 
