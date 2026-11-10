@@ -890,9 +890,6 @@ class FreeplayState extends MusicBeatSubState
     }
     #end
 
-    // Keep the stock FREEPLAY label in both styles. The old NovaBeat-only
-    // header duplicated it at the top-left of this screen.
-
     if (prepForNewRank)
     {
       rankCamera.fade(0xFF000000, 0, false, null, true);
