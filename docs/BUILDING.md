@@ -154,3 +154,5 @@ Final menu cleanup also removes the dormant NovaBeat theme paths from Preference
 Controls, Offset, and Save Data pages now use the original FNF options chrome; no deleted NovaBeat options-chrome class is required.
 
 The debug console command `testPsychV2Compatibility` runs a synthetic psych_v2 converter fixture covering note lanes, sustains, alt notes, 3/4 timing, BPM changes, camera targets, stage aliases, and the additional-strumline guard.
+
+The FNF Preferences responsive layout uses a runtime type test for checkbox rows so it compiles under the pinned Haxe toolchain.
