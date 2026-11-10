@@ -68,7 +68,8 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
 
     items = new TextMenuList(NavControls.Vertical);
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = false;
+    // Activate submenu rows on the first tap in mobile browsers, matching the Options page.
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     descriptions = [
