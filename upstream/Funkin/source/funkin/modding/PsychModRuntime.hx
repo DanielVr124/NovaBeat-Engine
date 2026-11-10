@@ -551,6 +551,58 @@ class PsychModRuntime
 
 
   /**
+   * Read Psych healthbar_colors for the active opponent/player pair.
+   * The first RGB triplet is the opponent/empty side; the second is the
+   * boyfriend/player/filled side, matching Psych's health bar convention.
+   */
+  public static function getPsychHealthBarColors(songId:String, playerId:String, opponentId:String):Null<Array<Int>>
+  {
+    #if sys
+    if (songId == null || playerId == null || opponentId == null) return null;
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (modRoot == null) return null;
+
+    var opponentPath:Null<String> = findPsychCharacterDataFile(modRoot, opponentId);
+    var playerPath:Null<String> = findPsychCharacterDataFile(modRoot, playerId);
+    if (opponentPath == null || playerPath == null) return null;
+
+    try
+    {
+      var opponentRaw:Dynamic = Json.parse(File.getContent(opponentPath));
+      var playerRaw:Dynamic = Json.parse(File.getContent(playerPath));
+      var opponentColors:Null<Array<Int>> = readPsychHealthBarColor(opponentRaw);
+      var playerColors:Null<Array<Int>> = readPsychHealthBarColor(playerRaw);
+      if (opponentColors == null || playerColors == null) return null;
+      return opponentColors.concat(playerColors);
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not read character healthbar_colors for ' + songId + ': ' + Std.string(error));
+      return null;
+    }
+    #else
+    return null;
+    #end
+  }
+
+  #if sys
+  static function readPsychHealthBarColor(characterData:Dynamic):Null<Array<Int>>
+  {
+    var raw:Dynamic = characterData == null ? null : Reflect.field(characterData, "healthbar_colors");
+    if (!Std.isOfType(raw, Array) || raw.length < 3) return null;
+    var result:Array<Int> = [];
+    for (i in 0...3)
+    {
+      var parsed:Float = Std.parseFloat(Std.string(raw[i]));
+      if (Math.isNaN(parsed)) return null;
+      result.push(Std.int(Math.max(0, Math.min(255, parsed))));
+    }
+    return result;
+  }
+  #end
+
+
+  /**
    * Apply the active Psych package's stages/<stage>.json data to the native
    * stage before characters are constructed. The baseline is restored on
    * every stage load so Psych overrides cannot leak into ordinary V-Slice
