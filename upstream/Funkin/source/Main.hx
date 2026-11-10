@@ -68,8 +68,9 @@ class Main extends Sprite
     // You can remove this line if you want to read debug messages.
     openfl.utils._internal.Log.level = openfl.utils._internal.Log.LogLevel.INFO;
 
-    // Initialize Polymod with no user mods. The in-game Game Library selects
-    // the active experience and loads only that experience's enabled packages.
+    // Initialize Polymod without user mods. InitState activates the default
+    // FNF experience on startup; the main-menu Mods screen switches to the
+    // package the player explicitly chooses.
     funkin.modding.PolymodHandler.loadNoMods();
 
     if (stage != null)

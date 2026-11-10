@@ -69,7 +69,6 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var previewHeight:Float = 0;
   var previewContentY:Float = 0;
   var previewContentHeight:Float = 0;
-  var statusLabel:Null<FlxText> = null;
 
   public function new()
   {
@@ -127,11 +126,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowObjects = [];
     buttonHitboxes = [];
     buttonActions = [];
-    statusLabel = null;
 
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
-    portraitLayout = height > width * 1.12 || width < 720;
+    portraitLayout = height > width * 1.12 || width < 520;
     var compactLandscape:Bool = !portraitLayout && height < 520;
     var margin:Float = portraitLayout ? 14 : (compactLandscape ? 20 : 34);
     var headerY:Float = portraitLayout ? 12 : (compactLandscape ? 8 : 18);
@@ -168,7 +166,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     addPanel(previewX, previewY, previewWidth, previewHeight, COLOR_PINK);
 
     addLabel(listX + 15, listY + 12, listWidth - 30, "INSTALLED MODS", portraitLayout ? 13 : 16, COLOR_BLUE);
-    var countText:String = experiences.length + (experiences.length == 1 ? " INSTALLED" : " INSTALLED");
+    var countText:String = experiences.length + (experiences.length == 1 ? " MOD INSTALLED" : " MODS INSTALLED");
     addLabel(listX + 15, listY + 34, listWidth - 30, countText, 9, COLOR_MUTED);
 
     rowX = listX + 10;
@@ -190,7 +188,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var title:FlxText = addLabel(x, y, width, "MODS", 34, COLOR_PINK);
     title.angle = -2;
     var subtitle:FlxText = addLabel(x + 112, y + 17, Math.max(80, width - 112),
-      "PICK YOUR NEXT EXPERIENCE", 10, COLOR_TEXT);
+      "PICK A MOD TO PLAY", 10, COLOR_TEXT);
     subtitle.angle = -1;
   }
 
@@ -264,9 +262,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var sub:String = info.author;
       if (sub == null || sub.length == 0) sub = "Unknown creator";
       var status:String = info.enabled ? "READY" : "DISABLED";
-      var packageLabel:String = info.packageType == ExperienceManager.PACKAGE_EXTENSION ? "ADD-ON" : "MOD";
-      var line:FlxText = addLabel(labelX, y + (portraitLayout ? 27 : 32), labelWidth,
-        sub + "  •  " + packageLabel + "  •  " + status, 8, selected ? COLOR_BLUE : COLOR_MUTED);
+remove package type local      var line:FlxText = addLabel(labelX, y + (portraitLayout ? 27 : 32), labelWidth,
+        sub + "  •  " + status, 8, selected ? COLOR_BLUE : COLOR_MUTED);
       addRowObject(line);
     }
   }
@@ -303,7 +300,18 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var info:ExperienceInfo = experiences[selectedIndex];
       var art:FlxSprite = addRect(artX, artY, artSize, artSize, 0xFF080710);
-      loadModArtwork(art, info, artSize);
+      var hasArtwork:Bool = loadModArtwork(art, info, artSize);
+      if (!hasArtwork)
+      {
+        addRect(artX + 4, artY + 4, artSize - 8, artSize - 8, 0xFF54316F);
+        var initials:String = info.title.length <= 3
+          ? info.title.toUpperCase()
+          : info.title.substr(0, 3).toUpperCase();
+        addLabel(artX + 6, artY + artSize * 0.30 + 2, artSize - 12,
+          initials, compact ? 20 : 30, COLOR_BLACK, FlxTextAlign.CENTER);
+        addLabel(artX + 6, artY + artSize * 0.30, artSize - 12,
+          initials, compact ? 20 : 30, COLOR_PINK, FlxTextAlign.CENTER);
+      }
 
       addLabel(titleX, textY, textWidth, info.title, compact ? 15 : 22, COLOR_TEXT);
       var creator:String = info.author == null || info.author.length == 0 ? "Unknown creator" : info.author;
@@ -311,14 +319,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         compact ? 9 : 11, COLOR_PINK);
       var modVersion:String = readModVersion(info);
       addLabel(titleX, textY + (compact ? 39 : 52), textWidth,
-        "VERSION " + modVersion + "  •  " + info.engineLabel, 8, COLOR_BLUE);
+        "VERSION " + modVersion, 8, COLOR_BLUE);
 
-      var compatibility:String = info.launchable ? "PACKAGE SCAN: READY" : "PACKAGE SCAN: NEEDS ATTENTION";
-      addLabel(titleX, textY + (compact ? 53 : 72), textWidth, compatibility,
-        8, info.launchable ? 0xFF8CFFB5 : 0xFFFFA3B5);
-
-      previewContentY = Math.max(artY + artSize + 10, textY + (compact ? 68 : 92));
-      previewContentHeight = Math.max(24, previewY + previewHeight - previewContentY - 62);
+      previewContentY = Math.max(artY + artSize + 10, textY + (compact ? 55 : 72));
+      previewContentHeight = Math.max(24, previewY + previewHeight - previewContentY - 78);
 
       var body:String = infoExpanded ? buildMoreInfo(info) : info.description;
       if (body == null || body.length == 0) body = "No description was provided.";
@@ -345,6 +349,13 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       bodyLabel.fieldHeight = previewContentHeight;
     }
 
+    var statusLine:String = lastStatus;
+    var maxStatusLength:Int = compact ? 46 : 90;
+    if (statusLine.length > maxStatusLength)
+      statusLine = statusLine.substr(0, maxStatusLength - 3) + "...";
+    addLabel(previewX + inset, previewY + previewHeight - 58,
+      previewWidth - inset * 2, statusLine, 7, COLOR_BLUE);
+
     var buttonY:Float = previewY + previewHeight - 44;
     var buttonGap:Float = 8;
     var playWidth:Float = (previewWidth - inset * 2 - buttonGap) * 0.60;
@@ -364,7 +375,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     var help:String = DeviceUtil.isMobileBrowser
       ? "TAP A MOD  •  PLAY MOD TO LAUNCH  •  MORE INFO FOR DETAILS"
-      : "UP / DOWN SELECT  •  ENTER PLAY  •  I MORE INFO  •  R REFRESH  •  ESC BACK";
+      : "UP / DOWN OR D-PAD SELECT  •  ENTER / A PLAY  •  RIGHT / I INFO  •  LEFT / R REFRESH  •  ESC / B BACK  •  T CLASSIFY";
     var helpX:Float = margin + buttonWidth * 2 + 22;
     addLabel(helpX, buttonY + 9, Math.max(50, width - helpX - margin),
       help, compactLandscape ? 7 : 8, COLOR_MUTED);
@@ -412,10 +423,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       rowObjects.push(cast object);
   }
 
-  function loadModArtwork(art:FlxSprite, info:ExperienceInfo, size:Float):Void
+  function loadModArtwork(art:FlxSprite, info:ExperienceInfo, size:Float):Bool
   {
     #if !web
-    if (info.directory == null) return;
+    if (info.directory == null) return false;
     for (mod in PolymodHandler.getAllMods())
     {
       if (mod.dirName != info.directory) continue;
@@ -431,6 +442,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
           art.setGraphicSize(Std.int(bitmap.width * scale), Std.int(bitmap.height * scale));
           art.updateHitbox();
           art.setPosition(art.x + (size - art.width) * 0.5, art.y + (size - art.height) * 0.5);
+          return true;
         }
       }
       catch (error:Dynamic)
@@ -440,6 +452,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       break;
     }
     #end
+    return false;
   }
 
   function readModVersion(info:ExperienceInfo):String
@@ -455,7 +468,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       }
     }
     #end
-    return info.engineVersion == null || info.engineVersion.length == 0 ? "NOT PROVIDED" : info.engineVersion;
+    return "NOT PROVIDED";
   }
 
   function buildMoreInfo(info:ExperienceInfo):String
@@ -604,7 +617,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     selectedIndex = index;
     infoExpanded = false;
     infoScroll = 0;
-    lastStatus = experiences[index].title;
+    lastStatus = "SELECTED: " + experiences[index].title;
     FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.35);
     renderLayout();
   }
@@ -640,7 +653,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var selected:ExperienceInfo = experiences[selectedIndex];
     if (!selected.launchable)
     {
-      lastStatus = selected.explanation;
+      lastStatus = selected.explanation == null || selected.explanation.length == 0
+        ? "This package was not marked launchable by the compatibility scan."
+        : selected.explanation;
       renderLayout();
       return;
     }
@@ -743,8 +758,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       ? Math.min(78, Math.max(56, previewWidth * 0.22))
       : Math.min(164, Math.max(112, previewHeight * 0.43));
     var contentY:Float = Math.max(previewY + inset + 8 + artSize + 10,
-      previewY + inset + 8 + (compact ? 68 : 92));
-    var contentHeight:Float = Math.max(24, previewY + previewHeight - contentY - 62);
+      previewY + inset + 8 + (compact ? 55 : 72));
+    var contentHeight:Float = Math.max(24, previewY + previewHeight - contentY - 78);
     var maxLines:Int = Std.int(Math.max(3, Math.floor(contentHeight / 13)));
     var maxScroll:Int = Std.int(Math.max(0, lineCount - maxLines));
     infoScroll = Std.int(Math.max(0, Math.min(maxScroll, infoScroll + direction)));
@@ -804,8 +819,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (infoExpanded)
     {
-      if (controls.UI_UP_P || FlxG.keys.justPressed.UP) scrollMoreInfo(-3);
-      if (controls.UI_DOWN_P || FlxG.keys.justPressed.DOWN) scrollMoreInfo(3);
+      if (controls.UI_UP_P || FlxG.keys.justPressed.UP || SwipeUtil.swipeUp) scrollMoreInfo(-3);
+      if (controls.UI_DOWN_P || FlxG.keys.justPressed.DOWN || SwipeUtil.swipeDown) scrollMoreInfo(3);
       if (controls.UI_LEFT_P || FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.I)
       {
         infoExpanded = false;
@@ -823,6 +838,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         performAction("more");
       }
+      if (controls.UI_LEFT_P)
+        refreshModList();
     }
 
     if (controls.ACCEPT_P || FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
