@@ -909,6 +909,7 @@ class PlayState extends MusicBeatSubState
     {
       initStage();
       initCharacters();
+      PsychGameplayApi.applyPsychHealthBarColors(this);
     }
     else
     {
