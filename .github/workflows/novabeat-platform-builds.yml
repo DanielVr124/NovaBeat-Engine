@@ -28,6 +28,7 @@ on:
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
+      - "novabeat-assets/psych-freeplay/**"
       - ".github/workflows/novabeat-platform-builds.yml"
       - "docs/BUILDING.md"
       - "README.md"
@@ -36,6 +37,222 @@ on:
     paths:
       - ".gitmodules"
       - "upstream/Funkin/**"
+      - "novabeat-assets/psych-freeplay/**"
+      - ".github/workflows/novabeat-platform-builds.yml"
+      - "docs/BUILDING.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: novabeat-platform-builds-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'windows')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-windows]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-windows]')))
+    name: Windows desktop
+    runs-on: windows-2022
+    timeout-minutes: 180
+    steps:
+      - name: Check out NovaBeat and pinned FNF asset repositories
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Restore Neko 2.4.0 tool cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/neko/2.4.0
+          key: ${{ runner.os }}-${{ runner.arch }}-neko-2.4.0-v1
+          save-always: true
+
+      - name: Prime Neko tool cache with extended download retries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_cache="${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE is not set}"
+          neko_root="$tool_cache/neko/2.4.0"
+          neko_path="$neko_root/x64"
+
+          if [[ -x "$neko_path/neko" && -f "$neko_root/x64.complete" ]]; then
+            echo "Neko 2.4.0 is already restored from the runner tool cache."
+            exit 0
+          fi
+
+          archive="$RUNNER_TEMP/neko-2.4.0-linux64.tar.gz"
+          extract="$RUNNER_TEMP/neko-2.4.0-extract"
+          rm -rf "$extract"
+          mkdir -p "$extract"
+
+          # setup-haxe v2 retries transient downloads three times. Neko's release
+          # endpoint has repeatedly returned HTTP 504 in CI, so prime the exact
+          # actions/tool-cache location with a longer retry window first.
+          curl -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 \
+            "https://github.com/HaxeFoundation/neko/releases/download/v2-4-0/neko-2.4.0-linux64.tar.gz" \
+            -o "$archive"
+
+          tar -xzf "$archive" -C "$extract"
+          archive_root="$(find "$extract" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$archive_root"
+          test -x "$archive_root/neko"
+
+          mkdir -p "$neko_root"
+          rm -rf "$neko_path"
+          cp -a "$archive_root" "$neko_path"
+          touch "$neko_root/x64.complete"
+          echo "$neko_path" >> "$GITHUB_PATH"
+
+      - name: Restore Windows Neko 2.4.0 tool cache
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/neko/2.4.0
+          key: ${{ runner.os }}-${{ runner.arch }}-neko-2.4.0-v1
+          save-always: true
+
+      - name: Prime Windows Neko tool cache with extended download retries
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $toolCache = $env:RUNNER_TOOL_CACHE
+          if ([string]::IsNullOrWhiteSpace($toolCache)) { throw "RUNNER_TOOL_CACHE is not set." }
+          $nekoRoot = Join-Path $toolCache "neko/2.4.0"
+          $nekoPath = Join-Path $nekoRoot "x64"
+          $marker = Join-Path $nekoRoot "x64.complete"
+
+          if ((Test-Path (Join-Path $nekoPath "neko.exe")) -and (Test-Path $marker)) {
+            Write-Host "Neko 2.4.0 is already restored from the runner tool cache."
+          } else {
+            $archive = Join-Path $env:RUNNER_TEMP "neko-2.4.0-win64.zip"
+            $extract = Join-Path $env:RUNNER_TEMP "neko-2.4.0-extract"
+            if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+            New-Item -ItemType Directory -Force -Path $extract | Out-Null
+
+            & curl.exe -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 "https://github.com/HaxeFoundation/neko/releases/download/v2-4-0/neko-2.4.0-win64.zip" --output $archive
+            if ($LASTEXITCODE -ne 0) { throw "Neko download failed with curl exit code $LASTEXITCODE." }
+
+            Expand-Archive -LiteralPath $archive -DestinationPath $extract -Force
+            $nekoBinary = Get-ChildItem -LiteralPath $extract -Filter "neko.exe" -File -Recurse | Select-Object -First 1
+            if ($null -eq $nekoBinary) { throw "neko.exe was not found in the Neko archive." }
+            $nekoSource = $nekoBinary.DirectoryName
+
+            New-Item -ItemType Directory -Force -Path $nekoPath | Out-Null
+            Get-ChildItem -LiteralPath $nekoSource -Force | Copy-Item -Destination $nekoPath -Recurse -Force
+            if (!(Test-Path (Join-Path $nekoPath "neko.exe"))) { throw "Neko cache does not contain neko.exe." }
+
+            New-Item -ItemType File -Force -Path $marker | Out-Null
+          }
+
+      - name: Restore Haxe 4.3.7 tool cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/haxe/4.3.7
+          key: ${{ runner.os }}-${{ runner.arch }}-haxe-4.3.7-v1
+          save-always: true
+
+      - name: Prime Windows Haxe tool cache with extended download retries
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $toolCache = $env:RUNNER_TOOL_CACHE
+          if ([string]::IsNullOrWhiteSpace($toolCache)) { throw "RUNNER_TOOL_CACHE is not set." }
+          $haxeRoot = Join-Path $toolCache "haxe/4.3.7"
+          $haxePath = Join-Path $haxeRoot "x64"
+          $marker = Join-Path $haxeRoot "x64.complete"
+
+          if ((Test-Path (Join-Path $haxePath "haxe.exe")) -and (Test-Path (Join-Path $haxePath "std")) -and (Test-Path $marker)) {
+            Write-Host "Haxe 4.3.7 is already restored from the runner tool cache."
+          } else {
+            $archive = Join-Path $env:RUNNER_TEMP "haxe-4.3.7-win64.zip"
+            $extract = Join-Path $env:RUNNER_TEMP "haxe-4.3.7-extract"
+            if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+            New-Item -ItemType Directory -Force -Path $extract | Out-Null
+
+            & curl.exe -fL --retry 12 --retry-all-errors --retry-delay 5 --retry-max-time 900 "https://github.com/HaxeFoundation/haxe/releases/download/4.3.7/haxe-4.3.7-win64.zip" --output $archive
+            if ($LASTEXITCODE -ne 0) { throw "Haxe download failed with curl exit code $LASTEXITCODE." }
+
+            Expand-Archive -LiteralPath $archive -DestinationPath $extract -Force
+            $haxeBinary = Get-ChildItem -LiteralPath $extract -Filter "haxe.exe" -File -Recurse | Select-Object -First 1
+            if ($null -eq $haxeBinary) { throw "haxe.exe was not found in the Haxe archive." }
+            $haxeSource = $haxeBinary.DirectoryName
+            if (!(Test-Path (Join-Path $haxeSource "std"))) { throw "The Haxe archive is missing its std directory." }
+
+            New-Item -ItemType Directory -Force -Path $haxePath | Out-Null
+            Get-ChildItem -LiteralPath $haxeSource -Force | Copy-Item -Destination $haxePath -Recurse -Force
+            if (!(Test-Path (Join-Path $haxePath "haxe.exe"))) { throw "Haxe cache does not contain haxe.exe." }
+
+            New-Item -ItemType File -Force -Path $marker | Out-Null
+          }
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: "4.3.7"
+
+      - name: Locate global Haxe library repository
+        id: haxelib-cache-path
+        shell: bash
+        run: |
+          set -euo pipefail
+          haxelib_repo="$(haxelib config)"
+          test -n "$haxelib_repo"
+          echo "path=$haxelib_repo" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Haxe libraries and Lime tool caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.haxelib-cache-path.outputs.path }}
+            upstream/Funkin/.haxelib
+            ~/.lime
+          key: ${{ runner.os }}-haxe-4.3.7-${{ hashFiles('upstream/Funkin/hmm.json') }}
+
+name: NovaBeat platform build checks
+
+# [full-build-android] Verify APK compilation without HXCPP precompiled headers.
+
+# [full-build] Build Windows and Android for the current native test pass.
+# [full-build] Validate Windows and Android after Haxe/Neko tool-cache priming.
+# Reuse dependency and tool caches without clearing the restored local Haxe repository.
+# Android-only validation run requested after the NovaBeat menu compiler fixes.
+# [full-build-android] Rebuild Android after adding the native TouchUtil stub.
+# Android-only builds can be requested with workflow_dispatch (build_target: android)
+# or by pushing a change with [full-build-android] in its commit message.
+
+on:
+  workflow_dispatch:
+    inputs:
+# Psych compatibility testing requires native filesystem access to discover installed mods; use the Windows target for real-mod validation.
+      build_target:
+        description: Which native platform(s) to build
+        required: true
+        type: choice
+        options:
+          - both
+          - windows
+          - android
+        default: both
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - ".gitmodules"
+      - "upstream/Funkin/**"
+      - "novabeat-assets/psych-freeplay/**"
+      - ".github/workflows/novabeat-platform-builds.yml"
+      - "docs/BUILDING.md"
+      - "README.md"
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - ".gitmodules"
+      - "upstream/Funkin/**"
+      - "novabeat-assets/psych-freeplay/**"
       - ".github/workflows/novabeat-platform-builds.yml"
       - "docs/BUILDING.md"
 
@@ -220,6 +437,35 @@ jobs:
           test -f upstream/Funkin/LICENSE.md
           test -f upstream/Funkin/assets/LICENSE.md
           test -f upstream/Funkin/art/LICENSE.md
+
+      - name: Install classic Psych Freeplay assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="novabeat-assets/psych-freeplay/shared"
+          destination="upstream/Funkin/assets/shared"
+          test -s "$source/images/menuDesat.png"
+          test -s "$source/images/alphabet.png"
+          test -s "$source/images/alphabet.xml"
+          test -s "$source/sounds/scrollMenu.ogg"
+          mkdir -p "$destination/images" "$destination/sounds"
+          cp "$source/images/"* "$destination/images/"
+          cp "$source/sounds/"* "$destination/sounds/"
+          test -s upstream/Funkin/assets/fonts/vcr.ttf
+
+      - name: Install classic Psych Freeplay assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $source = "novabeat-assets/psych-freeplay/shared"
+          $destination = "upstream/Funkin/assets/shared"
+          foreach ($folder in @("images", "sounds")) {
+            $sourceFolder = Join-Path $source $folder
+            $destinationFolder = Join-Path $destination $folder
+            New-Item -ItemType Directory -Force -Path $destinationFolder | Out-Null
+            Get-ChildItem -LiteralPath $sourceFolder -File | Copy-Item -Destination $destinationFolder -Force
+          }
+          if (!(Test-Path "upstream/Funkin/assets/fonts/vcr.ttf")) { throw "VCR font is missing from the pinned FNF assets." }
 
       - name: Configure patched Haxe libraries and install pinned dependencies
         shell: bash
