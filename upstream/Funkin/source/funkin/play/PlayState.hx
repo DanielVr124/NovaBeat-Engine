@@ -2070,7 +2070,7 @@ class PlayState extends MusicBeatSubState
 
     PsychScriptRuntime.dispatch("onStepHit", []);
     if (Conductor.instance.currentStep % 16 == 0)
-      PsychScriptRuntime.dispatch("onSectionHit", [Std.int(Conductor.instance.currentStep / 16)]);
+      PsychScriptRuntime.dispatch("onSectionHit", [PsychGameplayApi.getCurrentPsychSection()]);
     return true;
   }
 
