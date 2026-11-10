@@ -280,6 +280,18 @@ class TouchUtil
     return true;
   }
   #end
+
+  // Native/mobile builds do not compile the browser Pointer Events bridge.
+  // MenuList shares its input path across targets, so provide a harmless
+  // native stub for the browser-only tap consumer.
+  #if !web
+  public static function consumeBrowserPointerTap(?object:FlxBasic, ?camera:FlxCamera, alignToSpriteCenter:Bool = false,
+      padding:Float = 0):Bool
+  {
+    return false;
+  }
+  #end
+
   /**
    * Indicates if any touch is currently pressed.
    */
