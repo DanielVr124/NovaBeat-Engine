@@ -207,6 +207,28 @@ class BaseCharacter extends Bopper
     return _data.scale;
   }
 
+  /**
+   * Psych exposes the source atlas path as character.imageFile. Keep this
+   * read-only so scripts can clone character frames without mutating assets.
+   */
+  public function getPsychImageFile():String
+  {
+    return _data.assetPath;
+  }
+
+  /**
+   * Psych exposes the current Sparrow frame name as
+   * character.animation.frameName. Trail scripts use this value to recreate
+   * the exact frame on a separate animated sprite.
+   */
+  public function getPsychFrameName():String
+  {
+    var currentFrame:Dynamic = this.frame;
+    if (currentFrame == null) return "";
+    var frameName:Dynamic = Reflect.field(currentFrame, "name");
+    return frameName == null ? "" : Std.string(frameName);
+  }
+
   public function getDeathCameraZoom():Float
   {
     return _data.death?.cameraZoom ?? 1.0;
