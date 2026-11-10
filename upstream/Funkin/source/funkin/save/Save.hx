@@ -133,6 +133,7 @@ class Save implements ConsoleClass
         audioVisualOffset: 0,
         unlockedFramerate: false,
         enabledDiscordRPC: true,
+        showMouseInMenus: false,
         screenshot: {
           shouldHideMouse: true,
           fancyPreview: true,
@@ -1290,6 +1291,12 @@ typedef SaveDataOptions =
    * @default `true`
    */
   var enabledDiscordRPC:Bool;
+
+  /**
+   * If enabled, the mouse cursor is visible while navigating desktop menus.
+   * @default `false`
+   */
+  var showMouseInMenus:Bool;
 
   /**
    * Screenshot options

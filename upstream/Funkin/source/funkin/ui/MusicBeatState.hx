@@ -153,10 +153,16 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     super.create();
 
     #if !mobile
-    // Keep the native mouse cursor hidden throughout menus. Mouse-wheel
-    // navigation remains active; menu items do not respond to pointer clicks.
+    // Keep the native mouse cursor hidden throughout menus by default.
+    // Desktop users can opt in to showing it from Options > Preferences.
+    // When that option is enabled, hide it again outside menu/UI states.
     var className = getRuntimeClassName();
-    if (className != null && className.indexOf("funkin.ui.") == 0)
+    var isMenuState:Bool = className != null && className.indexOf("funkin.ui.") == 0;
+    if (isMenuState)
+    {
+      if (Preferences.showMouseInMenus) Cursor.show(); else Cursor.hide();
+    }
+    else if (Preferences.showMouseInMenus)
     {
       Cursor.hide();
     }

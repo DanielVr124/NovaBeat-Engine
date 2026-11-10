@@ -29,6 +29,7 @@ import funkin.util.TouchUtil;
 import funkin.util.SwipeUtil;
 #end
 import funkin.util.DeviceUtil;
+import funkin.input.Cursor;
 import funkin.util.HapticUtil;
 import lime.ui.WindowVSyncMode;
 
@@ -227,6 +228,14 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
       Preferences.debugDisplayBGOpacity = value;
     }, Preferences.debugDisplayBGOpacity);
     #end
+    #if !(mobile || web)
+    createPrefItemCheckbox('Show Mouse in Menus', 'When enabled, the mouse cursor stays visible while navigating menus on PC.', function(value:Bool):Void
+    {
+      Preferences.showMouseInMenus = value;
+      if (value) Cursor.show(); else Cursor.hide();
+    }, Preferences.showMouseInMenus);
+    #end
+
     #if !mobile
     if (!DeviceUtil.isMobileBrowser)
     {

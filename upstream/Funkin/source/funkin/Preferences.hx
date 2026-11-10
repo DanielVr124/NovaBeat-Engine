@@ -7,6 +7,7 @@ import funkin.mobile.ui.FunkinHitbox;
 import funkin.mobile.util.InAppPurchasesUtil;
 #end
 import funkin.save.Save;
+import funkin.input.Cursor;
 import funkin.util.WindowUtil;
 import funkin.util.DeviceUtil;
 import funkin.util.HapticUtil.HapticsMode;
@@ -564,6 +565,25 @@ class Preferences
   {
     var save:Save = Save.instance;
     save.options.performanceCameraBops = value;
+    Save.system.flush();
+    return value;
+  }
+
+  /**
+   * If enabled, the mouse cursor is shown while navigating desktop menus.
+   * @default `false`
+   */
+  public static var showMouseInMenus(get, set):Bool;
+
+  static function get_showMouseInMenus():Bool
+  {
+    return Save?.instance?.options?.showMouseInMenus ?? false;
+  }
+
+  static function set_showMouseInMenus(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.showMouseInMenus = value;
     Save.system.flush();
     return value;
   }
