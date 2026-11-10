@@ -1,6 +1,8 @@
 package funkin.play.event;
 
 import funkin.data.song.SongData.SongEventData;
+import funkin.Conductor;
+import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.modding.psychlua.PsychGameplayApi;
 import funkin.play.PlayState;
 
@@ -30,6 +32,11 @@ class PsychCompatibilitySongEvent extends SongEvent
         Reflect.field(data.value, "altAnim") == true,
         Reflect.field(data.value, "gfSection") == true
       );
+      // Only announce a section transition when the marker is current. Old
+      // markers are skipped on seeks; updateGlobals derives the active state
+      // directly from the chart timeline instead of replaying past callbacks.
+      if (Conductor.instance.songPosition - data.time <= 1000)
+        PsychScriptRuntime.dispatch("onSectionHit", [PsychGameplayApi.getCurrentPsychSection()]);
       return;
     }
 
