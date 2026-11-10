@@ -143,3 +143,6 @@ A green Windows job means the v0.8.6 game source compiled into a Windows executa
 
 
 Freeplay no longer contains NovaBeat theme, menu-header, background, sound, or parent-menu routing branches; it uses the original FNF Freeplay and Main Menu path.
+
+
+The original FNF menu is the only active menu presentation. Story Mode, Freeplay, Options, Preferences, Customization, Performance, and Mobile customization no longer carry NovaBeat alternate-theme branches; mod-owned menus remain under the mod's control.
