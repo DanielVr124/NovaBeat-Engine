@@ -14,6 +14,7 @@ import openfl.display.BitmapData;
 import funkin.modding.IScriptedClass.IPlayStateScriptedClass;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEventDispatcher;
+import funkin.modding.PsychModRuntime;
 import funkin.play.character.BaseCharacter;
 import funkin.data.IRegistryEntry;
 import funkin.data.stage.StageData;
@@ -486,6 +487,20 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
       }
       #end
     }
+
+    // Psych stage JSON stores character positions as top-left x/y values,
+    // unlike V-Slice stage data, which stores the character's feet position.
+    // Apply the Psych coordinates after the native stage placement/scale so
+    // both initial spawns and Change Character swaps use the same position.
+    var psychRole:String = switch (charType)
+    {
+      case BF: "boyfriend";
+      case GF: "girlfriend";
+      case DAD: "opponent";
+      default: "";
+    };
+    if (psychRole.length > 0)
+      PsychModRuntime.applyPsychStageCharacterPosition(character, psychRole);
 
     // Set the characters type
     character.characterType = charType;
