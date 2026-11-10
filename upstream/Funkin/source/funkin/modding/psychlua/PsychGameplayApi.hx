@@ -70,10 +70,30 @@ class PsychGameplayApi
   static var activeDialogue:Null<PsychDialogueOverlay> = null;
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
+  static var psychCurrentSection:Int = 0;
+  static var psychMustHitSection:Bool = false;
+  static var psychAltAnim:Bool = false;
+  static var psychGFSection:Bool = false;
+
+  public static function setPsychSectionState(section:Int, mustHit:Bool, altAnimation:Bool, gfSection:Bool):Void
+  {
+    psychCurrentSection = Std.int(Math.max(0, section));
+    psychMustHitSection = mustHit;
+    psychAltAnim = altAnimation;
+    psychGFSection = gfSection;
+    PsychScriptRuntime.setGlobal("curSection", psychCurrentSection);
+    PsychScriptRuntime.setGlobal("mustHitSection", psychMustHitSection);
+    PsychScriptRuntime.setGlobal("altAnim", psychAltAnim);
+    PsychScriptRuntime.setGlobal("gfSection", psychGFSection);
+  }
 
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
     var vars:Map<String, Dynamic> = [];
+    psychCurrentSection = 0;
+    psychMustHitSection = false;
+    psychAltAnim = false;
+    psychGFSection = false;
 
     ensureTimeBar(state);
     if (activeTimeBar != null)
@@ -1890,7 +1910,7 @@ class PsychGameplayApi
 
     var activeDirectory:String = PsychScriptRuntime.getActiveModDirectory();
     PsychScriptRuntime.setGlobal("currentModDirectory", activeDirectory);
-    PsychScriptRuntime.setGlobal("curSection", Std.int(Math.floor(Conductor.instance.currentStep / 16)));
+    PsychScriptRuntime.setGlobal("curSection", psychCurrentSection);
     PsychScriptRuntime.setGlobal("rating", Highscore.tallies.totalNotes <= 0
       ? 0.0
       : Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes);
@@ -1902,9 +1922,9 @@ class PsychGameplayApi
     PsychScriptRuntime.setGlobal("week", 0);
     PsychScriptRuntime.setGlobal("seenCutscene", false);
     PsychScriptRuntime.setGlobal("version", Constants.VERSION);
-    PsychScriptRuntime.setGlobal("mustHitSection", false);
-    PsychScriptRuntime.setGlobal("altAnim", false);
-    PsychScriptRuntime.setGlobal("gfSection", false);
+    PsychScriptRuntime.setGlobal("mustHitSection", psychMustHitSection);
+    PsychScriptRuntime.setGlobal("altAnim", psychAltAnim);
+    PsychScriptRuntime.setGlobal("gfSection", psychGFSection);
     PsychScriptRuntime.setGlobal("healthGainMult", 1.0);
     PsychScriptRuntime.setGlobal("healthLossMult", 1.0);
     PsychScriptRuntime.setGlobal("guitarHeroSustains", false);
