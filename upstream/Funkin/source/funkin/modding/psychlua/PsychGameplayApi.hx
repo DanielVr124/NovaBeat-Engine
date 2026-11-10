@@ -87,6 +87,39 @@ class PsychGameplayApi
     PsychScriptRuntime.setGlobal("gfSection", psychGFSection);
   }
 
+  static function initializePsychSectionState(state:PlayState):Void
+  {
+    if (state == null || state.currentChart == null) return;
+    var rawEvents:Dynamic = Reflect.field(state.currentChart, "events");
+    if (!Std.isOfType(rawEvents, Array)) return;
+
+    var firstMarker:Dynamic = null;
+    var bestMarker:Dynamic = null;
+    var bestTime:Float = -1.0e30;
+    var songPosition:Float = Conductor.instance.songPosition;
+    for (event in (cast rawEvents:Array<Dynamic>))
+    {
+      if (event == null || Reflect.field(event, "eventKind") != "PsychCompatibilityEvent") continue;
+      var value:Dynamic = Reflect.field(event, "value");
+      if (value == null || Reflect.field(value, "name") != "__PsychSectionState") continue;
+      if (firstMarker == null) firstMarker = event;
+      var eventTime:Float = Std.parseFloat(Std.string(Reflect.field(event, "time")));
+      if (!Math.isNaN(eventTime) && eventTime <= songPosition && eventTime >= bestTime)
+      {
+        bestMarker = event;
+        bestTime = eventTime;
+      }
+    }
+
+    var selected:Dynamic = bestMarker == null ? firstMarker : bestMarker;
+    if (selected == null) return;
+    var selectedValue:Dynamic = Reflect.field(selected, "value");
+    psychCurrentSection = Std.int(Reflect.field(selectedValue, "curSection"));
+    psychMustHitSection = Reflect.field(selectedValue, "mustHitSection") == true;
+    psychAltAnim = Reflect.field(selectedValue, "altAnim") == true;
+    psychGFSection = Reflect.field(selectedValue, "gfSection") == true;
+  }
+
   public static function createGlobals(state:PlayState):Map<String, Dynamic>
   {
     var vars:Map<String, Dynamic> = [];
@@ -94,6 +127,7 @@ class PsychGameplayApi
     psychMustHitSection = false;
     psychAltAnim = false;
     psychGFSection = false;
+    initializePsychSectionState(state);
 
     ensureTimeBar(state);
     if (activeTimeBar != null)
