@@ -55,6 +55,19 @@ class LevelRegistry extends BaseRegistry<Level, LevelData, LevelEntryParams> imp
     result.sort(SortUtil.defaultsThenAlphabetically.bind(listBaseGameEntryIds()));
     return result;
   }
+
+  /** Register one Psych week after native level assets have been loaded. */
+  public function registerPsychLevel(id:String, data:LevelData):Void
+  {
+    if (id == null || id.length == 0 || data == null) return;
+    registerCompatibilityEntry(new Level(id, {psychRuntimeData: data}));
+  }
+
+  /** Remove a previously imported Psych week before re-registering active packs. */
+  public function removePsychLevel(id:String):Void
+  {
+    removeCompatibilityEntry(id);
+  }
 }
 
 typedef LevelEntryParams =
