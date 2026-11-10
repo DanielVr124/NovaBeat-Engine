@@ -410,7 +410,7 @@ class PsychFreeplayState extends MusicBeatSubState
     resetNo.setMenuScale(resetSelection == 1 ? 1.0 : 0.75);
     resetYes.setMenuAlpha(resetSelection == 0 ? 1.25 : 0.6);
     resetNo.setMenuAlpha(resetSelection == 1 ? 1.25 : 0.6);
-    resetIcon.playAnimation(resetSelection == 0 ? resetIcon.Idle : resetIcon.Losing, resetIcon.Idle, true);
+    resetIcon.playAnimation(resetSelection == 0 ? "idle" : "losing", "idle", true);
   }
 
   function updateResetPrompt(elapsed:Float):Void
@@ -438,7 +438,7 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     super.update(elapsed);
 
-    if (stickerSubState?.switchingState ?? false) return;
+    if (stickerSubState?.isSwitchingState() ?? false) return;
 
     if (resetPrompt)
     {

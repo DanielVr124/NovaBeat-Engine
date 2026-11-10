@@ -253,6 +253,12 @@ class StickerSubState extends MusicBeatSubState
 
   var switchingState:Bool = false;
 
+  /** Whether the sticker transition has begun switching to its target state. */
+  public function isSwitchingState():Bool
+  {
+    return switchingState;
+  }
+
   override public function close():Void
   {
     if (switchingState) return;
