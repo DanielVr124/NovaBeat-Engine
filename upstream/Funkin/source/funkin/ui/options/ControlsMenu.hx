@@ -101,7 +101,6 @@ class ControlsMenu extends Page<OptionsState.OptionsMenuPageName>
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
     camera = menuCamera;
-    NovaBeatOptionsChrome.apply(this, 'CONTROLS', menuCamera);
 
     novaBeatRows = new FlxTypedGroup<FunkinSprite>();
     novaBeatRows.cameras = [menuCamera];
