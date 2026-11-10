@@ -94,15 +94,6 @@ class MainMenuState extends MusicBeatState
   override function create():Void
   {
     Cursor.hide();
-    // Keep the upstream FNF menu as the default. NovaBeat is an explicit
-    // preference and is routed here only after the player opts in.
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      super.create();
-      FlxG.switchState(() -> new NovaBeatMainMenuState());
-      return;
-    }
-
     #if FEATURE_DISCORD_RPC
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end
