@@ -71,6 +71,7 @@ class PsychGameplayApi
   static var activeCustomSubstate:Null<PsychCustomSubState> = null;
   static var nextSoundTag:Int = 0;
   static var psychCurrentSection:Int = 0;
+  static var psychHasSectionMarkers:Bool = false;
   static var psychMustHitSection:Bool = false;
   static var psychAltAnim:Bool = false;
   static var psychGFSection:Bool = false;
@@ -78,13 +79,21 @@ class PsychGameplayApi
   public static function setPsychSectionState(section:Int, mustHit:Bool, altAnimation:Bool, gfSection:Bool):Void
   {
     psychCurrentSection = Std.int(Math.max(0, section));
+    psychHasSectionMarkers = true;
     psychMustHitSection = mustHit;
     psychAltAnim = altAnimation;
     psychGFSection = gfSection;
-    PsychScriptRuntime.setGlobal("curSection", psychCurrentSection);
+    PsychScriptRuntime.setGlobal("curSection", getCurrentPsychSection());
     PsychScriptRuntime.setGlobal("mustHitSection", psychMustHitSection);
     PsychScriptRuntime.setGlobal("altAnim", psychAltAnim);
     PsychScriptRuntime.setGlobal("gfSection", psychGFSection);
+  }
+
+  public static function getCurrentPsychSection():Int
+  {
+    return psychHasSectionMarkers
+      ? psychCurrentSection
+      : Std.int(Math.floor(Conductor.instance.currentStep / 16));
   }
 
   static function initializePsychSectionState(state:PlayState):Void
@@ -115,6 +124,7 @@ class PsychGameplayApi
     if (selected == null) return;
     var selectedValue:Dynamic = Reflect.field(selected, "value");
     psychCurrentSection = Std.int(Reflect.field(selectedValue, "curSection"));
+    psychHasSectionMarkers = true;
     psychMustHitSection = Reflect.field(selectedValue, "mustHitSection") == true;
     psychAltAnim = Reflect.field(selectedValue, "altAnim") == true;
     psychGFSection = Reflect.field(selectedValue, "gfSection") == true;
@@ -124,6 +134,7 @@ class PsychGameplayApi
   {
     var vars:Map<String, Dynamic> = [];
     psychCurrentSection = 0;
+    psychHasSectionMarkers = false;
     psychMustHitSection = false;
     psychAltAnim = false;
     psychGFSection = false;
