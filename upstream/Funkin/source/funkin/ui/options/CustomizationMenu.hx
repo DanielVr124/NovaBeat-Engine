@@ -146,7 +146,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     for (item in categoryItems)
     {
       item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
-      item.updateHitbox();
+      // TextMenuItem uses a transparent 1x1 backing graphic but preserves a
+      // label-sized hitbox. updateHitbox() would replace that custom hitbox
+      // with the backing graphic's 1x1 dimensions, making these rows untappable.
       rowHeight = Math.max(rowHeight, item.height);
     }
 
