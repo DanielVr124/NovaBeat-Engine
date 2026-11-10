@@ -3383,8 +3383,15 @@ class PsychGameplayApi
         var role:String = value1 == null || value1.length == 0 ? "bf" : value1;
         changePsychCharacter(state, role, value2);
       default:
-        trace('[Psych API] Unsupported built-in event: ' + name);
+        // Chart validation requires a matching custom_events script for
+        // non-built-in events. Those scripts receive the event through the
+        // standard Psych onEvent callback dispatched immediately below.
     }
+
+    // Psych's onEvent callback is the entry point for custom event scripts.
+    // Dispatch it for chart events and Lua-triggered events alike, after the
+    // native built-in event has applied its own behavior.
+    PsychScriptRuntime.dispatch("onEvent", [name, value1, value2]);
   }
 
   static function parseFloatOr(value:String, fallback:Float):Float
