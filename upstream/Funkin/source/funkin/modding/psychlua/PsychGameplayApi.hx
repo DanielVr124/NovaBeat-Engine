@@ -1896,7 +1896,35 @@ class PsychGameplayApi
   }
 
   public static function updateGlobals(state:PlayState):Void
+  {  /**
+   * Apply Psych's opponent/player character colors to NovaBeat's two-color bar.
+   * Non-Psych songs and characters without both color triplets keep native colors.
+   */
+  public static function applyPsychHealthBarColors(state:PlayState):Bool
   {
+    if (state == null || state.currentSong == null || state.currentStage == null
+      || state.healthBar == null || !PsychModRuntime.isImportedSong(state.currentSong.id)) return false;
+
+    var boyfriend:Null<BaseCharacter> = state.currentStage.getBoyfriend();
+    var opponent:Null<BaseCharacter> = state.currentStage.getDad();
+    if (boyfriend == null || opponent == null) return false;
+
+    var colors:Null<Array<Int>> = PsychModRuntime.getPsychHealthBarColors(
+      state.currentSong.id,
+      boyfriend.characterId,
+      opponent.characterId
+    );
+    if (colors == null || colors.length != 6) return false;
+
+    state.healthBar.createFilledBar(
+      FlxColor.fromRGB(colors[0], colors[1], colors[2]),
+      FlxColor.fromRGB(colors[3], colors[4], colors[5])
+    );
+    state.healthBar.updateBar();
+    return true;
+  }
+
+
     if (state == null) return;
     initializePsychSectionState(state);
     if (activeTimeBar != null)
@@ -3300,6 +3328,7 @@ class PsychGameplayApi
     replacement.visible = true;
     replacement.active = true;
     state.currentStage.addCharacter(replacement, removed.characterType);
+    applyPsychHealthBarColors(state);
 
     // Keep the live chart's legacy character mirrors synchronized. This does
     // not modify the package's on-disk chart or the saved mod content.
