@@ -1252,9 +1252,12 @@ class PsychModRuntime
     if (songDataPath != null)
     {
       var ownerRoot:String = Path.normalize(Path.directory(Path.directory(songDataPath)));
-      var characterRoot:String = Path.join([ownerRoot, "characters"]);
-      if (FileSystem.exists(characterRoot) && FileSystem.isDirectory(characterRoot))
+      // Full Psych game distributions sometimes keep their shared character
+      // JSON beside the mod pack (../assets/characters) instead of duplicating
+      // it inside mods/characters. Import those companion definitions too.
+      for (characterRoot in psychCharacterDataRoots(ownerRoot))
       {
+        if (!FileSystem.exists(characterRoot) || !FileSystem.isDirectory(characterRoot)) continue;
         for (entry in FileSystem.readDirectory(characterRoot))
         {
           if (Path.extension(entry).toLowerCase() != "json") continue;
@@ -1316,20 +1319,41 @@ class PsychModRuntime
   }
 
   #if sys
+  static function psychCharacterDataRoots(modPath:String):Array<String>
+  {
+    var roots:Array<String> = [
+      Path.join([modPath, "characters"]),
+      Path.join([modPath, "data", "characters"])
+    ];
+
+    // Some full Psych Engine games ship their playable-character JSON beside
+    // the mods/ directory while the corresponding atlas is inside mods/images.
+    // This keeps those game-bundled characters available when testing/importing
+    // the game's own mods/ pack as a NovaBeat mod.
+    var companionRoot:String = Path.normalize(Path.join([Path.directory(modPath), "assets", "characters"]));
+    if (roots.indexOf(companionRoot) < 0) roots.push(companionRoot);
+    return roots;
+  }
+
   static function findPsychCharacterDataFile(modPath:String, characterId:String):Null<String>
   {
-    var candidates:Array<String> = [
-      Path.join([modPath, "characters", characterId + ".json"]),
-      Path.join([modPath, "data", "characters", characterId + ".json"])
-    ];
-    for (candidate in candidates)
+    if (characterId == null || characterId.length == 0
+      || characterId.indexOf("/") >= 0 || characterId.indexOf("\\") >= 0
+      || characterId == "." || characterId == "..") return null;
+
+    var fileName:String = characterId + ".json";
+    var roots:Array<String> = psychCharacterDataRoots(modPath);
+    for (root in roots)
+    {
+      var candidate:String = Path.join([root, fileName]);
       if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate)) return candidate;
-    for (root in [Path.join([modPath, "characters"]), Path.join([modPath, "data", "characters"])])
+    }
+    for (root in roots)
     {
       if (!FileSystem.exists(root) || !FileSystem.isDirectory(root)) continue;
       for (entry in FileSystem.readDirectory(root))
         if (!FileSystem.isDirectory(Path.join([root, entry]))
-          && entry.toLowerCase() == (characterId + ".json").toLowerCase())
+          && entry.toLowerCase() == fileName.toLowerCase())
           return Path.join([root, entry]);
     }
     return null;
