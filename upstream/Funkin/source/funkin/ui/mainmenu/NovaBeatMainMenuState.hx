@@ -102,6 +102,8 @@ class NovaBeatMainMenuState extends MusicBeatState
   var menuScrollViewportTop:Float = 0;
   var rowTapTargets:Array<FlxObject> = [];
   var rowBorders:Array<FlxSprite> = [];
+  // Pointer confirmation follows FNF: first click selects, second click accepts.
+  var pointerArmedIndex:Int = -1;
 
   var rowBackgrounds:Array<FlxSprite> = [];
   var rowIconPlates:Array<FlxSprite> = [];
@@ -613,28 +615,48 @@ class NovaBeatMainMenuState extends MusicBeatState
 
   function handleMobileMenuCardInput():Void
   {
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (!DeviceUtil.isMobileBrowser || menuItems == null || menuItems.busy) return;
+    if (menuItems == null || menuItems.busy) return;
 
+    // Use the artwork-aligned hit targets for both mouse and touch. A first
+    // pointer click only selects; a second click on the same card confirms.
     for (index in 0...rowTapTargets.length)
     {
       final target:FlxObject = rowTapTargets[index];
       if (!target.exists || !target.visible) continue;
 
-      var tapped:Bool = TouchUtil.pressAction(target, uiCamera, false);
-      #if web
-      if (!tapped && FlxG.mouse.justReleased)
-        tapped = FlxG.mouse.overlaps(target, uiCamera);
+      var clicked:Bool = false;
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      if (DeviceUtil.isMobileBrowser)
+      {
+        clicked = TouchUtil.pressAction(target, uiCamera, false);
+        #if web
+        if (!clicked && FlxG.mouse.justReleased)
+          clicked = FlxG.mouse.overlaps(target, uiCamera);
+        #end
+      }
       #end
 
-      if (!tapped || SwipeUtil.justSwipedAny) continue;
+      // Desktop browsers use the same two-click behavior as touch devices.
+      if (!clicked && !DeviceUtil.isMobileBrowser && FlxG.mouse.justReleased)
+        clicked = FlxG.mouse.overlaps(target, uiCamera);
 
-      menuItems.selectItem(index);
-      playSfx('select', 0.45);
-      menuItems.accept();
+      if (!clicked || SwipeUtil.justSwipedAny) continue;
+
+      if (pointerArmedIndex == index)
+      {
+        menuItems.selectItem(index);
+        playSfx('confirm', 0.8);
+        menuItems.accept();
+        pointerArmedIndex = -1;
+      }
+      else
+      {
+        pointerArmedIndex = index;
+        menuItems.selectItem(index);
+        playSfx('select', 0.45);
+      }
       return;
     }
-    #end
   }
 
   override function update(elapsed:Float):Void
