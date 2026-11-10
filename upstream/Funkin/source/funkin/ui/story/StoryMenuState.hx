@@ -20,6 +20,7 @@ import funkin.modding.events.ScriptEventDispatcher;
 import funkin.play.PlayStatePlaylist;
 import funkin.play.song.Song;
 import funkin.save.Save;
+import funkin.Preferences;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatState;
