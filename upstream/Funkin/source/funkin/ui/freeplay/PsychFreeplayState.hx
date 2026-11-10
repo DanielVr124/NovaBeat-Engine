@@ -129,7 +129,11 @@ class PsychFreeplayState extends MusicBeatSubState
   function buildSongList():Void
   {
     songs = [];
+    var orderedSongIds = funkin.modding.PsychModRuntime.getPsychFreeplaySongOrder();
     for (songId in ExperienceManager.getActivePsychSongIds())
+      if (!orderedSongIds.contains(songId)) orderedSongIds.push(songId);
+
+    for (songId in orderedSongIds)
     {
       if (!ExperienceManager.isPsychSong(songId)) continue;
       var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: VARIATION});

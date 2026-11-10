@@ -45,6 +45,7 @@ class PsychModRuntime
   static var psychWeekIds:Array<String> = [];
   static var psychFreeplayColors:Map<String, Int> = [];
   static var psychFreeplayIcons:Map<String, String> = [];
+  static var psychFreeplaySongOrder:Array<String> = [];
   static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
@@ -237,6 +238,12 @@ class PsychModRuntime
   }
 
 
+  /** Return songs in the same week-file order used by classic Psych Freeplay. */
+  public static function getPsychFreeplaySongOrder():Array<String>
+  {
+    return psychFreeplaySongOrder.copy();
+  }
+
   /** Return the Psych week color for a song, or the classic purple default. */
   public static function getPsychFreeplayColor(songId:String):Int
   {
@@ -260,6 +267,7 @@ class PsychModRuntime
     psychWeekIds = [];
     psychFreeplayColors.clear();
     psychFreeplayIcons.clear();
+    psychFreeplaySongOrder = [];
 
     #if sys
     var root:String = PolymodHandler.getModRoot();
@@ -294,6 +302,7 @@ class PsychModRuntime
             if (songId != null)
             {
               if (songIds.indexOf(songId) < 0) songIds.push(songId);
+              if (!psychFreeplaySongOrder.contains(songId)) psychFreeplaySongOrder.push(songId);
 
               if (Std.isOfType(songEntry, Array))
               {
