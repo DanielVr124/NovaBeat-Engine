@@ -1555,7 +1555,7 @@ class PsychModRuntime
     if (name == null) return false;
     return switch (StringTools.trim(name).toLowerCase())
     {
-      case "alt animation", "no animation", "hey!", "gf sing": true;
+      case "alt animation", "no animation", "hey!", "gf sing", "hurt note": true;
       default: false;
     };
   }
@@ -1570,6 +1570,7 @@ class PsychModRuntime
       case "no animation": "noanim";
       case "hey!": "psychhey";
       case "gf sing": "psychgfsing";
+      case "hurt note": "psychhurt";
       default: name;
     };
   }
@@ -1973,7 +1974,8 @@ class PsychModRuntime
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +
         '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true},' +
         '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"},' +
-        '{"t":1750,"s":0,"d":0,"k":"Hey!"},{"t":2000,"s":1,"d":0,"k":"GF Sing"}],' +
+        '{"t":1750,"s":0,"d":0,"k":"Hey!"},{"t":2000,"s":1,"d":0,"k":"GF Sing"},' +
+        '{"t":2250,"s":1,"d":2,"k":"Hurt Note"}],' +
         '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]},' +
         '{"t":1800,"e":"Change Scroll Speed","v":["1.5","2"]}],' +
         '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
@@ -1986,16 +1988,17 @@ class PsychModRuntime
         "smoke-test"
       );
       if (converted == null) return false;
-      if (converted.notes.length != 6) return false;
+      if (converted.notes.length != 7) return false;
       if (converted.notes[0].data != 5 || converted.notes[0].length != 250) return false;
       if (converted.notes[1].data != 2 || converted.notes[1].kind != "alt") return false;
       if (converted.notes[2].kind != "alt" || converted.notes[3].kind != "noanim") return false;
       if (converted.notes[4].kind != "psychhey" || converted.notes[5].kind != "psychgfsing") return false;
+      if (converted.notes[6].kind != "psychhurt") return false;
       if (!isSupportedBuiltinPsychNoteType("Alt Animation")
         || !isSupportedBuiltinPsychNoteType("No Animation")
         || !isSupportedBuiltinPsychNoteType("Hey!")
         || !isSupportedBuiltinPsychNoteType("GF Sing")
-        || isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
+        || !isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
       if (converted.metadata.playData.stage != "phillyTrain") return false;
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
@@ -2007,10 +2010,13 @@ class PsychModRuntime
       var heyKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychHeyNoteKind");
       var gfSingKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychGFSingNoteKind");
       var altKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.AltAnimNoteKind");
-      if (heyKindClass == null || gfSingKindClass == null || altKindClass == null) return false;
+      var hurtKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychHurtNoteKind");
+      if (heyKindClass == null || gfSingKindClass == null || altKindClass == null || hurtKindClass == null) return false;
       var heyKind:Dynamic = Type.createInstance(heyKindClass, []);
       var gfSingKind:Dynamic = Type.createInstance(gfSingKindClass, []);
-      if (Reflect.field(heyKind, "hey") != true || Reflect.field(gfSingKind, "gfSing") != true) return false;
+      var hurtKind:Dynamic = Type.createInstance(hurtKindClass, []);
+      if (Reflect.field(heyKind, "hey") != true || Reflect.field(gfSingKind, "gfSing") != true
+        || Reflect.field(hurtKind, "hurt") != true || Reflect.field(hurtKind, "scoreable") != false) return false;
 
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
