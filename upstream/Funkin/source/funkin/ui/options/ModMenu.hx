@@ -3,6 +3,7 @@ package funkin.ui.options;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup;
+import flixel.math.FlxPoint;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -262,7 +263,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var sub:String = info.author;
       if (sub == null || sub.length == 0) sub = "Unknown creator";
       var status:String = info.enabled ? "READY" : "DISABLED";
-remove package type local      var line:FlxText = addLabel(labelX, y + (portraitLayout ? 27 : 32), labelWidth,
+      var line:FlxText = addLabel(labelX, y + (portraitLayout ? 27 : 32), labelWidth,
         sub + "  •  " + status, 8, selected ? COLOR_BLUE : COLOR_MUTED);
       addRowObject(line);
     }
@@ -766,16 +767,34 @@ remove package type local      var line:FlxText = addLabel(labelX, y + (portrait
     renderLayout();
   }
 
+  function pointerOverAt(sprite:FlxSprite, pointer:Dynamic):Bool
+  {
+    if (sprite == null || pointer == null) return false;
+
+    // Resolve touch and compatibility-mouse pointers into the sprite camera's
+    // world space. This avoids the HTML5 touch overlap mismatch on scaled views.
+    var worldPoint:FlxPoint = pointer.getWorldPosition(sprite.camera);
+    if (worldPoint == null) return false;
+
+    var isOver:Bool = sprite.overlapsPoint(worldPoint, true, sprite.camera);
+    worldPoint.putWeak();
+    return isOver;
+  }
+
   function handlePointerInput():Void
   {
-    var released:Bool = TouchUtil.justReleased || FlxG.mouse.justReleased;
-    if (!released) return;
+    var touchReleased:Bool = TouchUtil.justReleased;
+    var mouseReleased:Bool = FlxG.mouse.justReleased;
+    if (!touchReleased && !mouseReleased) return;
+
+    var touchPointer:Dynamic = TouchUtil.touch;
+    var mousePointer:Dynamic = FlxG.mouse;
 
     for (index in 0...buttonHitboxes.length)
     {
       var hitbox:FlxSprite = buttonHitboxes[index];
-      var overTouch:Bool = TouchUtil.justReleased && TouchUtil.overlaps(hitbox);
-      var overMouse:Bool = FlxG.mouse.justReleased && FlxG.mouse.overlaps(hitbox);
+      var overTouch:Bool = touchReleased && pointerOverAt(hitbox, touchPointer);
+      var overMouse:Bool = mouseReleased && pointerOverAt(hitbox, mousePointer);
       if (overTouch || overMouse)
       {
         performAction(buttonActions[index]);
@@ -786,8 +805,8 @@ remove package type local      var line:FlxText = addLabel(labelX, y + (portrait
     for (index in 0...rowHitboxes.length)
     {
       var hitbox:FlxSprite = rowHitboxes[index];
-      var overTouch:Bool = TouchUtil.justReleased && TouchUtil.overlaps(hitbox);
-      var overMouse:Bool = FlxG.mouse.justReleased && FlxG.mouse.overlaps(hitbox);
+      var overTouch:Bool = touchReleased && pointerOverAt(hitbox, touchPointer);
+      var overMouse:Bool = mouseReleased && pointerOverAt(hitbox, mousePointer);
       if (overTouch || overMouse)
       {
         selectMod(firstVisibleIndex + index);
