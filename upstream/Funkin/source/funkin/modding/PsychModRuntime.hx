@@ -1272,7 +1272,10 @@ class PsychModRuntime
           {
             if (section == null) continue;
             if (Reflect.field(section, "changeKeyCount") == true) return "mid-song key-count changes";
-            if (Reflect.field(section, "changeScrollVelocity") == true) return "mid-song scroll-velocity changes";
+            if (Reflect.field(section, "changeSpeed") == true)
+              return "mid-song base scroll-speed changes";
+            if (Reflect.field(section, "changeScrollVelocity") == true)
+              return "mid-song scroll-velocity changes";
           }
         }
       }
