@@ -529,7 +529,9 @@ class StoryMenuState extends MusicBeatState
       }
 
       #if FEATURE_TOUCH_CONTROLS
-      if (!selectedLevel && TouchUtil.justReleased && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
+      // pressAction() owns release detection. On mobile HTML5 the browser PointerEvent
+      // bridge can capture a tap even when FlxTouch.justReleased was dropped.
+      if (!selectedLevel && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
       {
         for (i in 0...levelTitles.members.length)
         {
