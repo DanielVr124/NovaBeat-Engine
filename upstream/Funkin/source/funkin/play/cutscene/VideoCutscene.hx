@@ -211,6 +211,13 @@ class VideoCutscene
       {
         onVideoStarted.dispatch();
       }
+      else if (vid != null)
+      {
+        // A failed load/play can return false without dispatching
+        // onEncounteredError. Always release the cutscene state in that case.
+        trace('ALERT: Could not load or play video cutscene: ' + filePath);
+        finishVideo(0.5);
+      }
     }
     else
     {
@@ -343,8 +350,11 @@ class VideoCutscene
     #end
 
     #if (html5 || hxvlc)
-    vid.destroy();
-    vid = null;
+    if (vid != null)
+    {
+      vid.destroy();
+      vid = null;
+    }
     #end
 
     PlayState.instance.camHUD.visible = true;
