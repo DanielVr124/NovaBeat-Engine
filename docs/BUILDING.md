@@ -128,6 +128,10 @@ The debug build does not need a release keystore. Lime writes the APK beneath th
 
 The browser build is intentionally separate from the native platform workflow. It compiles with `haxelib run lime build html5 -v -release -DGITHUB_BUILD`, verifies that an HTML entry point and JavaScript bundle were generated, and publishes a ZIP only to the private NovaBeat-Builds repository. The complete manual test steps and current web limitations are documented in [HTML5_TESTING.md](HTML5_TESTING.md). Do not publish this build through public GitHub Pages or public Actions artifacts: the pinned upstream asset and art license files prohibit public redistribution of their content.
 
+## Psych Engine compatibility
+
+The current Psych package layouts, supported chart subset, script/runtime scope, limitations, and verification checklist are documented in [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md). Native Windows builds are required to compile and test the filesystem-based Psych adapter; a green HTML5 build does not establish Psych mod compatibility.
+
 ## What a green build means
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. A green HTML5 job means the game compiled into a browser bundle and the private ZIP was published. None of these results alone verifies runtime behavior on every PC, phone, or browser, and none completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
