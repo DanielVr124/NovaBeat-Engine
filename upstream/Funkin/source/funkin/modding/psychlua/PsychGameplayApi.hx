@@ -3091,6 +3091,89 @@ class PsychGameplayApi
     return setOnObject(item, path, value, allowMaps);
   }
 
+  /**
+   * Change the live BF/GF/DAD character using the same stage transaction used
+   * during initial character construction. Old characters are retained as
+   * hidden preloads so a later Psych Change Character event can switch back.
+   */
+  static function changePsychCharacter(state:PlayState, role:String, characterId:String):Bool
+  {
+    if (state == null || state.currentStage == null || characterId == null) return false;
+    var requested:String = StringTools.trim(characterId);
+    if (requested.length == 0) return false;
+
+    var normalizedRole:String = StringTools.trim(role).toLowerCase();
+    var propertyName:String;
+    var current:Null<BaseCharacter>;
+    switch (normalizedRole)
+    {
+      case "bf", "boyfriend", "player":
+        normalizedRole = "bf";
+        propertyName = "player";
+        current = state.currentStage.getBoyfriend();
+      case "gf", "girlfriend":
+        normalizedRole = "gf";
+        propertyName = "girlfriend";
+        current = state.currentStage.getGirlfriend();
+      case "dad", "opponent":
+        normalizedRole = "dad";
+        propertyName = "opponent";
+        current = state.currentStage.getDad();
+      default:
+        return false;
+    }
+
+    if (current == null) return false;
+    if (current.characterId == requested) return true;
+
+    var replacement:Null<BaseCharacter> = preloadedCharacters.get(requested);
+    if (replacement == null || !replacement.exists)
+    {
+      try
+      {
+        replacement = CharacterDataParser.fetchCharacter(requested);
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] Could not load replacement character ' + requested + ': ' + Std.string(error));
+        return false;
+      }
+    }
+    if (replacement == null) return false;
+
+    // Pop the active role only after the replacement is known to exist.
+    var removed:Null<BaseCharacter> = switch (normalizedRole)
+    {
+      case "bf": state.currentStage.getBoyfriend(true);
+      case "gf": state.currentStage.getGirlfriend(true);
+      default: state.currentStage.getDad(true);
+    };
+    if (removed == null) return false;
+
+    removed.visible = false;
+    removed.active = false;
+    preloadedCharacters.set(removed.characterId, removed);
+
+    preloadedCharacters.remove(requested);
+    replacement.debug = false;
+    replacement.visible = true;
+    replacement.active = true;
+    state.currentStage.addCharacter(replacement, removed.characterType);
+
+    // Keep the live chart's legacy character mirrors synchronized. This does
+    // not modify the package's on-disk chart or the saved mod content.
+    if (state.currentChart != null && state.currentChart.characters != null)
+      Reflect.setField(state.currentChart.characters, propertyName, requested);
+
+    PsychScriptRuntime.setGlobal("boyfriendName",
+      state.currentStage.getBoyfriend()?.characterId ?? "bf");
+    PsychScriptRuntime.setGlobal("gfName",
+      state.currentStage.getGirlfriend()?.characterId ?? "gf");
+    PsychScriptRuntime.setGlobal("dadName",
+      state.currentStage.getDad()?.characterId ?? "dad");
+    return true;
+  }
+
   public static function triggerEvent(state:PlayState, name:String, value1:String, value2:String):Void
   {
     switch (StringTools.trim(name).toLowerCase())
@@ -3140,6 +3223,9 @@ class PsychGameplayApi
         var girlfriend:Null<BaseCharacter> = state.currentStage == null ? null : state.currentStage.getGirlfriend();
         var speed:Int = Std.int(parseFloatOr(value1, 1));
         if (girlfriend != null) girlfriend.danceEvery = Std.int(Math.max(1, speed));
+      case "change character":
+        var role:String = value1 == null || value1.length == 0 ? "bf" : value1;
+        changePsychCharacter(state, role, value2);
       default:
         trace('[Psych API] Unsupported built-in event: ' + name);
     }
