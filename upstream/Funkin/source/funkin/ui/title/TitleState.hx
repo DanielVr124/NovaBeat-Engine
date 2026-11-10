@@ -16,7 +16,6 @@ import funkin.audio.FunkinSound;
 import funkin.ui.AtlasText;
 import openfl.Assets;
 import funkin.ui.mainmenu.MainMenuState;
-import funkin.ui.mainmenu.NovaBeatMainMenuState;
 import funkin.Preferences;
 import flixel.FlxG;
 #if FEATURE_NEWGROUNDS
@@ -219,19 +218,6 @@ class TitleState extends MusicBeatState
 
   function playMenuMusic(restartTrack:Bool = false):Void
   {
-    if (Preferences.menuStyle == "NovaBeat")
-    {
-      // Keep the NovaBeat soundtrack running under the shared startup intro.
-      FunkinSound.playMusic('novabeat-menu', {
-        startingVolume: 0.82,
-        overrideExisting: true,
-        restartTrack: restartTrack,
-        persist: true,
-        mapTimeChanges: false
-      });
-      return;
-    }
-
     var shouldFadeIn:Bool = (FlxG.sound.music == null);
     // Load music. Includes logic to handle BPM changes.
     FunkinSound.playMusic('freakyMenu', {
@@ -554,12 +540,6 @@ class TitleState extends MusicBeatState
       if (credGroup != null) remove(credGroup);
       skippedIntro = true;
 
-      // [web-build] After the shared black-screen credits, continue into NovaBeat's own
-      // V4 "Press Enter to Begin" title screen instead of the FNF title art.
-      if (Preferences.menuStyle == "NovaBeat")
-      {
-        FlxG.switchState(() -> new NovaBeatMainMenuState(true));
-      }
     }
   }
 }
