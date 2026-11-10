@@ -2376,6 +2376,72 @@ class PsychModRuntime
     return result.length == 0 ? fallback : result;
   }
 
+  #if sys
+  /**
+   * A small number of Psych packs ship a playable BF atlas but omit its
+   * character JSON. Register only the known, complete GorillaFunkin BF
+   * variants; do not guess for arbitrary missing player character IDs.
+   */
+  static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String):Bool
+  {
+    var atlasName:String;
+    switch (characterId.toLowerCase())
+    {
+      case "bf capuchin": atlasName = "BoyCapuchin";
+      case "bf capuchin run": atlasName = "BoyrunCapuchin";
+      default: return false;
+    }
+
+    var charactersDirectory:String = Path.join([modPath, "images", "characters"]);
+    var atlasPng:String = Path.join([charactersDirectory, atlasName + ".png"]);
+    var atlasXml:String = Path.join([charactersDirectory, atlasName + ".xml"]);
+    if (!FileSystem.exists(atlasPng) || !FileSystem.exists(atlasXml)) return false;
+
+    var iconId:String = "bfcapuchin";
+    var iconPath:String = Path.join([modPath, "images", "icons", "icon-" + iconId + ".png"]);
+    if (!FileSystem.exists(iconPath)) iconId = "bf";
+
+    // The atlas contains the regular BF idle/sing/miss prefixes. Use the
+    // canonical Psych BF offsets as a safe baseline; precise per-animation
+    // alignment cannot be recovered because the package omitted the JSON.
+    var animations:Array<Dynamic> = [
+      {anim: "idle", name: "idle", fps: 24, loop: false, offsets: [-5, 0]},
+      {anim: "singLEFT", name: "left", fps: 24, loop: false, offsets: [5, -6]},
+      {anim: "singDOWN", name: "down", fps: 24, loop: false, offsets: [-20, -51]},
+      {anim: "singUP", name: "up", fps: 24, loop: false, offsets: [-46, 27]},
+      {anim: "singRIGHT", name: "right", fps: 24, loop: false, offsets: [-48, -7]},
+      {anim: "singLEFTmiss", name: "leftmiss", fps: 24, loop: false, offsets: [7, 19]},
+      {anim: "singDOWNmiss", name: "downmiss", fps: 24, loop: false, offsets: [-15, -19]},
+      {anim: "singUPmiss", name: "upmiss", fps: 24, loop: false, offsets: [-46, 27]},
+      {anim: "singRIGHTmiss", name: "rightmiss", fps: 24, loop: false, offsets: [-44, 22]}
+    ];
+
+    // Only the non-running Capuchin atlas includes a hey animation.
+    if (atlasName == "BoyCapuchin")
+      animations.push({anim: "hey", name: "hey", fps: 24, loop: false, offsets: [-3, 5]});
+
+    var raw:Dynamic = {
+      image: "characters/" + atlasName,
+      animations: animations,
+      position: [0, 350],
+      healthicon: iconId,
+      flip_x: true,
+      camera_position: [0, 0],
+      sing_duration: 4,
+      scale: 1,
+      no_antialiasing: false
+    };
+
+    var converted:Null<CharacterData> = convertPsychCharacterData(characterId, raw);
+    if (converted == null || !CharacterDataParser.registerModCharacterData(characterId, converted))
+      return CharacterDataParser.fetchCharacterData(characterId) != null;
+
+    trace('[Psych Compatibility] Registered missing player JSON for "' + characterId
+      + '" from bundled atlas "' + atlasName + '" using baseline BF animation offsets.');
+    return true;
+  }
+  #end
+
   static function resolvePsychPlayerCharacter(modPath:String, requestedId:String):String
   {
     var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
@@ -2385,6 +2451,10 @@ class PsychModRuntime
     if (hasPsychCharacterDataFile(modPath, normalized)
       || CharacterDataParser.fetchCharacterData(normalized) != null)
       return normalized;
+
+    #if sys
+    if (registerKnownPsychPlayerAtlasAlias(modPath, normalized)) return normalized;
+    #end
 
     trace('[Psych Compatibility] Player character "' + normalized
       + '" is not bundled or registered; using NovaBeat BF for this song.');
