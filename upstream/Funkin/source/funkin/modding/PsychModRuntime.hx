@@ -1974,7 +1974,8 @@ class PsychModRuntime
         '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true},' +
         '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"},' +
         '{"t":1750,"s":0,"d":0,"k":"Hey!"},{"t":2000,"s":1,"d":0,"k":"GF Sing"}],' +
-        '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]}],' +
+        '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]},' +
+        '{"t":1800,"e":"Change Scroll Speed","v":["1.5","2"]}],' +
         '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
       );
 
@@ -1999,7 +2000,17 @@ class PsychModRuntime
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
       if (converted.metadata.timeChanges[1].bpm != 120) return false;
-      if (converted.events.length != 3) return false;
+      if (converted.events.length != 4) return false;
+      if (!isSupportedBuiltinPsychEvent("Change Scroll Speed")) return false;
+
+      // Ensure the normalized Psych built-ins resolve to concrete native note-kind classes.
+      var heyKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychHeyNoteKind");
+      var gfSingKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychGFSingNoteKind");
+      var altKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.AltAnimNoteKind");
+      if (heyKindClass == null || gfSingKindClass == null || altKindClass == null) return false;
+      var heyKind:Dynamic = Type.createInstance(heyKindClass, []);
+      var gfSingKind:Dynamic = Type.createInstance(gfSingKindClass, []);
+      if (Reflect.field(heyKind, "hey") != true || Reflect.field(gfSingKind, "gfSing") != true) return false;
 
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
