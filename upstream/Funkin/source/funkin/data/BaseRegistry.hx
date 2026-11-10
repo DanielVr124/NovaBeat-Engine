@@ -205,7 +205,7 @@ abstract class BaseRegistry<T:(IRegistryEntry<J> & Constructible<EntryConstructo
   public function removeCompatibilityEntry(id:String):Void
   {
     if (id == null || !entries.exists(id)) return;
-    var entry:T = entries.get(id);
+    var entry:Null<T> = entries.get(id);
     entries.remove(id);
     if (entry != null) entry.destroy();
   }
