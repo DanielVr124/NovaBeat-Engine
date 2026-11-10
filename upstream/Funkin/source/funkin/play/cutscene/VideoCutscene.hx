@@ -6,6 +6,9 @@ import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxSignal;
 import funkin.play.PlayState;
+#if sys
+import sys.FileSystem;
+#end
 #if html5
 import funkin.graphics.video.FlxVideo;
 #end
@@ -67,7 +70,13 @@ class VideoCutscene
     if (PlayState.instance == null) return;
 
     #if FEATURE_VIDEO_PLAYBACK
-    if (!openfl.Assets.exists(filePath))
+    var fileExists:Bool = openfl.Assets.exists(filePath);
+    #if sys
+    // Psych mods keep cutscenes in their own videos/ folder. Those files are
+    // ordinary mod files, not necessarily mounted OpenFL assets.
+    if (!fileExists) fileExists = FileSystem.exists(filePath);
+    #end
+    if (!fileExists)
     {
       // Display a popup.
       funkin.util.WindowUtil.showError('Error playing video', 'Video file does not exist: ${filePath}');
