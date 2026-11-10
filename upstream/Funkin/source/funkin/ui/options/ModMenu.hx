@@ -430,7 +430,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     mobileInfoY = contentY + 38;
     mobileInfoWidth = heroWidth - 28;
-    mobileInfoHeight = Math.max(22, contentHeight - 54);
+    mobileInfoHeight = Math.max(20, contentHeight - 78);
 
     var body:String = infoExpanded ? buildMoreInfo(info) : info.description;
     if (body == null || body.length == 0) body = "No description was provided.";
@@ -1226,9 +1226,15 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     // consume typed characters or launch the currently highlighted package.
     if (searchInput != null && searchInput.hasFocus)
     {
-      if (controls.BACK_P || FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.ENTER)
-        searchInput.hasFocus = false;
-      return;
+      // Still allow the clear, refresh, card, and back targets to receive
+      // taps while the software keyboard is open.
+      handlePointerInput();
+      if (searchInput != null && searchInput.hasFocus)
+      {
+        if (controls.BACK_P || FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.ENTER)
+          searchInput.hasFocus = false;
+        return;
+      }
     }
 
     // Handle keyboard and controller Back exactly once. This Page subclass
