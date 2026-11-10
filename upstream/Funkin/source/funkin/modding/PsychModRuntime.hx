@@ -1810,6 +1810,39 @@ class PsychModRuntime
     }
   }
 
+  /** Add internal timeline markers so Psych section globals follow chart timing. */
+  static function appendPsychSectionStateEvents(
+    sections:Array<Dynamic>,
+    initialBpm:Float,
+    events:Array<SongEventData>
+  ):Void
+  {
+    var currentBpm:Float = initialBpm > 0 && !Math.isNaN(initialBpm) ? initialBpm : Constants.DEFAULT_BPM;
+    var sectionStart:Float = 0;
+    for (index in 0...sections.length)
+    {
+      var section:Dynamic = sections[index];
+      if (section == null) continue;
+      if (Reflect.field(section, "changeBPM") == true)
+      {
+        var nextBpm:Float = readPsychFloat(section, "bpm", currentBpm);
+        if (nextBpm > 0 && !Math.isNaN(nextBpm)) currentBpm = nextBpm;
+      }
+
+      events.push(new SongEventData(sectionStart, "PsychCompatibilityEvent", {
+        name: "__PsychSectionState",
+        curSection: index,
+        mustHitSection: Reflect.field(section, "mustHitSection") == true,
+        altAnim: Reflect.field(section, "altAnim") == true,
+        gfSection: Reflect.field(section, "gfSection") == true
+      }));
+
+      var lengthInSteps:Float = readPsychFloat(section, "lengthInSteps", 16);
+      if (lengthInSteps <= 0 || Math.isNaN(lengthInSteps)) lengthInSteps = 16;
+      sectionStart += lengthInSteps * (60000.0 / currentBpm / 4.0);
+    }
+  }
+
   static function readPsychString(source:Dynamic, field:String, fallback:String):String
   {
     var value:Dynamic = source == null ? null : Reflect.field(source, field);
@@ -1828,6 +1861,7 @@ class PsychModRuntime
     var combinedSpeeds:Map<String, Float> = [];
     var combinedEvents:Array<funkin.data.song.SongData.SongEventData> = [];
     var hasEmbeddedEvents:Bool = false;
+    var hasPsychSectionStates:Bool = false;
     var firstDifficulty:String = Constants.DEFAULT_DIFFICULTY;
     var hasFirstDifficulty:Bool = false;
 
@@ -1873,6 +1907,17 @@ class PsychModRuntime
       if (legacy == null || legacy.song == null || legacy.song.notes == null) continue;
       var chartSong:Dynamic = Reflect.field(chartRoot, "song");
       if (extractPsychEvents(Reflect.field(chartSong, "events")).length > 0) hasEmbeddedEvents = true;
+      if (!hasPsychSectionStates)
+      {
+        var rawLegacyNotes:Dynamic = Reflect.field(chartSong, "notes");
+        var rawSections:Dynamic = rawLegacyNotes;
+        if (!Std.isOfType(rawLegacyNotes, Array)) rawSections = Reflect.field(rawLegacyNotes, difficultyName);
+        if (Std.isOfType(rawSections, Array))
+        {
+          appendPsychSectionStateEvents(cast rawSections, readPsychFloat(chartSong, "bpm", Constants.DEFAULT_BPM), combinedEvents);
+          hasPsychSectionStates = true;
+        }
+      }
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
@@ -2056,6 +2101,13 @@ class PsychModRuntime
       for (section in (cast sections:Array<Dynamic>))
       {
         if (section == null) continue;
+        events.push(new SongEventData(sectionStart, "PsychCompatibilityEvent", {
+          name: "__PsychSectionState",
+          curSection: (cast sections:Array<Dynamic>).indexOf(section),
+          mustHitSection: Reflect.field(section, "mustHitSection") == true,
+          altAnim: Reflect.field(section, "altAnim") == true,
+          gfSection: Reflect.field(section, "gfSection") == true
+        }));
         if (Reflect.field(section, "changeBPM") == true)
         {
           var nextBpm:Float = readPsychFloat(section, "bpm", currentBpm);
