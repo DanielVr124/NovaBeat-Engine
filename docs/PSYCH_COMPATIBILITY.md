@@ -19,13 +19,13 @@ Audio is resolved from `songs/<song>/` or `assets/songs/<song>/`. The instrument
 
 The adapter passes legacy Psych chart JSON through the existing FNF legacy chart importer, then translates the result to native V-Slice song data. Existing V-Slice chart loading is unchanged.
 
-Common Psych stage IDs are mapped to corresponding built-in V-Slice stage IDs. When the chart omits its stage, the compatibility layer applies the standard base-game week stage mapping for the original song names.
+Common Psych stage IDs are mapped to corresponding built-in V-Slice stage IDs. When the chart omits its stage, the compatibility layer applies the standard base-game week stage mapping for the original song names. A custom Psych stage script runs over NovaBeat's valid base stage; the adapter does not try to fetch a V-Slice StageRegistry entry for a Psych-only stage ID.
 
 ### psych_v2 (limited subset)
 
 The adapter currently converts charts with the standard opponent and player strumlines, four columns per line, standard note timing/length/type/alt-animation fields, section BPM changes, time signatures, and camera targets.
 
-The current V-Slice song data model has a single shared event timeline and two standard gameplay lanes. The adapter therefore does not claim support for additional/silent strumlines, GF-owned notes, variable key counts, mid-song key-count changes, mid-song scroll-velocity changes, or separate event timelines for multiple difficulties. Packages that would lose those mechanics are kept unavailable rather than launched with incomplete behavior.
+The current V-Slice song data model has a single shared event timeline and two standard gameplay lanes. The adapter therefore does not claim support for additional/silent strumlines, GF-owned notes, variable key counts, mid-song key-count changes, mid-song scroll-velocity changes, or different embedded/external event timelines for multiple difficulties. Packages that would lose those mechanics are kept unavailable rather than launched with incomplete behavior.
 
 ## Scripts and gameplay
 
