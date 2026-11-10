@@ -1622,7 +1622,7 @@ class PlayState extends MusicBeatSubState
         {
           var noteId:Int = PsychGameplayApi.getNoteId(this, note);
           var direction:Int = Std.int(note.direction);
-          var noteType:String = note.kind ?? "";
+          var noteType:String = PsychModRuntime.getPsychNoteTypeName(note.kind);
           var isSustain:Bool = note.isHoldNote;
           var luaNoteArgs:Array<Dynamic> = [noteId, direction, noteType, isSustain];
 
@@ -1694,7 +1694,9 @@ class PlayState extends MusicBeatSubState
         var holdEvent:HoldNoteScriptEvent = cast event;
         var noteId:Int = PsychGameplayApi.getNoteIdForHold(this, holdEvent.holdNote);
         var direction:Int = Std.int(holdEvent.holdNote.noteDirection);
-        var noteType:String = holdEvent.holdNote.noteData == null ? "" : (holdEvent.holdNote.noteData.kind ?? "");
+        var noteType:String = PsychModRuntime.getPsychNoteTypeName(
+          holdEvent.holdNote.noteData == null ? null : holdEvent.holdNote.noteData.kind
+        );
         if (PsychScriptRuntime.dispatchStop("noteMiss", [noteId, direction, noteType, true]))
           event.cancel();
         PsychScriptRuntime.dispatch("onHoldNoteDrop", [noteId, direction, noteType, true]);
@@ -3110,7 +3112,7 @@ class PlayState extends MusicBeatSubState
 
         var psychNoteId:Int = PsychGameplayApi.getNoteId(this, note);
         var psychDirection:Int = Std.int(note.direction);
-        var psychNoteType:String = note.kind ?? "";
+        var psychNoteType:String = PsychModRuntime.getPsychNoteTypeName(note.kind);
         var psychIsSustain:Bool = note.isHoldNote;
 
         // Command the opponent to hit the note on time.
@@ -3500,7 +3502,7 @@ class PlayState extends MusicBeatSubState
     var psychNoteId:Int = PsychGameplayApi.getNoteId(this, note);
     PsychScriptRuntime.dispatchPsychNoteCallback(
       "goodNoteHit",
-      [psychNoteId, Std.int(note.direction), note.kind ?? "", note.isHoldNote],
+      [psychNoteId, Std.int(note.direction), PsychModRuntime.getPsychNoteTypeName(note.kind), note.isHoldNote],
       [note]
     );
   }
