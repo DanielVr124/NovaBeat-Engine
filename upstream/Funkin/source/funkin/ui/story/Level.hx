@@ -2,6 +2,7 @@ package funkin.ui.story;
 
 import funkin.util.SortUtil;
 import flixel.FlxSprite;
+import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.play.song.Song;
 import funkin.data.IRegistryEntry;
@@ -21,7 +22,8 @@ class Level implements IRegistryEntry<LevelData>
   public function new(id:String, ?params:Dynamic)
   {
     this.id = id;
-    _data = _fetchData(id);
+    var psychRuntimeData:Dynamic = params == null ? null : Reflect.field(params, "psychRuntimeData");
+    _data = psychRuntimeData == null ? _fetchData(id) : cast psychRuntimeData;
 
     if (_data == null)
     {
@@ -69,6 +71,14 @@ class Level implements IRegistryEntry<LevelData>
    */
   public function buildTitleGraphic():FlxSprite
   {
+    if (Reflect.field(_data, "psychImported") == true)
+    {
+      var title:FlxText = new FlxText(0, 0, 0, _data.name, 32);
+      title.setFormat("VCR OSD Mono", 32, FlxColor.WHITE, CENTER);
+      title.updateHitbox();
+      return title;
+    }
+
     var result:FlxSprite = new FlxSprite().loadGraphic(Paths.image(_data.titleAsset));
 
     return result;
@@ -105,7 +115,8 @@ class Level implements IRegistryEntry<LevelData>
    */
   public function isUnlocked():Bool
   {
-    return true;
+    var psychStartUnlocked:Dynamic = Reflect.field(_data, "psychStartUnlocked");
+    return psychStartUnlocked == null ? true : psychStartUnlocked == true;
   }
 
   /**
