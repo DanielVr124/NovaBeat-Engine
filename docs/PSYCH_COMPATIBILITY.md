@@ -10,8 +10,9 @@ The native mod-folder scanner recognizes chart packages in both of these locatio
 
 - Classic psych_v1 charts: `mods/<mod>/data/<song>/`
 - Song-package charts: `mods/<mod>/songs/<song>/`
+- One extra archive wrapper: `mods/<installed-name>/mods/<actual-mod>/data/<song>/` or the corresponding `songs/<song>/` layout.
 
-Psych detection uses explicit engine metadata, Psych-specific layout/JSON markers, or Lua scripts in known Psych roots. A generic `.hx` file by itself is not an engine marker because native V-Slice/Polymod mods also use Haxe scripted classes. Once a package is identified as Psych, both Lua and HScript sources are eligible for loading.
+Psych detection uses explicit engine metadata, Psych-specific layout/JSON markers, or Lua scripts in known Psych roots. When one unambiguous nested `mods/<actual-mod>/` package is found, chart, script, settings, and custom-character discovery all resolve against that inner root rather than mixing the wrapper directory with the actual mod. A generic `.hx` file by itself is not an engine marker because native V-Slice/Polymod mods also use Haxe scripted classes. Once a package is identified as Psych, both Lua and HScript sources are eligible for loading.
 
 Audio is resolved from `songs/<song>/` or `assets/songs/<song>/`. The instrumental must be named `Inst.ogg`, `Inst.mp3`, or `Inst.wav`. Song-local scripts are read from the folder containing the charts; global scripts are read from `scripts/`.
 
