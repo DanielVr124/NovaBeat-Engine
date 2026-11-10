@@ -487,22 +487,22 @@ class Preferences
   }
 
   /**
-   * Which main-menu presentation to use. Original FNF remains the default.
+   * Legacy save compatibility. The engine now uses the original FNF menu only.
+   * Older saves may still contain a NovaBeat value, but it is intentionally ignored.
    */
   public static var menuStyle(get, set):String;
 
   static function get_menuStyle():String
   {
-    return Save?.instance?.options?.menuStyle ?? "Original FNF";
+    return "Original FNF";
   }
 
   static function set_menuStyle(value:String):String
   {
-    var normalized:String = value == "NovaBeat" ? "NovaBeat" : "Original FNF";
     var save:Save = Save.instance;
-    save.options.menuStyle = normalized;
+    save.options.menuStyle = "Original FNF";
     Save.system.flush();
-    return normalized;
+    return "Original FNF";
   }
 
   /**
