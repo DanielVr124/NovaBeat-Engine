@@ -192,6 +192,25 @@ abstract class BaseRegistry<T:(IRegistryEntry<J> & Constructible<EntryConstructo
   }
 
   /**
+   * Register a runtime-generated compatibility entry without writing it into
+   * the game's asset tree or changing the source mod package.
+   */
+  public function registerCompatibilityEntry(entry:T):Void
+  {
+    if (entry == null) return;
+    entries.set(entry.id, entry);
+  }
+
+  /** Remove a runtime-generated entry when its owning compatibility layer reloads. */
+  public function removeCompatibilityEntry(id:String):Void
+  {
+    if (id == null || !entries.exists(id)) return;
+    var entry:T = entries.get(id);
+    entries.remove(id);
+    if (entry != null) entry.destroy();
+  }
+
+  /**
    * A list of all entries included in the base game.
    * The actual function exists and is auto-generated on each registry at build time.
    * @return Array<String>
