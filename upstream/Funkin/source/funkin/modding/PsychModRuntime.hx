@@ -1403,7 +1403,7 @@ class PsychModRuntime
     return switch (StringTools.trim(name).toLowerCase())
     {
       case "add camera zoom", "screen shake", "set property", "camera follow pos",
-        "play animation", "hey!", "set gf speed", "change character": true;
+        "play animation", "hey!", "set gf speed", "change character", "change scroll speed": true;
       default: false;
     };
   }
