@@ -3507,6 +3507,21 @@ class FreeplayState extends MusicBeatSubState
     return result;
   }
 
+  /** Build the Freeplay destination appropriate for the active experience. */
+  public static function buildForActiveExperience(?params:FreeplayStateParams, ?stickers:StickerSubState):MusicBeatState
+  {
+    if (ExperienceManager.hasActivePsychSongs())
+    {
+      CUTOUT_WIDTH = FullScreenScaleMode.gameCutoutSize.x / 1.5;
+      var result:MusicBeatState = new MainMenuState(true);
+      result.openSubState(new PsychFreeplayState(stickers));
+      result.persistentUpdate = false;
+      result.persistentDraw = true;
+      return result;
+    }
+    return build(params, stickers);
+  }
+
   function favoriteSong():Void
   {
     var selectedCapsule = currentCapsule;

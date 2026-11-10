@@ -279,8 +279,31 @@ class PsychModRuntime
       var weekPath:String = Path.join([modPath, "weeks"]);
       if (!FileSystem.exists(weekPath) || !FileSystem.isDirectory(weekPath)) continue;
 
-      var weekFiles:Array<String> = FileSystem.readDirectory(weekPath);
-      weekFiles.sort(Reflect.compare);
+      var weekFiles:Array<String> = [];
+      var weekListPath:String = Path.join([weekPath, "weekList.txt"]);
+      if (FileSystem.exists(weekListPath))
+      {
+        for (rawWeekName in File.getContent(weekListPath).split("\n"))
+        {
+          var weekName:String = StringTools.trim(rawWeekName);
+          if (weekName.length == 0 || weekName.startsWith("#")) continue;
+          if (!weekName.toLowerCase().endsWith(".json")) weekName += ".json";
+          var listedPath:String = Path.join([weekPath, weekName]);
+          if (FileSystem.exists(listedPath) && !weekFiles.contains(weekName))
+            weekFiles.push(weekName);
+        }
+      }
+
+      // Psych loads the explicit weekList order first, then appends unlisted
+      // week JSON files in alphabetical order.
+      var remainingWeekFiles:Array<String> = FileSystem.readDirectory(weekPath);
+      remainingWeekFiles.sort(Reflect.compare);
+      for (candidate in remainingWeekFiles)
+      {
+        if (Path.extension(candidate).toLowerCase() == "json" && !weekFiles.contains(candidate))
+          weekFiles.push(candidate);
+      }
+
       for (weekFile in weekFiles)
       {
         if (Path.extension(weekFile).toLowerCase() != "json") continue;
@@ -288,6 +311,7 @@ class PsychModRuntime
         try
         {
           var raw:Dynamic = Json.parse(File.getContent(fullPath));
+          var hideFreeplay:Bool = Reflect.field(raw, "hideFreeplay") == true;
           var rawSongs:Dynamic = Reflect.field(raw, "songs");
           if (rawSongs == null || !Std.isOfType(rawSongs, Array)) continue;
 
@@ -302,9 +326,9 @@ class PsychModRuntime
             if (songId != null)
             {
               if (songIds.indexOf(songId) < 0) songIds.push(songId);
-              if (!psychFreeplaySongOrder.contains(songId)) psychFreeplaySongOrder.push(songId);
+              if (!hideFreeplay && !psychFreeplaySongOrder.contains(songId)) psychFreeplaySongOrder.push(songId);
 
-              if (Std.isOfType(songEntry, Array))
+              if (!hideFreeplay && Std.isOfType(songEntry, Array))
               {
                 var entry:Array<Dynamic> = cast songEntry;
                 if (entry.length > 1 && entry[1] != null && !psychFreeplayIcons.exists(songId))

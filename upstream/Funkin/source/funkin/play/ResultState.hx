@@ -1096,7 +1096,7 @@ class ResultState extends MusicBeatSubState
             this.close();
             return;
           }
-          targetState = FreeplayState.build({
+          targetState = FreeplayState.buildForActiveExperience({
             {
               character: playerCharacterId ?? "bf",
               fromResults: {
@@ -1124,7 +1124,7 @@ class ResultState extends MusicBeatSubState
           shouldTween = false;
           shouldUseSubstate = true;
           targetStateFactory = () -> new StickerSubState({
-            targetState: (sticker) -> FreeplayState.build(null, sticker),
+            targetState: (sticker) -> FreeplayState.buildForActiveExperience(null, sticker),
             stickerPack: stickerPackId
           });
         }

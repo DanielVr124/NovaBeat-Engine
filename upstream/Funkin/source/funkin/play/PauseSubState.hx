@@ -1232,7 +1232,7 @@ class PauseSubState extends MusicBeatSubState
     FlxTransitionableState.skipNextTransOut = true;
 
     var targetState:funkin.ui.transition.stickers.StickerSubState->FlxState = (PlayStatePlaylist.isStoryMode) ? (sticker) ->
-      new StoryMenuState(sticker) : (sticker) -> FreeplayState.build(sticker);
+      new StoryMenuState(sticker) : (sticker) -> FreeplayState.buildForActiveExperience(null, sticker);
 
     // Do this AFTER because this resets the value of isStoryMode!
     if (PlayStatePlaylist.isStoryMode)

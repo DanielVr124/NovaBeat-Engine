@@ -19,6 +19,7 @@ import funkin.save.Save;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.MusicBeatSubState;
 import funkin.ui.transition.LoadingState;
+import funkin.ui.transition.stickers.StickerSubState;
 
 /**
  * Psych Engine 0.7.3-style Freeplay screen.
@@ -33,11 +34,12 @@ class PsychFreeplayState extends MusicBeatSubState
   static inline final DEFAULT_COLOR:Int = 0xFF9271FD;
   static inline final LIST_X:Float = 90;
   static inline final LIST_Y:Float = 320;
-  static inline final ITEM_SPACING_Y:Float = 91;
+  static inline final ITEM_SPACING_Y:Float = 156;
   static inline final DRAW_DISTANCE:Int = 4;
 
   static var rememberedSelection:Int = 0;
   static var rememberedDifficulty:Map<String, String> = [];
+  static var lastDifficultyName:String = Constants.DEFAULT_DIFFICULTY;
 
   var songs:Array<PsychFreeplaySong> = [];
   var songTexts:Array<PsychAlphabet> = [];
@@ -70,6 +72,8 @@ class PsychFreeplayState extends MusicBeatSubState
   var previewRateHoldTime:Float = 0;
   var previewPlaybackText:FlxText;
   var previewPlaybackBackground:FlxSprite;
+  var previewArrowUp:FlxText;
+  var previewArrowDown:FlxText;
   var menuMusicBeforePreview:Null<FlxSound> = null;
   var previewPaused:Bool = false;
   var previewVocals:Array<FunkinSound> = [];
@@ -80,27 +84,41 @@ class PsychFreeplayState extends MusicBeatSubState
   var previewBarFill:FlxSprite;
   var resetPrompt:Bool = false;
   var resetPromptAlpha:Float = 0;
-  var resetSelection:Int = 1;
+  var resetSelection:Int = 0;
   var resetBackground:FlxSprite;
   var resetHeader:PsychAlphabet;
   var resetSongTitle:PsychAlphabet;
   var resetYes:PsychAlphabet;
   var resetNo:PsychAlphabet;
   var resetIcon:HealthIcon;
+  var previewWasPlaying:Bool = false;
+  var stickerSubState:Null<StickerSubState> = null;
 
-  public function new()
+  public function new(?stickers:StickerSubState)
   {
     super(FlxColor.BLACK);
+    if (stickers?.members != null) stickerSubState = stickers;
   }
 
   override function create():Void
   {
     super.create();
 
+    persistentUpdate = true;
+    PlayStatePlaylist.isStoryMode = false;
+
     if (!ExperienceManager.hasActivePsychSongs())
     {
       close();
       return;
+    }
+
+    if (stickerSubState != null)
+    {
+      persistentUpdate = true;
+      persistentDraw = true;
+      openSubState(stickerSubState);
+      stickerSubState.degenStickers();
     }
 
     FunkinSound.playMusic('freakyMenu', {
@@ -120,9 +138,6 @@ class PsychFreeplayState extends MusicBeatSubState
 
     background = new FlxSprite().loadGraphic(Paths.image('menuDesat', 'shared'));
     background.antialiasing = true;
-    background.setGraphicSize(FlxG.width, 0);
-    if (background.height < FlxG.height) background.setGraphicSize(0, FlxG.height);
-    background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
     add(background);
@@ -151,8 +166,6 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     songs = [];
     var orderedSongIds = funkin.modding.PsychModRuntime.getPsychFreeplaySongOrder();
-    for (songId in ExperienceManager.getActivePsychSongIds())
-      if (!orderedSongIds.contains(songId)) orderedSongIds.push(songId);
 
     for (songId in orderedSongIds)
     {
@@ -185,12 +198,15 @@ class PsychFreeplayState extends MusicBeatSubState
       songText.targetY = i;
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
+      songText.active = false;
       songTexts.push(songText);
       add(songText);
 
       var icon = new HealthIcon(songs[i].icon);
       icon.autoUpdate = false;
       icon.alpha = 0.6;
+      icon.visible = false;
+      icon.active = false;
       icons.push(icon);
       add(icon);
     }
@@ -230,7 +246,7 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomBackground.scrollFactor.set();
     add(bottomBackground);
 
-    var help = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET YOUR SCORE AND ACCURACY';
+    var help = 'Press SPACE to listen to the Song / Press CTRL to open the Gameplay Changers Menu / Press RESET to Reset your Score and Accuracy.';
     bottomText = new FlxText(0, bottomBackground.y + 4, FlxG.width, help, 16);
     bottomText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
     bottomText.scrollFactor.set();
@@ -239,40 +255,92 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function createPreviewPanel():Void
   {
-    previewBackground = new FlxSprite(FlxG.width * 0.7, 0).makeGraphic(Std.int(FlxG.width * 0.3), 100, FlxColor.BLACK);
+    var xPos:Float = FlxG.width * 0.7;
+
+    previewBackground = new FlxSprite(xPos - 6, 0).makeGraphic(1, 100, FlxColor.BLACK);
     previewBackground.alpha = 0.6;
     previewBackground.scrollFactor.set();
     add(previewBackground);
 
-    previewPlaybackBackground = new FlxSprite(FlxG.width * 0.55, 0).makeGraphic(Std.int(FlxG.width * 0.15), 100, FlxColor.BLACK);
+    previewPlaybackBackground = new FlxSprite(xPos - 6, 0).makeGraphic(1, 100, FlxColor.BLACK);
     previewPlaybackBackground.alpha = 0.6;
     previewPlaybackBackground.scrollFactor.set();
     add(previewPlaybackBackground);
 
-    previewPlaybackText = new FlxText(FlxG.width * 0.55, 20, FlxG.width * 0.15, '1.00x', 32);
-    previewPlaybackText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
-    previewPlaybackText.scrollFactor.set();
-    add(previewPlaybackText);
-
-    previewTitle = new FlxText(FlxG.width * 0.7, 5, FlxG.width * 0.28, '', 32);
+    previewTitle = new FlxText(xPos, 5, 0, '', 32);
     previewTitle.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     previewTitle.scrollFactor.set();
     add(previewTitle);
 
-    previewTime = new FlxText(FlxG.width * 0.7, 65, FlxG.width * 0.28, '< 00:00 / 00:00 >', 32);
+    previewTime = new FlxText(xPos, 65, 0, '< 00:00 / 00:00 >', 32);
     previewTime.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     previewTime.scrollFactor.set();
     add(previewTime);
 
-    previewBarBack = new FlxSprite(FlxG.width * 0.7, 98).makeGraphic(Std.int(FlxG.width * 0.28), 5, FlxColor.BLACK);
+    previewPlaybackText = new FlxText(FlxG.width * 0.6, 20, 0, '1.00x', 32);
+    previewPlaybackText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE);
+    previewPlaybackText.scrollFactor.set();
+    add(previewPlaybackText);
+
+    previewArrowUp = new FlxText(0, 0, 0, '^', 32);
+    previewArrowUp.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
+    previewArrowUp.scrollFactor.set();
+    add(previewArrowUp);
+
+    previewArrowDown = new FlxText(0, 0, 0, '^', 32);
+    previewArrowDown.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
+    previewArrowDown.flipY = true;
+    previewArrowDown.scrollFactor.set();
+    add(previewArrowDown);
+
+    previewBarBack = new FlxSprite(xPos, 98).makeGraphic(1, 5, FlxColor.BLACK);
     previewBarBack.scrollFactor.set();
     add(previewBarBack);
 
-    previewBarFill = new FlxSprite(previewBarBack.x, previewBarBack.y).makeGraphic(Std.int(FlxG.width * 0.28), 5, FlxColor.WHITE);
+    previewBarFill = new FlxSprite(xPos, 98).makeGraphic(1, 5, FlxColor.WHITE);
     previewBarFill.scrollFactor.set();
     add(previewBarFill);
 
+    positionPreview();
     setPreviewPanelVisible(false);
+  }
+
+  function positionPreview():Void
+  {
+    if (previewTitle == null || previewTime == null || songs.length == 0) return;
+
+    var length:Int = songs[selected].name.length;
+    var shortName:Bool = length < 5;
+
+    previewTitle.x = FlxG.width - previewTitle.width - 6;
+    if (shortName) previewTitle.x -= 10 * length - length;
+
+    previewBackground.scale.x = FlxG.width - previewTitle.x + 12;
+    previewBackground.x = FlxG.width - (previewBackground.scale.x / 2);
+
+    previewTime.x = Std.int(previewBackground.x + (previewBackground.width / 2));
+    previewTime.x -= previewTime.width / 2;
+    if (shortName) previewTime.x -= length - 5;
+
+    previewPlaybackBackground.scale.x = previewPlaybackText.width + 30;
+    previewPlaybackBackground.x = previewBackground.x - (previewBackground.scale.x / 2);
+    previewPlaybackBackground.x -= previewPlaybackBackground.scale.x;
+
+    previewPlaybackText.x = previewPlaybackBackground.x - previewPlaybackText.width / 2;
+    previewPlaybackText.y = previewPlaybackText.height;
+
+    previewBarBack.scale.x = Math.max(1, previewTitle.width);
+    previewBarBack.y = previewTitle.y + previewTitle.height + 10;
+    previewBarBack.x = previewTitle.x + previewTitle.width / 2 - 15;
+
+    previewBarFill.x = previewBarBack.x;
+    previewBarFill.y = previewBarBack.y;
+    previewBarFill.scale.x = previewBarBack.scale.x;
+
+    previewArrowUp.x = previewPlaybackText.x + previewPlaybackText.width / 2 - 10;
+    previewArrowUp.y = previewPlaybackText.y - previewPlaybackText.height;
+    previewArrowDown.x = previewArrowUp.x;
+    previewArrowDown.y = previewPlaybackText.y + previewPlaybackText.height;
   }
 
   function createResetPrompt():Void
@@ -293,6 +361,7 @@ class PsychFreeplayState extends MusicBeatSubState
     add(resetSongTitle);
 
     resetIcon = new HealthIcon('face');
+    resetIcon.autoUpdate = false;
     resetIcon.visible = false;
     add(resetIcon);
 
@@ -341,6 +410,7 @@ class PsychFreeplayState extends MusicBeatSubState
     resetNo.setMenuScale(resetSelection == 1 ? 1.0 : 0.75);
     resetYes.setMenuAlpha(resetSelection == 0 ? 1.25 : 0.6);
     resetNo.setMenuAlpha(resetSelection == 1 ? 1.25 : 0.6);
+    resetIcon.playAnimation(resetSelection == 0 ? resetIcon.Idle : resetIcon.Losing, resetIcon.Idle, true);
   }
 
   function updateResetPrompt(elapsed:Float):Void
@@ -367,6 +437,8 @@ class PsychFreeplayState extends MusicBeatSubState
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    if (stickerSubState?.switchingState ?? false) return;
 
     if (resetPrompt)
     {
@@ -399,6 +471,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (previewPlaying)
     {
       updatePreview(elapsed);
+      if (!previewPlaying) return;
       updatePreviewControls(elapsed);
       if (controls.BACK)
       {
@@ -406,24 +479,34 @@ class PsychFreeplayState extends MusicBeatSubState
         return;
       }
       if (FlxG.keys.justPressed.SPACE || controls.ACCEPT)
-      {
         togglePreviewPause();
-      }
-      if (controls.UI_LEFT_P) seekPreview(-1000);
-      if (controls.UI_RIGHT_P) seekPreview(1000);
-      }
+    }
     else
     {
       if (songs.length > 1)
       {
+        var shiftMult:Int = FlxG.keys.pressed.SHIFT ? 3 : 1;
+
         if (FlxG.keys.justPressed.HOME)
+        {
           changeSelection(-selected, true);
+          holdTime = 0;
+        }
         else if (FlxG.keys.justPressed.END)
+        {
           changeSelection((songs.length - 1) - selected, true);
+          holdTime = 0;
+        }
         else if (controls.UI_UP_P)
-          changeSelection(FlxG.keys.pressed.SHIFT ? -3 : -1, true);
+        {
+          changeSelection(-shiftMult, true);
+          holdTime = 0;
+        }
         else if (controls.UI_DOWN_P)
-          changeSelection(FlxG.keys.pressed.SHIFT ? 3 : 1, true);
+        {
+          changeSelection(shiftMult, true);
+          holdTime = 0;
+        }
 
         if (controls.UI_UP || controls.UI_DOWN)
         {
@@ -433,28 +516,65 @@ class PsychFreeplayState extends MusicBeatSubState
           if (holdTime > 0.5 && currentHold > previousHold)
           {
             var step = currentHold - previousHold;
-            changeSelection(step * (controls.UI_UP ? -1 : 1) * (FlxG.keys.pressed.SHIFT ? 3 : 1), true);
+            changeSelection(step * (controls.UI_UP ? -1 : 1) * shiftMult, true);
           }
         }
         else holdTime = 0;
 
         if (FlxG.mouse.wheel != 0)
-          changeSelection(-FlxG.mouse.wheel, true);
+        {
+          FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'), 0.2);
+          changeSelection(-shiftMult * FlxG.mouse.wheel, false);
+        }
       }
 
       if (controls.UI_LEFT_P) changeDifficulty(-1);
       else if (controls.UI_RIGHT_P) changeDifficulty(1);
 
       if (FlxG.keys.justPressed.SPACE)
+      {
         startPreview();
+      }
       else if (controls.ACCEPT)
+      {
         startSelectedSong();
+        return;
+      }
       else if (controls.RESET)
       {
         showResetPrompt();
+        return;
       }
       else if (controls.BACK)
+      {
         goBack();
+        return;
+      }
+
+      // Mouse clicks also act as taps on touch devices: first tap selects a
+      // visible row; tapping the selected row again launches it.
+      if (FlxG.mouse.justPressed)
+      {
+        for (i in 0...songTexts.length)
+        {
+          var item = songTexts[i];
+          if (!item.visible) continue;
+
+          var left:Float = item.x - 20;
+          var right:Float = item.x + item.textWidth + 170;
+          var top:Float = item.y - 18;
+          var bottom:Float = item.y + 82;
+          if (FlxG.mouse.x < left || FlxG.mouse.x > right || FlxG.mouse.y < top || FlxG.mouse.y > bottom) continue;
+
+          if (i == selected)
+          {
+            startSelectedSong();
+            return;
+          }
+          changeSelection(i - selected, true);
+          break;
+        }
+      }
     }
 
     lerpedScore = FlxMath.lerp(intendedScore, lerpedScore, Math.exp(-elapsed * 24));
@@ -472,6 +592,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (songs.length == 0) return;
     if (playSound) FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'), 0.4);
 
+    var previousDifficulties:Array<String> = currentDifficulties.copy();
     selected = ((selected + change) % songs.length + songs.length) % songs.length;
     rememberedSelection = selected;
 
@@ -492,11 +613,25 @@ class PsychFreeplayState extends MusicBeatSubState
     currentDifficulties = entry.song.listDifficulties(null, [VARIATION], true, true);
     if (currentDifficulties.length == 0) currentDifficulties = [Constants.DEFAULT_DIFFICULTY];
 
-    var saved = rememberedDifficulty.get(entry.id);
-    var savedIndex = saved == null ? -1 : currentDifficulties.indexOf(saved);
-    var normalIndex = currentDifficulties.indexOf(Constants.DEFAULT_DIFFICULTY);
-    difficultyIndex = savedIndex >= 0 ? savedIndex : (normalIndex >= 0 ? normalIndex : 0);
+    var savedDiff:Null<String> = rememberedDifficulty.get(entry.id);
+    var savedIndex:Int = savedDiff == null ? -1 : currentDifficulties.indexOf(savedDiff);
+    var lastIndex:Int = currentDifficulties.indexOf(lastDifficultyName);
+    var defaultIndex:Int = currentDifficulties.indexOf(Constants.DEFAULT_DIFFICULTY);
+
+    // Psych first carries a song's own saved difficulty only when it is not
+    // part of the previous song's list; otherwise the last global difficulty wins.
+    if (savedIndex >= 0 && savedDiff != null && !previousDifficulties.contains(savedDiff))
+      difficultyIndex = savedIndex;
+    else if (lastIndex >= 0)
+      difficultyIndex = lastIndex;
+    else if (defaultIndex >= 0)
+      difficultyIndex = defaultIndex;
+    else
+      difficultyIndex = 0;
+
     currentDifficulty = currentDifficulties[difficultyIndex];
+    lastDifficultyName = currentDifficulty;
+    rememberedDifficulty.set(entry.id, currentDifficulty);
     updateDifficultyText();
     updateScore();
   }
@@ -507,16 +642,16 @@ class PsychFreeplayState extends MusicBeatSubState
     difficultyIndex = (difficultyIndex + change) % currentDifficulties.length;
     if (difficultyIndex < 0) difficultyIndex += currentDifficulties.length;
     currentDifficulty = currentDifficulties[difficultyIndex];
+    lastDifficultyName = currentDifficulty;
     rememberedDifficulty.set(songs[selected].id, currentDifficulty);
     updateDifficultyText();
     updateScore();
-    FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'), 0.4);
   }
 
   function updateDifficultyText():Void
   {
     var label = currentDifficulty.toUpperCase();
-    difficultyText.text = currentDifficulties.length > 1 ? '<  ' + label + '  >' : label;
+    difficultyText.text = currentDifficulties.length > 1 ? '< ' + label + ' >' : label;
   }
 
   function updateScore():Void
@@ -545,18 +680,18 @@ class PsychFreeplayState extends MusicBeatSubState
 
     for (i in 0...songTexts.length)
     {
-      var visible = i >= min && i < max;
-      var text = songTexts[i];
-      var icon = icons[i];
-      text.visible = visible;
-      icon.visible = visible;
+      var item:PsychAlphabet = songTexts[i];
+      var icon:HealthIcon = icons[i];
+      var visible:Bool = i >= min && i < max;
+      item.visible = item.active = visible;
+      icon.visible = icon.active = visible;
       if (!visible) continue;
 
-      var offset = i - lerpSelected;
-      var x = LIST_X + offset * 20;
-      var y = LIST_Y + offset * ITEM_SPACING_Y;
-      text.setMenuPosition(x, y);
-      icon.setPosition(x + text.textWidth + 12, y - 30);
+      var offset:Float = item.targetY - lerpSelected;
+      var x:Float = LIST_X + offset * 20;
+      var y:Float = LIST_Y + offset * ITEM_SPACING_Y;
+      item.setMenuPosition(x, y);
+      icon.setPosition(x + item.textWidth + 12, y - 30);
     }
   }
 
@@ -599,11 +734,13 @@ class PsychFreeplayState extends MusicBeatSubState
     previewRateHoldTime = 0;
     applyPreviewPlaybackRate();
     previewTitle.text = 'PLAYING: ' + entry.name;
+    previewWasPlaying = false;
+    positionPreview();
     setPreviewPanelVisible(true);
     scoreBackground.visible = false;
     scoreText.visible = false;
     difficultyText.visible = false;
-    bottomText.text = 'SPACE: PAUSE / ESC: EXIT PREVIEW / LEFT-RIGHT: SEEK';
+    bottomText.text = 'Press SPACE to Pause / Press ESCAPE to Exit / Press R to Reset the Song';
   }
 
   function updatePreview(elapsed:Float):Void
@@ -624,12 +761,12 @@ class PsychFreeplayState extends MusicBeatSubState
       }
     }
 
-    var duration = Math.max(0, music.length);
-    var current = Math.max(0, music.time);
+    var duration:Float = Math.max(0, music.length);
+    var current:Float = Math.max(0, music.time);
     previewTime.text = '< ' + formatTime(current) + ' / ' + formatTime(duration) + ' >';
+
     var progress:Float = duration > 0 ? Math.max(0, Math.min(1, current / duration)) : 0;
-    previewBarFill.setGraphicSize(Math.max(1, Std.int(previewBarBack.width * progress)), 5);
-    previewBarFill.updateHitbox();
+    previewBarFill.scale.x = previewBarBack.scale.x * progress;
   }
 
   function updatePreviewControls(elapsed:Float):Void
@@ -639,11 +776,23 @@ class PsychFreeplayState extends MusicBeatSubState
 
     if (controls.UI_LEFT_P)
     {
+      if (!previewPaused && !previewWasPlaying)
+      {
+        previewWasPlaying = true;
+        music.pause();
+        for (voice in previewVocals) voice.pause();
+      }
       previewSeekHoldTime = 0;
       seekPreview(-1000);
     }
     else if (controls.UI_RIGHT_P)
     {
+      if (!previewPaused && !previewWasPlaying)
+      {
+        previewWasPlaying = true;
+        music.pause();
+        for (voice in previewVocals) voice.pause();
+      }
       previewSeekHoldTime = 0;
       seekPreview(1000);
     }
@@ -657,6 +806,12 @@ class PsychFreeplayState extends MusicBeatSubState
     else
     {
       previewSeekHoldTime = 0;
+      if (previewWasPlaying)
+      {
+        music.resume();
+        for (voice in previewVocals) voice.resume();
+        previewWasPlaying = false;
+      }
     }
 
     if (controls.UI_UP_P)
@@ -703,7 +858,13 @@ class PsychFreeplayState extends MusicBeatSubState
     if (music != null && music.exists) music.pitch = previewPlaybackRate;
     for (voice in previewVocals) voice.pitch = previewPlaybackRate;
     if (previewPlaybackText != null)
-      previewPlaybackText.text = Std.string(FlxMath.roundDecimal(previewPlaybackRate, 2)) + 'x';
+    {
+      var rateText:Array<String> = Std.string(FlxMath.roundDecimal(previewPlaybackRate, 2)).split('.');
+      if (rateText.length == 1) rateText.push('00');
+      while (rateText[1].length < 2) rateText[1] += '0';
+      previewPlaybackText.text = rateText[0] + '.' + rateText[1] + 'x';
+      positionPreview();
+    }
   }
 
   function seekPreview(amount:Float):Void
@@ -751,6 +912,7 @@ class PsychFreeplayState extends MusicBeatSubState
       FlxG.sound.music = menuMusicBeforePreview;
       menuMusicBeforePreview.resume();
     }
+    previewWasPlaying = false;
     menuMusicBeforePreview = null;
   }
 
@@ -759,11 +921,14 @@ class PsychFreeplayState extends MusicBeatSubState
     stopPreviewAudioOnly(true);
     previewPlaying = false;
     previewPaused = false;
+    previewWasPlaying = false;
+    previewPlaybackRate = 1.0;
     setPreviewPanelVisible(false);
     scoreBackground.visible = true;
     scoreText.visible = true;
     difficultyText.visible = true;
-    bottomText.text = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET SCORE AND ACCURACY';
+    bottomText.text = 'Press SPACE to listen to the Song / Press CTRL to open the Gameplay Changers Menu / Press RESET to Reset your Score and Accuracy.';
+    applyPreviewPlaybackRate();
   }
 
   function setPreviewPanelVisible(value:Bool):Void
@@ -771,6 +936,8 @@ class PsychFreeplayState extends MusicBeatSubState
     previewBackground.visible = value;
     previewPlaybackBackground.visible = value;
     previewPlaybackText.visible = value;
+    previewArrowUp.visible = value;
+    previewArrowDown.visible = value;
     previewTitle.visible = value;
     previewTime.visible = value;
     previewBarBack.visible = value;
@@ -831,33 +998,15 @@ class PsychFreeplayState extends MusicBeatSubState
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
-    if (background != null)
-    {
-      background.setGraphicSize(width, 0);
-      if (background.height < height) background.setGraphicSize(0, height);
-      background.updateHitbox();
-      background.screenCenter();
-    }
+
+    background?.screenCenter();
     bottomBackground?.makeGraphic(width, 26, FlxColor.BLACK);
     bottomBackground?.setPosition(0, height - 26);
     if (bottomText != null) bottomText.fieldWidth = width;
     bottomText?.setPosition(0, height - 22);
-    previewBackground?.makeGraphic(Std.int(width * 0.3), 100, FlxColor.BLACK);
-    previewBackground?.setPosition(width * 0.7, 0);
-    previewPlaybackBackground?.makeGraphic(Std.int(width * 0.15), 100, FlxColor.BLACK);
-    previewPlaybackBackground?.setPosition(width * 0.55, 0);
-    if (previewPlaybackText != null) previewPlaybackText.fieldWidth = width * 0.15;
-    previewPlaybackText?.setPosition(width * 0.55, 20);
-    if (previewTitle != null) previewTitle.fieldWidth = width * 0.28;
-    previewTitle?.setPosition(width * 0.7, 5);
-    if (previewTime != null) previewTime.fieldWidth = width * 0.28;
-    previewTime?.setPosition(width * 0.7, 65);
-    previewBarBack?.makeGraphic(Std.int(width * 0.28), 5, FlxColor.BLACK);
-    previewBarBack?.setPosition(width * 0.7, 98);
-    previewBarFill?.makeGraphic(Std.int(width * 0.28), 5, FlxColor.WHITE);
-    previewBarFill?.setPosition(width * 0.7, 98);
+    if (previewBackground != null) positionPreview();
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
-    positionHighscore();
+    if (scoreText != null) positionHighscore();
   }
 
   override public function destroy():Void
