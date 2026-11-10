@@ -5,6 +5,7 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxSignal;
+import flixel.util.FlxTimer;
 import funkin.play.PlayState;
 #if sys
 import sys.FileSystem;
@@ -78,10 +79,17 @@ class VideoCutscene
     #end
     if (!fileExists)
     {
-      // Display a popup.
+      // Display a popup. Psych scripts commonly cancel onStartCountdown()
+      // while waiting for startVideo(). If the file is missing, resume that
+      // flow on the next timer tick so the song is not left before countdown.
       funkin.util.WindowUtil.showError('Error playing video', 'Video file does not exist: ${filePath}');
       trace('Video file does not exist: ${filePath}');
 
+      var failedCutsceneType:CutsceneType = cutsceneType;
+      new FlxTimer().start(0.001, function(timer:FlxTimer):Void
+      {
+        if (PlayState.instance != null) onCutsceneFinish(failedCutsceneType);
+      });
       return;
     }
     #end
