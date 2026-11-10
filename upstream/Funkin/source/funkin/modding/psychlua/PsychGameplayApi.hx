@@ -1895,8 +1895,7 @@ class PsychGameplayApi
     return true;
   }
 
-  public static function updateGlobals(state:PlayState):Void
-  {  /**
+  /**
    * Apply Psych's opponent/player character colors to NovaBeat's two-color bar.
    * Non-Psych songs and characters without both color triplets keep native colors.
    */
@@ -1924,7 +1923,8 @@ class PsychGameplayApi
     return true;
   }
 
-
+  public static function updateGlobals(state:PlayState):Void
+  {
     if (state == null) return;
     initializePsychSectionState(state);
     if (activeTimeBar != null)
