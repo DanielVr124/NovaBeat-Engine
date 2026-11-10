@@ -1067,11 +1067,24 @@ class PsychModRuntime
   static function psychStrumLineRole(line:Dynamic):Int
   {
     if (line == null) return -1;
+
+    // Psych v2 line types are authoritative: OPPONENT=0, PLAYER=1,
+    // ADDITIONAL=2. In particular, an additional/GF line isPlayer=false too,
+    // so the legacy boolean must not turn it into an opponent line.
     var type:Dynamic = Reflect.field(line, "type");
-    if (type == 1 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "player")
-      || Reflect.field(line, "isPlayer") == true) return 0;
-    if (type == 0 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "opponent")
-      || Reflect.field(line, "isPlayer") == false) return 1;
+    if (type != null)
+    {
+      if (type == 1 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "player"))
+        return 0;
+      if (type == 0 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "opponent"))
+        return 1;
+      return -1;
+    }
+
+    // Older pre-type psych_v2 files used isPlayer alone.
+    var isPlayer:Dynamic = Reflect.field(line, "isPlayer");
+    if (isPlayer == true) return 0;
+    if (isPlayer == false) return 1;
     return -1;
   }
 
@@ -1226,6 +1239,17 @@ class PsychModRuntime
       {
         var lines:Array<Dynamic> = cast Reflect.field(root, "strumlines");
         var rawNotes:Array<Dynamic> = cast Reflect.field(root, "notes");
+        var chartKeyCount:Float = readPsychFloat(metadata, "keyCount", 4);
+        if (chartKeyCount != 4)
+          return "the psych_v2 chart declares a non-four-key layout";
+
+        for (line in lines)
+        {
+          if (line == null) continue;
+          var lineKeyCount:Dynamic = Reflect.field(line, "keyCount");
+          if (lineKeyCount != null && Std.int(lineKeyCount) != 4)
+            return "a psych_v2 strumline declares a non-four-key layout";
+        }
         for (line in lines)
         {
           if (line == null) continue;
