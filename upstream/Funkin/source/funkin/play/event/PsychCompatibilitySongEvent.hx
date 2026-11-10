@@ -22,6 +22,17 @@ class PsychCompatibilitySongEvent extends SongEvent
     var eventName:Dynamic = Reflect.field(data.value, "name");
     if (eventName == null) return;
 
+    if (Std.string(eventName) == "__PsychSectionState")
+    {
+      PsychGameplayApi.setPsychSectionState(
+        Std.int(Reflect.field(data.value, "curSection")),
+        Reflect.field(data.value, "mustHitSection") == true,
+        Reflect.field(data.value, "altAnim") == true,
+        Reflect.field(data.value, "gfSection") == true
+      );
+      return;
+    }
+
     var value1:Dynamic = Reflect.field(data.value, "value1");
     var value2:Dynamic = Reflect.field(data.value, "value2");
     PsychGameplayApi.triggerEvent(
