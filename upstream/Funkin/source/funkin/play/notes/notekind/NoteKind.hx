@@ -29,6 +29,16 @@ class NoteKind implements INoteScriptedClass
   public var noanim:Bool;
 
   /**
+   * Whether this note triggers the character's Hey animation.
+   */
+  public var hey:Bool = false;
+
+  /**
+   * Whether this note makes Girlfriend sing instead of the lane character.
+   */
+  public var gfSing:Bool = false;
+
+  /**
    * The animation suffix to use.
    */
   public var suffix:String;
