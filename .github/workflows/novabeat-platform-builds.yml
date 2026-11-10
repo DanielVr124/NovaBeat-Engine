@@ -1,6 +1,6 @@
 name: NovaBeat platform build checks
 
-# Android-only build trigger; no build configuration changes. (manual Android build requested)
+# [full-build] Build Windows and Android for the current native test pass.
 # [full-build] Validate Windows and Android after Haxe/Neko tool-cache priming.
 # Reuse dependency and tool caches without clearing the restored local Haxe repository.
 # Android-only validation run requested after the NovaBeat menu compiler fixes.
