@@ -23,14 +23,13 @@ import sys.io.File;
 #end
 
 /**
- * Runtime bridge for the currently supported classic Psych Engine mod tier.
+ * Runtime bridge for Psych Engine packages.
  *
- * It converts legacy Psych chart JSON into native V-Slice song data, resolves
- * Psych's conventional songs/<song>/ audio assets, and exposes supported
- * global and song-local Lua/HScript source files to the script runtime.
- * Referenced custom event and note-type scripts are supported through the
- * bounded callback bridge. Custom stages, characters, and substates remain
- * gated until their asset and lifecycle adapters are available.
+ * It supports classic psych_v1 charts in data/<song>/ and songs/<song>/, plus
+ * the bounded strumline-based psych_v2 chart subset that maps safely onto
+ * NovaBeat's two four-key gameplay lanes. Song-local scripts and assets are
+ * resolved from either package layout. Unsupported mechanics are rejected
+ * with a specific reason rather than silently discarded.
  */
 @:nullSafety(Off)
 class PsychModRuntime
@@ -99,7 +98,7 @@ class PsychModRuntime
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: "Psych Engine detected. This compatibility tier needs a classic data/<song> chart and a matching Inst.ogg, Inst.mp3, or Inst.wav file under songs/<song>/ or assets/songs/<song>/. No complete song package was found."
+        explanation: "Psych Engine detected, but no complete song package was found. NovaBeat checks psych_v1 charts in data/<song>/ or songs/<song>/ and psych_v2 chart-*.json files in songs/<song>/, together with a matching Inst audio file."
       };
     }
 
@@ -108,8 +107,8 @@ class PsychModRuntime
       launchable: true,
       supportedSongCount: supportedSongs,
       explanation: hasBasicScripts
-        ? "Experimental Psych scripting compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with global scripts and song-local Lua/HScript callbacks, basic property access, and basic Lua sprite helpers. Custom events, note types, stages, characters, custom substates, and many advanced Psych APIs are not supported yet. Native builds only."
-        : "Limited native Psych chart compatibility: " + Std.string(supportedSongs) + " classic chart song(s) can launch with NovaBeat's built-in characters and default stage. Lua/HScript song and global script loading is available for this basic compatibility tier. Custom events, note types, stages, characters, and custom substates remain unsupported."
+        ? "Experimental Psych compatibility: " + Std.string(supportedSongs) + " song(s) were found in classic or song-package layouts. Global, song-local, stage, character, event, and note-type Lua/HScript scripts load through NovaBeat's bounded compatibility API. Additional strumlines, variable key counts, mid-song scroll-velocity changes, and unsupported native extensions remain unavailable. Native builds only."
+        : "Limited Psych chart compatibility: " + Std.string(supportedSongs) + " song(s) were found in classic or song-package layouts and can launch with compatible chart features. Lua/HScript global and song-local script loading is available on native builds."
     };
     #else
     return unavailable("Psych mod launching currently requires native mod-folder access.");
@@ -516,7 +515,7 @@ class PsychModRuntime
 
   /**
    * Read global scripts, referenced custom event/note-type scripts, and
-   * matching song-local scripts in Psych's expected load order.
+   * matching song-local scripts from both Psych package layouts.
    */
   public static function getScriptSources(modDirs:Array<String>, songId:String):Array<PsychScriptSource>
   {
@@ -532,38 +531,50 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      globalSources = globalSources.concat(readScriptSources(Path.join([modPath, "scripts"]), 5));
 
-      var scriptsPath:String = Path.join([modPath, "scripts"]);
-      globalSources = globalSources.concat(readScriptSources(scriptsPath, 5));
-
-      var dataRoot:String = Path.join([modPath, "data"]);
-      if (!FileSystem.exists(dataRoot) || !FileSystem.isDirectory(dataRoot)) continue;
-      for (songFolder in FileSystem.readDirectory(dataRoot))
+      for (source in scanSongSources(modPath))
       {
-        var dataPath:String = Path.join([dataRoot, songFolder]);
-        if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) continue;
-        if (buildSongId(directory, songFolder) != songId) continue;
-
+        if (buildSongId(directory, source.songFolder) != songId) continue;
         var eventNames:Array<String> = [];
         var noteTypeNames:Array<String> = [];
         var stageNames:Array<String> = [];
         var characterNames:Array<String> = [];
-        for (fileName in FileSystem.readDirectory(dataPath))
+
+        for (chartPath in source.chartFiles)
         {
-          var lower:String = fileName.toLowerCase();
-          if (!StringTools.endsWith(lower, ".json") || lower == "events.json") continue;
           try
           {
-            var chartRoot:Dynamic = Json.parse(File.getContent(Path.join([dataPath, fileName])));
-            var chartSong:Dynamic = Reflect.field(chartRoot, "song");
-            if (chartSong == null) continue;
-            for (event in extractPsychEvents(Reflect.field(chartSong, "events")))
+            var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
+            var chartSong:Dynamic = getPsychChartDataRoot(chartRoot);
+            var chartMetadata:Dynamic = getPsychChartMetadata(chartRoot);
+            var rawEvents:Dynamic = Reflect.field(chartSong, "events");
+            if (rawEvents == null) rawEvents = Reflect.field(chartRoot, "events");
+            for (event in extractPsychEvents(rawEvents))
               if (!eventNames.contains(event.name.toLowerCase())) eventNames.push(event.name.toLowerCase());
-            collectPsychNoteTypes(Reflect.field(chartSong, "notes"), noteTypeNames);
+
+            var noteData:Dynamic = Reflect.field(chartSong, "notes");
+            if (isPsychV2ChartRoot(chartRoot) && Std.isOfType(noteData, Array))
+            {
+              for (note in (cast noteData:Array<Dynamic>))
+              {
+                if (note == null) continue;
+                var rawType:Dynamic = Reflect.field(note, "k");
+                if (rawType == null) rawType = Reflect.field(note, "type");
+                if (rawType == null) continue;
+                var typeName:String = StringTools.trim(Std.string(rawType)).toLowerCase();
+                if (typeName.length > 0 && !noteTypeNames.contains(typeName)) noteTypeNames.push(typeName);
+              }
+            }
+            else
+            {
+              collectPsychNoteTypes(noteData, noteTypeNames);
+            }
 
             var rawStage:Dynamic = Reflect.field(chartSong, "stage");
             if (rawStage == null || StringTools.trim(Std.string(rawStage)).length == 0)
               rawStage = Reflect.field(chartSong, "stageDefault");
+            if (rawStage == null) rawStage = Reflect.field(chartMetadata, "stage");
             if (rawStage != null)
             {
               var stageName:String = StringTools.trim(Std.string(rawStage)).toLowerCase();
@@ -578,46 +589,65 @@ class PsychModRuntime
               if (characterName.length > 0 && !characterNames.contains(characterName))
                 characterNames.push(characterName);
             }
+
+            var rawLines:Dynamic = Reflect.field(chartRoot, "strumlines");
+            if (Std.isOfType(rawLines, Array))
+            {
+              for (line in (cast rawLines:Array<Dynamic>))
+              {
+                var chars:Dynamic = line == null ? null : Reflect.field(line, "characters");
+                if (!Std.isOfType(chars, Array)) continue;
+                for (character in (cast chars:Array<Dynamic>))
+                {
+                  if (character == null) continue;
+                  var characterName:String = StringTools.trim(Std.string(character)).toLowerCase();
+                  if (characterName.length > 0 && !characterNames.contains(characterName))
+                    characterNames.push(characterName);
+                }
+              }
+            }
           }
           catch (error:Dynamic)
           {
-            trace('[Psych Compatibility] Could not scan compatibility scripts in ' + fileName + ': ' + Std.string(error));
+            trace('[Psych Compatibility] Could not scan scripts referenced by ' + chartPath + ': ' + Std.string(error));
           }
         }
 
-        var externalEventsPath:String = Path.join([dataPath, "events.json"]);
-        if (FileSystem.exists(externalEventsPath))
+        for (eventsPath in findPsychEventsFiles(source.dataPath))
         {
           try
           {
-            var externalEvents:Dynamic = Json.parse(File.getContent(externalEventsPath));
+            var externalEvents:Dynamic = Json.parse(File.getContent(eventsPath));
             for (event in extractPsychEvents(externalEvents))
               if (!eventNames.contains(event.name.toLowerCase())) eventNames.push(event.name.toLowerCase());
           }
           catch (error:Dynamic)
           {
-            trace('[Psych Compatibility] Could not scan events.json: ' + Std.string(error));
+            trace('[Psych Compatibility] Could not scan ' + eventsPath + ': ' + Std.string(error));
           }
         }
 
-        stageSources = stageSources.concat(
-          readNamedScriptSources(Path.join([modPath, "stages"]), stageNames)
-        );
-        characterSources = characterSources.concat(
-          readNamedScriptSources(Path.join([modPath, "characters"]), characterNames)
-        );
-        customEventSources = customEventSources.concat(
-          readNamedScriptSources(Path.join([modPath, "custom_events"]), eventNames)
-        );
-        customNoteSources = customNoteSources.concat(
-          readNamedScriptSources(Path.join([modPath, "custom_notetypes"]), noteTypeNames)
-        );
-        songSources = songSources.concat(readScriptSources(dataPath, 3));
+        stageSources = stageSources.concat(readNamedScriptSources(Path.join([modPath, "stages"]), stageNames));
+        characterSources = characterSources.concat(readNamedScriptSources(Path.join([modPath, "characters"]), characterNames));
+        customEventSources = customEventSources.concat(readNamedScriptSources(Path.join([modPath, "custom_events"]), eventNames));
+        customNoteSources = customNoteSources.concat(readNamedScriptSources(Path.join([modPath, "custom_notetypes"]), noteTypeNames));
+        songSources = songSources.concat(readScriptSources(source.dataPath, 3));
       }
     }
     #end
-    return globalSources.concat(stageSources).concat(characterSources)
+
+    var combined:Array<PsychScriptSource> = globalSources.concat(stageSources).concat(characterSources)
       .concat(customEventSources).concat(customNoteSources).concat(songSources);
+    var seen:Map<String, Bool> = [];
+    var unique:Array<PsychScriptSource> = [];
+    for (source in combined)
+    {
+      var key:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
+      if (seen.exists(key)) continue;
+      seen.set(key, true);
+      unique.push(source);
+    }
+    return unique;
   }
 
   public static function getCustomSubstateScriptSources(modDirs:Array<String>, name:String):Array<PsychScriptSource>
@@ -942,6 +972,102 @@ class PsychModRuntime
   }
   #end
 
+  static function getPsychChartDataRoot(chartRoot:Dynamic):Dynamic
+  {
+    var legacySong:Dynamic = chartRoot == null ? null : Reflect.field(chartRoot, "song");
+    return legacySong == null ? chartRoot : legacySong;
+  }
+
+  static function getPsychChartMetadata(chartRoot:Dynamic):Dynamic
+  {
+    if (chartRoot == null) return null;
+    var metadata:Dynamic = Reflect.field(chartRoot, "metadata");
+    return metadata == null ? chartRoot : metadata;
+  }
+
+  static function isPsychV2ChartRoot(chartRoot:Dynamic):Bool
+  {
+    if (chartRoot == null) return false;
+    return Std.isOfType(Reflect.field(chartRoot, "notes"), Array)
+      && Std.isOfType(Reflect.field(chartRoot, "strumlines"), Array);
+  }
+
+  static function isPsychChartFile(path:String):Bool
+  {
+    try
+    {
+      var root:Dynamic = Json.parse(File.getContent(path));
+      var legacySong:Dynamic = Reflect.field(root, "song");
+      if (legacySong != null && Reflect.field(legacySong, "notes") != null) return true;
+      return isPsychV2ChartRoot(root);
+    }
+    catch (error:Dynamic)
+    {
+      return false;
+    }
+  }
+
+  static function isBuiltinPsychStage(stageName:String):Bool
+  {
+    if (stageName == null) return true;
+    return switch (StringTools.trim(stageName).toLowerCase())
+    {
+      case "", "stage", "spooky", "philly", "limo", "mall", "mallevil",
+        "school", "schoolevil", "tank", "tankmanbattlefield",
+        "mainstage", "spookymansion", "phillytrain", "limoride", "mallxmas": true;
+      default: false;
+    };
+  }
+
+  static function resolvePsychStage(stageName:String):String
+  {
+    if (stageName == null || StringTools.trim(stageName).length == 0) return Constants.DEFAULT_STAGE;
+    return switch (StringTools.trim(stageName).toLowerCase())
+    {
+      case "stage": Constants.DEFAULT_STAGE;
+      case "spooky": "spookyMansion";
+      case "philly": "phillyTrain";
+      case "limo": "limoRide";
+      case "mall": "mallXmas";
+      case "mallevil": "mallEvil";
+      case "school": "school";
+      case "schoolevil": "schoolEvil";
+      case "tank": "tankmanBattlefield";
+      default: stageName;
+    };
+  }
+
+  static function psychStrumLineRole(line:Dynamic):Int
+  {
+    if (line == null) return -1;
+    var type:Dynamic = Reflect.field(line, "type");
+    if (type == 1 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "player")
+      || Reflect.field(line, "isPlayer") == true) return 0;
+    if (type == 0 || (Std.isOfType(type, String) && Std.string(type).toLowerCase() == "opponent")
+      || Reflect.field(line, "isPlayer") == false) return 1;
+    return -1;
+  }
+
+  #if sys
+  static function findPsychEventsFiles(dataPath:String):Array<String>
+  {
+    var result:Array<String> = [];
+    if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) return result;
+    var files:Array<String> = FileSystem.readDirectory(dataPath);
+    files.sort(Reflect.compare);
+    for (fileName in files)
+    {
+      var lower:String = fileName.toLowerCase();
+      if (lower == "events.json" || (StringTools.startsWith(lower, "events-") && StringTools.endsWith(lower, ".json")))
+      {
+        var fullPath:String = Path.join([dataPath, fileName]);
+        if (FileSystem.exists(fullPath) && !FileSystem.isDirectory(fullPath)) result.push(fullPath);
+      }
+    }
+    return result;
+  }
+  #end
+
   static function unavailable(message:String):PsychPackageAssessment
   {
     return {
@@ -954,47 +1080,52 @@ class PsychModRuntime
   #if sys
   static function scanSongSources(modPath:String):Array<PsychSongSource>
   {
-    var result:Array<PsychSongSource> = [];
-    var dataRoot:String = Path.join([modPath, "data"]);
-    if (!FileSystem.exists(dataRoot) || !FileSystem.isDirectory(dataRoot)) return result;
-
-    for (songFolder in FileSystem.readDirectory(dataRoot))
+    var bySong:Map<String, PsychSongSource> = [];
+    for (rootName in ["data", "songs"])
     {
-      if (songFolder.length == 0 || songFolder.charAt(0) == ".") continue;
-
-      var dataPath:String = Path.join([dataRoot, songFolder]);
-      if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) continue;
-
-      var audioPath:Null<String> = findAudioFolder(modPath, songFolder);
-      var instrumentFile:Null<String> = audioPath == null ? null : findExistingInstrument(audioPath);
-      var chartFiles:Array<String> = [];
-
-      for (fileName in FileSystem.readDirectory(dataPath))
+      var songRoot:String = Path.join([modPath, rootName]);
+      if (!FileSystem.exists(songRoot) || !FileSystem.isDirectory(songRoot)) continue;
+      var songFolders:Array<String> = FileSystem.readDirectory(songRoot);
+      songFolders.sort(Reflect.compare);
+      for (songFolder in songFolders)
       {
-        var lower:String = fileName.toLowerCase();
-        if (!StringTools.endsWith(lower, ".json") || lower == "events.json") continue;
+        if (songFolder.length == 0 || songFolder.charAt(0) == ".") continue;
+        var dataPath:String = Path.join([songRoot, songFolder]);
+        if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) continue;
+        var chartFiles:Array<String> = [];
+        var fileNames:Array<String> = FileSystem.readDirectory(dataPath);
+        fileNames.sort(Reflect.compare);
+        for (fileName in fileNames)
+        {
+          if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+          var chartPath:String = Path.join([dataPath, fileName]);
+          if (isPsychChartFile(chartPath)) chartFiles.push(chartPath);
+        }
+        if (chartFiles.length == 0) continue;
 
-        var chartPath:String = Path.join([dataPath, fileName]);
-        var chartProblem:Null<String> = inspectUnsupportedChartFeatures(chartPath, modPath);
-        var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
-        // Preserve raw charts that use unsupported fields even when the
-        // legacy importer rejects them, so a different difficulty cannot
-        // accidentally make the whole package appear fully compatible.
-        if ((legacy != null && legacy.song != null && legacy.song.notes != null) || chartProblem != null)
-          chartFiles.push(chartPath);
+        var existing:Null<PsychSongSource> = bySong.get(songFolder);
+        if (existing == null)
+        {
+          var audioPath:Null<String> = findAudioFolder(modPath, songFolder);
+          var instrumentFile:Null<String> = audioPath == null ? null : findExistingInstrument(audioPath);
+          bySong.set(songFolder, {
+            songFolder: songFolder,
+            dataPath: dataPath,
+            audioPath: audioPath,
+            instrumentFile: instrumentFile,
+            chartFiles: chartFiles
+          });
+        }
+        else
+        {
+          for (chartPath in chartFiles)
+            if (!existing.chartFiles.contains(chartPath)) existing.chartFiles.push(chartPath);
+          if (rootName == "songs") existing.dataPath = dataPath;
+        }
       }
-
-      if (chartFiles.length == 0) continue;
-
-      result.push({
-        songFolder: songFolder,
-        dataPath: dataPath,
-        audioPath: audioPath,
-        instrumentFile: instrumentFile,
-        chartFiles: chartFiles
-      });
     }
-
+    var result:Array<PsychSongSource> = [for (source in bySong) source];
+    result.sort(function(a:PsychSongSource, b:PsychSongSource):Int return Reflect.compare(a.songFolder, b.songFolder));
     return result;
   }
 
@@ -1019,18 +1150,15 @@ class PsychModRuntime
     try
     {
       var root:Dynamic = Json.parse(File.getContent(path));
-      var song:Dynamic = Reflect.field(root, "song");
-      // data/<song>/ can also contain dialogue/other JSON files. Only apply
-      // this chart-specific gate when the file has the legacy song.notes key.
-      if (song == null || Reflect.field(song, "notes") == null) return null;
+      var song:Dynamic = getPsychChartDataRoot(root);
+      var metadata:Dynamic = getPsychChartMetadata(root);
+      var isV2:Bool = isPsychV2ChartRoot(root);
+      var legacyNotes:Dynamic = Reflect.field(song, "notes");
+      if (!isV2 && legacyNotes == null) return null;
 
       var supportedCharacterIds:Map<String, String> = [
-        "player1" => "bf",
-        "player2" => "dad",
-        "player3" => "gf",
-        "gfVersion" => "gf"
+        "player1" => "bf", "player2" => "dad", "player3" => "gf", "gfVersion" => "gf"
       ];
-
       for (field => expected in supportedCharacterIds)
       {
         var rawValue:Dynamic = Reflect.field(song, field);
@@ -1044,47 +1172,101 @@ class PsychModRuntime
       var stageValue:Dynamic = Reflect.field(song, "stage");
       if (stageValue == null || StringTools.trim(Std.string(stageValue)).length == 0)
         stageValue = Reflect.field(song, "stageDefault");
-      var stageName:String = stageValue == null ? Constants.DEFAULT_STAGE : StringTools.trim(Std.string(stageValue));
-      if (stageName.length > 0 && stageName.toLowerCase() != Constants.DEFAULT_STAGE.toLowerCase()
+      if (stageValue == null) stageValue = Reflect.field(metadata, "stage");
+      var stageName:String = stageValue == null ? "" : StringTools.trim(Std.string(stageValue));
+      if (stageName.length > 0 && !isBuiltinPsychStage(stageName)
         && !hasNamedPsychScript(Path.join([modPath, "stages"]), stageName))
-        return "custom stage '" + stageName + "' is missing a matching stages/" + stageName + ".lua script";
+        return "custom stage '" + stageName + "' needs a matching stages/" + stageName + ".lua or .hx script";
 
-      for (field in ["arrowSkin", "splashSkin", "noteStyle"])
+      for (field in ["arrowSkin", "splashSkin", "noteStyle", "uiSkin"])
       {
-        var rawValue:Dynamic = Reflect.field(song, field);
-        if (rawValue == null) continue;
-        if (StringTools.trim(Std.string(rawValue)).length > 0)
-          return "custom note skin/style metadata (" + field + ")";
+        var rawValue:Dynamic = Reflect.field(metadata, field);
+        if (rawValue == null) rawValue = Reflect.field(song, field);
+        if (rawValue != null && StringTools.trim(Std.string(rawValue)).length > 0)
+          return "custom note/UI skin metadata (" + field + ")";
       }
 
-      var eventProblem:Null<String> = inspectUnsupportedEvents(Reflect.field(song, "events"), modPath);
-      if (eventProblem != null) return eventProblem;
-
-      var noteData:Dynamic = Reflect.field(song, "notes");
-      if (Std.isOfType(noteData, Array))
+      if (isV2)
       {
-        var problem:Null<String> = inspectNoteSections(cast noteData, modPath);
-        if (problem != null) return problem;
-      }
-      else if (noteData != null)
-      {
-        for (difficulty in Reflect.fields(noteData))
+        var lines:Array<Dynamic> = cast Reflect.field(root, "strumlines");
+        var rawNotes:Array<Dynamic> = cast Reflect.field(root, "notes");
+        for (line in lines)
         {
-          var difficultyNotes:Dynamic = Reflect.field(noteData, difficulty);
-          if (!Std.isOfType(difficultyNotes, Array)) continue;
-          var problem:Null<String> = inspectNoteSections(cast difficultyNotes, modPath);
+          if (line == null) continue;
+          var chars:Dynamic = Reflect.field(line, "characters");
+          if (!Std.isOfType(chars, Array)) continue;
+          for (rawCharacter in (cast chars:Array<Dynamic>))
+          {
+            if (rawCharacter == null) continue;
+            var character:String = StringTools.trim(Std.string(rawCharacter));
+            if (character.length == 0 || ["bf", "dad", "gf"].indexOf(character.toLowerCase()) >= 0) continue;
+            if (!hasPsychCharacterDataFile(modPath, character))
+              return "custom character '" + character + "' is missing characters/" + character + ".json";
+          }
+        }
+
+        for (note in rawNotes)
+        {
+          if (note == null) continue;
+          var rawLine:Dynamic = Reflect.field(note, "s");
+          var rawColumn:Dynamic = Reflect.field(note, "d");
+          if (rawLine == null || rawColumn == null) return "a psych_v2 note is missing its strumline or column";
+          var lineIndex:Int = Std.int(rawLine);
+          var column:Int = Std.int(rawColumn);
+          if (lineIndex < 0 || lineIndex >= lines.length) return "a psych_v2 note references an invalid strumline";
+          if (column < 0 || column > 3) return "a psych_v2 chart uses more than four keys per strumline";
+          if (psychStrumLineRole(lines[lineIndex]) < 0)
+            return "a psych_v2 chart uses an additional strumline that NovaBeat cannot map yet";
+          var rawType:Dynamic = Reflect.field(note, "k");
+          if (rawType == null) rawType = Reflect.field(note, "type");
+          if (rawType != null && Std.isOfType(rawType, String))
+          {
+            var noteType:String = StringTools.trim(Std.string(rawType));
+            if (noteType.length > 0 && !hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), noteType))
+              return "custom note type '" + noteType + "' has no matching custom_notetypes script";
+          }
+          if (Reflect.field(note, "g") == true || Reflect.field(note, "gfNote") == true)
+            return "GF-specific note ownership";
+        }
+
+        var sections:Dynamic = Reflect.field(root, "sections");
+        if (Std.isOfType(sections, Array))
+        {
+          for (section in (cast sections:Array<Dynamic>))
+          {
+            if (section == null) continue;
+            if (Reflect.field(section, "changeKeyCount") == true) return "mid-song key-count changes";
+            if (Reflect.field(section, "changeScrollVelocity") == true) return "mid-song scroll-velocity changes";
+          }
+        }
+      }
+      else if (legacyNotes != null)
+      {
+        if (Std.isOfType(legacyNotes, Array))
+        {
+          var problem:Null<String> = inspectNoteSections(cast legacyNotes, modPath);
           if (problem != null) return problem;
+        }
+        else
+        {
+          for (difficulty in Reflect.fields(legacyNotes))
+          {
+            var difficultyNotes:Dynamic = Reflect.field(legacyNotes, difficulty);
+            if (!Std.isOfType(difficultyNotes, Array)) continue;
+            var problem:Null<String> = inspectNoteSections(cast difficultyNotes, modPath);
+            if (problem != null) return problem;
+          }
         }
       }
 
-      return null;
+      var rawEvents:Dynamic = Reflect.field(song, "events");
+      if (rawEvents == null) rawEvents = Reflect.field(root, "events");
+      return inspectUnsupportedEvents(rawEvents, modPath);
     }
     catch (error:Dynamic)
     {
       trace('[Psych Compatibility] Could not inspect raw chart ' + path + ': ' + Std.string(error));
-      // Invalid/non-chart JSON is not a supported chart file and will not be
-      // imported by parseLegacyChart either.
-      return null;
+      return "chart JSON could not be parsed (" + Std.string(error) + ")";
     }
   }
 
@@ -1214,6 +1396,7 @@ class PsychModRuntime
     var rawTime:Dynamic = Reflect.field(entry, "t");
     if (rawTime == null) rawTime = Reflect.field(entry, "time");
     var rawValues:Dynamic = Reflect.field(entry, "v");
+    if (rawValues == null) rawValues = Reflect.field(entry, "values");
     if (rawValues == null) rawValues = Reflect.field(entry, "value");
     var value1:Dynamic = null;
     var value2:Dynamic = null;
@@ -1369,12 +1552,39 @@ class PsychModRuntime
 
     for (chartPath in source.chartFiles)
     {
+      var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
+      var difficultyName:String = getDifficultyName(source.songFolder, Path.withoutExtension(Path.withoutDirectory(chartPath)));
+
+      if (isPsychV2ChartRoot(chartRoot))
+      {
+        var importedV2:Null<PsychV2ChartImport> = convertPsychV2Chart(
+          chartRoot, source.dataPath, difficultyName, source.songFolder
+        );
+        if (importedV2 == null) continue;
+        if (metadata == null)
+        {
+          metadata = importedV2.metadata;
+          psychPlayerId = importedV2.player;
+          psychGirlfriendId = importedV2.girlfriend;
+          psychOpponentId = importedV2.opponent;
+        }
+        combinedNotes.set(difficultyName, importedV2.notes);
+        combinedSpeeds.set(difficultyName, importedV2.speed);
+        if (combinedEvents.length == 0)
+        {
+          for (event in importedV2.events) combinedEvents.push(event);
+        }
+        else
+        {
+          for (event in importedV2.events)
+            if (!combinedEvents.contains(event)) combinedEvents.push(event);
+        }
+        continue;
+      }
+
       var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
       if (legacy == null || legacy.song == null || legacy.song.notes == null) continue;
-
-      var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
       var chartSong:Dynamic = Reflect.field(chartRoot, "song");
-      var difficultyName:String = getDifficultyName(source.songFolder, Path.withoutExtension(Path.withoutDirectory(chartPath)));
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
@@ -1386,65 +1596,214 @@ class PsychModRuntime
         psychGirlfriendId = readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf"));
       }
 
+      var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", Constants.DEFAULT_STAGE));
+      importedMetadata.playData.stage = resolvePsychStage(stageName);
+      if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName);
+      importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
+
       for (difficulty in importedChart.notes.keys())
       {
         combinedNotes.set(difficulty, importedChart.getNotes(difficulty));
         combinedSpeeds.set(difficulty, importedChart.getScrollSpeed(difficulty));
       }
-
-      // Legacy camera changes are synthesized from section ownership by the importer.
       if (combinedEvents.length == 0)
       {
-        for (event in importedChart.events)
-          combinedEvents.push(event);
+        for (event in importedChart.events) combinedEvents.push(event);
       }
-
       for (event in extractPsychEvents(Reflect.field(chartSong, "events")))
       {
         combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
-          name: event.name,
-          value1: event.value1,
-          value2: event.value2
+          name: event.name, value1: event.value1, value2: event.value2
         }));
       }
     }
 
-    // Some Psych versions store event data in a separate events.json file.
-    var externalEventsPath:String = Path.join([source.dataPath, "events.json"]);
-    if (FileSystem.exists(externalEventsPath))
+    for (eventsPath in findPsychEventsFiles(source.dataPath))
     {
-      var externalEvents:Dynamic = Json.parse(File.getContent(externalEventsPath));
-      for (event in extractPsychEvents(externalEvents))
+      try
       {
-        combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
-          name: event.name,
-          value1: event.value1,
-          value2: event.value2
-        }));
+        var externalEvents:Dynamic = Json.parse(File.getContent(eventsPath));
+        for (event in extractPsychEvents(externalEvents))
+        {
+          combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
+            name: event.name, value1: event.value1, value2: event.value2
+          }));
+        }
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych Compatibility] Could not import events from ' + eventsPath + ': ' + Std.string(error));
       }
     }
 
     if (metadata == null || !combinedNotes.keys().hasNext()) return null;
-
-    // The first adapter tier deliberately uses the original base-game cast and
-    // default stage. It does not pretend to load Psych-only character/stage data.
     metadata.variation = Constants.DEFAULT_VARIATION;
     metadata.generatedBy = "NovaBeat Psych compatibility";
     metadata.playData.songVariations = [];
     metadata.playData.difficulties = [for (difficulty in combinedNotes.keys()) difficulty];
     metadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
-    metadata.playData.stage = Constants.DEFAULT_STAGE;
+    if (metadata.playData.stage == null || metadata.playData.stage.length == 0)
+      metadata.playData.stage = Constants.DEFAULT_STAGE;
     metadata.playData.noteStyle = Constants.DEFAULT_NOTE_STYLE;
     for (difficulty in metadata.playData.difficulties)
-    {
       metadata.playData.ratings.set(difficulty, 0);
-    }
 
     var chart:SongChartData = new SongChartData(combinedSpeeds, combinedEvents, combinedNotes);
     var charts:Map<String, SongChartData> = [];
     charts.set(Constants.DEFAULT_VARIATION, chart);
-
     return Song.buildRaw(songId, [metadata], Constants.DEFAULT_VARIATION, charts, false, false);
+  }
+
+  static function convertPsychV2Chart(chartRoot:Dynamic, dataPath:String, difficultyName:String,
+      songFolder:String):Null<PsychV2ChartImport>
+  {
+    if (!isPsychV2ChartRoot(chartRoot)) return null;
+
+    var embeddedMetadata:Dynamic = getPsychChartMetadata(chartRoot);
+    var externalMetadataPath:String = Path.join([dataPath, "metadata-" + difficultyName + ".json"]);
+    if (!FileSystem.exists(externalMetadataPath))
+      externalMetadataPath = Path.join([dataPath, "metadata.json"]);
+    var externalMetadata:Dynamic = null;
+    if (FileSystem.exists(externalMetadataPath) && !FileSystem.isDirectory(externalMetadataPath))
+    {
+      try externalMetadata = Json.parse(File.getContent(externalMetadataPath)) catch (error:Dynamic)
+      {
+        trace('[Psych Compatibility] Could not parse ' + externalMetadataPath + ': ' + Std.string(error));
+      }
+    }
+
+    var meta:Dynamic = {};
+    if (externalMetadata != null)
+      for (field in Reflect.fields(externalMetadata)) Reflect.setField(meta, field, Reflect.field(externalMetadata, field));
+    if (embeddedMetadata != null)
+      for (field in Reflect.fields(embeddedMetadata)) Reflect.setField(meta, field, Reflect.field(embeddedMetadata, field));
+
+    var songName:String = readPsychString(meta, "songName", readPsychString(meta, "song", songFolder));
+    var artist:String = readPsychString(meta, "artist", Constants.DEFAULT_ARTIST);
+    var charter:String = readPsychString(meta, "charter", Constants.DEFAULT_CHARTER);
+    var bpm:Float = readPsychFloat(meta, "bpm", Constants.DEFAULT_BPM);
+    var speed:Float = readPsychFloat(meta, "speed", 1.0);
+    if (Math.isNaN(bpm) || bpm <= 0) bpm = Constants.DEFAULT_BPM;
+    if (Math.isNaN(speed) || speed <= 0) speed = 1.0;
+
+    var lines:Array<Dynamic> = cast Reflect.field(chartRoot, "strumlines");
+    var player:String = "bf";
+    var opponent:String = "dad";
+    var girlfriend:String = "gf";
+    for (line in lines)
+    {
+      var role:Int = psychStrumLineRole(line);
+      var chars:Dynamic = Reflect.field(line, "characters");
+      if (!Std.isOfType(chars, Array) || (cast chars:Array<Dynamic>).length == 0) continue;
+      var character:String = StringTools.trim(Std.string((cast chars:Array<Dynamic>)[0]));
+      if (character.length == 0) continue;
+      if (role == 0) player = character;
+      else if (role == 1) opponent = character;
+      else if (girlfriend == "gf") girlfriend = character;
+    }
+
+    var metadata:SongMetadata = new SongMetadata(songName, artist, charter, Constants.DEFAULT_VARIATION);
+    metadata.timeChanges = [new funkin.data.song.SongData.SongTimeChange(0, bpm)];
+    metadata.playData.stage = resolvePsychStage(readPsychString(meta, "stage", Constants.DEFAULT_STAGE));
+    metadata.playData.characters = new SongCharacterData(player, girlfriend, opponent);
+
+    var notes:Array<funkin.data.song.SongData.SongNoteData> = [];
+    var rawNotes:Array<Dynamic> = cast Reflect.field(chartRoot, "notes");
+    for (note in rawNotes)
+    {
+      if (note == null) continue;
+      var lineIndex:Int = Std.int(Reflect.field(note, "s"));
+      var column:Int = Std.int(Reflect.field(note, "d"));
+      if (lineIndex < 0 || lineIndex >= lines.length || column < 0 || column > 3) return null;
+      var role:Int = psychStrumLineRole(lines[lineIndex]);
+      if (role < 0) return null;
+      var data:Int = column + (role == 0 ? 0 : 4);
+      var noteTime:Float = readPsychFloat(note, "t", 0);
+      var noteLength:Float = readPsychFloat(note, "l", 0);
+      var kind:String = readPsychString(note, "k", readPsychString(note, "type", ""));
+      if (kind.length == 0 && Reflect.field(note, "a") == true) kind = "alt";
+      notes.push(new funkin.data.song.SongData.SongNoteData(noteTime, data, noteLength, kind));
+    }
+
+    var events:Array<funkin.data.song.SongData.SongEventData> = [];
+    for (event in extractPsychEvents(Reflect.field(chartRoot, "events")))
+    {
+      events.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
+        name: event.name, value1: event.value1, value2: event.value2
+      }));
+    }
+
+    var sections:Dynamic = Reflect.field(chartRoot, "sections");
+    var sectionStart:Float = 0;
+    var currentBpm:Float = bpm;
+    if (Std.isOfType(sections, Array))
+    {
+      var lastCameraChar:Int = -1;
+      for (section in (cast sections:Array<Dynamic>))
+      {
+        if (section == null) continue;
+        if (Reflect.field(section, "changeBPM") == true)
+        {
+          var nextBpm:Float = readPsychFloat(section, "bpm", currentBpm);
+          if (nextBpm > 0 && !Math.isNaN(nextBpm))
+          {
+            currentBpm = nextBpm;
+            metadata.timeChanges.push(new funkin.data.song.SongData.SongTimeChange(sectionStart, currentBpm));
+          }
+        }
+
+        var beats:Float = readPsychFloat(section, "beats", 4);
+        var numerator:Int = 4;
+        var denominator:Int = 4;
+        var signature:Dynamic = Reflect.field(section, "timeSignature");
+        if (Std.isOfType(signature, Array))
+        {
+          var values:Array<Dynamic> = cast signature;
+          if (values.length > 0) numerator = Std.int(values[0]);
+          if (values.length > 1) denominator = Std.int(values[1]);
+        }
+        if (beats <= 0 || Math.isNaN(beats)) beats = numerator;
+        if (denominator <= 0) denominator = 4;
+
+        var cameraTarget:Dynamic = Reflect.field(section, "cameraTarget");
+        if (cameraTarget != null)
+        {
+          var target:Int = Std.int(cameraTarget);
+          if (target >= 0 && target < lines.length)
+          {
+            var cameraRole:Int = psychStrumLineRole(lines[target]);
+            if (cameraRole >= 0)
+            {
+              var cameraChar:Int = cameraRole == 0 ? 0 : 1;
+              if (cameraChar != lastCameraChar)
+              {
+                events.push(new SongEventData(sectionStart, "FocusCamera", {char: cameraChar}));
+                lastCameraChar = cameraChar;
+              }
+            }
+          }
+        }
+        sectionStart += beats * (4.0 / denominator) * (60000.0 / currentBpm);
+      }
+    }
+
+    return {
+      metadata: metadata,
+      notes: notes,
+      speed: speed,
+      events: events,
+      player: player,
+      girlfriend: girlfriend,
+      opponent: opponent
+    };
+  }
+
+  static function readPsychFloat(source:Dynamic, field:String, fallback:Float):Float
+  {
+    var value:Dynamic = source == null ? null : Reflect.field(source, field);
+    if (value == null) return fallback;
+    var parsed:Float = Std.parseFloat(Std.string(value));
+    return Math.isNaN(parsed) ? fallback : parsed;
   }
 
   static function findAudioFolder(modPath:String, songFolder:String):Null<String>
@@ -1594,6 +1953,17 @@ class PsychModRuntime
 
     return null;
   }
+}
+
+typedef PsychV2ChartImport =
+{
+  var metadata:SongMetadata;
+  var notes:Array<funkin.data.song.SongData.SongNoteData>;
+  var speed:Float;
+  var events:Array<funkin.data.song.SongData.SongEventData>;
+  var player:String;
+  var girlfriend:String;
+  var opponent:String;
 }
 
 typedef PsychPackageAssessment =

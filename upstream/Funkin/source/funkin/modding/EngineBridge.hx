@@ -295,7 +295,8 @@ class EngineBridge
       "custom_events",
       "custom_notetypes",
       "custom_substates",
-      "data"
+      "data",
+      "songs"
     ];
     for (folder in scriptFolders)
     {
@@ -343,31 +344,45 @@ class EngineBridge
    */
   static function hasPsychChartMarkers(root:String):Bool
   {
-    var dataPath:String = Path.join([root, "data"]);
-    if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) return false;
-
-    for (songFolder in FileSystem.readDirectory(dataPath))
+    for (folder in ["data", "songs"])
     {
-      if (songFolder.length == 0 || songFolder.charAt(0) == ".") continue;
-      var songPath:String = Path.join([dataPath, songFolder]);
-
-      if (!FileSystem.isDirectory(songPath))
+      var dataPath:String = Path.join([root, folder]);
+      if (!FileSystem.exists(dataPath) || !FileSystem.isDirectory(dataPath)) continue;
+      for (songFolder in FileSystem.readDirectory(dataPath))
       {
-        if (StringTools.endsWith(songFolder.toLowerCase(), ".json") && isPsychChartFile(Path.join([dataPath, songFolder])))
-          return true;
-        continue;
-      }
-
-      for (fileName in FileSystem.readDirectory(songPath))
-      {
-        if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
-        if (isPsychChartFile(Path.join([songPath, fileName]))) return true;
+        if (songFolder.length == 0 || songFolder.charAt(0) == ".") continue;
+        var songPath:String = Path.join([dataPath, songFolder]);
+        if (!FileSystem.isDirectory(songPath))
+        {
+          if (StringTools.endsWith(songFolder.toLowerCase(), ".json") && isPsychChartFile(Path.join([dataPath, songFolder])))
+            return true;
+          continue;
+        }
+        for (fileName in FileSystem.readDirectory(songPath))
+        {
+          if (!StringTools.endsWith(fileName.toLowerCase(), ".json")) continue;
+          if (isPsychChartFile(Path.join([songPath, fileName]))) return true;
+        }
       }
     }
-
     return false;
   }
 
+  static function isPsychChartFile(chartPath:String):Bool
+  {
+    try
+    {
+      var parsed:Dynamic = Json.parse(File.getContent(chartPath));
+      var songData:Dynamic = Reflect.field(parsed, "song");
+      if (songData != null && Reflect.field(songData, "notes") != null) return true;
+      return Std.isOfType(Reflect.field(parsed, "notes"), Array)
+        && Std.isOfType(Reflect.field(parsed, "strumlines"), Array);
+    }
+    catch (error:Dynamic)
+    {
+      return false;
+    }
+  }
 
   /**
    * Psych week files have a distinctive schema containing songs,
