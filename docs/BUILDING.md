@@ -149,3 +149,8 @@ The original FNF menu is the only active menu presentation. Story Mode, Freeplay
 
 
 Final menu cleanup also removes the dormant NovaBeat theme paths from Preferences, Customization, Performance customization, and Mobile customization; the FNF options list and mobile control settings remain.
+
+
+Controls, Offset, and Save Data pages now use the original FNF options chrome; no deleted NovaBeat options-chrome class is required.
+
+The debug console command `testPsychV2Compatibility` runs a synthetic psych_v2 converter fixture covering note lanes, sustains, alt notes, 3/4 timing, BPM changes, camera targets, stage aliases, and the additional-strumline guard.
