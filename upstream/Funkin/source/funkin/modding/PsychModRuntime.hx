@@ -1621,7 +1621,7 @@ class PsychModRuntime
     if (name == null) return false;
     return switch (StringTools.trim(name).toLowerCase())
     {
-      case "alt animation", "no animation", "hey!", "gf sing", "hurt note": true;
+      case "alt", "alt animation", "no animation", "hey!", "gf sing", "hurt note": true;
       default: false;
     };
   }
@@ -2156,7 +2156,8 @@ class PsychModRuntime
       if (converted.notes[4].kind != "psychhey" || converted.notes[5].kind != "psychgfsing") return false;
       if (converted.notes[6].kind != "psychhurt") return false;
       if (converted.notes[7].kind != "psychgfsection" || converted.notes[8].kind != "psychgfsectionalt") return false;
-      if (!isSupportedBuiltinPsychNoteType("Alt Animation")
+      if (!isSupportedBuiltinPsychNoteType("Alt")
+        || !isSupportedBuiltinPsychNoteType("Alt Animation")
         || !isSupportedBuiltinPsychNoteType("No Animation")
         || !isSupportedBuiltinPsychNoteType("Hey!")
         || !isSupportedBuiltinPsychNoteType("GF Sing")
