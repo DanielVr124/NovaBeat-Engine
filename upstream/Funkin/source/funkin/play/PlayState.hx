@@ -1532,11 +1532,9 @@ class PlayState extends MusicBeatSubState
           var eventAge:Float = Conductor.instance.songPosition - event.time;
           if (eventAge > 1000)
           {
-            // Section-state markers must still be applied when entering a song
-            // after a seek; replaying old visual/gameplay events is not safe.
-            var isPsychSectionState:Bool = isPsychSectionStateEvent(event);
+            // Setting `event.processOldEvents = true` allows events to be handled even if they are old.
             var eventHandler:Null<SongEvent> = SongEventRegistry.getEvent(event.eventKind);
-            if (!isPsychSectionState && (eventHandler == null || !eventHandler.processOldEvents))
+            if (eventHandler == null || !eventHandler.processOldEvents)
             {
               event.activated = true;
               continue;
@@ -2069,7 +2067,7 @@ class PlayState extends MusicBeatSubState
     playerStrumline.noteVibrations.tryHoldNoteVibration();
 
     PsychScriptRuntime.dispatch("onStepHit", []);
-    if (Conductor.instance.currentStep % 16 == 0)
+    if (Conductor.instance.currentStep % 16 == 0 && !PsychGameplayApi.hasPsychSectionMarkers())
       PsychScriptRuntime.dispatch("onSectionHit", [PsychGameplayApi.getCurrentPsychSection()]);
     return true;
   }
