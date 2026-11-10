@@ -65,6 +65,11 @@ class PsychFreeplayState extends MusicBeatSubState
   // The original Psych preview player is represented by the same compact
   // transport panel and synchronized instrumental/vocal playback.
   var previewPlaying:Bool = false;
+  var previewPlaybackRate:Float = 1.0;
+  var previewSeekHoldTime:Float = 0;
+  var previewRateHoldTime:Float = 0;
+  var previewPlaybackText:FlxText;
+  var previewPlaybackBackground:FlxSprite;
   var menuMusicBeforePreview:Null<FlxSound> = null;
   var previewPaused:Bool = false;
   var previewVocals:Array<FunkinSound> = [];
@@ -238,21 +243,31 @@ class PsychFreeplayState extends MusicBeatSubState
     previewBackground.scrollFactor.set();
     add(previewBackground);
 
-    previewTitle = new FlxText(FlxG.width * 0.6, 12, FlxG.width * 0.38, '', 24);
-    previewTitle.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.RIGHT);
+    previewPlaybackBackground = new FlxSprite(FlxG.width * 0.55, 0).makeGraphic(Std.int(FlxG.width * 0.15), 100, FlxColor.BLACK);
+    previewPlaybackBackground.alpha = 0.6;
+    previewPlaybackBackground.scrollFactor.set();
+    add(previewPlaybackBackground);
+
+    previewPlaybackText = new FlxText(FlxG.width * 0.55, 20, FlxG.width * 0.15, '1.00x', 32);
+    previewPlaybackText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
+    previewPlaybackText.scrollFactor.set();
+    add(previewPlaybackText);
+
+    previewTitle = new FlxText(FlxG.width * 0.7, 5, FlxG.width * 0.28, '', 32);
+    previewTitle.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     previewTitle.scrollFactor.set();
     add(previewTitle);
 
-    previewTime = new FlxText(FlxG.width * 0.6, 48, FlxG.width * 0.38, '00:00 / 00:00', 20);
-    previewTime.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE, FlxTextAlign.RIGHT);
+    previewTime = new FlxText(FlxG.width * 0.7, 65, FlxG.width * 0.28, '< 00:00 / 00:00 >', 32);
+    previewTime.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
     previewTime.scrollFactor.set();
     add(previewTime);
 
-    previewBarBack = new FlxSprite(FlxG.width * 0.6, 78).makeGraphic(Std.int(FlxG.width * 0.38), 8, FlxColor.BLACK);
+    previewBarBack = new FlxSprite(FlxG.width * 0.7, 98).makeGraphic(Std.int(FlxG.width * 0.28), 5, FlxColor.BLACK);
     previewBarBack.scrollFactor.set();
     add(previewBarBack);
 
-    previewBarFill = new FlxSprite(previewBarBack.x, previewBarBack.y).makeGraphic(Std.int(FlxG.width * 0.38), 8, FlxColor.WHITE);
+    previewBarFill = new FlxSprite(previewBarBack.x, previewBarBack.y).makeGraphic(Std.int(FlxG.width * 0.28), 5, FlxColor.WHITE);
     previewBarFill.scrollFactor.set();
     add(previewBarFill);
 
@@ -383,6 +398,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (previewPlaying)
     {
       updatePreview(elapsed);
+      updatePreviewControls(elapsed);
       if (controls.BACK)
       {
         stopPreview();
@@ -577,6 +593,10 @@ class PsychFreeplayState extends MusicBeatSubState
 
     previewPlaying = true;
     previewPaused = false;
+    previewPlaybackRate = 1.0;
+    previewSeekHoldTime = 0;
+    previewRateHoldTime = 0;
+    applyPreviewPlaybackRate();
     previewTitle.text = 'PLAYING: ' + entry.name;
     setPreviewPanelVisible(true);
     scoreBackground.visible = false;
@@ -605,9 +625,84 @@ class PsychFreeplayState extends MusicBeatSubState
 
     var duration = Math.max(0, music.length);
     var current = Math.max(0, music.time);
-    previewTime.text = formatTime(current) + ' / ' + formatTime(duration);
-    previewBarFill.scale.x = duration > 0 ? Math.max(0, Math.min(1, current / duration)) : 0;
+    previewTime.text = '< ' + formatTime(current) + ' / ' + formatTime(duration) + ' >';
+    var progress:Float = duration > 0 ? Math.max(0, Math.min(1, current / duration)) : 0;
+    previewBarFill.setGraphicSize(Math.max(1, Std.int(previewBarBack.width * progress)), 5);
     previewBarFill.updateHitbox();
+  }
+
+  function updatePreviewControls(elapsed:Float):Void
+  {
+    var music = FlxG.sound.music;
+    if (music == null || !music.exists) return;
+
+    if (controls.UI_LEFT_P)
+    {
+      previewSeekHoldTime = 0;
+      seekPreview(-1000);
+    }
+    else if (controls.UI_RIGHT_P)
+    {
+      previewSeekHoldTime = 0;
+      seekPreview(1000);
+    }
+
+    if (controls.UI_LEFT || controls.UI_RIGHT)
+    {
+      previewSeekHoldTime += elapsed;
+      if (previewSeekHoldTime > 0.5)
+        seekPreview(40000 * elapsed * (controls.UI_LEFT ? -1 : 1));
+    }
+    else
+    {
+      previewSeekHoldTime = 0;
+    }
+
+    if (controls.UI_UP_P)
+    {
+      previewRateHoldTime = 0;
+      previewPlaybackRate = Math.min(3.0, FlxMath.roundDecimal(previewPlaybackRate + 0.05, 2));
+      applyPreviewPlaybackRate();
+    }
+    else if (controls.UI_DOWN_P)
+    {
+      previewRateHoldTime = 0;
+      previewPlaybackRate = Math.max(0.25, FlxMath.roundDecimal(previewPlaybackRate - 0.05, 2));
+      applyPreviewPlaybackRate();
+    }
+
+    if (controls.UI_UP || controls.UI_DOWN)
+    {
+      previewRateHoldTime += elapsed;
+      if (previewRateHoldTime > 0.6)
+      {
+        var direction:Int = controls.UI_UP ? 1 : -1;
+        previewPlaybackRate = Math.max(0.25,
+          Math.min(3.0, FlxMath.roundDecimal(previewPlaybackRate + direction * 0.05 * elapsed * 8, 2)));
+        applyPreviewPlaybackRate();
+      }
+    }
+    else
+    {
+      previewRateHoldTime = 0;
+    }
+
+    if (controls.RESET)
+    {
+      previewPlaybackRate = 1.0;
+      music.time = 0;
+      for (voice in previewVocals) voice.time = 0;
+      applyPreviewPlaybackRate();
+    }
+  }
+
+  function applyPreviewPlaybackRate():Void
+  {
+    var music = FlxG.sound.music;
+    if (music != null && music.exists) music.pitch = previewPlaybackRate;
+    for (voice in previewVocals) voice.pitch = previewPlaybackRate;
+    if (previewPlaybackText != null)
+      previewPlaybackText.text = Std.string(FlxMath.roundDecimal(previewPlaybackRate, 2)) + 'x';
   }
 
   function seekPreview(amount:Float):Void
@@ -673,6 +768,8 @@ class PsychFreeplayState extends MusicBeatSubState
   function setPreviewPanelVisible(value:Bool):Void
   {
     previewBackground.visible = value;
+    previewPlaybackBackground.visible = value;
+    previewPlaybackText.visible = value;
     previewTitle.visible = value;
     previewTime.visible = value;
     previewBarBack.visible = value;
@@ -746,13 +843,18 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomText?.setPosition(0, height - 22);
     previewBackground?.makeGraphic(Std.int(width * 0.4), 100, FlxColor.BLACK);
     previewBackground?.setPosition(width * 0.6, 0);
-    if (previewTitle != null) previewTitle.fieldWidth = width * 0.38;
-    previewTitle?.setPosition(width * 0.6, 12);
-    if (previewTime != null) previewTime.fieldWidth = width * 0.38;
-    previewTime?.setPosition(width * 0.6, 48);
-    previewBarBack?.setPosition(width * 0.6, 78);
-    previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
-    previewBarFill?.setPosition(width * 0.6, 78);
+    previewPlaybackBackground?.makeGraphic(Std.int(width * 0.15), 100, FlxColor.BLACK);
+    previewPlaybackBackground?.setPosition(width * 0.55, 0);
+    if (previewPlaybackText != null) previewPlaybackText.fieldWidth = width * 0.15;
+    previewPlaybackText?.setPosition(width * 0.55, 20);
+    if (previewTitle != null) previewTitle.fieldWidth = width * 0.28;
+    previewTitle?.setPosition(width * 0.7, 5);
+    if (previewTime != null) previewTime.fieldWidth = width * 0.28;
+    previewTime?.setPosition(width * 0.7, 65);
+    previewBarBack?.makeGraphic(Std.int(width * 0.28), 5, FlxColor.BLACK);
+    previewBarBack?.setPosition(width * 0.7, 98);
+    previewBarFill?.makeGraphic(Std.int(width * 0.28), 5, FlxColor.WHITE);
+    previewBarFill?.setPosition(width * 0.7, 98);
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
     positionHighscore();
   }
