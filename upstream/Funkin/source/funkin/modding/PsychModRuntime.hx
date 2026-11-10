@@ -13,6 +13,7 @@ import funkin.data.song.SongRegistry;
 import funkin.data.song.importer.FNFLegacyData;
 import funkin.data.song.importer.FNFLegacyImporter;
 import funkin.play.song.Song;
+import funkin.play.PlayState;
 import haxe.Json;
 import openfl.utils.AssetType;
 
@@ -36,6 +37,10 @@ class PsychModRuntime
 {
   static final audioFolders:Map<String, String> = [];
   static final songDataFolders:Map<String, String> = [];
+  static final psychSongStageNames:Map<String, String> = [];
+  static final psychSongModRoots:Map<String, String> = [];
+  static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
+  static final psychStageBaselines:Map<String, Dynamic> = [];
   static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
@@ -187,6 +192,9 @@ class PsychModRuntime
     #if sys
     audioFolders.clear();
     songDataFolders.clear();
+    psychSongStageNames.clear();
+    psychSongModRoots.clear();
+    psychSongStagePositions.clear();
     cachedSoundAssetKeys = null;
 
     var root:String = PolymodHandler.getModRoot();
@@ -228,6 +236,161 @@ class PsychModRuntime
   public static function isImportedSong(songId:String):Bool
   {
     return songId != null && audioFolders.exists(songId);
+  }
+
+
+  /**
+   * Apply the active Psych package's stages/<stage>.json data to the native
+   * stage before characters are constructed. The baseline is restored on
+   * every stage load so Psych overrides cannot leak into ordinary V-Slice
+   * songs that reuse the same native Stage instance.
+   */
+  public static function applyPsychStageData(stage:Dynamic, songId:String):Void
+  {
+    if (stage == null) return;
+    var stageId:String = Std.string(Reflect.field(stage, "id"));
+    if (stageId.length == 0) return;
+
+    var stageData:Dynamic = Reflect.field(stage, "_data");
+    if (stageData == null) return;
+
+    var baseline:Dynamic = psychStageBaselines.get(stageId);
+    if (baseline == null)
+    {
+      var characters:Dynamic = Reflect.field(stageData, "characters");
+      baseline = {
+        cameraZoom: Reflect.field(stageData, "cameraZoom"),
+        boyfriend: copyPsychStageCharacterData(Reflect.field(characters, "bf")),
+        girlfriend: copyPsychStageCharacterData(Reflect.field(characters, "gf")),
+        opponent: copyPsychStageCharacterData(Reflect.field(characters, "dad"))
+      };
+      psychStageBaselines.set(stageId, baseline);
+    }
+
+    Reflect.setField(stageData, "cameraZoom", Reflect.field(baseline, "cameraZoom"));
+    var stageCharacters:Dynamic = Reflect.field(stageData, "characters");
+    restorePsychStageCharacterData(Reflect.field(stageCharacters, "bf"), Reflect.field(baseline, "boyfriend"));
+    restorePsychStageCharacterData(Reflect.field(stageCharacters, "gf"), Reflect.field(baseline, "girlfriend"));
+    restorePsychStageCharacterData(Reflect.field(stageCharacters, "dad"), Reflect.field(baseline, "opponent"));
+    psychSongStagePositions.remove(songId);
+
+    #if sys
+    var stageName:Null<String> = psychSongStageNames.get(songId);
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (stageName == null || modRoot == null) return;
+
+    // Stage names are file basenames, never arbitrary paths.
+    if (stageName.indexOf("/") >= 0 || stageName.indexOf("\\") >= 0
+      || stageName == "." || stageName == "..") return;
+
+    var stagePath:String = Path.normalize(Path.join([modRoot, "stages", stageName + ".json"]));
+    var stageDirectory:String = Path.normalize(Path.join([modRoot, "stages"]));
+    var prefix:String = StringTools.endsWith(stageDirectory, "/") ? stageDirectory : stageDirectory + "/";
+    if (!StringTools.startsWith(stagePath, prefix) || !FileSystem.exists(stagePath) || FileSystem.isDirectory(stagePath)) return;
+
+    try
+    {
+      var raw:Dynamic = Json.parse(File.getContent(stagePath));
+      var zoom:Float = readPsychFloat(raw, "defaultZoom", stage.camZoom);
+      if (zoom > 0 && !Math.isNaN(zoom)) Reflect.setField(stageData, "cameraZoom", zoom);
+
+      var positions:Map<String, Array<Float>> = [];
+      var boyfriend:Array<Float> = readPsychStagePosition(raw, "boyfriend");
+      var girlfriend:Array<Float> = readPsychStagePosition(raw, "girlfriend");
+      var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");
+      if (boyfriend != null) positions.set("boyfriend", boyfriend);
+      if (girlfriend != null) positions.set("girlfriend", girlfriend);
+      if (opponent != null) positions.set("opponent", opponent);
+      psychSongStagePositions.set(songId, positions);
+
+      // Psych character JSON already carries its own camera offsets and
+      // scale, so the native stage's per-character offsets must not be added.
+      for (entry in [
+        Reflect.field(stageCharacters, "bf"),
+        Reflect.field(stageCharacters, "gf"),
+        Reflect.field(stageCharacters, "dad")
+      ])
+      {
+        if (entry == null) continue;
+        Reflect.setField(entry, "cameraOffsets", [0.0, 0.0]);
+        Reflect.setField(entry, "scale", 1.0);
+        Reflect.setField(entry, "scroll", [1.0, 1.0]);
+        Reflect.setField(entry, "alpha", 1.0);
+        Reflect.setField(entry, "angle", 0.0);
+      }
+      trace('[Psych Compatibility] Applied Psych stage JSON for ' + stageName + ' (' + songId + ').');
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not load stage data for ' + stageName + ': ' + Std.string(error));
+    }
+    #end
+  }
+
+  /** Place a Psych character at the x/y coordinates from stages/<stage>.json. */
+  public static function applyPsychStageCharacterPosition(character:Dynamic, role:String):Void
+  {
+    if (character == null || PlayState.instance == null || PlayState.instance.currentSong == null) return;
+    var positions:Null<Map<String, Array<Float>>> = psychSongStagePositions.get(PlayState.instance.currentSong.id);
+    if (positions == null) return;
+    var position:Null<Array<Float>> = positions.get(role);
+    if (position == null || position.length < 2) return;
+
+    var offsets:Dynamic = Reflect.field(character, "globalOffsets");
+    var offsetX:Float = offsets != null && offsets.length > 0 ? cast offsets[0] : 0;
+    var offsetY:Float = offsets != null && offsets.length > 1 ? cast offsets[1] : 0;
+    var x:Float = position[0] + offsetX;
+    var y:Float = position[1] + offsetY;
+    Reflect.setProperty(character, "x", x);
+    Reflect.setProperty(character, "y", y);
+
+    var originalPosition:Dynamic = Reflect.field(character, "originalPosition");
+    if (originalPosition != null)
+      Reflect.callMethod(originalPosition, Reflect.field(originalPosition, "set"), [x, y]);
+    var resetCamera:Dynamic = Reflect.field(character, "resetCameraFocusPoint");
+    if (resetCamera != null) Reflect.callMethod(character, resetCamera, []);
+  }
+
+  static function copyPsychStageCharacterData(source:Dynamic):Dynamic
+  {
+    if (source == null) return null;
+    return {
+      zIndex: Reflect.field(source, "zIndex"),
+      position: copyPsychStageVector(Reflect.field(source, "position"), [0.0, 0.0]),
+      scale: Reflect.field(source, "scale"),
+      cameraOffsets: copyPsychStageVector(Reflect.field(source, "cameraOffsets"), [0.0, 0.0]),
+      scroll: copyPsychStageVector(Reflect.field(source, "scroll"), [1.0, 1.0]),
+      alpha: Reflect.field(source, "alpha"),
+      angle: Reflect.field(source, "angle")
+    };
+  }
+
+  static function copyPsychStageVector(value:Dynamic, fallback:Array<Float>):Array<Float>
+  {
+    if (value == null || value.length < 2) return fallback.copy();
+    return [cast value[0], cast value[1]];
+  }
+
+  static function restorePsychStageCharacterData(target:Dynamic, source:Dynamic):Void
+  {
+    if (target == null || source == null) return;
+    Reflect.setField(target, "zIndex", Reflect.field(source, "zIndex"));
+    Reflect.setField(target, "position", copyPsychStageVector(Reflect.field(source, "position"), [0.0, 0.0]));
+    Reflect.setField(target, "scale", Reflect.field(source, "scale"));
+    Reflect.setField(target, "cameraOffsets", copyPsychStageVector(Reflect.field(source, "cameraOffsets"), [0.0, 0.0]));
+    Reflect.setField(target, "scroll", copyPsychStageVector(Reflect.field(source, "scroll"), [1.0, 1.0]));
+    Reflect.setField(target, "alpha", Reflect.field(source, "alpha"));
+    Reflect.setField(target, "angle", Reflect.field(source, "angle"));
+  }
+
+  static function readPsychStagePosition(source:Dynamic, field:String):Null<Array<Float>>
+  {
+    var value:Dynamic = source == null ? null : Reflect.field(source, field);
+    if (value == null || !Std.isOfType(value, Array) || value.length < 2) return null;
+    var x:Float = Std.parseFloat(Std.string(value[0]));
+    var y:Float = Std.parseFloat(Std.string(value[1]));
+    if (Math.isNaN(x) || Math.isNaN(y)) return null;
+    return [x, y];
   }
 
   /**
@@ -769,6 +932,40 @@ class PsychModRuntime
       characters:Null<SongCharacterData>):Void
   {
     if (characters == null) return;
+
+    // Change Character events may name a character that is not one of the
+    // chart's three starting roles. Register the owning package's complete
+    // standard characters/ catalog so those swaps can resolve at runtime.
+    #if sys
+    var songDataPath:Null<String> = songDataFolders.get(songId);
+    if (songDataPath != null)
+    {
+      var ownerRoot:String = Path.normalize(Path.directory(Path.directory(songDataPath)));
+      var characterRoot:String = Path.join([ownerRoot, "characters"]);
+      if (FileSystem.exists(characterRoot) && FileSystem.isDirectory(characterRoot))
+      {
+        for (entry in FileSystem.readDirectory(characterRoot))
+        {
+          if (Path.extension(entry).toLowerCase() != "json") continue;
+          var characterId:String = Path.withoutExtension(entry);
+          if (CharacterDataParser.fetchCharacterData(characterId) != null) continue;
+          var jsonPath:String = Path.join([characterRoot, entry]);
+          try
+          {
+            var raw:Dynamic = Json.parse(File.getContent(jsonPath));
+            var converted:Null<CharacterData> = convertPsychCharacterData(characterId, raw);
+            if (converted != null && CharacterDataParser.registerModCharacterData(characterId, converted))
+              trace('[Psych Compatibility] Registered additional Psych character for scripted swaps: ' + characterId);
+          }
+          catch (error:Dynamic)
+          {
+            trace('[Psych Compatibility] Could not register additional character ' + characterId + ': ' + Std.string(error));
+          }
+        }
+      }
+    }
+    #end
+
     var characterIds:Array<String> = [characters.player, characters.girlfriend, characters.opponent];
     for (characterId in characterIds)
     {
@@ -1328,8 +1525,16 @@ class PsychModRuntime
       {
         var rawValue:Dynamic = Reflect.field(metadata, field);
         if (rawValue == null) rawValue = Reflect.field(song, field);
-        if (rawValue != null && StringTools.trim(Std.string(rawValue)).length > 0)
-          return "custom note/UI skin metadata (" + field + ")";
+        if (rawValue == null) continue;
+
+        var skinName:String = StringTools.trim(Std.string(rawValue));
+        if (skinName.length == 0) continue;
+
+        // Psych writes this canonical default splash atlas into exported
+        // charts. It does not mean that a package supplies a custom skin.
+        if (field == "splashSkin" && skinName.toLowerCase() == "notesplashes") continue;
+
+        return "custom note/UI skin metadata (" + field + ": " + skinName + ")";
       }
 
       if (isV2)
@@ -1931,6 +2136,11 @@ class PsychModRuntime
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
+      if (stageName.length > 0)
+      {
+        psychSongStageNames.set(songId, stageName);
+        psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
+      }
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
