@@ -15,7 +15,6 @@ import flixel.util.FlxColor;
 import openfl.filters.ShaderFilter;
 import flixel.util.FlxTimer;
 import funkin.audio.FunkinSound;
-import funkin.Preferences;
 import funkin.data.freeplay.player.PlayerRegistry;
 import funkin.ui.freeplay.dj.BaseFreeplayDJ;
 import funkin.ui.freeplay.dj.AnimateAtlasFreeplayDJ;
@@ -50,7 +49,6 @@ import funkin.ui.freeplay.backcards.*;
 import funkin.ui.freeplay.components.DifficultySprite;
 import funkin.ui.freeplay.charselect.PlayableCharacter;
 import funkin.ui.mainmenu.MainMenuState;
-import funkin.ui.mainmenu.NovaBeatMainMenuState;
 import funkin.ui.story.Level;
 import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.stickers.StickerSubState;
@@ -271,7 +269,6 @@ class FreeplayState extends MusicBeatSubState
   var freeplayTitleBackground:Null<FlxSprite> = null;
   var highscoreSprite:Null<FlxSprite> = null;
   var clearBoxDisplay:Null<FlxSprite> = null;
-  var novaBeatHeaderObjects:Array<FlxSprite> = [];
   var djBaseScaleX:Float = 1;
   var djBaseScaleY:Float = 1;
   var djBaseFrameWidth:Float = 1;
@@ -360,9 +357,9 @@ class FreeplayState extends MusicBeatSubState
     ostName = new FlxText(8 - FullScreenScaleMode.gameNotchSize.x, 8, FlxG.width - 8 - 8, Constants.DEFAULT_OST_NAME, 48);
     charSelectHint = new FlxText(-40, 18, FlxG.width - 8 - 8, 'Press [ LOL ] to change characters', 32);
 
-    var freeplayBackgroundKey:String = Preferences.menuStyle == "NovaBeat"
-      ? 'novabeat/menu-background'
-      : (styleData == null ? 'freeplay/freeplayBGweek1-bf' : styleData.getBgAssetKey());
+    var freeplayBackgroundKey:String = styleData == null
+      ? 'freeplay/freeplayBGweek1-bf'
+      : styleData.getBgAssetKey();
     backingImage = FunkinSprite.create(backingCard.pinkBack.width * 0.74, 0, freeplayBackgroundKey);
     backingImageBaseX = backingImage.x;
     backingImageBaseY = backingImage.y;
@@ -2487,9 +2484,7 @@ class FreeplayState extends MusicBeatSubState
 
   function playBackSound():Void
   {
-    // The parent menu is the source of truth if a style switch is in flight.
-    var useNovaBeatSound:Bool = Preferences.menuStyle == "NovaBeat" || Std.isOfType(_parentState, NovaBeatMainMenuState);
-    FunkinSound.playOnce(Paths.sound(useNovaBeatSound ? 'novabeat/back' : 'cancelMenu'));
+    FunkinSound.playOnce(Paths.sound('cancelMenu'));
   }
 
   function goBack():Void
@@ -2557,8 +2552,7 @@ class FreeplayState extends MusicBeatSubState
       caps.doJumpOut = true;
     }
 
-    var returnToNovaBeatMenu:Bool = Preferences.menuStyle == "NovaBeat" && Std.isOfType(_parentState, NovaBeatMainMenuState);
-    if (Type.getClass(_parentState) == MainMenuState || returnToNovaBeatMenu)
+    if (Type.getClass(_parentState) == MainMenuState)
     {
       _parentState.persistentUpdate = false;
       _parentState.persistentDraw = true;
@@ -2568,13 +2562,12 @@ class FreeplayState extends MusicBeatSubState
     {
       FlxTransitionableState.skipNextTransIn = true;
       FlxTransitionableState.skipNextTransOut = true;
-      if (Type.getClass(_parentState) == MainMenuState || returnToNovaBeatMenu)
+      if (Type.getClass(_parentState) == MainMenuState)
       {
-        FunkinSound.playMusic(returnToNovaBeatMenu ? 'novabeat-menu' : 'freakyMenu', {
+        FunkinSound.playMusic('freakyMenu', {
           overrideExisting: true,
           restartTrack: false,
-          persist: true,
-          mapTimeChanges: false
+          persist: true
         });
         if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(4.0, 0.0, 0.82);
         dispatchEvent(new FreeplayScriptEvent(FREEPLAY_CLOSE));
@@ -3183,26 +3176,7 @@ class FreeplayState extends MusicBeatSubState
 
   function playNavigationSound():Void
   {
-    var soundName:String = Preferences.menuStyle == "NovaBeat" ? "novabeat/select" : "scrollMenu";
-    FunkinSound.playOnce(Paths.sound(soundName), 0.4);
-  }
-
-  function buildNovaBeatFreeplayHeader():Void
-  {
-    var panel:FlxSprite = new FlxSprite(24, 20);
-    panel.makeGraphic(318, 58, 0xD9000000);
-    panel.scrollFactor.set();
-    panel.cameras = [funnyCam];
-    add(panel);
-    novaBeatHeaderObjects.push(panel);
-
-    var accent:FlxSprite = new FlxSprite(24, 20);
-    accent.makeGraphic(4, 58, 0xFF48E7FF);
-    accent.scrollFactor.set();
-    accent.cameras = [funnyCam];
-    add(accent);
-    novaBeatHeaderObjects.push(accent);
-
+    FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.4);
   }
 
   function layoutFreeplayCapsules():Void
@@ -3269,7 +3243,7 @@ class FreeplayState extends MusicBeatSubState
         // The active animation can have frame-to-frame width variation.
         // Use FNF's stable intro frame measurement so browser viewport changes
         // do not resize the DJ differently depending on the frame being drawn.
-        var fitFrameWidth:Float = Preferences.menuStyle == "NovaBeat" ? dj.frameWidth : djBaseFrameWidth;
+        var fitFrameWidth:Float = djBaseFrameWidth;
         var djFit:Float = Math.min(djBaseScaleX, (width * 0.68) / Math.max(1, fitFrameWidth));
         dj.scale.set(djFit, djFit * (djBaseScaleY / Math.max(0.001, djBaseScaleX)));
         dj.updateHitbox();
@@ -3316,11 +3290,6 @@ class FreeplayState extends MusicBeatSubState
       if (fpScoreDisplay != null) fpScoreDisplay.setPosition(width - fpScoreDisplay.width - 22, 64);
       if (txtCompletion != null) txtCompletion.x = width - txtCompletion.width - 22;
 
-      if (novaBeatHeaderObjects.length >= 2)
-      {
-        novaBeatHeaderObjects[0].setPosition(16, 16);
-        novaBeatHeaderObjects[1].setPosition(16, 16);
-      }
     }
     else
     {
@@ -3336,11 +3305,6 @@ class FreeplayState extends MusicBeatSubState
       diffSelRight.setPosition((CUTOUT_WIDTH * DJ_POS_MULTI) + 325, grpDifficulties.y - 10);
       if (letterSort != null) letterSort.setPosition((CUTOUT_WIDTH * SONGS_POS_MULTI) + 400, 75);
       if (albumRoll != null) albumRoll.layoutViewport(width, height, false);
-      if (novaBeatHeaderObjects.length >= 2)
-      {
-        novaBeatHeaderObjects[0].setPosition(24, 20);
-        novaBeatHeaderObjects[1].setPosition(24, 20);
-      }
       if (freeplayTitleText != null)
       {
         freeplayTitleText.setFormat('VCR OSD Mono', 48);
@@ -3539,13 +3503,7 @@ class FreeplayState extends MusicBeatSubState
   {
     // Since CUTOUT_WIDTH is static it might retain some old inccrect values so we update it before loading freeplay
     CUTOUT_WIDTH = FullScreenScaleMode.gameCutoutSize.x / 1.5;
-    var result:MusicBeatState;
-    // Rebuild Freeplay over the active menu presentation, including after
-    // quitting a song or leaving the results screen.
-    if (Preferences.menuStyle == "NovaBeat")
-      result = new NovaBeatMainMenuState();
-    else
-      result = new MainMenuState(true);
+    var result:MusicBeatState = new MainMenuState(true);
     result.openSubState(new FreeplayState(params, stickers));
     result.persistentUpdate = false;
     result.persistentDraw = true;
