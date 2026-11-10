@@ -2200,6 +2200,17 @@ class PsychModRuntime
         || !isSupportedPsychGFSectionNoteType("GF Sing")
         || isSupportedPsychGFSectionNoteType("Hurt Note")) return false;
 
+      // Exercise the psych_v1 raw-section adapter separately from psych_v2.
+      var legacyGFNotes:Array<funkin.data.song.SongData.SongNoteData> = [
+        new funkin.data.song.SongData.SongNoteData(500, 0, 0, ""),
+        new funkin.data.song.SongData.SongNoteData(1000, 1, 0, "alt")
+      ];
+      var legacyGFSections:Array<Dynamic> = [
+        {mustHitSection: true, gfSection: true, sectionNotes: [[500, 0, 0, ""], [1000, 1, 0, true]]}
+      ];
+      applyPsychGFSectionOwnership(legacyGFSections, legacyGFNotes);
+      if (legacyGFNotes[0].kind != "psychgfsection" || legacyGFNotes[1].kind != "psychgfsectionalt") return false;
+
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
       if (resolvePsychStage("a-custom-psych-stage", "smoke-test") != Constants.DEFAULT_STAGE) return false;
