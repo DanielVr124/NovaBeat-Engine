@@ -67,12 +67,18 @@ class PsychModRuntime
         }
       }
 
-      for (eventsPath in findPsychEventsFiles(source.dataPath))
+      var eventFiles:Array<String> = findPsychEventsFiles(source.dataPath);
+      var hasDifficultyEvents:Bool = false;
+      for (eventsPath in eventFiles)
       {
+        var eventFileName:String = Path.withoutExtension(Path.withoutDirectory(eventsPath)).toLowerCase();
+        if (StringTools.startsWith(eventFileName, "events-")) hasDifficultyEvents = true;
         var externalEventsProblem:Null<String> = inspectUnsupportedEventFile(eventsPath, modPath);
         if (externalEventsProblem != null)
           return unavailable("This Psych package contains event data NovaBeat cannot safely load yet: " + externalEventsProblem);
       }
+      if (hasDifficultyEvents && source.chartFiles.length > 1)
+        return unavailable("This package has separate events-<difficulty>.json files for multiple charts. NovaBeat's current song data model uses one shared event timeline, so this package needs difficulty-aware event storage before it can be launched safely.");
     }
     var songScriptCount:Int = 0;
 
@@ -1015,15 +1021,32 @@ class PsychModRuntime
     return switch (StringTools.trim(stageName).toLowerCase())
     {
       case "", "stage", "spooky", "philly", "limo", "mall", "mallevil",
-        "school", "schoolevil", "tank", "tankmanbattlefield",
+        "school", "schoolevil", "tank", "tankmanbattlefield", "phillystreets", "phillyblazin",
         "mainstage", "spookymansion", "phillytrain", "limoride", "mallxmas": true;
       default: false;
     };
   }
 
-  static function resolvePsychStage(stageName:String):String
+  static function resolvePsychStage(stageName:String, ?songFolder:String):String
   {
-    if (stageName == null || StringTools.trim(stageName).length == 0) return Constants.DEFAULT_STAGE;
+    if (stageName == null || StringTools.trim(stageName).length == 0)
+    {
+      var songKey:String = songFolder == null ? "" : songFolder.toLowerCase();
+      return switch (songKey)
+      {
+        case "spookeez", "south", "monster": "spookyMansion";
+        case "pico", "philly", "philly-nice", "blammed": "phillyTrain";
+        case "milf", "satin-panties", "high": "limoRide";
+        case "cocoa", "eggnog": "mallXmas";
+        case "winter-horrorland": "mallEvil";
+        case "senpai", "roses": "school";
+        case "thorns": "schoolEvil";
+        case "ugh", "guns", "stress": "tankmanBattlefield";
+        case "darnell", "lit-up", "2hot": "phillyStreets";
+        case "blazin": "phillyBlazin";
+        default: Constants.DEFAULT_STAGE;
+      };
+    }
     return switch (StringTools.trim(stageName).toLowerCase())
     {
       case "stage": Constants.DEFAULT_STAGE;
@@ -1035,6 +1058,8 @@ class PsychModRuntime
       case "school": "school";
       case "schoolevil": "schoolEvil";
       case "tank": "tankmanBattlefield";
+      case "phillystreets": "phillyStreets";
+      case "phillyblazin": "phillyBlazin";
       default: stageName;
     };
   }
@@ -1067,6 +1092,15 @@ class PsychModRuntime
       }
     }
     return result;
+  }
+
+  static function findPsychEventFile(dataPath:String, difficulty:String):Null<String>
+  {
+    var specific:String = Path.join([dataPath, "events-" + difficulty + ".json"]);
+    if (FileSystem.exists(specific) && !FileSystem.isDirectory(specific)) return specific;
+    var shared:String = Path.join([dataPath, "events.json"]);
+    if (FileSystem.exists(shared) && !FileSystem.isDirectory(shared)) return shared;
+    return null;
   }
   #end
 
@@ -1551,11 +1585,19 @@ class PsychModRuntime
     var combinedNotes:Map<String, Array<funkin.data.song.SongData.SongNoteData>> = [];
     var combinedSpeeds:Map<String, Float> = [];
     var combinedEvents:Array<funkin.data.song.SongData.SongEventData> = [];
+    var hasEmbeddedEvents:Bool = false;
+    var firstDifficulty:String = Constants.DEFAULT_DIFFICULTY;
+    var hasFirstDifficulty:Bool = false;
 
     for (chartPath in source.chartFiles)
     {
       var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
       var difficultyName:String = getDifficultyName(source.songFolder, Path.withoutExtension(Path.withoutDirectory(chartPath)));
+      if (!hasFirstDifficulty)
+      {
+        firstDifficulty = difficultyName;
+        hasFirstDifficulty = true;
+      }
 
       if (isPsychV2ChartRoot(chartRoot))
       {
@@ -1563,6 +1605,7 @@ class PsychModRuntime
           chartRoot, source.dataPath, difficultyName, source.songFolder
         );
         if (importedV2 == null) continue;
+        if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
         {
           metadata = importedV2.metadata;
@@ -1587,6 +1630,7 @@ class PsychModRuntime
       var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
       if (legacy == null || legacy.song == null || legacy.song.notes == null) continue;
       var chartSong:Dynamic = Reflect.field(chartRoot, "song");
+      if (extractPsychEvents(Reflect.field(chartSong, "events")).length > 0) hasEmbeddedEvents = true;
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
@@ -1598,9 +1642,9 @@ class PsychModRuntime
         psychGirlfriendId = readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf"));
       }
 
-      var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", Constants.DEFAULT_STAGE));
-      importedMetadata.playData.stage = resolvePsychStage(stageName);
-      if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName);
+      var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
+      importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
+      if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
 
       for (difficulty in importedChart.notes.keys())
@@ -1620,21 +1664,27 @@ class PsychModRuntime
       }
     }
 
-    for (eventsPath in findPsychEventsFiles(source.dataPath))
+    // Chart-embedded events take precedence. A standalone events file is a
+    // fallback for charts that do not carry their own event data.
+    if (!hasEmbeddedEvents && hasFirstDifficulty)
     {
-      try
+      var eventsPath:Null<String> = findPsychEventFile(source.dataPath, firstDifficulty);
+      if (eventsPath != null)
       {
-        var externalEvents:Dynamic = Json.parse(File.getContent(eventsPath));
-        for (event in extractPsychEvents(externalEvents))
+        try
         {
-          combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
-            name: event.name, value1: event.value1, value2: event.value2
-          }));
+          var externalEvents:Dynamic = Json.parse(File.getContent(eventsPath));
+          for (event in extractPsychEvents(externalEvents))
+          {
+            combinedEvents.push(new SongEventData(event.time, "PsychCompatibilityEvent", {
+              name: event.name, value1: event.value1, value2: event.value2
+            }));
+          }
         }
-      }
-      catch (error:Dynamic)
-      {
-        trace('[Psych Compatibility] Could not import events from ' + eventsPath + ': ' + Std.string(error));
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not import events from ' + eventsPath + ': ' + Std.string(error));
+        }
       }
     }
 
@@ -1706,7 +1756,7 @@ class PsychModRuntime
 
     var metadata:SongMetadata = new SongMetadata(songName, artist, charter, Constants.DEFAULT_VARIATION);
     metadata.timeChanges = [new funkin.data.song.SongData.SongTimeChange(0, bpm)];
-    metadata.playData.stage = resolvePsychStage(readPsychString(meta, "stage", Constants.DEFAULT_STAGE));
+    metadata.playData.stage = resolvePsychStage(readPsychString(meta, "stage", ""), songFolder);
     metadata.playData.characters = new SongCharacterData(player, girlfriend, opponent);
 
     var notes:Array<funkin.data.song.SongData.SongNoteData> = [];
@@ -1754,17 +1804,17 @@ class PsychModRuntime
           }
         }
 
-        var beats:Float = readPsychFloat(section, "beats", 4);
-        var numerator:Int = 4;
+        var beats:Float = readPsychFloat(section, "beats", 0);
         var denominator:Int = 4;
         var signature:Dynamic = Reflect.field(section, "timeSignature");
         if (Std.isOfType(signature, Array))
         {
           var values:Array<Dynamic> = cast signature;
-          if (values.length > 0) numerator = Std.int(values[0]);
+          if (values.length > 0 && (beats <= 0 || Math.isNaN(beats)))
+            beats = Std.parseFloat(Std.string(values[0]));
           if (values.length > 1) denominator = Std.int(values[1]);
         }
-        if (beats <= 0 || Math.isNaN(beats)) beats = numerator;
+        if (beats <= 0 || Math.isNaN(beats)) beats = 4;
         if (denominator <= 0) denominator = 4;
 
         var cameraTarget:Dynamic = Reflect.field(section, "cameraTarget");
