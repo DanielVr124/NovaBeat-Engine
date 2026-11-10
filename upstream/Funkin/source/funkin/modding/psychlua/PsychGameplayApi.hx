@@ -1262,7 +1262,7 @@ class PsychGameplayApi
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
       var normalized:String = camera == null ? "game" : camera.toLowerCase();
-      sprite.cameras = [normalized == "hud" || normalized == "camhud" ? state.camHUD : state.camGame];
+      sprite.cameras = [resolveCamera(state, normalized)];
       return true;
     });
     vars.set("setScrollFactor", function(tag:String, x:Float, ?y:Null<Float>):Bool
@@ -1432,6 +1432,9 @@ class PsychGameplayApi
     vars.set("stage", state.currentStage);
     vars.set("camGame", state.camGame);
     vars.set("camHUD", state.camHUD);
+    // Psych's camOther is the separate top-layer overlay camera. NovaBeat's
+    // existing pause/overlay camera provides the same independent draw layer.
+    vars.set("camOther", state.camPause);
 
     if (state.currentStage != null)
     {
@@ -1538,7 +1541,7 @@ class PsychGameplayApi
       "setShaderFloat", "setShaderFloatArray", "setShaderSampler2D",
       "callMethod", "callMethodFromClass", "createInstance", "addInstance", "instanceArg",
       "makeFlxAnimateSprite", "loadAnimateAtlas", "addAnimationBySymbol", "addAnimationBySymbolIndices",
-      "cameraShake", "cameraFlash", "cameraFade", "triggerEvent",
+      "cameraShake", "cameraFlash", "cameraFade", "triggerEvent", "camOther",
       "openCustomSubstate", "closeCustomSubstate", "insertToCustomSubstate",
       "getCharacterX", "getCharacterY", "setCharacterX", "setCharacterY",
       "cameraSetTarget", "startCountdown", "endSong", "restartSong", "exitSong", "loadSong", "startVideo", "startDialogue",
@@ -1787,6 +1790,15 @@ class PsychGameplayApi
     var missing:Array<String> = [];
     for (name in required)
       if (!globals.exists(name) || globals.get(name) == null) missing.push(name);
+
+    if (resolveCamera(state, "camOther") != state.camPause
+      || resolveCamera(state, "other") != state.camPause
+      || resolveCamera(state, "camHUD") != state.camHUD
+      || resolveCamera(state, "camGame") != state.camGame)
+    {
+      trace('[Psych API Smoke Test] Camera aliases did not resolve to the expected layers.');
+      return false;
+    }
 
     if (missing.length > 0)
     {
@@ -2231,7 +2243,12 @@ class PsychGameplayApi
   static function resolveCamera(state:PlayState, camera:String):FlxCamera
   {
     var normalized:String = camera == null ? "game" : StringTools.trim(camera).toLowerCase();
-    return normalized == "hud" || normalized == "camhud" ? state.camHUD : state.camGame;
+    return switch (normalized)
+    {
+      case "hud", "camhud": state.camHUD;
+      case "other", "camother", "pause", "campause": state.camPause;
+      default: state.camGame;
+    };
   }
 
   static function getMousePosition(state:PlayState, camera:String):FlxPoint
