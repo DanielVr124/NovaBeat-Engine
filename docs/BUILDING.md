@@ -132,7 +132,7 @@ The browser build is intentionally separate from the native platform workflow. I
 
 The current Psych package layouts, supported chart subset, script/runtime scope, limitations, and verification checklist are documented in [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md). Native Windows builds are required to compile and test the filesystem-based Psych adapter; a green HTML5 build does not establish Psych mod compatibility.
 
-The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations.
+The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations. Story-menu back navigation now returns only to the original FNF main menu; no NovaBeat custom-menu state is referenced.
 
 ## What a green build means
 
