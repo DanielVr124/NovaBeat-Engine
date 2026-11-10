@@ -5,6 +5,7 @@ package funkin.play.notes.notekind;
  * The lane character suppresses its normal sing animation and routes the
  * animation to Girlfriend through BaseCharacter's note-kind behavior.
  * This remains a native note kind, not a mod-owned custom_notetypes script.
+ * Its constructor is covered by the native Psych compatibility smoke test.
  */
 class PsychGFSingNoteKind extends NoteKind
 {
