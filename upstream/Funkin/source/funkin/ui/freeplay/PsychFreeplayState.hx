@@ -225,7 +225,7 @@ class PsychFreeplayState extends MusicBeatSubState
     previewBarBack.scrollFactor.set();
     add(previewBarBack);
 
-    previewBarFill = new FlxSprite(previewBarBack.x, previewBarBack.y).makeGraphic(1, 8, FlxColor.WHITE);
+    previewBarFill = new FlxSprite(previewBarBack.x, previewBarBack.y).makeGraphic(Std.int(FlxG.width * 0.38), 8, FlxColor.WHITE);
     previewBarFill.scrollFactor.set();
     add(previewBarFill);
 
@@ -624,6 +624,7 @@ class PsychFreeplayState extends MusicBeatSubState
     previewTime?.setSize(width * 0.38, 20);
     previewTime?.setPosition(width * 0.6, 48);
     previewBarBack?.setPosition(width * 0.6, 78);
+    previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
     previewBarFill?.setPosition(width * 0.6, 78);
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
   }
