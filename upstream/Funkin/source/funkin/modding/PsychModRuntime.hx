@@ -2023,6 +2023,11 @@ class PsychModRuntime
       if (converted.metadata.timeChanges[1].bpm != 120) return false;
       if (converted.events.length != 4) return false;
       if (!isSupportedBuiltinPsychEvent("Change Scroll Speed")) return false;
+      if (getPsychNoteTypeName("psychhey") != "Hey!"
+        || getPsychNoteTypeName("psychgfsing") != "GF Sing"
+        || getPsychNoteTypeName("psychhurt") != "Hurt Note"
+        || getPsychNoteTypeName("alt") != "Alt Animation"
+        || getPsychNoteTypeName("noanim") != "No Animation") return false;
 
       // Ensure the normalized Psych built-ins resolve to concrete native note-kind classes.
       var heyKindClass:Null<Class<Dynamic>> = Type.resolveClass("funkin.play.notes.notekind.PsychHeyNoteKind");
