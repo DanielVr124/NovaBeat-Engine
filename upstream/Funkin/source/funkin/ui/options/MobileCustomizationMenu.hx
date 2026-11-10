@@ -49,12 +49,15 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
     panelBackground = new FlxSprite();
+    panelBackground.visible = false;
     add(panelBackground);
     brandLabel = makeLabel(0, 0, 100, "MOBILE OPTIONS", 11, FlxColor.WHITE);
+    brandLabel.visible = false;
     add(brandLabel);
     headingLabel = makeLabel(0, 0, 100, "MOBILE", 27, FlxColor.WHITE);
     add(headingLabel);
     introLabel = makeLabel(0, 0, 100, "DEVICE & TOUCH EXPERIENCE", 11, FlxColor.WHITE);
+    introLabel.visible = false;
     add(introLabel);
 
     items = new TextMenuList(NavControls.Vertical);
@@ -73,20 +76,24 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       item.fireInstantly = true;
       item.makeGraphic(1, 1, FlxColor.TRANSPARENT);
       item.updateHitbox();
-      item.atlasText.visible = false;
+      // Keep the actual FNF atlas menu item visible and tappable; the separate row labels are only decoration.
+      item.atlasText.visible = true;
       rowItems.push(item);
 
       var background:FlxSprite = new FlxSprite();
       background.makeGraphic(1, 1, 0xFF0D1935);
+      background.visible = false;
       add(background);
       rowBackgrounds.push(background);
 
       var accent:FlxSprite = new FlxSprite();
       accent.makeGraphic(4, 24, FlxColor.WHITE);
+      accent.visible = false;
       add(accent);
       rowAccents.push(accent);
 
       var label:FlxText = makeLabel(0, 0, 100, labelText, 14, 0xFFB9C8E3);
+      label.visible = false;
       add(label);
       rowLabels.push(label);
 
