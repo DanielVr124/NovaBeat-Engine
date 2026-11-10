@@ -2571,12 +2571,12 @@ class PsychGameplayApi
         switch (rootName)
         {
           case "defaultCamZoom":
-            state.currentCameraZoom = cast value;
+            state.currentCameraZoom = parseDynamicFloatOr(value, state.currentCameraZoom);
             state.camGame.zoom = state.currentCameraZoom;
           case "cameraX":
-            state.cameraFollowPoint.x = cast value;
+            state.cameraFollowPoint.x = parseDynamicFloatOr(value, state.cameraFollowPoint.x);
           case "cameraY":
-            state.cameraFollowPoint.y = cast value;
+            state.cameraFollowPoint.y = parseDynamicFloatOr(value, state.cameraFollowPoint.y);
           case "score":
             state.songScore = cast value;
           case "misses":
@@ -3392,6 +3392,13 @@ class PsychGameplayApi
     // Dispatch it for chart events and Lua-triggered events alike, after the
     // native built-in event has applied its own behavior.
     PsychScriptRuntime.dispatch("onEvent", [name, value1, value2]);
+  }
+
+  static function parseDynamicFloatOr(value:Dynamic, fallback:Float):Float
+  {
+    if (value == null) return fallback;
+    var parsed:Null<Float> = Std.parseFloat(Std.string(value));
+    return parsed == null || Math.isNaN(parsed) ? fallback : parsed;
   }
 
   static function parseFloatOr(value:String, fallback:Float):Float
