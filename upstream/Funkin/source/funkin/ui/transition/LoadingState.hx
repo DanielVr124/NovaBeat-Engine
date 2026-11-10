@@ -1,6 +1,7 @@
 package funkin.ui.transition;
 
 import funkin.data.notestyle.NoteStyleRegistry;
+import funkin.modding.PsychModRuntime;
 import flixel.FlxSprite;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
@@ -129,7 +130,13 @@ class LoadingState extends MusicBeatSubState
         throw 'Invalid parameter: Target song should not be null';
       }
 
-      playParams.targetSong.cacheCharts(true);
+      // Imported Psych charts are assembled and stored directly on the Song
+      // object by PsychModRuntime. They do not have a V-Slice chart asset to
+      // reload, so cacheCharts(true) would clear their only note data.
+      if (!PsychModRuntime.isImportedSong(playParams.targetSong.id))
+      {
+        playParams.targetSong.cacheCharts(true);
+      }
 
       // Preload the song for the play state.
       var difficulty:String = playParams.targetDifficulty ?? Constants.DEFAULT_DIFFICULTY;
