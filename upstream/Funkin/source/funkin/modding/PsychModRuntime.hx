@@ -44,6 +44,7 @@ class PsychModRuntime
     if (!FileSystem.exists(modPath) || !FileSystem.isDirectory(modPath))
       return unavailable("The Psych mod folder could not be read.");
 
+    modPath = resolvePsychContentRoot(modPath);
     var sources:Array<PsychSongSource> = scanSongSources(modPath);
     var globalScriptCount:Int = countPsychScripts(modPath);
     var unsupportedScriptCount:Int = countUnsupportedPsychScripts(modPath);
@@ -161,6 +162,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      modPath = resolvePsychContentRoot(modPath);
       if (!inspectPackage(modPath).launchable) continue;
 
       for (source in scanSongSources(modPath))
@@ -192,6 +194,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      modPath = resolvePsychContentRoot(modPath);
 
       var assessment:PsychPackageAssessment = inspectPackage(modPath);
       if (!assessment.launchable) continue;
@@ -280,6 +283,7 @@ class PsychModRuntime
 
     var root:String = Path.normalize(PolymodHandler.getModRoot());
     var modPath:String = Path.normalize(Path.join([root, directory]));
+    modPath = Path.normalize(resolvePsychContentRoot(modPath));
     var rootPrefix:String = StringTools.endsWith(root, "/") ? root : root + "/";
     if (!StringTools.startsWith(modPath, rootPrefix)) return null;
 
@@ -568,6 +572,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      modPath = resolvePsychContentRoot(modPath);
       globalSources = globalSources.concat(readScriptSources(Path.join([modPath, "scripts"]), 5));
 
       for (source in scanSongSources(modPath))
@@ -698,6 +703,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
+      modPath = resolvePsychContentRoot(modPath);
       result = result.concat(readNamedScriptSources(Path.join([modPath, "custom_substates"]), [name]));
     }
     #end
@@ -734,6 +740,7 @@ class PsychModRuntime
     {
       var modPath:String = Path.normalize(Path.join([root, directory]));
       if (!isPsychDirectory(modPath)) continue;
+      modPath = Path.normalize(resolvePsychContentRoot(modPath));
       for (candidate in candidates)
       {
         var filePath:String = Path.normalize(Path.join([modPath, candidate]));
@@ -774,6 +781,8 @@ class PsychModRuntime
       for (directory in modDirs)
       {
         var modPath:String = Path.join([root, directory]);
+        if (!isPsychDirectory(modPath)) continue;
+        modPath = resolvePsychContentRoot(modPath);
         var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, characterId);
         if (jsonPath == null) continue;
         try
@@ -1181,6 +1190,38 @@ class PsychModRuntime
   }
 
   #if sys
+  /**
+   * Resolve a Psych package extracted with one extra archive wrapper folder,
+   * for example mods/<installed-name>/mods/<actual-mod>/songs/<song>/.
+   * EngineBridge already recognizes this layout; every scanner and loader
+   * must use the same inner content root after detection.
+   */
+  static function resolvePsychContentRoot(modPath:String):String
+  {
+    if (!FileSystem.exists(modPath) || !FileSystem.isDirectory(modPath)) return modPath;
+
+    // Prefer a normal mod root when it already contains chart packages.
+    if (scanSongSources(modPath).length > 0) return modPath;
+
+    var nestedModsPath:String = Path.join([modPath, "mods"]);
+    if (!FileSystem.exists(nestedModsPath) || !FileSystem.isDirectory(nestedModsPath)) return modPath;
+
+    var candidates:Array<String> = [];
+    for (entry in FileSystem.readDirectory(nestedModsPath))
+    {
+      if (entry.length == 0 || entry.charAt(0) == ".") continue;
+      var candidate:String = Path.join([nestedModsPath, entry]);
+      if (!FileSystem.isDirectory(candidate)) continue;
+      if (!EngineBridge.hasPsychMarkersForRuntime(candidate)) continue;
+      if (scanSongSources(candidate).length == 0) continue;
+      candidates.push(candidate);
+    }
+
+    // A single nested package is unambiguous. Do not merge several independent
+    // mods into one package or let them shadow each other's scripts/charts.
+    return candidates.length == 1 ? candidates[0] : modPath;
+  }
+
   static function scanSongSources(modPath:String):Array<PsychSongSource>
   {
     var bySong:Map<String, PsychSongSource> = [];
