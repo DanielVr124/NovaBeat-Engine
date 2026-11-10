@@ -2266,8 +2266,12 @@ class PsychModRuntime
         new funkin.data.song.SongData.SongNoteData(500, 0, 0, ""),
         new funkin.data.song.SongData.SongNoteData(1000, 1, 0, "alt")
       ];
+      var legacyGFSectionRows:Array<Dynamic> = [
+        [500, 0, 0, ""],
+        [1000, 1, 0, true]
+      ];
       var legacyGFSections:Array<Dynamic> = [
-        {mustHitSection: true, gfSection: true, sectionNotes: [[500, 0, 0, ""], [1000, 1, 0, true]]}
+        {mustHitSection: true, gfSection: true, sectionNotes: legacyGFSectionRows}
       ];
       applyPsychGFSectionOwnership(legacyGFSections, legacyGFNotes);
       if (legacyGFNotes[0].kind != "psychgfsection" || legacyGFNotes[1].kind != "psychgfsectionalt") return false;
