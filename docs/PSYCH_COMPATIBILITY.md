@@ -11,6 +11,8 @@ The native mod-folder scanner recognizes chart packages in both of these locatio
 - Classic psych_v1 charts: `mods/<mod>/data/<song>/`
 - Song-package charts: `mods/<mod>/songs/<song>/`
 
+Psych detection uses explicit engine metadata, Psych-specific layout/JSON markers, or Lua scripts in known Psych roots. A generic `.hx` file by itself is not an engine marker because native V-Slice/Polymod mods also use Haxe scripted classes. Once a package is identified as Psych, both Lua and HScript sources are eligible for loading.
+
 Audio is resolved from `songs/<song>/` or `assets/songs/<song>/`. The instrumental must be named `Inst.ogg`, `Inst.mp3`, or `Inst.wav`. Song-local scripts are read from the folder containing the charts; global scripts are read from `scripts/`.
 
 ## Chart formats
@@ -54,6 +56,7 @@ The current test pass should cover:
 9. A custom note type script.
 10. A chart with an extra strumline or unsupported key count, which must be rejected with a clear reason.
 11. A package with multiple difficulty-specific event files, which must be rejected until difficulty-aware event storage exists.
-12. V-Slice mods before and after Psych activation to confirm the native path remains unchanged.
+12. A V-Slice mod containing generic `scripts/*.hx` files is still classified and launched as V-Slice.
+13. V-Slice mods before and after Psych activation to confirm the native path remains unchanged.
 
 A successful compile is only a source/build check. Actual gameplay behavior still requires running these packages in the Windows build and comparing results with the corresponding Psych Engine version.
