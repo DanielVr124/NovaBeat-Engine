@@ -463,7 +463,9 @@ class LoadingState extends MusicBeatSubState
 
     // Load and cache the song's charts.
     // Don't do this if we already provided the music and charts.
-    if (!(params.overrideMusic ?? false))
+    // Imported Psych charts are already attached to the Song object; clearing
+    // and reloading them as V-Slice chart assets would erase their note data.
+    if (!(params.overrideMusic ?? false) && !PsychModRuntime.isImportedSong(params.targetSong.id))
     {
       params.targetSong.cacheCharts(true);
     }
