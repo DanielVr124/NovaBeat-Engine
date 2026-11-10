@@ -1555,7 +1555,7 @@ class PsychModRuntime
     if (name == null) return false;
     return switch (StringTools.trim(name).toLowerCase())
     {
-      case "alt animation", "no animation": true;
+      case "alt animation", "no animation", "hey!", "gf sing": true;
       default: false;
     };
   }
@@ -1568,6 +1568,8 @@ class PsychModRuntime
     {
       case "alt animation": "alt";
       case "no animation": "noanim";
+      case "hey!": "psychhey";
+      case "gf sing": "psychgfsing";
       default: name;
     };
   }
@@ -1970,7 +1972,8 @@ class PsychModRuntime
         '{"metadata":{"songName":"NovaBeat Psych v2 Smoke Test","artist":"Test","charter":"Test","bpm":100,"speed":1,"stage":"philly"},' +
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +
         '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true},' +
-        '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"}],' +
+        '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"},' +
+        '{"t":1750,"s":0,"d":0,"k":"Hey!"},{"t":2000,"s":1,"d":0,"k":"GF Sing"}],' +
         '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]}],' +
         '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
       );
@@ -1982,12 +1985,15 @@ class PsychModRuntime
         "smoke-test"
       );
       if (converted == null) return false;
-      if (converted.notes.length != 4) return false;
+      if (converted.notes.length != 6) return false;
       if (converted.notes[0].data != 5 || converted.notes[0].length != 250) return false;
       if (converted.notes[1].data != 2 || converted.notes[1].kind != "alt") return false;
       if (converted.notes[2].kind != "alt" || converted.notes[3].kind != "noanim") return false;
+      if (converted.notes[4].kind != "psychhey" || converted.notes[5].kind != "psychgfsing") return false;
       if (!isSupportedBuiltinPsychNoteType("Alt Animation")
         || !isSupportedBuiltinPsychNoteType("No Animation")
+        || !isSupportedBuiltinPsychNoteType("Hey!")
+        || !isSupportedBuiltinPsychNoteType("GF Sing")
         || isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
       if (converted.metadata.playData.stage != "phillyTrain") return false;
       if (converted.metadata.timeChanges.length != 2) return false;
