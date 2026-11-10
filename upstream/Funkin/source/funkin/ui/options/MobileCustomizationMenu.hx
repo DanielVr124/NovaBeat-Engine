@@ -41,7 +41,6 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var introLabel:FlxText;
   var descriptionText:FlxText;
   var statusText:FlxText;
-  var novaBeatLayout:Bool = false;
   #if FEATURE_TOUCH_CONTROLS
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -49,14 +48,13 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   public function new()
   {
     super();
-    novaBeatLayout = false;
     panelBackground = new FlxSprite();
     add(panelBackground);
-    brandLabel = makeLabel(0, 0, 100, "MOBILE OPTIONS", 11, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+    brandLabel = makeLabel(0, 0, 100, "MOBILE OPTIONS", 11, FlxColor.WHITE);
     add(brandLabel);
     headingLabel = makeLabel(0, 0, 100, "MOBILE", 27, FlxColor.WHITE);
     add(headingLabel);
-    introLabel = makeLabel(0, 0, 100, "DEVICE & TOUCH EXPERIENCE", 11, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+    introLabel = makeLabel(0, 0, 100, "DEVICE & TOUCH EXPERIENCE", 11, FlxColor.WHITE);
     add(introLabel);
 
     items = new TextMenuList(NavControls.Vertical);
@@ -84,7 +82,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       rowBackgrounds.push(background);
 
       var accent:FlxSprite = new FlxSprite();
-      accent.makeGraphic(4, 24, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+      accent.makeGraphic(4, 24, FlxColor.WHITE);
       add(accent);
       rowAccents.push(accent);
 
@@ -92,19 +90,19 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       add(label);
       rowLabels.push(label);
 
-      var value:FlxText = makeLabel(0, 0, 100, "", 14, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+      var value:FlxText = makeLabel(0, 0, 100, "", 14, FlxColor.WHITE);
       value.alignment = FlxTextAlign.RIGHT;
       add(value);
       valueLabels.push(value);
     }
 
     add(items);
-    descriptionText = makeLabel(0, 0, 100, "", 12, novaBeatLayout ? 0xFFB6C7E5 : FlxColor.WHITE);
+    descriptionText = makeLabel(0, 0, 100, "", 12, FlxColor.WHITE);
     descriptionText.wordWrap = true;
     descriptionText.autoSize = false;
     add(descriptionText);
     statusText = makeLabel(0, 0, 100, "TAP A ROW TO CHANGE   •   ESC BACK", 9,
-      novaBeatLayout ? 0xFF8DA8D8 : 0xFFCCCCCC);
+      0xFFCCCCCC);
     add(statusText);
 
     items.onChange.add(function(selected:TextMenuItem)
@@ -151,11 +149,11 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var panelTop:Float = compact ? 80 : 100;
     var panelHeight:Float = Math.max(160, height - (compact ? 100 : 142));
     var panelWidth:Float = Math.max(1, width - margin * 2);
-    var accentColor:FlxColor = novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE;
+    var accentColor:FlxColor = FlxColor.WHITE;
 
     panelBackground.setPosition(margin, panelTop);
     panelBackground.makeGraphic(Std.int(panelWidth), Std.int(panelHeight),
-      novaBeatLayout ? 0xC9091833 : 0xB8000000);
+      0xB8000000);
     brandLabel.setPosition(margin + 18, compact ? 8 : 20);
     brandLabel.fieldWidth = panelWidth - 36;
     headingLabel.setPosition(margin + 18, compact ? 30 : 44);
@@ -254,7 +252,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var schemeIndex:Int = CONTROL_SCHEMES.indexOf(Preferences.controlsScheme);
     if (schemeIndex < 0) schemeIndex = 0;
     valueLabels[0].text = CONTROL_SCHEMES[schemeIndex].toUpperCase();
-    valueLabels[0].color = novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE;
+    valueLabels[0].color = FlxColor.WHITE;
     #else
     valueLabels[0].text = "MOBILE ONLY";
     valueLabels[0].color = FlxColor.GRAY;
@@ -263,7 +261,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     var enabled:Bool = Save.instance.mobileOptions.lockCurrentOrientation;
     valueLabels[1].text = enabled ? "ON" : "OFF";
-    valueLabels[1].color = enabled ? 0xFF6FE8FF : (novaBeatLayout ? 0xFF48BBD4 : FlxColor.WHITE);
+    valueLabels[1].color = enabled ? 0xFF6FE8FF : FlxColor.WHITE;
     #else
     valueLabels[1].text = "N/A";
     valueLabels[1].color = FlxColor.GRAY;
@@ -299,7 +297,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   function makeLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
   {
     var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(novaBeatLayout ? "Arial" : Paths.font("vcr.ttf"), size, color, FlxTextAlign.LEFT);
+    label.setFormat(Paths.font("vcr.ttf"), size, color, FlxTextAlign.LEFT);
     label.scrollFactor.set();
     return label;
   }
