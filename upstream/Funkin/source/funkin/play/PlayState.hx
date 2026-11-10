@@ -2315,6 +2315,9 @@ class PlayState extends MusicBeatSubState
 
     if (currentStage != null)
     {
+      // Apply this song's Psych stages/<stage>.json settings before the
+      // Stage CREATE event and before its characters are constructed.
+      PsychModRuntime.applyPsychStageData(currentStage, currentSong == null ? "" : currentSong.id);
       currentStage.revive(); // Stages are killed and props destroyed when the PlayState is destroyed to save memory.
 
       // Actually create and position the sprites.
