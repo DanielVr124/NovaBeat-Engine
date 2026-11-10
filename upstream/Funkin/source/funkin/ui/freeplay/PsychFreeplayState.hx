@@ -7,7 +7,6 @@ import flixel.math.FlxMath;
 import flixel.sound.FlxSound;
 import flixel.text.FlxText;
 import flixel.text.FlxTextAlign;
-import flixel.text.FlxTextBorderStyle;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;
@@ -236,7 +235,7 @@ class PsychFreeplayState extends MusicBeatSubState
   function createResetPrompt():Void
   {
     resetPromptText = new FlxText(0, FlxG.height * 0.42, FlxG.width, 'RESET THIS SONG\'S SCORE AND ACCURACY?\nENTER: CONFIRM     ESC: CANCEL', 24);
-    resetPromptText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    resetPromptText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.CENTER);
     resetPromptText.scrollFactor.set();
     resetPromptText.visible = false;
     add(resetPromptText);
@@ -432,7 +431,8 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     if (songs.length == 0) return;
     var entry = songs[selected];
-    stopPreviewAudioOnly();
+    menuMusicBeforePreview = FlxG.sound.music;
+    menuMusicBeforePreview?.pause();
 
     entry.song.playInst(0.8, '', false);
     if (FlxG.sound.music == null || !FlxG.sound.music.exists)
@@ -581,7 +581,7 @@ class PsychFreeplayState extends MusicBeatSubState
     stopPreviewAudioOnly();
     previewPlaying = false;
 
-    var instrumental = entry.song.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? VARIATION);
+    var instrumental:String = entry.song.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? VARIATION) ?? '';
     LoadingState.loadPlayState({
       targetSong: entry.song,
       targetDifficulty: currentDifficulty,
