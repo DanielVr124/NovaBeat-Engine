@@ -36,7 +36,7 @@ class PsychCompatibilitySongEvent extends SongEvent
       // markers are skipped on seeks; updateGlobals derives the active state
       // directly from the chart timeline instead of replaying past callbacks.
       if (Conductor.instance.songPosition - data.time <= 1000)
-        PsychScriptRuntime.dispatch("onSectionHit", [PsychGameplayApi.getCurrentPsychSection()]);
+        PsychScriptRuntime.dispatch("onSectionHit", [Std.int(Reflect.field(data.value, "curSection"))]);
       return;
     }
 
