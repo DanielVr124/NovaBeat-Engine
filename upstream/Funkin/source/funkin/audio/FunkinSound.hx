@@ -14,6 +14,7 @@ import funkin.util.flixel.sound.FlxPartialSound;
 import funkin.Paths.PathsFunction;
 import lime.app.Promise;
 import lime.media.AudioSource;
+import lime.media.AudioBuffer;
 import openfl.events.Event;
 import openfl.media.SoundChannel;
 import openfl.media.SoundMixer;
