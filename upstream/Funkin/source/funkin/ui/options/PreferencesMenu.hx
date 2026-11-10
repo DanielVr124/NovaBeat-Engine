@@ -64,7 +64,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
 
-    novaBeatStyle = Preferences.menuStyle == "NovaBeat";
+    novaBeatStyle = false;
     menuCamera = new FunkinCamera('prefMenu');
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
@@ -74,7 +74,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.bgColor = 0x0;
 
     camera = menuCamera;
-    NovaBeatOptionsChrome.apply(this, 'PREFERENCES', menuCamera);
 
     // Draw the NovaBeat row panels before the interactive menu items.
     add(novaBeatRowLayer = new FlxTypedSpriteGroup<FlxSprite>());
@@ -188,38 +187,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
    */
   function createPrefItems():Void
   {
-    createPrefItemEnum('Menu Style', 'Switch between the original FNF menu and the NovaBeat menu without restarting the game.', [
-      "Original FNF" => "Original FNF",
-      "NovaBeat" => "NovaBeat"
-    ], function(key:String, value:String):Void
-    {
-      var previousStyle:String = Preferences.menuStyle;
-      Preferences.menuStyle = value;
-
-      // Re-enter the title flow with the selected presentation. This refreshes
-      // the complete menu immediately without restarting the game.
-      if (previousStyle != value)
-      {
-        if (value == "Original FNF")
-        {
-          // Switching styles should land on the interactive Press Enter screen,
-          // not replay or inherit a partially initialized intro sequence.
-          TitleState.initialized = true;
-          var startedTrack:Bool = FunkinSound.playMusic('freakyMenu', {
-            startingVolume: 0.0,
-            overrideExisting: true,
-            restartTrack: false,
-            persist: true,
-            mapTimeChanges: false
-          });
-          if (startedTrack && FlxG.sound.music != null)
-            FlxG.sound.music.fadeIn(0.45, 0.0, 0.82);
-        }
-
-        FlxG.switchState(() -> new TitleState());
-      }
-    }, Preferences.menuStyle);
-
   #if FEATURE_NAUGHTYNESS
     createPrefItemCheckbox('Naughtyness', 'When enabled, raunchy content (such as swearing, etc.) is displayed.', function(value:Bool):Void
     {
@@ -404,11 +371,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
         default:
           // Huh?
       }
-
-      // Menu Style is a custom enum added by NovaBeat. Treat its label like
-      // the standard checkbox rows instead of shifting it by the long value
-      // text ("Original FNF").
-      if (items.members.indexOf(daItem) == 0) thyOffset = 0;
 
       if (items.selectedItem == daItem)
       {
