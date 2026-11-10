@@ -48,6 +48,10 @@ class OptionsState extends MusicBeatState
   public static var instance:OptionsState;
 
   var optionsCodex:Codex<OptionsMenuPageName>;
+  var performanceCustomization:Null<PerformanceCustomizationMenu> = null;
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  var mobileCustomization:Null<MobileCustomizationMenu> = null;
+  #end
 
   public var drumsBG:FunkinSound;
   var menuBackground:Null<FlxSprite> = null;
@@ -83,10 +87,6 @@ class OptionsState extends MusicBeatState
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
     var customization:CustomizationMenu = optionsCodex.addPage(Customization, new CustomizationMenu());
-    var performance:PerformanceCustomizationMenu = optionsCodex.addPage(Performance, new PerformanceCustomizationMenu());
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    var mobileCustomization:MobileCustomizationMenu = optionsCodex.addPage(Mobile, new MobileCustomizationMenu());
-    #end
 
 
     options.addSaveDataOptionsItem(saveData);
@@ -102,10 +102,6 @@ class OptionsState extends MusicBeatState
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
       customization.onExit.add(optionsCodex.switchPage.bind(Options));
-      performance.onExit.add(optionsCodex.switchPage.bind(Customization));
-      #if (mobile || FEATURE_TOUCH_CONTROLS)
-      mobileCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
-      #end
 
     }
     else
@@ -138,6 +134,33 @@ class OptionsState extends MusicBeatState
     }
     #end
   }
+
+  /**
+   * Construct customization submenus only when the player opens them.
+   * These pages own cameras, save-backed settings and resize listeners, so
+   * keeping them lazy avoids initializing inactive settings screens at boot.
+   */
+  public function openPerformanceCustomization():Void
+  {
+    if (performanceCustomization == null)
+    {
+      performanceCustomization = optionsCodex.addPage(Performance, new PerformanceCustomizationMenu());
+      performanceCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
+    }
+    optionsCodex.switchPage(Performance);
+  }
+
+  #if (mobile || FEATURE_TOUCH_CONTROLS)
+  public function openMobileCustomization():Void
+  {
+    if (mobileCustomization == null)
+    {
+      mobileCustomization = optionsCodex.addPage(Mobile, new MobileCustomizationMenu());
+      mobileCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
+    }
+    optionsCodex.switchPage(Mobile);
+  }
+  #end
 
   override public function onViewportResize(width:Int, height:Int):Void
   {

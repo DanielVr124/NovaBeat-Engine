@@ -59,7 +59,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     var itemY:Float = 30;
     var performanceItem:TextMenuItem = items.createItem(0, itemY, 'PERFORMANCE', AtlasFont.BOLD, function()
     {
-      codex.switchPage(Performance);
+      OptionsState.instance.openPerformanceCustomization();
     });
     performanceItem.screenCenter(X);
     performanceItem.cameras = [menuCamera];
@@ -70,7 +70,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     {
       var mobileItem:TextMenuItem = items.createItem(0, itemY + 112, 'MOBILE', AtlasFont.BOLD, function()
     {
-      codex.switchPage(Mobile);
+      OptionsState.instance.openMobileCustomization();
     });
     mobileItem.screenCenter(X);
     mobileItem.cameras = [menuCamera];
