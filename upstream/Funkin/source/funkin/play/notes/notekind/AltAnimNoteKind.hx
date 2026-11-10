@@ -4,6 +4,7 @@ package funkin.play.notes.notekind;
  * Psych Engine's built-in "Alt Animation" note type.
  * Uses the native character animation suffix so Psych charts retain their
  * alternate sing animations without requiring a custom note-type script.
+ * Psych's display label is normalized by PsychModRuntime before gameplay.
  */
 class AltAnimNoteKind extends NoteKind
 {
