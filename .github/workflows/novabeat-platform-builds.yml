@@ -7,6 +7,8 @@ name: NovaBeat platform build checks
 # Reuse dependency and tool caches without clearing the restored local Haxe repository.
 # Android-only validation run requested after the NovaBeat menu compiler fixes.
 # [full-build-android] Rebuild Android after adding the native TouchUtil stub.
+# Android-only builds can be requested with workflow_dispatch (build_target: android)
+# or by pushing a change with [full-build-android] in its commit message.
 
 on:
   workflow_dispatch:
