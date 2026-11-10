@@ -2266,10 +2266,9 @@ class PsychModRuntime
         new funkin.data.song.SongData.SongNoteData(500, 0, 0, ""),
         new funkin.data.song.SongData.SongNoteData(1000, 1, 0, "alt")
       ];
-      var legacyGFSectionRows:Array<Dynamic> = [
-        [500, 0, 0, ""],
-        [1000, 1, 0, true]
-      ];
+      var legacyGFFirstRow:Array<Dynamic> = [500, 0, 0, ""];
+      var legacyGFSecondRow:Array<Dynamic> = [1000, 1, 0, true];
+      var legacyGFSectionRows:Array<Dynamic> = [legacyGFFirstRow, legacyGFSecondRow];
       var legacyGFSections:Array<Dynamic> = [
         {mustHitSection: true, gfSection: true, sectionNotes: legacyGFSectionRows}
       ];
