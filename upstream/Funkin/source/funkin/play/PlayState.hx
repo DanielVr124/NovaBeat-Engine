@@ -3166,6 +3166,17 @@ class PlayState extends MusicBeatSubState
       var r = GRhythmUtil.processWindow(note, !isBotPlayMode);
       if (r.botplayHit)
       {
+        // Psych marks Hurt Notes as ignored so Botplay must leave them untouched.
+        // Their normal expiry path also ignores them (see below).
+        var botplayNoteKind:Null<NoteKind> = NoteKindManager.getNoteKind(note.kind);
+        if (botplayNoteKind != null && botplayNoteKind.hurt)
+        {
+          note.handledMiss = true;
+          playerStrumline.killNote(note);
+          if (note.holdNoteSprite != null) note.holdNoteSprite.handledMiss = true;
+          continue;
+        }
+
         // We call onHitNote to play the proper animations,
         // but not goodNoteHit! This means zero score and zero notes hit for the results screen!
 
@@ -3192,6 +3203,17 @@ class PlayState extends MusicBeatSubState
       // It might still be on screen.
       if (note.hasMissed && !note.handledMiss)
       {
+        // Psych Hurt Notes are ignored when avoided: they do not cause an ordinary
+        // miss, combo break, or score penalty just for passing the hit window.
+        var missedNoteKind:Null<NoteKind> = NoteKindManager.getNoteKind(note.kind);
+        if (missedNoteKind != null && missedNoteKind.hurt)
+        {
+          note.handledMiss = true;
+          playerStrumline.killNote(note);
+          if (note.holdNoteSprite != null) note.holdNoteSprite.handledMiss = true;
+          continue;
+        }
+
         // Call an event to allow canceling the note miss.
         // NOTE: This is what handles the character animations!
         var event:NoteScriptEvent = new NoteScriptEvent(NOTE_MISS, note, Constants.HEALTH_MISS_PENALTY, Highscore.tallies.combo, true);
@@ -3396,6 +3418,29 @@ class PlayState extends MusicBeatSubState
 
   function goodNoteHit(note:NoteSprite, input:PreciseInputEvent):Void
   {
+    // Psych Hurt Notes are intentionally hit-causes-miss notes. Route them
+    // through the existing NOTE_MISS path so characters and Lua scripts receive
+    // the expected callbacks, but do not award hit score or confirm animations.
+    var noteKind:Null<NoteKind> = NoteKindManager.getNoteKind(note.kind);
+    if (noteKind != null && noteKind.hurt)
+    {
+      var hurtEvent:NoteScriptEvent = new NoteScriptEvent(
+        NOTE_MISS,
+        note,
+        -Math.abs(noteKind.hurtDamage),
+        Highscore.tallies.combo,
+        true
+      );
+      dispatchEvent(hurtEvent);
+      if (hurtEvent.eventCanceled) return;
+
+      playerStrumline.killNote(note);
+      note.handledMiss = true;
+      if (note.holdNoteSprite != null) note.holdNoteSprite.handledMiss = true;
+      onNoteMiss(note, hurtEvent.playSound, hurtEvent.healthChange);
+      return;
+    }
+
     // Calculate the input latency (do this as late as possible).
     // trace('Compare: ${PreciseInputManager.getCurrentTimestamp()} - ${input.timestamp}');
     var inputLatencyNs:Int64 = PreciseInputManager.getCurrentTimestamp() - input.timestamp;
