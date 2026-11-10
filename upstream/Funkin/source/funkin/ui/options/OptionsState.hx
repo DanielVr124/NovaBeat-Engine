@@ -351,6 +351,23 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   {
     super.onViewportResize(width, height);
     if (width <= 0 || height <= 0) return;
+
+    // Keep the original FNF Options list centered and vertically spaced on
+    // both portrait and landscape viewports.
+    var portrait:Bool = height > width * 1.12;
+    var startY:Float = portrait ? height * 0.19 : 100;
+    var gap:Float = portrait ? Math.min(78, (height * 0.60) / Math.max(1, items.length)) : 100;
+    for (index in 0...items.members.length)
+    {
+      var item:TextMenuItem = items.members[index];
+      item.y = startY + index * gap;
+      item.x = 0;
+      item.screenCenter(X);
+    }
+    if (camFocusPoint != null && items.selectedItem != null) camFocusPoint.y = items.selectedItem.y;
+    FlxG.camera.deadzone.set(0, portrait ? height * 0.16 : CAMERA_MARGIN / 2,
+      width, portrait ? height * 0.66 : height - CAMERA_MARGIN + 40);
+
     #if FEATURE_TOUCH_CONTROLS
     if (backButton != null)
       backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
