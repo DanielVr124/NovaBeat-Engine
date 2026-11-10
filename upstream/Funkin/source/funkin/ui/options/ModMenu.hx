@@ -817,10 +817,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   override function updateEnabled(elapsed:Float):Void
   {
-    super.updateEnabled(elapsed);
     if (!enabled) return;
 
-    if (FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE)
+    // Handle keyboard and controller Back exactly once. This Page subclass
+    // owns its Back action so the base Page implementation cannot dispatch
+    // a duplicate exit during the same frame.
+    if (controls.BACK_P || FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.BACKSPACE)
     {
       performAction("back");
       return;
@@ -854,9 +856,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       if (controls.UI_DOWN_P || FlxG.keys.justPressed.DOWN || SwipeUtil.swipeDown)
         selectMod(selectedIndex + 1);
       if (controls.UI_RIGHT_P || FlxG.keys.justPressed.I)
-      {
         performAction("more");
-      }
       if (controls.UI_LEFT_P)
         refreshModList();
     }
