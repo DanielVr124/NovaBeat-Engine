@@ -290,7 +290,7 @@ class PsychModRuntime
           var props:Array<Dynamic> = buildPsychWeekProps(modPath, Reflect.field(raw, "weekCharacters"));
 
           var data:Dynamic = {
-            version: LevelRegistry.LEVEL_DATA_VERSION,
+            version: Std.string(LevelRegistry.LEVEL_DATA_VERSION),
             name: displayName,
             titleAsset: "psych-week-title",
             props: props,
