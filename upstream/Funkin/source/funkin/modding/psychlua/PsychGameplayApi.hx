@@ -96,6 +96,11 @@ class PsychGameplayApi
       : Std.int(Math.floor(Conductor.instance.currentStep / 16));
   }
 
+  public static function hasPsychSectionMarkers():Bool
+  {
+    return psychHasSectionMarkers;
+  }
+
   static function initializePsychSectionState(state:PlayState):Void
   {
     if (state == null || state.currentChart == null) return;
@@ -1887,6 +1892,7 @@ class PsychGameplayApi
   public static function updateGlobals(state:PlayState):Void
   {
     if (state == null) return;
+    initializePsychSectionState(state);
     if (activeTimeBar != null)
     {
       var requestedTimeBarType:Dynamic = PsychScriptRuntime.getGlobal("timeBarType");
