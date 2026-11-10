@@ -291,6 +291,13 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     camFocusPoint = new FlxObject(0, 0, 140, 70);
     add(camFocusPoint);
 
+    // Preserve the original FNF camera setup. The responsive resize handler
+    // updates this deadzone, so follow() must initialize the camera first.
+    FlxG.camera.follow(camFocusPoint, null, 0.085);
+    FlxG.camera.deadzone.set(0, CAMERA_MARGIN / 2, FlxG.camera.width, FlxG.camera.height - CAMERA_MARGIN + 40);
+    items.onChange.add(onMenuChange);
+    if (items.selectedItem != null) onMenuChange(items.selectedItem);
+
     #if FEATURE_TOUCH_CONTROLS
     FlxG.touches.swipeThreshold.y = 100;
     #end
