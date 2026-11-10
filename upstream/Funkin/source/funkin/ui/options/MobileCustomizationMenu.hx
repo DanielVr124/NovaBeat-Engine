@@ -49,10 +49,10 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   public function new()
   {
     super();
-    novaBeatLayout = Preferences.menuStyle == "NovaBeat";
+    novaBeatLayout = false;
     panelBackground = new FlxSprite();
     add(panelBackground);
-    brandLabel = makeLabel(0, 0, 100, "NOVABEAT ENGINE", 11, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
+    brandLabel = makeLabel(0, 0, 100, "MOBILE OPTIONS", 11, novaBeatLayout ? 0xFF48E7FF : FlxColor.WHITE);
     add(brandLabel);
     headingLabel = makeLabel(0, 0, 100, "MOBILE", 27, FlxColor.WHITE);
     add(headingLabel);
