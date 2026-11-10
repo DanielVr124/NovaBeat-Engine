@@ -33,7 +33,7 @@ The current V-Slice song data model has a single shared event timeline and two s
 
 The compatibility runtime can discover global and song-local Lua/HScript files, as well as named stage, character, custom-event, and custom-note-type scripts. It exposes a bounded Psych-style callback and gameplay API. For a song, global and referenced scripts load before note/event generation; `onCreate` and `onSongLoaded` run after chart generation; `onCreatePost` runs exactly once after the PlayState scene is initialized and before countdown callbacks. Script execution is sandboxed; arbitrary native libraries, host process access, and unrestricted filesystem/network access are not provided.
 
-The built-in Psych note types `Alt Animation`, `No Animation`, `Hey!`, and `GF Sing` are normalized to native note kinds. Alt animations retain their `-alt` suffix on both hits and misses; No Animation suppresses hit, miss, and GF combo animations; Hey! plays the lane character's Hey animation and GF's Cheer on player hits; GF Sing routes the lane animation to Girlfriend. `Hurt Note` behavior is not yet implemented as a native note kind, so those charts remain unavailable unless the mod supplies an appropriate custom note-type script. A package using the legacy `custom_notes/` runtime is currently rejected. Custom stages still need a matching stage script, and custom character data must be in a format that the current character adapter can convert.
+The built-in Psych note types `Alt Animation`, `No Animation`, `Hey!`, `GF Sing`, and `Hurt Note` are normalized to native note kinds. Alt animations retain their `-alt` suffix on hits and misses; No Animation suppresses hit, miss, and GF combo animations; Hey! plays the lane character's Hey animation and GF's Cheer on player hits; GF Sing routes the lane animation to Girlfriend. Hurt Notes are ignored when avoided, but hitting one triggers NovaBeat's normal miss callback/animation and applies 0.1 health damage by default without awarding hit score; Botplay ignores them. A package using the legacy `custom_notes/` runtime is currently rejected. Custom stages still need a matching stage script, and custom character data must be in a format that the current character adapter can convert.
 
 The built-in event adapter currently handles camera zoom, screen shake, property changes, camera follow position, character animation, Hey!, GF dance speed, Change Character (BF/GF/DAD swaps), and Change Scroll Speed (chart-base multiplier with an optional linear tween in seconds). The built-in event list is not yet complete. Other events must have a matching custom-event script. Unknown or unhandled behavior must not be silently dropped.
 
@@ -53,7 +53,7 @@ The current test pass should cover:
 6. A custom character JSON and its character script.
 7. Global and song-local Lua scripts, followed by an HScript script.
 8. A built-in Psych event and a custom event script.
-9. A custom note type script.
+9. Native Psych Alt Animation, No Animation, Hey!, GF Sing, and Hurt Note behavior, plus a custom note type script.
 10. A chart with an extra strumline or unsupported key count, which must be rejected with a clear reason.
 11. A package with multiple difficulty-specific event files, which must be rejected until difficulty-aware event storage exists.
 12. A V-Slice mod containing generic `scripts/*.hx` files is still classified and launched as V-Slice.
