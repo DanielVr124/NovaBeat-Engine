@@ -4,7 +4,6 @@ package funkin.ui.options;
 import funkin.api.newgrounds.NewgroundsClient;
 #end
 import funkin.save.Save;
-import funkin.Preferences;
 
 class SaveDataMenu extends Page<OptionsState.OptionsMenuPageName>
 {
@@ -14,7 +13,6 @@ class SaveDataMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
 
-    NovaBeatOptionsChrome.apply(this, 'SAVE DATA', FlxG.camera);
     add(items = new TextMenuList());
 
     createItem("CLEAR SAVE DATA", openSaveDataPrompt);
@@ -99,7 +97,7 @@ class SaveDataMenu extends Page<OptionsState.OptionsMenuPageName>
 
     prompt = new Prompt(text, Custom(yesText, "Cancel"));
     prompt.create();
-    prompt.createBgFromMargin(100, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : 0xFFFAFD6D);
+    prompt.createBgFromMargin(100, 0xFFFAFD6D);
     prompt.back.scrollFactor.set(0, 0);
     FlxG.state.add(prompt);
     // Disable page navigation while the prompt is open
