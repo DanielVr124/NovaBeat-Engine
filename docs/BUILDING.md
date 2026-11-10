@@ -146,3 +146,6 @@ Freeplay no longer contains NovaBeat theme, menu-header, background, sound, or p
 
 
 The original FNF menu is the only active menu presentation. Story Mode, Freeplay, Options, Preferences, Customization, Performance, and Mobile customization no longer carry NovaBeat alternate-theme branches; mod-owned menus remain under the mod's control.
+
+
+Final menu cleanup also removes the dormant NovaBeat theme paths from Preferences, Customization, Performance customization, and Mobile customization; the FNF options list and mobile control settings remain.
