@@ -1920,6 +1920,54 @@ class PsychModRuntime
     return Math.isNaN(parsed) ? fallback : parsed;
   }
 
+  /**
+   * Synthetic regression test for the supported psych_v2 chart subset.
+   * Exposed to the debug console so it can be run without an uploaded mod.
+   */
+  public static function runPsychV2SmokeTests():Bool
+  {
+    #if sys
+    try
+    {
+      var fixture:Dynamic = Json.parse(
+        '{"metadata":{"songName":"NovaBeat Psych v2 Smoke Test","artist":"Test","charter":"Test","bpm":100,"speed":1,"stage":"philly"},' +
+        '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +
+        '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true}],' +
+        '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]}],' +
+        '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
+      );
+
+      var converted:Null<PsychV2ChartImport> = convertPsychV2Chart(
+        fixture,
+        Path.join(["mods", "__novabeat_psych_v2_smoke__", "songs", "smoke-test"]),
+        "normal",
+        "smoke-test"
+      );
+      if (converted == null) return false;
+      if (converted.notes.length != 2) return false;
+      if (converted.notes[0].data != 5 || converted.notes[0].length != 250) return false;
+      if (converted.notes[1].data != 2 || converted.notes[1].kind != "alt") return false;
+      if (converted.metadata.playData.stage != "phillyTrain") return false;
+      if (converted.metadata.timeChanges.length != 2) return false;
+      if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
+      if (converted.metadata.timeChanges[1].bpm != 120) return false;
+      if (converted.events.length != 3) return false;
+
+      // The additional/GF strumline must never be misread as an opponent lane.
+      if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
+      if (resolvePsychStage("a-custom-psych-stage", "smoke-test") != Constants.DEFAULT_STAGE) return false;
+      return true;
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] psych_v2 smoke test failed: ' + Std.string(error));
+      return false;
+    }
+    #else
+    return false;
+    #end
+  }
+
   static function findAudioFolder(modPath:String, songFolder:String):Null<String>
   {
     var candidates:Array<String> = [
