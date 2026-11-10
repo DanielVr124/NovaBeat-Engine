@@ -992,6 +992,7 @@ class PsychModRuntime
       && Std.isOfType(Reflect.field(chartRoot, "strumlines"), Array);
   }
 
+  #if sys
   static function isPsychChartFile(path:String):Bool
   {
     try
@@ -1006,6 +1007,7 @@ class PsychModRuntime
       return false;
     }
   }
+  #end
 
   static function isBuiltinPsychStage(stageName:String):Bool
   {
