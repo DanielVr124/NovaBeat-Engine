@@ -170,7 +170,6 @@ class OffsetMenu extends Page<OptionsState.OptionsMenuPageName>
     menuCamera.bgColor = 0x0;
 
     camera = menuCamera;
-    NovaBeatOptionsChrome.apply(this, 'LAG ADJUSTMENT', menuCamera);
 
     blackRect = new FlxSprite(0, 0);
     blackRect.makeGraphic(FlxG.width + 50, FlxG.height + 50, FlxColor.BLACK);
