@@ -7,6 +7,7 @@ import flixel.math.FlxMath;
 import flixel.sound.FlxSound;
 import flixel.text.FlxText;
 import flixel.text.FlxTextAlign;
+import flixel.text.FlxTextBorderStyle;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;

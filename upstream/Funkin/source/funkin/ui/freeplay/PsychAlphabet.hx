@@ -19,8 +19,7 @@ class PsychAlphabet extends FlxSpriteGroup
 
   public function new(x:Float, y:Float, text:String)
   {
-    super();
-    setMenuPosition(x, y);
+    super(x, y);
     var atlas = getAtlas();
     var cursor:Float = 0;
 
@@ -78,8 +77,8 @@ class PsychAlphabet extends FlxSpriteGroup
         case "•": 20;
         default: 0;
       };
-      letter.x = x + cursor;
-      letter.y = y + offsetY;
+      letter.x = cursor;
+      letter.y = offsetY;
       add(letter);
       letters.push(letter);
       cursor += letter.width;
@@ -95,12 +94,7 @@ class PsychAlphabet extends FlxSpriteGroup
 
   public function setMenuPosition(x:Float, y:Float):Void
   {
-    var deltaX:Float = x - this.x;
-    var deltaY:Float = y - this.y;
-    this.x = x;
-    this.y = y;
-    for (letter in letters)
-      letter.setPosition(letter.x + deltaX, letter.y + deltaY);
+    this.setPosition(x, y);
   }
 
   public function setMenuAlpha(value:Float):Void
