@@ -34,6 +34,7 @@ import funkin.Paths;
 import funkin.graphics.FunkinSprite;
 import funkin.Assets;
 import funkin.play.PlayState;
+import funkin.play.PlayStatePlaylist;
 import funkin.Highscore;
 import funkin.Preferences;
 import funkin.util.Constants;
@@ -1933,7 +1934,7 @@ class PsychGameplayApi
     PsychScriptRuntime.setGlobal("noteOffset", Preferences.globalOffset);
     PsychScriptRuntime.setGlobal("luaDebugMode", false);
     PsychScriptRuntime.setGlobal("luaDeprecatedWarnings", false);
-    PsychScriptRuntime.setGlobal("isStoryMode", false);
+    PsychScriptRuntime.setGlobal("isStoryMode", PlayStatePlaylist.isStoryMode);
 
     var currentStage = state.currentStage;
     if (currentStage != null)
