@@ -42,20 +42,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   var menuCamera:FlxCamera;
   var hudCamera:FlxCamera;
   var camFollow:FlxObject;
-  var novaBeatStyle:Bool = false;
-  var novaBeatRowLayer:FlxTypedSpriteGroup<FlxSprite>;
-  var novaBeatLabelLayer:FlxTypedSpriteGroup<FlxSprite>;
-  var novaBeatRowBackgrounds:Array<FunkinSprite> = [];
-  var novaBeatRowAccents:Array<FunkinSprite> = [];
-  var novaBeatRowLabels:Array<FlxText> = [];
-  var novaBeatRowGap:Float = 62;
-  var novaBeatCheckboxSources:Array<CheckboxPreferenceItem> = [];
-  var novaBeatCheckboxPlates:Array<FunkinSprite> = [];
-  var novaBeatCheckboxMarks:Array<FlxText> = [];
-  var novaBeatCheckboxRows:Array<Int> = [];
-  var novaBeatValueSources:Array<AtlasText> = [];
-  var novaBeatValueLabels:Array<FlxText> = [];
-  var novaBeatValueRows:Array<Int> = [];
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -64,7 +50,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super();
 
-    novaBeatStyle = false;
     menuCamera = new FunkinCamera('prefMenu');
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
@@ -75,16 +60,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     camera = menuCamera;
 
-    // Draw the NovaBeat row panels before the interactive menu items.
-    add(novaBeatRowLayer = new FlxTypedSpriteGroup<FlxSprite>());
-    novaBeatRowLayer.cameras = [menuCamera];
     add(items = new TextMenuList());
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = novaBeatStyle;
+    items.acceptOnTouchSelection = false;
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
     preferenceItems.cameras = [menuCamera];
-    add(novaBeatLabelLayer = new FlxTypedSpriteGroup<FlxSprite>());
-    novaBeatLabelLayer.cameras = [menuCamera];
 
     add(itemDescBox = new FunkinSprite());
     itemDescBox.cameras = [hudCamera];
@@ -94,7 +74,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     createPrefItems();
     createPrefDescription();
-    updateNovaBeatRows();
 
     camFollow = new FlxObject(FlxG.width / 2, 0, 140, 70);
 
@@ -106,8 +85,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.onChange.add(function(selected)
     {
       itemDesc.text = preferenceDesc[items.selectedIndex];
-      updateNovaBeatRows();
-    });
+      });
 
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
@@ -125,24 +103,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     itemDesc.text = preferenceDesc[items.selectedIndex];
     itemDesc.scrollFactor.set();
-
-    if (novaBeatStyle)
-    {
-      var margin:Float = Math.max(20, FlxG.width * 0.035);
-      itemDescBox.makeSolidColor(1, 1, 0xFF0D1935);
-      itemDescBox.alpha = 0.96;
-      itemDesc.setFormat("Arial", 13, 0xFFDCEBFF, FlxTextAlign.LEFT);
-      itemDesc.x = margin + 18;
-      itemDesc.y = FlxG.height - 82;
-      itemDesc.width = FlxG.width - margin * 2 - 36;
-      itemDesc.height = 42;
-      itemDesc.wordWrap = true;
-      itemDesc.autoSize = false;
-      itemDescBox.setPosition(margin + 10, FlxG.height - 94);
-      itemDescBox.setGraphicSize(Std.int(FlxG.width - margin * 2 - 20), 64);
-      itemDescBox.updateHitbox();
-      return;
-    }
 
     layoutOriginalFNFDescription(FlxG.width, FlxG.height);
   }
@@ -341,16 +301,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     // Positions the camera to the selected item.
     if (items != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
 
-    if (novaBeatStyle)
-    {
-      updateNovaBeatRows();
-      for (index in 0...novaBeatCheckboxSources.length)
-        novaBeatCheckboxMarks[index].text = novaBeatCheckboxSources[index].currentValue ? "✓" : "";
-      for (index in 0...novaBeatValueSources.length)
-        novaBeatValueLabels[index].text = novaBeatValueSources[index].text;
-      return;
-    }
-
     // Indent the selected item.
     items.forEach(function(daItem:TextMenuItem)
     {
@@ -409,30 +359,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     preferenceItems.add(checkbox);
     preferenceDesc.push(prefDesc);
 
-    if (novaBeatStyle)
-    {
-      var index:Int = items.length - 1;
-      styleNovaBeatPreferenceItem(item, prefName, index);
-      checkbox.visible = false;
-
-      var rowX:Float = novaBeatRowX();
-      var rowW:Float = novaBeatRowWidth();
-      var rowY:Float = novaBeatRowY(index);
-      var plate:FunkinSprite = new FunkinSprite(rowX + rowW - 56, rowY + 13);
-      plate.makeSolidColor(30, 30, 0xFF142B49);
-      plate.cameras = [menuCamera];
-      novaBeatRowLayer.add(plate);
-
-      var mark:FlxText = new FlxText(plate.x, plate.y - 1, 30, checkbox.currentValue ? "✓" : "", 20);
-      mark.setFormat("Arial", 20, 0xFF55E8FF, FlxTextAlign.CENTER);
-      mark.cameras = [menuCamera];
-      novaBeatLabelLayer.add(mark);
-
-      novaBeatCheckboxSources.push(checkbox);
-      novaBeatCheckboxPlates.push(plate);
-      novaBeatCheckboxMarks.push(mark);
-      novaBeatCheckboxRows.push(index);
-    }
   }
 
   /**
@@ -453,20 +379,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
-    if (novaBeatStyle)
-    {
-      var index:Int = items.length - 1;
-      styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
-        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
-      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
-      valueLabel.cameras = [menuCamera];
-      novaBeatLabelLayer.add(valueLabel);
-      novaBeatValueSources.push(item.lefthandText);
-      novaBeatValueLabels.push(valueLabel);
-      novaBeatValueRows.push(index);
-    }
   }
 
   /**
@@ -491,20 +403,6 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
-    if (novaBeatStyle)
-    {
-      var index:Int = items.length - 1;
-      styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
-        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
-      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
-      valueLabel.cameras = [menuCamera];
-      novaBeatLabelLayer.add(valueLabel);
-      novaBeatValueSources.push(item.lefthandText);
-      novaBeatValueLabels.push(valueLabel);
-      novaBeatValueRows.push(index);
-    }
   }
 
   /**
@@ -519,95 +417,11 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     items.addItem(prefName, item);
     preferenceItems.add(item.lefthandText);
     preferenceDesc.push(prefDesc);
-    if (novaBeatStyle)
-    {
-      var index:Int = items.length - 1;
-      styleNovaBeatPreferenceItem(item, prefName, index);
-      item.lefthandText.visible = false;
-      var valueLabel:FlxText = new FlxText(novaBeatValueX(), novaBeatRowY(index) + 15, novaBeatValueWidth(),
-        item.lefthandText.text, FlxG.height > FlxG.width * 1.12 ? 13 : 15);
-      valueLabel.setFormat("Arial", FlxG.height > FlxG.width * 1.12 ? 13 : 15, 0xFF62E8FF, FlxTextAlign.RIGHT);
-      valueLabel.cameras = [menuCamera];
-      novaBeatLabelLayer.add(valueLabel);
-      novaBeatValueSources.push(item.lefthandText);
-      novaBeatValueLabels.push(valueLabel);
-      novaBeatValueRows.push(index);
-    }
-  }
-
-  function novaBeatRowX():Float
-  {
-    return Math.max(20, FlxG.width * 0.035) + 18;
-  }
-
-  function novaBeatRowWidth():Float
-  {
-    return FlxG.width - Math.max(20, FlxG.width * 0.035) * 2 - 36;
-  }
-
-  function novaBeatValueX():Float
-  {
-    return novaBeatRowX() + novaBeatRowWidth() * 0.62;
-  }
-
-  function novaBeatValueWidth():Float
-  {
-    return Math.max(88, novaBeatRowWidth() * 0.33);
-  }
-
-  function novaBeatRowY(index:Int):Float
-  {
-    return 84 + index * novaBeatRowGap;
-  }
-
-  function styleNovaBeatPreferenceItem(item:TextMenuItem, prefName:String, index:Int):Void
-  {
-    var rowX:Float = novaBeatRowX();
-    var rowY:Float = novaBeatRowY(index);
-    var rowW:Float = novaBeatRowWidth();
-
-    var background:FunkinSprite = new FunkinSprite(rowX, rowY);
-    background.makeSolidColor(Std.int(rowW), 54, 0xFF0D1935);
-    background.cameras = [menuCamera];
-    novaBeatRowLayer.add(background);
-    novaBeatRowBackgrounds.push(background);
-
-    var accent:FunkinSprite = new FunkinSprite(rowX, rowY + 7);
-    accent.makeSolidColor(4, 40, 0xFF48E7FF);
-    accent.cameras = [menuCamera];
-    novaBeatRowLayer.add(accent);
-    novaBeatRowAccents.push(accent);
-
-    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
-    var label:FlxText = new FlxText(rowX + 18, rowY + 17, Math.max(80, rowW * 0.53), prefName, portrait ? 13 : 16);
-    label.setFormat("Arial", portrait ? 13 : 16, 0xFFDCEBFF, FlxTextAlign.LEFT);
-    label.cameras = [menuCamera];
-    novaBeatLabelLayer.add(label);
-    novaBeatRowLabels.push(label);
-
-    item.x = rowX + 8;
-    item.y = rowY + 5;
-    item.cameras = [menuCamera];
-    item.makeGraphic(Std.int(rowW - 16), 44, FlxColor.TRANSPARENT);
-    item.updateHitbox();
-    item.atlasText.visible = false;
-  }
-
-  function updateNovaBeatRows():Void
-  {
-    for (index in 0...novaBeatRowBackgrounds.length)
-    {
-      var selected:Bool = index == items.selectedIndex;
-      novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
-      novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.82;
-      novaBeatRowAccents[index].alpha = selected ? 1.0 : 0.42;
-      novaBeatRowLabels[index].color = selected ? FlxColor.WHITE : 0xFFDCEBFF;
-    }
   }
 
   function preferenceItemY(index:Int):Float
   {
-    return novaBeatStyle ? novaBeatRowY(index) + 5 : 30 + index * 120;
+    return 30 + index * 120;
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -618,95 +432,38 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.setSize(width, height);
     var portrait:Bool = height > width * 1.12;
     var margin:Float = Math.max(18, width * 0.035);
-    if (novaBeatStyle)
+    var top:Float = portrait ? 62 : 30;
+    var rowGap:Float = portrait ? Math.min(82, height * 0.09) : 120;
+    for (index in 0...items.length)
     {
-      novaBeatRowGap = Math.max(44, Math.min(62, (height - 190) / Math.max(1, items.length)));
-      var rowX:Float = novaBeatRowX();
-      var rowW:Float = novaBeatRowWidth();
-      for (index in 0...items.length)
+      var item:TextMenuItem = items.members[index];
+      var textWidth:Int = 0;
+      switch (Type.typeof(item))
       {
-        var rowY:Float = novaBeatRowY(index);
-        var rowHeight:Float = Math.min(54, novaBeatRowGap - 6);
-        novaBeatRowBackgrounds[index].setPosition(rowX, rowY);
-        novaBeatRowBackgrounds[index].makeSolidColor(Std.int(rowW), Std.int(rowHeight), 0xFF0D1935);
-        novaBeatRowAccents[index].setPosition(rowX, rowY + 6);
-        novaBeatRowAccents[index].makeSolidColor(4, Std.int(Math.max(12, rowHeight - 12)), 0xFF48E7FF);
-        novaBeatRowLabels[index].setPosition(rowX + 14, rowY + (rowHeight - novaBeatRowLabels[index].height) * 0.5);
-        novaBeatRowLabels[index].fieldWidth = Math.max(80, rowW * 0.53);
-        novaBeatRowLabels[index].size = portrait ? 13 : 16;
-        var item:TextMenuItem = items.members[index];
-        item.setPosition(rowX + 7, rowY + 3);
-        item.cameras = [menuCamera];
-        item.makeGraphic(Std.int(rowW - 14), Std.int(rowHeight - 6), FlxColor.TRANSPARENT);
-        item.updateHitbox();
-        item.atlasText.visible = false;
-        var widget:FlxSprite = preferenceItems.members[index];
-        if (Std.isOfType(widget, CheckboxPreferenceItem))
-        {
-          widget.visible = false;
-          var visualIndex:Int = novaBeatCheckboxRows.indexOf(index);
-          if (visualIndex >= 0)
-          {
-            var plate:FunkinSprite = novaBeatCheckboxPlates[visualIndex];
-            var mark:FlxText = novaBeatCheckboxMarks[visualIndex];
-            plate.setPosition(rowX + rowW - 58, rowY + (rowHeight - 28) * 0.5);
-            mark.setPosition(plate.x, plate.y - 1);
-          }
-        }
-        else
-        {
-          var source:AtlasText = cast widget;
-          source.visible = false;
-          var visualIndex:Int = novaBeatValueRows.indexOf(index);
-          if (visualIndex >= 0)
-          {
-            var valueLabel:FlxText = novaBeatValueLabels[visualIndex];
-            valueLabel.setPosition(novaBeatValueX(), rowY + (rowHeight - valueLabel.height) * 0.5);
-            valueLabel.fieldWidth = novaBeatValueWidth();
-            valueLabel.size = portrait ? 13 : 15;
-          }
-        }
+        case TClass(CheckboxPreferenceItem):
+          textWidth = 0;
+        case TClass(EnumPreferenceItem):
+          textWidth = cast(item, EnumPreferenceItem<Dynamic>).lefthandText.getWidth();
+        case TClass(NumberPreferenceItem):
+          textWidth = cast(item, NumberPreferenceItem).lefthandText.getWidth();
+        default:
       }
-      itemDesc.setFormat("Arial", portrait ? 12 : 14, 0xFFDCEBFF, FlxTextAlign.LEFT);
-      itemDesc.setPosition(margin + 18, height - 70);
-      itemDesc.fieldWidth = width - margin * 2 - 36;
-      itemDesc.autoSize = false;
-      itemDescBox.setPosition(margin + 10, height - 82);
-      itemDescBox.setGraphicSize(Std.int(width - margin * 2 - 20), 64);
-      itemDescBox.updateHitbox();
-    }
-    else
-    {
-      var top:Float = portrait ? 62 : 30;
-      var rowGap:Float = portrait ? Math.min(82, height * 0.09) : 120;
-      for (index in 0...items.length)
+      var offset:Float = Type.typeof(item) == TClass(CheckboxPreferenceItem) ? 0 : textWidth - 75;
+      offset += items.selectedItem == item ? 150 : 120;
+      item.x = offset + funkin.ui.FullScreenScaleMode.gameNotchSize.x;
+      item.y = top + index * rowGap;
+
+      var widget:FlxSprite = preferenceItems.members[index];
+      if (Std.isOfType(widget, CheckboxPreferenceItem))
+        widget.setPosition(width - widget.width - margin - 18, item.y - 18);
+      else
       {
-        var item:TextMenuItem = items.members[index];
-        var textWidth:Int = 0;
-        switch (Type.typeof(item))
-        {
-          case TClass(CheckboxPreferenceItem):
-            textWidth = 0;
-          case TClass(EnumPreferenceItem):
-            textWidth = cast(item, EnumPreferenceItem<Dynamic>).lefthandText.getWidth();
-          case TClass(NumberPreferenceItem):
-            textWidth = cast(item, NumberPreferenceItem).lefthandText.getWidth();
-          default:
-        }
-        item.x = Math.max(18, FullScreenScaleMode.gameNotchSize.x + (portrait ? 20 : textWidth - 75 + 120));
-        item.y = top + index * rowGap;
-        var widget:FlxSprite = preferenceItems.members[index];
-        if (Std.isOfType(widget, CheckboxPreferenceItem))
-          widget.setPosition(width - widget.width - margin - 18, item.y - 18);
-        else
-        {
-          var valueLabel:AtlasText = cast widget;
-          valueLabel.x = width - valueLabel.width - margin - 18;
-          valueLabel.y = item.y;
-        }
+        var valueLabel:AtlasText = cast widget;
+        valueLabel.x = width - valueLabel.width - margin - 18;
+        valueLabel.y = item.y;
       }
-      layoutOriginalFNFDescription(width, height);
     }
+    layoutOriginalFNFDescription(width, height);
     if (camFollow != null && items.selectedItem != null) camFollow.y = items.selectedItem.y;
     menuCamera.deadzone.set(0, height * (portrait ? 0.14 : 0.22), width, height * (portrait ? 0.72 : 0.56));
     #if (mobile || FEATURE_TOUCH_CONTROLS)
