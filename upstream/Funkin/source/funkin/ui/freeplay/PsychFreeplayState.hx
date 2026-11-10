@@ -4,6 +4,7 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxMath;
+import flixel.sound.FlxSound;
 import flixel.text.FlxText;
 import flixel.text.FlxTextAlign;
 import flixel.tweens.FlxTween;
@@ -65,6 +66,7 @@ class PsychFreeplayState extends MusicBeatSubState
   // The original Psych preview player is represented by the same compact
   // transport panel and synchronized instrumental/vocal playback.
   var previewPlaying:Bool = false;
+  var menuMusicBeforePreview:Null<FlxSound> = null;
   var previewPaused:Bool = false;
   var previewVocals:Array<FunkinSound> = [];
   var previewBackground:FlxSprite;
@@ -191,7 +193,7 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomBackground.scrollFactor.set();
     add(bottomBackground);
 
-    var help = 'PRESS SPACE TO LISTEN  /  PRESS CTRL FOR GAMEPLAY CHANGERS  /  PRESS RESET TO RESET SCORE AND ACCURACY';
+    var help = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET SCORE AND ACCURACY';
     bottomText = new FlxText(0, bottomBackground.y + 5, FlxG.width, help, 16);
     bottomText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
     bottomText.scrollFactor.set();
@@ -318,8 +320,6 @@ class PsychFreeplayState extends MusicBeatSubState
       }
       else if (controls.BACK)
         goBack();
-      else if (FlxG.keys.justPressed.CONTROL)
-        FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'), 0.4);
     }
 
     lerpedScore = FlxMath.lerp(intendedScore, lerpedScore, Math.exp(-elapsed * 24));
@@ -433,6 +433,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (FlxG.sound.music == null || !FlxG.sound.music.exists)
     {
       FlxG.log.warn('[Psych Freeplay] Could not load preview instrumental for ' + entry.id);
+      stopPreviewAudioOnly(true);
       return;
     }
 
@@ -507,7 +508,7 @@ class PsychFreeplayState extends MusicBeatSubState
     }
   }
 
-  function stopPreviewAudioOnly():Void
+  function stopPreviewAudioOnly(restoreMenuMusic:Bool = false):Void
   {
     for (voice in previewVocals)
     {
@@ -515,20 +516,28 @@ class PsychFreeplayState extends MusicBeatSubState
       voice.destroy();
     }
     previewVocals = [];
-    if (FlxG.sound.music != null) FlxG.sound.music.stop();
+
+    if (FlxG.sound.music != null && FlxG.sound.music != menuMusicBeforePreview)
+      FlxG.sound.music.stop();
+
+    if (restoreMenuMusic && menuMusicBeforePreview != null)
+    {
+      FlxG.sound.music = menuMusicBeforePreview;
+      menuMusicBeforePreview.resume();
+    }
+    menuMusicBeforePreview = null;
   }
 
   function stopPreview():Void
   {
-    stopPreviewAudioOnly();
+    stopPreviewAudioOnly(true);
     previewPlaying = false;
     previewPaused = false;
     setPreviewPanelVisible(false);
     scoreBackground.visible = true;
     scoreText.visible = true;
     difficultyText.visible = true;
-    bottomText.text = 'PRESS SPACE TO LISTEN  /  PRESS CTRL FOR GAMEPLAY CHANGERS  /  PRESS RESET TO RESET SCORE AND ACCURACY';
-    FunkinSound.playMusic('freakyMenu', {overrideExisting: true, restartTrack: true, loop: true, mapTimeChanges: false});
+    bottomText.text = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET SCORE AND ACCURACY';
   }
 
   function setPreviewPanelVisible(value:Bool):Void
@@ -617,7 +626,7 @@ class PsychFreeplayState extends MusicBeatSubState
   override public function destroy():Void
   {
     colorTween?.cancel();
-    if (previewPlaying) stopPreviewAudioOnly();
+    if (previewPlaying) stopPreviewAudioOnly(false);
     super.destroy();
   }
 }
