@@ -2080,6 +2080,7 @@ class PsychModRuntime
   static function slug(value:String):String return value;
   static function readScriptSources(path:String, depth:Int):Array<PsychScriptSource> return [];
   static function collectScriptPaths(path:String, depth:Int, result:Array<String>):Void {}
+  public static function runPsychV2SmokeTests():Bool return false;
   #end
 
   static function findSongAsset(songFolder:String, baseName:String):Null<String>
