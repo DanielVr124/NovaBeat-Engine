@@ -39,6 +39,17 @@ class NoteKind implements INoteScriptedClass
   public var gfSing:Bool = false;
 
   /**
+   * Whether hitting this note should behave as a miss rather than a successful hit.
+   */
+  public var hurt:Bool = false;
+
+  /**
+   * Positive health amount removed when a hurt note is hit.
+   * @default 0.1
+   */
+  public var hurtDamage:Float = 0.1;
+
+  /**
    * The animation suffix to use.
    */
   public var suffix:String;
