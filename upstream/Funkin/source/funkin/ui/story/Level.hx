@@ -74,7 +74,7 @@ class Level implements IRegistryEntry<LevelData>
     if (Reflect.field(_data, "psychImported") == true)
     {
       var title:FlxText = new FlxText(0, 0, 0, _data.name, 32);
-      title.setFormat("VCR OSD Mono", 32, FlxColor.WHITE, CENTER);
+      title.setFormat("VCR OSD Mono", 32, FlxColor.WHITE);
       title.updateHitbox();
       return title;
     }
