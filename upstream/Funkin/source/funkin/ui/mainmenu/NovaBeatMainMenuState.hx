@@ -271,7 +271,7 @@ class NovaBeatMainMenuState extends MusicBeatState
     // the original FNF logo atlas from being replaced or modified.
     var logo:FlxSprite = new FlxSprite();
     logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
-    logo.animation.addByPrefix('idle', 'logo bumpin', 6, true);
+    logo.animation.addByPrefix('idle', 'logo bumpin', 10, true);
     logo.animation.play('idle', true);
     logo.antialiasing = true;
     // The reference uses a large, dominant Bumpin mark. Fit by both axes
@@ -363,7 +363,7 @@ class NovaBeatMainMenuState extends MusicBeatState
   {
     var logo:FlxSprite = new FlxSprite();
     logo.frames = Paths.getSparrowAtlas('novabeat/logoBumpin');
-    logo.animation.addByPrefix('idle', 'logo bumpin', 6, true);
+    logo.animation.addByPrefix('idle', 'logo bumpin', 10, true);
     logo.animation.play('idle', true);
     logo.antialiasing = true;
     logo.scrollFactor.set();
