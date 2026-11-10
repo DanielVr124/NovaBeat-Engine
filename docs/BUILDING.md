@@ -140,3 +140,6 @@ Story Mode and the shared menu-page framework no longer contain the removed Nova
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. A green HTML5 job means the game compiled into a browser bundle and the private ZIP was published. None of these results alone verifies runtime behavior on every PC, phone, or browser, and none completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
 
+
+
+Freeplay no longer contains NovaBeat theme, menu-header, background, sound, or parent-menu routing branches; it uses the original FNF Freeplay and Main Menu path.
