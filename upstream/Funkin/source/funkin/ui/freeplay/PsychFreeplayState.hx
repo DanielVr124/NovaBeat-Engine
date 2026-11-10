@@ -29,7 +29,7 @@ import funkin.ui.transition.LoadingState;
 @:nullSafety(Off)
 class PsychFreeplayState extends MusicBeatSubState
 {
-  static inline final VARIATION:String = Constants.DEFAULT_VARIATION;
+  static final VARIATION:String = Constants.DEFAULT_VARIATION;
   static inline final DEFAULT_COLOR:Int = 0xFF9271FD;
   static inline final LIST_X:Float = 90;
   static inline final LIST_Y:Float = 320;
@@ -465,7 +465,7 @@ class PsychFreeplayState extends MusicBeatSubState
     }
 
     previewVocals = [];
-    for (voicePath in entry.song.buildVoiceList())
+    for (voicePath in previewDifficulty.buildVoiceList())
     {
       var voice = FunkinSound.load(voicePath, 0.8, true, false, true, false, null, null, false, #if web true #else false #end);
       if (voice != null) previewVocals.push(voice);
