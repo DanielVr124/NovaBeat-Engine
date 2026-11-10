@@ -58,12 +58,43 @@ class PsychModRuntime
       // should not prevent otherwise complete songs in this package loading.
       if (source.instrumentFile == null) continue;
 
+      var embeddedEventSignature:Null<String> = null;
       for (chartPath in source.chartFiles)
       {
         var chartProblem:Null<String> = inspectUnsupportedChartFeatures(chartPath, modPath);
         if (chartProblem != null)
         {
           return unavailable("This Psych package contains a chart feature NovaBeat does not support yet: " + chartProblem);
+        }
+
+        // V-Slice stores one event timeline per song, not one per difficulty.
+        // Refuse different embedded timelines rather than accidentally mixing
+        // or replaying a difficulty's events on every other chart.
+        try
+        {
+          var chartRoot:Dynamic = Json.parse(File.getContent(chartPath));
+          var chartSong:Dynamic = getPsychChartDataRoot(chartRoot);
+          var rawEvents:Dynamic = Reflect.field(chartSong, "events");
+          if (rawEvents == null) rawEvents = Reflect.field(chartRoot, "events");
+          var normalizedEvents:Array<Dynamic> = [];
+          for (event in extractPsychEvents(rawEvents))
+          {
+            normalizedEvents.push({
+              time: event.time,
+              name: event.name,
+              value1: event.value1,
+              value2: event.value2
+            });
+          }
+          var signature:String = Json.stringify(normalizedEvents);
+          if (embeddedEventSignature == null)
+            embeddedEventSignature = signature;
+          else if (embeddedEventSignature != signature)
+            return unavailable("This package has different embedded event timelines for multiple difficulties. NovaBeat's current song data model uses one shared event timeline, so it cannot safely load these charts together yet.");
+        }
+        catch (error:Dynamic)
+        {
+          return unavailable("A chart's embedded Psych events could not be compared safely (" + Std.string(error) + ").");
         }
       }
 
