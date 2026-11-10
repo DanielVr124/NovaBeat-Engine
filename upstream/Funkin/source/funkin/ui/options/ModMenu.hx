@@ -331,7 +331,8 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         // Keep the Play / More Info dock fixed while allowing long metadata
         // to scroll inside the preview instead of running underneath controls.
-        var infoLines:Array<String> = body.split("\n");
+        var maxCharacters:Int = Std.int(Math.max(18, (previewWidth - inset * 2) / 8));
+        var infoLines:Array<String> = wrapInformationLines(body, maxCharacters);
         var maxInfoLines:Int = Std.int(Math.max(3, Math.floor(previewContentHeight / 13)));
         var maxScroll:Int = Std.int(Math.max(0, infoLines.length - maxInfoLines));
         infoScroll = Std.int(Math.max(0, Math.min(infoScroll, maxScroll)));
@@ -369,17 +370,23 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function buildFooter(width:Float, height:Float, margin:Float, footerHeight:Float, compactLandscape:Bool):Void
   {
     var buttonY:Float = height - footerHeight - 7;
-    var buttonHeight:Float = compactLandscape ? 27 : 34;
-    var buttonWidth:Float = compactLandscape ? 116 : 144;
+    var buttonHeight:Float = portraitLayout ? 32 : (compactLandscape ? 27 : 34);
+    var buttonGap:Float = 10;
+    var buttonWidth:Float = portraitLayout
+      ? (width - margin * 2 - buttonGap) / 2
+      : (compactLandscape ? 116 : 144);
     addActionButton(margin, buttonY, buttonWidth, buttonHeight, "REFRESH MODS", "refresh", COLOR_BLUE, false);
-    addActionButton(margin + buttonWidth + 10, buttonY, buttonWidth, buttonHeight, "BACK", "back", COLOR_PURPLE, false);
+    addActionButton(margin + buttonWidth + buttonGap, buttonY, buttonWidth, buttonHeight, "BACK", "back", COLOR_PURPLE, false);
 
-    var help:String = DeviceUtil.isMobileBrowser
-      ? "TAP A MOD  •  PLAY MOD TO LAUNCH  •  MORE INFO FOR DETAILS"
-      : "UP / DOWN OR D-PAD SELECT  •  ENTER / A PLAY  •  RIGHT / I INFO  •  LEFT / R REFRESH  •  ESC / B BACK  •  T CLASSIFY";
-    var helpX:Float = margin + buttonWidth * 2 + 22;
-    addLabel(helpX, buttonY + 9, Math.max(50, width - helpX - margin),
-      help, compactLandscape ? 7 : 8, COLOR_MUTED);
+    // Portrait layouts devote the footer to two full-width thumb targets.
+    // Desktop / landscape can fit the richer keyboard and controller hints.
+    if (!portraitLayout)
+    {
+      var help:String = "UP / DOWN OR D-PAD SELECT  •  ENTER / A PLAY  •  RIGHT / I INFO  •  LEFT / R REFRESH  •  ESC / B BACK  •  T CLASSIFY";
+      var helpX:Float = margin + buttonWidth * 2 + 22;
+      addLabel(helpX, buttonY + 9, Math.max(50, width - helpX - margin),
+        help, compactLandscape ? 7 : 8, COLOR_MUTED);
+    }
   }
 
   function addActionButton(x:Float, y:Float, width:Float, height:Float, label:String, action:String, accent:Int,
@@ -511,6 +518,56 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     else lines.push("STATUS: DISABLED — PLAY MOD WILL ENABLE THIS PACKAGE");
 
     return lines.join("\n");
+  }
+
+  function wrapInformationLines(value:String, maxCharacters:Int):Array<String>
+  {
+    var result:Array<String> = [];
+    var safeWidth:Int = Std.int(Math.max(1, maxCharacters));
+
+    for (paragraph in value.split("\n"))
+    {
+      if (paragraph.length == 0)
+      {
+        result.push("");
+        continue;
+      }
+
+      var current:String = "";
+      for (wordValue in paragraph.split(" "))
+      {
+        var word:String = wordValue;
+        if (word.length == 0) continue;
+
+        while (word.length > safeWidth)
+        {
+          if (current.length > 0)
+          {
+            result.push(current);
+            current = "";
+          }
+          result.push(word.substr(0, safeWidth));
+          word = word.substr(safeWidth);
+        }
+
+        if (word.length == 0) continue;
+        if (current.length == 0)
+          current = word;
+        else if (current.length + word.length + 1 > safeWidth)
+        {
+          result.push(current);
+          current = word;
+        }
+        else
+        {
+          current += " " + word;
+        }
+      }
+
+      if (current.length > 0) result.push(current);
+    }
+
+    return result;
   }
 
   function appendDetectedSection(lines:Array<String>, title:String, values:Array<String>):Void
@@ -752,9 +809,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     if (!infoExpanded || experiences.length == 0) return;
     // Clamp against the available metadata lines. The preview layout computes
     // the final visible window and keeps the action dock outside the scroll area.
-    var lineCount:Int = buildMoreInfo(experiences[selectedIndex]).split("\n").length;
     var compact:Bool = previewWidth < 520 || portraitLayout;
     var inset:Float = compact ? 12 : 20;
+    var maxCharacters:Int = Std.int(Math.max(18, (previewWidth - inset * 2) / 8));
+    var lineCount:Int = wrapInformationLines(buildMoreInfo(experiences[selectedIndex]), maxCharacters).length;
     var artSize:Float = compact
       ? Math.min(78, Math.max(56, previewWidth * 0.22))
       : Math.min(164, Math.max(112, previewHeight * 0.43));
