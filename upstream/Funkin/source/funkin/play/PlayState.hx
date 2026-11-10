@@ -1532,9 +1532,11 @@ class PlayState extends MusicBeatSubState
           var eventAge:Float = Conductor.instance.songPosition - event.time;
           if (eventAge > 1000)
           {
-            // Setting `event.processOldEvents = true` allows events to be handled even if they are old.
+            // Section-state markers must still be applied when entering a song
+            // after a seek; replaying old visual/gameplay events is not safe.
+            var isPsychSectionState:Bool = isPsychSectionStateEvent(event);
             var eventHandler:Null<SongEvent> = SongEventRegistry.getEvent(event.eventKind);
-            if (eventHandler == null || !eventHandler.processOldEvents)
+            if (!isPsychSectionState && (eventHandler == null || !eventHandler.processOldEvents))
             {
               event.activated = true;
               continue;
