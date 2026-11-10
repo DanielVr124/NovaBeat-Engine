@@ -276,7 +276,7 @@ jobs:
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Package Windows distribution
+      - name: Verify Windows distribution folder
         shell: pwsh
         working-directory: upstream/Funkin
         run: |
@@ -284,17 +284,21 @@ jobs:
           $binaryDir = "export/release/windows/bin"
           $exe = Join-Path $binaryDir "Funkin.exe"
           if (!(Test-Path $exe)) { throw "Windows executable missing: $exe" }
-          $package = "export/release/windows/NovaBeat-Windows.zip"
-          if (Test-Path $package) { Remove-Item $package -Force }
-          Compress-Archive -Path "$binaryDir/*" -DestinationPath $package -CompressionLevel Optimal
-          if ((Get-Item $package).Length -le 0) { throw "Windows package is empty" }
-          "Windows package SHA-256: $( (Get-FileHash $package -Algorithm SHA256).Hash )" >> $env:GITHUB_STEP_SUMMARY
+          $files = @(Get-ChildItem $binaryDir -File -Recurse)
+          if ($files.Count -lt 1) { throw "Windows distribution folder is empty" }
+          "Windows distribution files: $($files.Count)" >> $env:GITHUB_STEP_SUMMARY
+          foreach ($file in $files) {
+            $relative = $file.FullName.Substring((Resolve-Path $binaryDir).Path.Length).TrimStart('\', '/')
+            "- $relative ($($file.Length) bytes)" >> $env:GITHUB_STEP_SUMMARY
+          }
 
-      - name: Upload Windows package for automatic release publishing
+      # upload-artifact creates the one download ZIP; upload the folder contents
+      # directly so users do not get a ZIP nested inside that ZIP.
+      - name: Upload Windows distribution
         uses: actions/upload-artifact@v4
         with:
-          name: novabeat-windows
-          path: upstream/Funkin/export/release/windows/NovaBeat-Windows.zip
+          name: NovaBeat-Windows
+          path: upstream/Funkin/export/release/windows/bin/
           if-no-files-found: error
           retention-days: 3
 
