@@ -64,33 +64,16 @@ class OptionsState extends MusicBeatState
 
     drumsBG = FunkinSound.load(Paths.music('offsetsLoop/drumsLoop'), 0, true, false, false, false);
 
-    var novaBeatStyle:Bool = funkin.Preferences.menuStyle == "NovaBeat";
-    isNovaBeatStyle = novaBeatStyle;
-    var menuBG = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
+    isNovaBeatStyle = false;
+    var menuBG = new FlxSprite().loadGraphic(Paths.image('menuBG'));
     menuBackground = menuBG;
-    if (novaBeatStyle)
-    {
-      var bgScale:Float = Math.max(FlxG.width / menuBG.width, FlxG.height / menuBG.height);
-      menuBG.scale.set(bgScale, bgScale);
-    }
-    else
-    {
-      var hsv = new HSVShader(-0.6, 0.9, 3.6);
-      menuBG.shader = hsv;
-      menuBG.setGraphicSize(Std.int(FlxG.width * 1.1));
-    }
+    var hsv = new HSVShader(-0.6, 0.9, 3.6);
+    menuBG.shader = hsv;
+    menuBG.setGraphicSize(Std.int(FlxG.width * 1.1));
     menuBG.updateHitbox();
     menuBG.screenCenter();
     menuBG.scrollFactor.set(0, 0);
     add(menuBG);
-
-    if (novaBeatStyle)
-    {
-      var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0x99040A1A);
-      dimmer.scrollFactor.set();
-      backgroundDimmer = dimmer;
-      add(dimmer);
-    }
 
     optionsCodex = new Codex<OptionsMenuPageName>(Options);
     add(optionsCodex);
@@ -103,7 +86,6 @@ class OptionsState extends MusicBeatState
     #end
     var saveData:SaveDataMenu = optionsCodex.addPage(SaveData, new SaveDataMenu());
     var customization:CustomizationMenu = optionsCodex.addPage(Customization, new CustomizationMenu());
-    var menuCustomization:MenuCustomizationMenu = optionsCodex.addPage(MenuCustomization, new MenuCustomizationMenu());
     var performance:PerformanceCustomizationMenu = optionsCodex.addPage(Performance, new PerformanceCustomizationMenu());
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     var mobileCustomization:MobileCustomizationMenu = optionsCodex.addPage(Mobile, new MobileCustomizationMenu());
@@ -123,7 +105,6 @@ class OptionsState extends MusicBeatState
       #end
       saveData.onExit.add(optionsCodex.switchPage.bind(Options));
       customization.onExit.add(optionsCodex.switchPage.bind(Options));
-      menuCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
       performance.onExit.add(optionsCodex.switchPage.bind(Customization));
       #if (mobile || FEATURE_TOUCH_CONTROLS)
       mobileCustomization.onExit.add(optionsCodex.switchPage.bind(Customization));
@@ -177,19 +158,9 @@ class OptionsState extends MusicBeatState
     if (width <= 0 || height <= 0) return;
     if (menuBackground != null)
     {
-      if (isNovaBeatStyle)
-      {
-        var scale:Float = Math.max(width / Math.max(1, menuBackground.frameWidth), height / Math.max(1, menuBackground.frameHeight));
-        menuBackground.scale.set(scale, scale);
-      }
-      else menuBackground.setGraphicSize(Std.int(width * 1.1));
+      menuBackground.setGraphicSize(Std.int(width * 1.1));
       menuBackground.updateHitbox();
       menuBackground.screenCenter();
-    }
-    if (backgroundDimmer != null)
-    {
-      backgroundDimmer.makeGraphic(width, height, 0x99040A1A);
-      backgroundDimmer.setPosition(0, 0);
     }
   }
 
@@ -201,10 +172,10 @@ class OptionsState extends MusicBeatState
     }
     FlxG.sound.music.fadeOut(0.5, 0, function(tw)
     {
-      FunkinSound.playMusic(funkin.Preferences.menuStyle == "NovaBeat" ? 'novabeat-menu' : 'freakyMenu', {
+      FunkinSound.playMusic('freakyMenu', {
         startingVolume: 0,
         overrideExisting: true,
-        restartTrack: funkin.Preferences.menuStyle != "NovaBeat",
+        restartTrack: true,
         persist: true,
         mapTimeChanges: false
       });
@@ -259,7 +230,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   {
     super();
 
-    novaBeatLayout = funkin.Preferences.menuStyle == "NovaBeat";
+    novaBeatLayout = false;
     if (novaBeatLayout) buildNovaBeatLayout();
 
     add(items = new TextMenuList());
@@ -521,7 +492,7 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     return switch (name)
     {
       case 'PREFERENCES': 'Audio, gameplay, accessibility, and general engine preferences live here.';
-      case 'CUSTOMIZATION': 'Open the customization categories for the NovaBeat menu and other menu styles.';
+      case 'CUSTOMIZATION': 'Adjust performance settings and mobile controls.';
       case 'CONTROLS': 'View and remap your keyboard, controller, and supported input bindings.';
       case 'LAG ADJUSTMENT': 'Calibrate audio and visual timing to match your display and speakers.';
       case 'RESTORE PURCHASES': 'Restore supported purchases linked to your platform account.';
@@ -693,7 +664,6 @@ enum abstract OptionsMenuPageName(String) to PageName
   public var Controls = 'controls';
   public var Colors = 'colors';
   public var Customization = 'customization';
-  public var MenuCustomization = 'menuCustomization';
   public var Performance = 'performance';
   #if (mobile || FEATURE_TOUCH_CONTROLS)
   public var Mobile = 'mobileCustomization';
