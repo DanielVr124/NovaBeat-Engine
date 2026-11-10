@@ -1049,18 +1049,22 @@ class PsychModRuntime
     }
     return switch (StringTools.trim(stageName).toLowerCase())
     {
-      case "stage": Constants.DEFAULT_STAGE;
-      case "spooky": "spookyMansion";
-      case "philly": "phillyTrain";
-      case "limo": "limoRide";
-      case "mall": "mallXmas";
-      case "mallevil": "mallEvil";
-      case "school": "school";
-      case "schoolevil": "schoolEvil";
-      case "tank": "tankmanBattlefield";
+      case "stage", "mainstage": Constants.DEFAULT_STAGE;
+      case "spooky", "spookymansion": "spookyMansion";
+      case "philly", "phillytrain": "phillyTrain";
       case "phillystreets": "phillyStreets";
       case "phillyblazin": "phillyBlazin";
-      default: stageName;
+      case "limo", "limoride": "limoRide";
+      case "mall", "mallxmas": "mallXmas";
+      case "mallevil", "malleevil": "mallEvil";
+      case "school": "school";
+      case "schoolevil": "schoolEvil";
+      case "tank", "tankmanbattlefield": "tankmanBattlefield";
+      // A Psych custom stage is implemented by its stages/<name>.lua/.hx
+      // script; the V-Slice chart still needs a valid StageRegistry entry.
+      // Keep the native scene on the base stage and let the Psych stage script
+      // supply/position its own background objects.
+      default: Constants.DEFAULT_STAGE;
     };
   }
 
