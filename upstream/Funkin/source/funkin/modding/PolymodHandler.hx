@@ -647,6 +647,7 @@ class PolymodHandler
 
     SongRegistry.instance.loadEntries();
     LevelRegistry.instance.loadEntries();
+    PsychModRuntime.loadWeeks(ExperienceManager.getActivePsychModDirs());
     NoteStyleRegistry.instance.loadEntries();
     PlayerRegistry.instance.loadEntries();
     ConversationRegistry.instance.loadEntries();
