@@ -132,6 +132,8 @@ The browser build is intentionally separate from the native platform workflow. I
 
 The current Psych package layouts, supported chart subset, script/runtime scope, limitations, and verification checklist are documented in [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md). Native Windows builds are required to compile and test the filesystem-based Psych adapter; a green HTML5 build does not establish Psych mod compatibility.
 
+The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations.
+
 ## What a green build means
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. A green HTML5 job means the game compiled into a browser bundle and the private ZIP was published. None of these results alone verifies runtime behavior on every PC, phone, or browser, and none completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
