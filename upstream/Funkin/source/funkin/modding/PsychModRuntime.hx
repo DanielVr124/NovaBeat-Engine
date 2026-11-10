@@ -1546,6 +1546,24 @@ class PsychModRuntime
   }
 
   /**
+   * Return the Psych-facing display label for an internally normalized
+   * built-in note kind. Keep private engine IDs out of Lua callback arguments.
+   */
+  public static function getPsychNoteTypeName(noteType:Null<String>):String
+  {
+    if (noteType == null) return "";
+    return switch (StringTools.trim(noteType).toLowerCase())
+    {
+      case "alt": "Alt Animation";
+      case "noanim": "No Animation";
+      case "psychhey": "Hey!";
+      case "psychgfsing": "GF Sing";
+      case "psychhurt": "Hurt Note";
+      default: noteType;
+    };
+  }
+
+  /**
    * Psych's legacy built-in note types that map cleanly to native V-Slice
    * note kinds. Other Psych note types remain gated unless their custom
    * custom_notetypes script is present.
