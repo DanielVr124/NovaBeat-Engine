@@ -134,6 +134,8 @@ The current Psych package layouts, supported chart subset, script/runtime scope,
 
 The Psych compatibility adapter also includes the native Change Character event transaction; see [PSYCH_COMPATIBILITY.md](PSYCH_COMPATIBILITY.md) for the current supported event list and limitations. Story-menu back navigation now returns only to the original FNF main menu; no NovaBeat custom-menu state is referenced.
 
+Story Mode and the shared menu-page framework no longer contain the removed NovaBeat presentation or options-chrome references; the original FNF Story Mode presentation is the only active implementation.
+
 ## What a green build means
 
 A green Windows job means the v0.8.6 game source compiled into a Windows executable. A green Android job means the v0.8.6 game source compiled into an Android debug APK. A green HTML5 job means the game compiled into a browser bundle and the private ZIP was published. None of these results alone verifies runtime behavior on every PC, phone, or browser, and none completes NovaBeat's planned Mod Manager, gameplay extensions, or Android portrait/landscape adaptation.
