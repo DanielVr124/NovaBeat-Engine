@@ -2158,6 +2158,13 @@ class PlayState extends MusicBeatSubState
         ? 'HScript and Lua smoke tests passed.'
         : 'One or more interpreter smoke tests failed.'));
     });
+    FlxG.console.registerFunction('testPsychV2Compatibility', () ->
+    {
+      var passed:Bool = PsychModRuntime.runPsychV2SmokeTests();
+      trace('[Psych Compatibility] ' + (passed
+        ? 'psych_v2 chart conversion smoke test passed.'
+        : 'psych_v2 chart conversion smoke test failed.'));
+    });
   };
 
   /**
