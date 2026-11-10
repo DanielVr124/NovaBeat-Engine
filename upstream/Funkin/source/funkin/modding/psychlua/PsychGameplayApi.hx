@@ -861,7 +861,12 @@ class PsychGameplayApi
       if (videoFile == null || StringTools.trim(videoFile).length == 0) return false;
       try
       {
-        VideoCutscene.play(Paths.videos(StringTools.trim(videoFile)));
+        var requestedPath:String = StringTools.trim(videoFile);
+        var songId:String = PlayState.instance == null || PlayState.instance.currentSong == null
+          ? ""
+          : PlayState.instance.currentSong.id;
+        var modVideoPath:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedPath);
+        VideoCutscene.play(modVideoPath ?? Paths.videos(requestedPath));
         return true;
       }
       catch (error:Dynamic)
