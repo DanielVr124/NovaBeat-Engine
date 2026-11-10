@@ -368,22 +368,6 @@ class EngineBridge
     return false;
   }
 
-  static function isPsychChartFile(chartPath:String):Bool
-  {
-    try
-    {
-      var parsed:Dynamic = Json.parse(File.getContent(chartPath));
-      var songData:Dynamic = Reflect.field(parsed, "song");
-      if (songData != null && Reflect.field(songData, "notes") != null) return true;
-      return Std.isOfType(Reflect.field(parsed, "notes"), Array)
-        && Std.isOfType(Reflect.field(parsed, "strumlines"), Array);
-    }
-    catch (error:Dynamic)
-    {
-      return false;
-    }
-  }
-
   /**
    * Psych week files have a distinctive schema containing songs,
    * weekCharacters, and weekName.
@@ -489,7 +473,12 @@ class EngineBridge
       var hasSongIdentity:Bool = songName != null && Std.isOfType(songName, String);
       var hasChartContent:Bool = notes != null;
       var hasTempo:Bool = bpm != null;
-      return hasSongIdentity && hasChartContent && hasTempo;
+      if (hasSongIdentity && hasChartContent && hasTempo) return true;
+
+      // psych_v2 stores notes and strumlines at the chart root rather than
+      // under a legacy "song" object.
+      return Std.isOfType(Reflect.field(parsed, "notes"), Array)
+        && Std.isOfType(Reflect.field(parsed, "strumlines"), Array);
     }
     catch (error:Dynamic)
     {
