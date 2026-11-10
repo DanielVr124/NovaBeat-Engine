@@ -3,7 +3,6 @@ package funkin.ui.mainmenu;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import funkin.graphics.FunkinCamera;
-import funkin.Preferences;
 import funkin.graphics.shaders.HSVShader;
 import funkin.audio.FunkinSound;
 import funkin.input.Cursor;
@@ -20,34 +19,23 @@ class NovaBeatModsMenuState extends MusicBeatState
   var modPage:ModMenu;
   var menuBackground:Null<FlxSprite> = null;
   var backgroundDimmer:Null<FlxSprite> = null;
-  var novaBeatStyle:Bool = false;
 
   override function create():Void
   {
     FlxG.keys.enabled = true;
-    FlxG.cameras.reset(new FunkinCamera('novaBeatMods'));
+    FlxG.cameras.reset(new FunkinCamera('modLibrary'));
     super.create();
 
-    var novaBeatStyle:Bool = Preferences.menuStyle == "NovaBeat";
-    this.novaBeatStyle = novaBeatStyle;
-    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image(novaBeatStyle ? 'novabeat/menu-background' : 'menuBG'));
+    var background:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuBG'));
     menuBackground = background;
-    if (novaBeatStyle)
-    {
-      var scale:Float = Math.max(FlxG.width / background.width, FlxG.height / background.height);
-      background.scale.set(scale, scale);
-    }
-    else
-    {
-      background.shader = new HSVShader(-0.6, 0.9, 3.6);
-      background.setGraphicSize(Std.int(FlxG.width * 1.1));
-    }
+    background.shader = new HSVShader(-0.6, 0.9, 3.6);
+    background.setGraphicSize(Std.int(FlxG.width * 1.1));
     background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
     add(background);
 
-    var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, novaBeatStyle ? 0xA9040A1A : 0x78000000);
+    var dimmer:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0x78000000);
     backgroundDimmer = dimmer;
     dimmer.scrollFactor.set();
     add(dimmer);
@@ -85,30 +73,19 @@ class NovaBeatModsMenuState extends MusicBeatState
     super.onViewportResize(width, height);
     if (menuBackground != null)
     {
-      if (novaBeatStyle)
-      {
-        var scale:Float = Math.max(width / Math.max(1, menuBackground.frameWidth), height / Math.max(1, menuBackground.frameHeight));
-        menuBackground.scale.set(scale, scale);
-      }
-      else
-      {
-        menuBackground.setGraphicSize(Std.int(width * 1.1));
-      }
+      menuBackground.setGraphicSize(Std.int(width * 1.1));
       menuBackground.updateHitbox();
       menuBackground.screenCenter();
     }
     if (backgroundDimmer != null)
     {
-      backgroundDimmer.makeGraphic(width, height, novaBeatStyle ? 0xA9040A1A : 0x78000000);
+      backgroundDimmer.makeGraphic(width, height, 0x78000000);
       backgroundDimmer.setPosition(0, 0);
     }
   }
 
   function goBack():Void
   {
-    if (Preferences.menuStyle == "NovaBeat")
-      FlxG.switchState(() -> new NovaBeatMainMenuState());
-    else
-      FlxG.switchState(() -> new MainMenuState());
+    FlxG.switchState(() -> new MainMenuState());
   }
 }
