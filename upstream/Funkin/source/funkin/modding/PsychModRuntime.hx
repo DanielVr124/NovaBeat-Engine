@@ -600,7 +600,8 @@ class PsychModRuntime
                 if (rawType == null) rawType = Reflect.field(note, "type");
                 if (rawType == null) continue;
                 var typeName:String = StringTools.trim(Std.string(rawType)).toLowerCase();
-                if (typeName.length > 0 && !noteTypeNames.contains(typeName)) noteTypeNames.push(typeName);
+                if (typeName.length > 0 && !isSupportedBuiltinPsychNoteType(typeName) && !noteTypeNames.contains(typeName))
+                  noteTypeNames.push(typeName);
               }
             }
             else
@@ -1317,7 +1318,8 @@ class PsychModRuntime
           if (rawType != null && Std.isOfType(rawType, String))
           {
             var noteType:String = StringTools.trim(Std.string(rawType));
-            if (noteType.length > 0 && !hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), noteType))
+            if (noteType.length > 0 && !isSupportedBuiltinPsychNoteType(noteType)
+              && !hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), noteType))
               return "custom note type '" + noteType + "' has no matching custom_notetypes script";
           }
           if (Reflect.field(note, "g") == true || Reflect.field(note, "gfNote") == true)
@@ -1543,6 +1545,33 @@ class PsychModRuntime
     return Math.isNaN(parsed) ? null : parsed;
   }
 
+  /**
+   * Psych's legacy built-in note types that map cleanly to native V-Slice
+   * note kinds. Other Psych note types remain gated unless their custom
+   * custom_notetypes script is present.
+   */
+  static function isSupportedBuiltinPsychNoteType(name:String):Bool
+  {
+    if (name == null) return false;
+    return switch (StringTools.trim(name).toLowerCase())
+    {
+      case "alt animation", "no animation": true;
+      default: false;
+    };
+  }
+
+  /** Convert Psych display names to the built-in note-kind IDs used in gameplay. */
+  static function normalizePsychNoteType(name:String):String
+  {
+    if (name == null) return "";
+    return switch (StringTools.trim(name).toLowerCase())
+    {
+      case "alt animation": "alt";
+      case "no animation": "noanim";
+      default: name;
+    };
+  }
+
   static function collectPsychNoteTypes(noteData:Dynamic, result:Array<String>):Void
   {
     if (noteData == null) return;
@@ -1573,7 +1602,8 @@ class PsychModRuntime
         var values:Array<Dynamic> = cast note;
         if (values.length <= 3 || !Std.isOfType(values[3], String)) continue;
         var name:String = StringTools.trim(cast values[3]);
-        if (name.length > 0 && !result.contains(name.toLowerCase())) result.push(name.toLowerCase());
+        if (name.length > 0 && !isSupportedBuiltinPsychNoteType(name) && !result.contains(name.toLowerCase()))
+          result.push(name.toLowerCase());
       }
     }
   }
@@ -1617,7 +1647,7 @@ class PsychModRuntime
           if (Std.isOfType(noteType, String))
           {
             var customType:String = StringTools.trim(cast noteType);
-            if (customType.length == 0) continue;
+            if (customType.length == 0 || isSupportedBuiltinPsychNoteType(customType)) continue;
             if (!hasNamedPsychScript(Path.join([modPath, "custom_notetypes"]), customType))
               return "custom note type '" + customType + "' has no matching custom_notetypes script";
             continue;
@@ -1711,7 +1741,13 @@ class PsychModRuntime
 
       for (difficulty in importedChart.notes.keys())
       {
-        combinedNotes.set(difficulty, importedChart.getNotes(difficulty));
+        var importedNotes:Array<funkin.data.song.SongData.SongNoteData> = importedChart.getNotes(difficulty);
+        for (note in importedNotes)
+        {
+          if (note.kind != null && note.kind.length > 0)
+            note.kind = normalizePsychNoteType(note.kind);
+        }
+        combinedNotes.set(difficulty, importedNotes);
         combinedSpeeds.set(difficulty, importedChart.getScrollSpeed(difficulty));
       }
       if (combinedEvents.length == 0)
@@ -1836,6 +1872,7 @@ class PsychModRuntime
       var noteLength:Float = readPsychFloat(note, "l", 0);
       var kind:String = readPsychString(note, "k", readPsychString(note, "type", ""));
       if (kind.length == 0 && Reflect.field(note, "a") == true) kind = "alt";
+      kind = normalizePsychNoteType(kind);
       notes.push(new funkin.data.song.SongData.SongNoteData(noteTime, data, noteLength, kind));
     }
 
@@ -1932,7 +1969,8 @@ class PsychModRuntime
       var fixture:Dynamic = Json.parse(
         '{"metadata":{"songName":"NovaBeat Psych v2 Smoke Test","artist":"Test","charter":"Test","bpm":100,"speed":1,"stage":"philly"},' +
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +
-        '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true}],' +
+        '"notes":[{"t":500,"s":0,"d":1,"l":250},{"t":1000,"s":1,"d":2,"a":true},' +
+        '{"t":1250,"s":0,"d":3,"k":"Alt Animation"},{"t":1500,"s":1,"d":3,"k":"No Animation"}],' +
         '"events":[{"t":750,"e":"Add Camera Zoom","v":["0.02","0.03"]}],' +
         '"sections":[{"timeSignature":[3,4],"cameraTarget":1},{"changeBPM":true,"bpm":120,"timeSignature":[3,4],"cameraTarget":0}]}'
       );
@@ -1944,9 +1982,13 @@ class PsychModRuntime
         "smoke-test"
       );
       if (converted == null) return false;
-      if (converted.notes.length != 2) return false;
+      if (converted.notes.length != 4) return false;
       if (converted.notes[0].data != 5 || converted.notes[0].length != 250) return false;
       if (converted.notes[1].data != 2 || converted.notes[1].kind != "alt") return false;
+      if (converted.notes[2].kind != "alt" || converted.notes[3].kind != "noanim") return false;
+      if (!isSupportedBuiltinPsychNoteType("Alt Animation")
+        || !isSupportedBuiltinPsychNoteType("No Animation")
+        || isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
       if (converted.metadata.playData.stage != "phillyTrain") return false;
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
