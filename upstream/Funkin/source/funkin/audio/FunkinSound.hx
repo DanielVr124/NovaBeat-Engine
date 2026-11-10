@@ -130,6 +130,16 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
    */
   var _label:String = 'unknown';
 
+  #if web
+  // Browser song assets are emitted as external MP3 files. Track async stream
+  // loading so play requests can wait for the file instead of attempting to
+  // create a channel before its audio buffer exists.
+  var streamedLoadGeneration:Int = 0;
+  var streamedLoadPending:Bool = false;
+  var streamedStartPending:Bool = false;
+  var streamedStartTime:Float = 0;
+  #end
+
   public function new()
   {
     super();
@@ -215,6 +225,10 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
   override public function pause():FunkinSound
   {
+    #if web
+    if (streamedLoadPending) streamedStartPending = false;
+    #end
+
     if (_shouldPlay)
     {
       // This sound will eventually play, but is still at a negative timestamp.
@@ -232,6 +246,16 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
 
   override public function resume():FunkinSound
   {
+    #if web
+    if (streamedLoadPending && _sound == null && this._time >= 0)
+    {
+      streamedStartPending = true;
+      streamedStartTime = this._time;
+      _paused = false;
+      return this;
+    }
+    #end
+
     if (this._time < 0)
     {
       // Sound with negative timestamp, restart the timer.
@@ -462,11 +486,11 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
       sound._label = 'unknown';
     }
 
-    if (autoPlay) sound.play();
     sound.volume = volume;
     FlxG.sound.defaultSoundGroup.add(sound);
     sound.persist = persist;
     sound.important = important;
+    if (autoPlay) sound.play();
 
     // Make sure to add the sound to the list.
     // If it's already in, it won't get re-added.
@@ -486,11 +510,18 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
    * decoding it as a regular sound. Used only for full-length gameplay stems.
    */
   public function loadStreamedEmbedded(EmbeddedSound:Null<FlxSoundAsset>, Looped:Bool = false, AutoDestroy:Bool = false,
-      ?OnComplete:Void->Void):FunkinSound
+      ?OnComplete:Void->Void, ?OnLoad:Void->Void):FunkinSound
   {
     if (EmbeddedSound == null) return this;
 
     cleanup(true);
+    streamedLoadGeneration++;
+    final loadGeneration:Int = streamedLoadGeneration;
+    streamedLoadPending = false;
+    streamedStartPending = false;
+
+    var shouldLoadFromURL:Bool = false;
+    var assetURL:Null<String> = null;
 
     if ((EmbeddedSound is Sound))
     {
@@ -503,16 +534,87 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
     else if ((EmbeddedSound is String))
     {
       #if (openfl >= "8.0.0")
-      if (Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC))
+      final assetExists:Bool = Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC);
       #else
-      if (Assets.exists(EmbeddedSound))
+      final assetExists:Bool = Assets.exists(EmbeddedSound);
       #end
-        _sound = Assets.getMusic(EmbeddedSound);
+
+      if (assetExists)
+      {
+        // Assets.getMusic() resolves embedded MP3 bytes into a data URI. That
+        // is fragile for long tracks on mobile browsers and defeats streaming.
+        // Resolve the published file URL and let Howler load it as a real file.
+        assetURL = Assets.getPath(EmbeddedSound);
+        if (assetURL != null && assetURL != '')
+        {
+          shouldLoadFromURL = true;
+          streamedLoadPending = true;
+        }
+        else
+        {
+          // Keep the embedded-asset path as a fallback for platforms which do
+          // not expose a separately addressable file.
+          _sound = Assets.getMusic(EmbeddedSound);
+          if (_sound == null)
+            FlxG.log.error('Could not load embedded streaming music asset with ID \'$EmbeddedSound\'.');
+        }
+      }
       else
+      {
         FlxG.log.error('Could not find a streaming music asset with an ID of \'$EmbeddedSound\'.');
+      }
     }
 
-    return cast init(Looped, AutoDestroy, OnComplete);
+    final result:FunkinSound = cast init(Looped, AutoDestroy, OnComplete);
+
+    if (shouldLoadFromURL)
+    {
+      final streamURL:String = assetURL;
+      AudioBuffer.loadFromFile(streamURL)
+        .onComplete(function(buffer:AudioBuffer)
+        {
+          if (loadGeneration != streamedLoadGeneration || !exists) return;
+
+          streamedLoadPending = false;
+          if (buffer == null)
+          {
+            FlxG.log.error('The browser returned an empty audio buffer for song MP3 \'$streamURL\'.');
+            streamedStartPending = false;
+            return;
+          }
+
+          _sound = Sound.fromAudioBuffer(buffer);
+          if (_sound == null)
+          {
+            FlxG.log.error('Could not create a playable sound from song MP3 \'$streamURL\'.');
+            streamedStartPending = false;
+            return;
+          }
+
+          _sound.addEventListener(Event.ID3, gotID3);
+          _length = _sound.length;
+          endTime = _length;
+
+          if (streamedStartPending && !_paused)
+          {
+            final pendingStart:Float = streamedStartTime;
+            streamedStartPending = false;
+            startSound(pendingStart);
+          }
+
+          if (OnLoad != null) OnLoad();
+        })
+        .onError(function(error:Dynamic)
+        {
+          if (loadGeneration != streamedLoadGeneration || !exists) return;
+
+          streamedLoadPending = false;
+          streamedStartPending = false;
+          FlxG.log.error('Failed to load song MP3 \'$streamURL\': $error');
+        });
+    }
+
+    return result;
   }
   #end
 
@@ -566,6 +668,11 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
   @:nullSafety(Off)
   override public function destroy():Void
   {
+    #if web
+    streamedLoadGeneration++;
+    streamedLoadPending = false;
+    streamedStartPending = false;
+    #end
     super.destroy();
     if (fadeTween != null)
     {
@@ -580,6 +687,18 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
   @:access(openfl.media.Sound) @:access(openfl.media.SoundChannel) @:access(openfl.media.SoundMixer)
   override function startSound(startTime:Float)
   {
+    #if web
+    if (_sound == null && streamedLoadPending)
+    {
+      streamedStartPending = true;
+      streamedStartTime = startTime;
+      _time = startTime;
+      _paused = false;
+      return;
+    }
+    streamedStartPending = false;
+    #end
+
     if (!important)
     {
       super.startSound(startTime);
