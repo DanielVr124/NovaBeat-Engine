@@ -1,5 +1,7 @@
 name: NovaBeat platform build checks
 
+# [full-build-android] Verify APK compilation without HXCPP precompiled headers.
+
 # [full-build] Build Windows and Android for the current native test pass.
 # [full-build] Validate Windows and Android after Haxe/Neko tool-cache priming.
 # Reuse dependency and tool caches without clearing the restored local Haxe repository.
