@@ -91,6 +91,13 @@ class PsychFreeplayState extends MusicBeatSubState
       return;
     }
 
+    FunkinSound.playMusic('freakyMenu', {
+      overrideExisting: true,
+      restartTrack: false,
+      loop: true,
+      mapTimeChanges: false
+    });
+
     buildSongList();
     if (songs.length == 0)
     {
@@ -623,9 +630,6 @@ class PsychFreeplayState extends MusicBeatSubState
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
-    background?.setGraphicSize(width, height);
-    background?.updateHitbox();
-    background?.screenCenter();
     if (background != null)
     {
       background.setGraphicSize(width, 0);
@@ -639,12 +643,11 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomText?.setPosition(0, height - 22);
     previewBackground?.makeGraphic(Std.int(width * 0.4), 100, FlxColor.BLACK);
     previewBackground?.setPosition(width * 0.6, 0);
-    previewTitle?.setSize(width * 0.38, 24);
+    if (previewTitle != null) previewTitle.fieldWidth = width * 0.38;
     previewTitle?.setPosition(width * 0.6, 12);
-    previewTime?.setSize(width * 0.38, 20);
+    if (previewTime != null) previewTime.fieldWidth = width * 0.38;
     previewTime?.setPosition(width * 0.6, 48);
     previewBarBack?.setPosition(width * 0.6, 78);
-    previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
     previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
     previewBarFill?.setPosition(width * 0.6, 78);
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
