@@ -562,6 +562,24 @@ class Save implements ConsoleClass
   }
 
   /**
+   * Remove one song/difficulty record. Used by the Psych Freeplay reset-score
+   * confirmation; the active experience's score namespace is preserved.
+   */
+  public function removeSongScore(songId:String, difficultyId:String = 'normal', ?variation:String):Void
+  {
+    var scoreKey:String = getExperienceScopedScoreId(songId);
+    var songScores = data.scores.songs.get(scoreKey);
+    if (songScores == null) return;
+
+    if (variation != null && variation != '' && variation != 'default' && variation != 'erect')
+      difficultyId = '${difficultyId}-${variation}';
+
+    songScores.remove(difficultyId);
+    if (!songScores.keys().hasNext()) data.scores.songs.remove(scoreKey);
+    Save.system.flush();
+  }
+
+  /**
    * Only replace the ranking data for the song, because the old score is still better.
    */
   public function applySongRank(songId:String, difficultyId:String, newScoreData:SaveScoreData):Void

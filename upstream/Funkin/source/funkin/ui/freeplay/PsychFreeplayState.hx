@@ -67,6 +67,7 @@ class PsychFreeplayState extends MusicBeatSubState
   var previewPlaying:Bool = false;
   var previewPaused:Bool = false;
   var previewVocals:Array<FunkinSound> = [];
+  var previewBackground:FlxSprite;
   var previewTitle:FlxText;
   var previewTime:FlxText;
   var previewBarBack:FlxSprite;
@@ -77,8 +78,6 @@ class PsychFreeplayState extends MusicBeatSubState
   public function new()
   {
     super(FlxColor.BLACK);
-    if (!ExperienceManager.hasActivePsychSongs())
-      close();
   }
 
   override function create():Void
@@ -201,6 +200,11 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function createPreviewPanel():Void
   {
+    previewBackground = new FlxSprite(FlxG.width * 0.6, 0).makeGraphic(Std.int(FlxG.width * 0.4), 100, FlxColor.BLACK);
+    previewBackground.alpha = 0.6;
+    previewBackground.scrollFactor.set();
+    add(previewBackground);
+
     previewTitle = new FlxText(FlxG.width * 0.6, 12, FlxG.width * 0.38, '', 24);
     previewTitle.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.RIGHT);
     previewTitle.scrollFactor.set();
@@ -269,8 +273,7 @@ class PsychFreeplayState extends MusicBeatSubState
       }
       if (controls.UI_LEFT_P) seekPreview(-1000);
       if (controls.UI_RIGHT_P) seekPreview(1000);
-      if (FlxG.keys.justPressed.SPACE && previewPaused) togglePreviewPause();
-    }
+      }
     else
     {
       if (songs.length > 1)
@@ -333,8 +336,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (songs.length == 0) return;
     if (playSound) FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'), 0.4);
 
-    selected = (selected + change) % songs.length;
-    if (selected < 0) selected += songs.length;
+    selected = ((selected + change) % songs.length + songs.length) % songs.length;
     rememberedSelection = selected;
 
     var entry = songs[selected];
@@ -427,7 +429,7 @@ class PsychFreeplayState extends MusicBeatSubState
     var entry = songs[selected];
     stopPreviewAudioOnly();
 
-    entry.song.playInst(0.8, '', true);
+    entry.song.playInst(0.8, '', false);
     if (FlxG.sound.music == null || !FlxG.sound.music.exists)
     {
       FlxG.log.warn('[Psych Freeplay] Could not load preview instrumental for ' + entry.id);
@@ -455,7 +457,7 @@ class PsychFreeplayState extends MusicBeatSubState
   function updatePreview(elapsed:Float):Void
   {
     var music = FlxG.sound.music;
-    if (music == null || !music.exists)
+    if (music == null || !music.exists || (!music.playing && music.time >= music.length && music.length > 0))
     {
       stopPreview();
       return;
@@ -531,6 +533,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function setPreviewPanelVisible(value:Bool):Void
   {
+    previewBackground.visible = value;
     previewTitle.visible = value;
     previewTime.visible = value;
     previewBarBack.visible = value;
@@ -600,6 +603,8 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomText?.setPosition(0, height - 23);
     scoreText?.setSize(width - 12, 32);
     difficultyText?.setSize(width - 12, 24);
+    previewBackground?.makeGraphic(Std.int(width * 0.4), 100, FlxColor.BLACK);
+    previewBackground?.setPosition(width * 0.6, 0);
     previewTitle?.setSize(width * 0.38, 24);
     previewTitle?.setPosition(width * 0.6, 12);
     previewTime?.setSize(width * 0.38, 20);

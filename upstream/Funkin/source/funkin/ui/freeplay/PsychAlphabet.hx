@@ -95,14 +95,12 @@ class PsychAlphabet extends FlxSpriteGroup
 
   public function setMenuPosition(x:Float, y:Float):Void
   {
+    var deltaX:Float = x - this.x;
+    var deltaY:Float = y - this.y;
     this.x = x;
     this.y = y;
     for (letter in letters)
-    {
-      var offsetX = letter.x - this.x;
-      var offsetY = letter.y - this.y;
-      letter.setPosition(x + offsetX, y + offsetY);
-    }
+      letter.setPosition(letter.x + deltaX, letter.y + deltaY);
   }
 
   public function setMenuAlpha(value:Float):Void

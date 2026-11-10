@@ -43,6 +43,8 @@ class PsychModRuntime
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
   static final psychStageBaselines:Map<String, Dynamic> = [];
   static var psychWeekIds:Array<String> = [];
+  static var psychFreeplayColors:Map<String, Int> = [];
+  static var psychFreeplayIcons:Map<String, String> = [];
   static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
@@ -235,6 +237,18 @@ class PsychModRuntime
   }
 
 
+  /** Return the Psych week color for a song, or the classic purple default. */
+  public static function getPsychFreeplayColor(songId:String):Int
+  {
+    return psychFreeplayColors.get(songId) ?? 0xFF9271FD;
+  }
+
+  /** Return the week-defined icon character, falling back to the chart opponent. */
+  public static function getPsychFreeplayIcon(songId:String, fallback:String = 'face'):String
+  {
+    return psychFreeplayIcons.get(songId) ?? fallback;
+  }
+
   /**
    * Convert standard Psych weeks/<week>.json files into runtime-only native
    * Story Mode levels. The source mod files remain untouched.
@@ -244,6 +258,8 @@ class PsychModRuntime
     var loaded:Array<String> = [];
     for (oldId in psychWeekIds) LevelRegistry.instance.removePsychLevel(oldId);
     psychWeekIds = [];
+    psychFreeplayColors.clear();
+    psychFreeplayIcons.clear();
 
     #if sys
     var root:String = PolymodHandler.getModRoot();
@@ -275,8 +291,32 @@ class PsychModRuntime
               : songEntry;
             if (rawSongName == null) continue;
             var songId:Null<String> = resolvePsychWeekSongId(directory, Std.string(rawSongName));
-            if (songId != null && songIds.indexOf(songId) < 0)
-              songIds.push(songId);
+            if (songId != null)
+            {
+              if (songIds.indexOf(songId) < 0) songIds.push(songId);
+
+              if (Std.isOfType(songEntry, Array))
+              {
+                var entry:Array<Dynamic> = cast songEntry;
+                if (entry.length > 1 && entry[1] != null && !psychFreeplayIcons.exists(songId))
+                  psychFreeplayIcons.set(songId, Std.string(entry[1]));
+
+                if (entry.length > 2 && Std.isOfType(entry[2], Array) && !psychFreeplayColors.exists(songId))
+                {
+                  var rgb:Array<Dynamic> = cast entry[2];
+                  if (rgb.length >= 3)
+                  {
+                    var red:Int = Std.int(Std.parseInt(Std.string(rgb[0])) ?? 146);
+                    var green:Int = Std.int(Std.parseInt(Std.string(rgb[1])) ?? 113);
+                    var blue:Int = Std.int(Std.parseInt(Std.string(rgb[2])) ?? 253);
+                    red = Std.int(Math.max(0, Math.min(255, red)));
+                    green = Std.int(Math.max(0, Math.min(255, green)));
+                    blue = Std.int(Math.max(0, Math.min(255, blue)));
+                    psychFreeplayColors.set(songId, 0xFF000000 | (red << 16) | (green << 8) | blue);
+                  }
+                }
+              }
+            }
           }
           if (songIds.length == 0) continue;
 
