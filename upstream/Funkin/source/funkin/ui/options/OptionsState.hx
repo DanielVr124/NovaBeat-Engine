@@ -51,8 +51,6 @@ class OptionsState extends MusicBeatState
 
   public var drumsBG:FunkinSound;
   var menuBackground:Null<FlxSprite> = null;
-  var backgroundDimmer:Null<FlxSprite> = null;
-  var isNovaBeatStyle:Bool = false;
 
   public static var rememberedSelectedIndex:Int = 0;
 
@@ -64,7 +62,6 @@ class OptionsState extends MusicBeatState
 
     drumsBG = FunkinSound.load(Paths.music('offsetsLoop/drumsLoop'), 0, true, false, false, false);
 
-    isNovaBeatStyle = false;
     var menuBG = new FlxSprite().loadGraphic(Paths.image('menuBG'));
     menuBackground = menuBG;
     var hsv = new HSVShader(-0.6, 0.9, 3.6);
@@ -132,16 +129,6 @@ class OptionsState extends MusicBeatState
     }
 
     super.create();
-
-    if (novaBeatStyle)
-    {
-      FunkinSound.playMusic('novabeat-menu', {
-        overrideExisting: true,
-        restartTrack: false,
-        persist: true,
-        mapTimeChanges: false
-      });
-    }
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
@@ -216,22 +203,9 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   var camFocusPoint:FlxObject;
   final CAMERA_MARGIN:Int = 150;
 
-  var novaBeatLayout:Bool = false;
-  var novaBeatListX:Float = 0;
-  var novaBeatListY:Float = 0;
-  var novaBeatListWidth:Float = 0;
-  var novaBeatRowHeight:Float = 52;
-  var novaBeatDescription:Null<FlxText> = null;
-  var novaBeatRowBackgrounds:Array<FlxSprite> = [];
-  var novaBeatRowAccents:Array<FlxSprite> = [];
-  var novaBeatRowLabels:Array<FlxText> = [];
-
   public function new()
   {
     super();
-
-    novaBeatLayout = false;
-    if (novaBeatLayout) buildNovaBeatLayout();
 
     add(items = new TextMenuList());
     // FNF options/submenus should activate on the first mobile tap rather
@@ -317,193 +291,9 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     camFocusPoint = new FlxObject(0, 0, 140, 70);
     add(camFocusPoint);
 
-    if (novaBeatLayout)
-    {
-      items.onChange.add(updateNovaBeatSelection);
-      layoutNovaBeatItems();
-      items.selectItem(0);
-      updateNovaBeatSelection(items.members[0]);
-    }
-    else
-    {
-      FlxG.camera.follow(camFocusPoint, null, 0.085);
-      FlxG.camera.deadzone.set(0, CAMERA_MARGIN / 2, FlxG.camera.width, FlxG.camera.height - CAMERA_MARGIN + 40);
-      items.onChange.add(onMenuChange);
-      onMenuChange(items.members[0]);
-    }
-
     #if FEATURE_TOUCH_CONTROLS
     FlxG.touches.swipeThreshold.y = 100;
     #end
-  }
-
-  function buildNovaBeatLayout():Void
-  {
-    var width:Float = FlxG.width;
-    var height:Float = FlxG.height;
-    var margin:Float = Math.max(20, width * 0.045);
-    var panelTop:Float = 96;
-    var panelHeight:Float = Math.max(170, height - 124);
-    var compactLayout:Bool = width < 950 || height > width * 1.12;
-
-    if (compactLayout)
-    {
-      var panel:FlxSprite = new FlxSprite(margin, panelTop);
-      panel.makeGraphic(Std.int(width - margin * 2), Std.int(panelHeight), 0xC9091833);
-      add(panel);
-
-      var brand:FlxText = new FlxText(margin + 20, 18, width - margin * 2 - 40, 'NOVABEAT ENGINE', 11);
-      brand.setFormat(Paths.font('vcr.ttf'), 11, 0xFF48E7FF);
-      add(brand);
-
-      var heading:FlxText = new FlxText(margin + 20, 42, width - margin * 2 - 40, 'OPTIONS', 27);
-      heading.setFormat(Paths.font('vcr.ttf'), 27, FlxColor.WHITE);
-      add(heading);
-
-      var intro:FlxText = new FlxText(margin + 22, panelTop + 16, width - margin * 2 - 44,
-        'SELECT A SECTION', 11);
-      intro.setFormat(Paths.font('vcr.ttf'), 11, 0xFF48E7FF);
-      add(intro);
-
-      novaBeatDescription = new FlxText(margin + 22, panelTop + 42, width - margin * 2 - 44,
-        'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 11);
-      novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 11, 0xFFB7C9E8);
-      novaBeatDescription.visible = false;
-      novaBeatDescription.wordWrap = true;
-      novaBeatDescription.autoSize = false;
-      add(novaBeatDescription);
-
-      novaBeatListX = margin + 16;
-      novaBeatListY = panelTop + 102;
-      novaBeatListWidth = width - margin * 2 - 32;
-
-      var footer:FlxText = new FlxText(margin + 20, height - 28, width - margin * 2 - 40,
-        'UP / DOWN SELECT   •   ENTER OPEN   •   ESC BACK', 9);
-      footer.setFormat(Paths.font('vcr.ttf'), 9, 0xFF8297C2);
-      add(footer);
-    }
-    else
-    {
-      var leftWidth:Float = width * 0.36;
-      var rightX:Float = width * 0.435;
-      var rightWidth:Float = width * 0.515;
-
-      var leftPanel:FlxSprite = new FlxSprite(margin, panelTop);
-      leftPanel.makeGraphic(Std.int(leftWidth), Std.int(panelHeight), 0xC9091833);
-      add(leftPanel);
-
-      var rightPanel:FlxSprite = new FlxSprite(rightX, panelTop);
-      rightPanel.makeGraphic(Std.int(rightWidth), Std.int(panelHeight), 0xC9091833);
-      add(rightPanel);
-
-      var brand:FlxText = new FlxText(margin + 28, 25, leftWidth - 48, 'NOVABEAT ENGINE', 12);
-      brand.setFormat(Paths.font('vcr.ttf'), 12, 0xFF48E7FF);
-      add(brand);
-
-      var heading:FlxText = new FlxText(margin + 28, 54, leftWidth - 48, 'OPTIONS', 34);
-      heading.setFormat(Paths.font('vcr.ttf'), 34, FlxColor.WHITE);
-      add(heading);
-
-      var intro:FlxText = new FlxText(margin + 28, panelTop + 34, leftWidth - 56,
-        'MAKE THE GAME FEEL RIGHT.', 15);
-      intro.setFormat(Paths.font('vcr.ttf'), 15, 0xFF48E7FF);
-      add(intro);
-
-      novaBeatDescription = new FlxText(margin + 28, panelTop + 84, leftWidth - 56,
-        'Choose a section to adjust preferences, controls, and the NovaBeat presentation.', 15);
-      novaBeatDescription.setFormat(Paths.font('vcr.ttf'), 15, 0xFFB7C9E8);
-      novaBeatDescription.visible = false;
-      novaBeatDescription.wordWrap = true;
-      novaBeatDescription.autoSize = false;
-      add(novaBeatDescription);
-
-      var footer:FlxText = new FlxText(margin + 28, panelTop + panelHeight - 55, leftWidth - 56,
-        'UP / DOWN   SELECT\nENTER   OPEN   •   ESC   BACK', 11);
-      footer.setFormat(Paths.font('vcr.ttf'), 11, 0xFF8297C2);
-      add(footer);
-
-      novaBeatListX = rightX + 24;
-      novaBeatListY = panelTop + 26;
-      novaBeatListWidth = rightWidth - 48;
-    }
-
-    novaBeatRowHeight = 52;
-  }
-
-  function layoutNovaBeatItems():Void
-  {
-    if (!novaBeatLayout || items.length <= 0) return;
-
-    var count:Int = items.length;
-    var bottomReserve:Float = 30;
-    novaBeatRowHeight = Math.min(58, (FlxG.height - novaBeatListY - bottomReserve) / count);
-    novaBeatRowHeight = Math.max(30, novaBeatRowHeight);
-
-    for (index in 0...count)
-    {
-      var y:Float = novaBeatListY + index * novaBeatRowHeight;
-      var item:TextMenuItem = items.members[index];
-      item.x = novaBeatListX + 8;
-      item.y = y + 3;
-      item.setGraphicSize(Std.int(novaBeatListWidth - 16), Std.int(novaBeatRowHeight - 6));
-      item.updateHitbox();
-
-      if (index < novaBeatRowBackgrounds.length)
-      {
-        novaBeatRowBackgrounds[index].x = novaBeatListX;
-        novaBeatRowBackgrounds[index].y = y;
-        novaBeatRowBackgrounds[index].setGraphicSize(Std.int(novaBeatListWidth), Std.int(novaBeatRowHeight - 5));
-        novaBeatRowBackgrounds[index].updateHitbox();
-
-        novaBeatRowAccents[index].x = novaBeatListX;
-        novaBeatRowAccents[index].y = y + 7;
-        novaBeatRowAccents[index].setGraphicSize(4, Std.int(novaBeatRowHeight - 19));
-        novaBeatRowAccents[index].updateHitbox();
-
-        novaBeatRowLabels[index].x = novaBeatListX + 20;
-        novaBeatRowLabels[index].y = y + (novaBeatRowHeight - novaBeatRowLabels[index].height) * 0.5;
-        novaBeatRowLabels[index].width = novaBeatListWidth - 42;
-      }
-    }
-    updateNovaBeatRows();
-  }
-
-  function updateNovaBeatSelection(selected:TextMenuItem):Void
-  {
-    // Selection is conveyed by the highlighted row; NovaBeat does not show
-    // a changing description block above the menu.
-    updateNovaBeatRows();
-  }
-
-  function updateNovaBeatRows():Void
-  {
-    for (index in 0...novaBeatRowLabels.length)
-    {
-      var selected:Bool = index == items.selectedIndex;
-      novaBeatRowBackgrounds[index].color = selected ? 0xFF123B5C : 0xFF0D1935;
-      novaBeatRowBackgrounds[index].alpha = selected ? 1.0 : 0.78;
-      novaBeatRowAccents[index].alpha = selected ? 1.0 : 0.36;
-      novaBeatRowLabels[index].color = selected ? FlxColor.WHITE : 0xFFB9C8E3;
-    }
-  }
-
-  function novaBeatDescriptionFor(name:String):String
-  {
-    return switch (name)
-    {
-      case 'PREFERENCES': 'Audio, gameplay, accessibility, and general engine preferences live here.';
-      case 'CUSTOMIZATION': 'Adjust performance settings and mobile controls.';
-      case 'CONTROLS': 'View and remap your keyboard, controller, and supported input bindings.';
-      case 'LAG ADJUSTMENT': 'Calibrate audio and visual timing to match your display and speakers.';
-      case 'RESTORE PURCHASES': 'Restore supported purchases linked to your platform account.';
-      case 'OPEN DATA FOLDER': 'Open the local game data folder to manage supported files.';
-      case 'LOGIN TO NG': 'Connect to your Newgrounds account for supported online features.';
-      case 'LOGOUT OF NG': 'Sign out of the currently connected Newgrounds account.';
-      case 'SAVE DATA OPTIONS': 'Manage save slots and other save-data actions.';
-      case 'CLEAR SAVE DATA': 'Clear the current save data after reviewing the confirmation prompt.';
-      case 'EXIT': 'Return to the main menu.';
-      default: 'Open this section to view its available settings.';
-    };
   }
 
   public function addSaveDataOptionsItem(saveDataMenu:SaveDataMenu):Void
@@ -519,7 +309,6 @@ class OptionsMenu extends Page<OptionsMenuPageName>
     {
       createItem('CLEAR SAVE DATA', saveDataMenu.openSaveDataPrompt);
     }
-    layoutNovaBeatItems();
   }
 
   public function addExitItem():Void
@@ -543,7 +332,6 @@ class OptionsMenu extends Page<OptionsMenuPageName>
       createItem('EXIT', exit);
     }
     #end
-    layoutNovaBeatItems();
   }
 
   function onMenuChange(selected:TextMenuItem):Void
@@ -553,38 +341,6 @@ class OptionsMenu extends Page<OptionsMenuPageName>
 
   function createItem(name:String, callback:Void->Void, fireInstantly = false):TextMenuItem
   {
-    if (novaBeatLayout)
-    {
-      var index:Int = items.length;
-      var y:Float = novaBeatListY + index * novaBeatRowHeight;
-      var item:TextMenuItem = items.createItem(novaBeatListX + 8, y + 3, name, BOLD, callback);
-      // NovaBeat draws each row label separately from this transparent
-      // TextMenuItem hit target. Avoid a delayed invisible flicker on confirm.
-      item.fireInstantly = fireInstantly || novaBeatLayout;
-      item.makeGraphic(Std.int(novaBeatListWidth - 16), Std.int(novaBeatRowHeight - 6), FlxColor.TRANSPARENT);
-      item.updateHitbox();
-      item.atlasText.visible = false;
-
-      var rowBg:FlxSprite = new FlxSprite(novaBeatListX, y);
-      rowBg.makeGraphic(Std.int(novaBeatListWidth), Std.int(novaBeatRowHeight - 5), 0xFF0D1935);
-      add(rowBg);
-      novaBeatRowBackgrounds.push(rowBg);
-
-      var accent:FlxSprite = new FlxSprite(novaBeatListX, y + 7);
-      accent.makeGraphic(4, Std.int(novaBeatRowHeight - 19), 0xFF48E7FF);
-      add(accent);
-      novaBeatRowAccents.push(accent);
-
-      var fontSize:Int = Std.int(Math.max(11, Math.min(18, novaBeatRowHeight * 0.34)));
-      var label:FlxText = new FlxText(novaBeatListX + 20, y + 8, novaBeatListWidth - 42, name, fontSize);
-      label.setFormat(Paths.font('vcr.ttf'), fontSize, 0xFFB9C8E3, FlxTextAlign.LEFT);
-      add(label);
-      novaBeatRowLabels.push(label);
-
-      layoutNovaBeatItems();
-      return item;
-    }
-
     var item = items.createItem(0, 100 + items.length * 100, name, BOLD, callback);
     item.fireInstantly = fireInstantly;
     item.screenCenter(X);
@@ -595,38 +351,6 @@ class OptionsMenu extends Page<OptionsMenuPageName>
   {
     super.onViewportResize(width, height);
     if (width <= 0 || height <= 0) return;
-    if (novaBeatLayout)
-    {
-      var margin:Float = Math.max(18, width * 0.045);
-      var panelTop:Float = 96;
-      novaBeatListX = margin + 16;
-      novaBeatListY = panelTop + (height > width * 1.12 ? 128 : 102);
-      novaBeatListWidth = width - margin * 2 - 32;
-      if (novaBeatDescription != null)
-      {
-        novaBeatDescription.x = margin + 22;
-        novaBeatDescription.y = panelTop + 42;
-        novaBeatDescription.fieldWidth = width - margin * 2 - 44;
-        novaBeatDescription.size = height > width * 1.12 ? 10 : 12;
-      }
-      layoutNovaBeatItems();
-    }
-    else
-    {
-      var portrait:Bool = height > width * 1.12;
-      var startY:Float = portrait ? height * 0.19 : 100;
-      var gap:Float = portrait ? Math.min(78, (height * 0.60) / Math.max(1, items.length)) : 100;
-      for (index in 0...items.members.length)
-      {
-        var item:TextMenuItem = items.members[index];
-        item.y = startY + index * gap;
-        item.x = 0;
-        item.screenCenter(X);
-      }
-      if (camFocusPoint != null && items.selectedItem != null) camFocusPoint.y = items.selectedItem.y;
-      FlxG.camera.deadzone.set(0, portrait ? height * 0.16 : CAMERA_MARGIN / 2,
-        width, portrait ? height * 0.66 : height - CAMERA_MARGIN + 40);
-    }
     #if FEATURE_TOUCH_CONTROLS
     if (backButton != null)
       backButton.setPosition(width - backButton.width - 18, height - backButton.height - 18);
