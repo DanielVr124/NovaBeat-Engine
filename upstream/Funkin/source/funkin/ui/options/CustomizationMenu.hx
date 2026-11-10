@@ -32,8 +32,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var itemDesc:FlxText;
   var itemDescBox:FunkinSprite;
   var categoryItems:Array<TextMenuItem> = [];
-  var categoryLabels:Array<FlxText> = [];
-  var novaBeatStyle:Bool = false;
   #if FEATURE_TOUCH_CONTROLS
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -50,8 +48,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.bgColor = 0x0;
     camera = menuCamera;
 
-    novaBeatStyle = false;
-
     items = new TextMenuList();
     // The category list is rendered through menuCamera. Assign that camera
     // directly to the list so MenuTypedList's mobile pointer hit-tests use
@@ -60,7 +56,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
-    var itemY:Float = novaBeatStyle ? 112 : 30;
+    var itemY:Float = 30;
     var performanceItem:TextMenuItem = items.createItem(0, itemY, 'PERFORMANCE', AtlasFont.BOLD, function()
     {
       codex.switchPage(Performance);
@@ -68,7 +64,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     performanceItem.screenCenter(X);
     performanceItem.cameras = [menuCamera];
     categoryItems.push(performanceItem);
-    if (novaBeatStyle) styleNovaBeatCategory(performanceItem, 'PERFORMANCE');
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
@@ -80,22 +75,10 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     mobileItem.screenCenter(X);
     mobileItem.cameras = [menuCamera];
     categoryItems.push(mobileItem);
-    if (novaBeatStyle) styleNovaBeatCategory(mobileItem, 'MOBILE');
     }
     #end
 
-    if (novaBeatStyle)
-    {
-      camFollow = new FlxObject(FlxG.width / 2, itemY, 140, 70);
-      menuCamera.follow(camFollow, null, 0.085);
-      menuCamera.deadzone.set(0, FlxG.height * 0.14, menuCamera.width, FlxG.height * 0.72);
-      menuCamera.minScrollY = 0;
-      layoutNovaBeatCategoryItems(FlxG.width, FlxG.height);
-    }
-    else
-    {
-      layoutFNFCategoryItems(FlxG.width, FlxG.height);
-    }
+    layoutFNFCategoryItems(FlxG.width, FlxG.height);
 
     itemDescBox = new FunkinSprite();
     itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
@@ -115,24 +98,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     itemDescBox.setGraphicSize(Std.int(itemDesc.width + 20), Std.int(itemDesc.height + 25));
     itemDescBox.updateHitbox();
     add(itemDesc);
-
-    if (novaBeatStyle)
-    {
-      itemDesc.visible = false;
-      itemDescBox.visible = false;
-    }
-    else
-    {
-      items.onChange.add(function(selected:TextMenuItem)
-      {
-        itemDesc.text = switch (items.selectedIndex)
-        {
-          case 1: 'Configure device orientation and other mobile-specific behavior.';
-          default: 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.';
-        };
-      });
-    }
-
 
     #if FEATURE_TOUCH_CONTROLS
     if (DeviceUtil.isMobileBrowser)
@@ -181,59 +146,6 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
   }
 
-  function styleNovaBeatCategory(item:TextMenuItem, labelText:String):Void
-  {
-    // Retain the native TextMenuItem as the focusable hit target, but replace
-    // its FNF atlas lettering with NovaBeat's clean sans-serif label.
-    // The visible label is separate, so do not flicker the transparent hitbox
-    // for a full second before switching customization categories.
-    item.fireInstantly = true;
-    item.atlasText.visible = false;
-    item.makeGraphic(FlxG.width, 62, 0x00000000);
-    item.setPosition(0, item.y);
-    item.updateHitbox();
-
-    var label:FlxText = new FlxText(0, item.y + 8, FlxG.width, labelText, 25);
-    label.setFormat("Arial Black", 25, 0xFFDCEBFF, FlxTextAlign.CENTER);
-    label.cameras = [menuCamera];
-    label.scrollFactor.copyFrom(item.scrollFactor);
-    add(label);
-    categoryLabels.push(label);
-  }
-
-  function layoutNovaBeatCategoryItems(width:Int, height:Int):Void
-  {
-    if (width <= 0 || height <= 0 || categoryItems.length == 0) return;
-
-    var portrait:Bool = height > width * 1.12;
-    var availableTop:Float = Math.max(76, height * 0.12);
-    var availableBottom:Float = height * 0.84;
-    var availableHeight:Float = Math.max(100, availableBottom - availableTop);
-    var gap:Float = portrait ? Math.min(110, availableHeight / Math.max(1, categoryItems.length)) : 112;
-    var rowHeight:Float = 62;
-    var groupHeight:Float = rowHeight + Math.max(0, categoryItems.length - 1) * gap;
-    var startY:Float = availableTop + Math.max(0, (availableHeight - groupHeight) * 0.5);
-
-    for (index in 0...categoryItems.length)
-    {
-      var item:TextMenuItem = categoryItems[index];
-      item.scale.set(portrait ? 0.86 : 1.0, portrait ? 0.86 : 1.0);
-      item.setPosition(0, startY + index * gap);
-      item.makeGraphic(width, Std.int(rowHeight), 0x00000000);
-      item.updateHitbox();
-
-      if (index < categoryLabels.length)
-      {
-        var label:FlxText = categoryLabels[index];
-        label.setPosition(0, item.y + 8);
-        label.fieldWidth = width;
-        label.size = portrait ? 22 : 25;
-      }
-    }
-
-    if (camFollow != null) camFollow.setPosition(width * 0.5, height * 0.5);
-  }
-
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
@@ -241,28 +153,17 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     menuCamera.setSize(width, height);
     hudCamera.setSize(width, height);
     var portrait:Bool = height > width * 1.12;
-    if (novaBeatStyle)
-    {
-      layoutNovaBeatCategoryItems(width, height);
-      menuCamera.deadzone.set(0, height * 0.14, width, height * 0.72);
-    }
-    else
-    {
-      layoutFNFCategoryItems(width, height);
-    }
-    if (!novaBeatStyle)
-    {
-      itemDesc.visible = true;
-      itemDescBox.visible = true;
-      itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 18 : 32, FlxColor.WHITE,
-        FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-      itemDesc.fieldWidth = Math.max(160, width - (portrait ? 36 : 120));
-      itemDesc.x = (width - itemDesc.fieldWidth) * 0.5;
-      itemDesc.y = portrait ? height * 0.78 : height * 0.76;
-      itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
-      itemDescBox.setGraphicSize(Std.int(itemDesc.fieldWidth + 20), Std.int(itemDesc.height + 22));
-      itemDescBox.updateHitbox();
-    }
+    layoutFNFCategoryItems(width, height);
+    itemDesc.visible = true;
+    itemDescBox.visible = true;
+    itemDesc.setFormat(Paths.font('vcr.ttf'), portrait ? 18 : 32, FlxColor.WHITE,
+      FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    itemDesc.fieldWidth = Math.max(160, width - (portrait ? 36 : 120));
+    itemDesc.x = (width - itemDesc.fieldWidth) * 0.5;
+    itemDesc.y = portrait ? height * 0.78 : height * 0.76;
+    itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
+    itemDescBox.setGraphicSize(Std.int(itemDesc.fieldWidth + 20), Std.int(itemDesc.height + 22));
+    itemDescBox.updateHitbox();
     #if FEATURE_TOUCH_CONTROLS
     if (responsiveBackButton != null)
       responsiveBackButton.setPosition(width - responsiveBackButton.width - 18, height - responsiveBackButton.height - 18);
@@ -273,15 +174,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   {
     super.update(elapsed);
 
-    if (novaBeatStyle && camFollow != null && items != null && items.selectedItem != null)
-      camFollow.y = items.selectedItem.y;
-    else if (!novaBeatStyle)
-      layoutFNFCategoryItems(FlxG.width, FlxG.height);
-    if (novaBeatStyle)
-    {
-      for (index in 0...categoryLabels.length)
-        categoryLabels[index].color = index == items.selectedIndex ? FlxColor.WHITE : 0xFFB7C9E8;
-    }
+    layoutFNFCategoryItems(FlxG.width, FlxG.height);
   }
 
   override function destroy():Void
