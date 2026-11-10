@@ -969,15 +969,8 @@ class PlayState extends MusicBeatSubState
     // Reset the camera's zoom and force it to focus on the camera follow point.
     resetCamera();
 
-    // Psych's post-create callback runs after the stage, chart, and note lanes
-    // exist, but before countdown callbacks begin.
-    PsychScriptRuntime.dispatch("onCreatePost", []);
-
-    // Call a script event to start the countdown.
-    // Songs with cutscenes should call event.cancel().
-    // As long as they call `PlayState.instance.startCountdown()` later, the countdown will start.
-    startCountdown();
-
+    // The Psych post-create callback is dispatched after all scene children
+    // are initialized, immediately before the countdown begins.
     // Create the pause button.
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (isMobileTouchDevice()) initPauseSprites();
@@ -1004,10 +997,13 @@ class PlayState extends MusicBeatSubState
     // and it's important to call it last so all elements get affected.
     refresh();
 
-    // Global and song-local scripts have already loaded before the countdown.
-    // Run post-create only after the state and all scene children are fully created.
+    // Psych's onCreatePost callback must run once, after the state and its
+    // scene children are fully initialized, and before countdown callbacks.
     if (PsychScriptRuntime.getScriptPaths().length > 0)
       PsychScriptRuntime.dispatch("onCreatePost", []);
+
+    // Start the countdown after onCreatePost so mods can cancel or defer it.
+    startCountdown();
   }
 
   public function togglePauseButton(visible:Bool = false):Void
