@@ -2085,6 +2085,7 @@ class PsychModRuntime
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
       if (resolvePsychStage("a-custom-psych-stage", "smoke-test") != Constants.DEFAULT_STAGE) return false;
+      if (!runNestedPackageRootSmokeTest()) return false;
       return true;
     }
     catch (error:Dynamic)
@@ -2095,6 +2096,63 @@ class PsychModRuntime
     #else
     return false;
     #end
+  }
+
+  /**
+   * Regression test for mods extracted as an archive wrapper containing
+   * mods/<actual-mod>/. This mirrors the folder shape already accepted by
+   * EngineBridge's Psych detector and verifies the runtime resolves the same
+   * inner package root before scanning charts.
+   */
+  static function runNestedPackageRootSmokeTest():Bool
+  {
+    var tempParent:Null<String> = Sys.getEnv("TEMP");
+    if (tempParent == null || tempParent.length == 0) tempParent = Sys.getEnv("TMPDIR");
+    if (tempParent == null || tempParent.length == 0) tempParent = Sys.getCwd();
+
+    var tempRoot:String = Path.join([tempParent, "novabeat-psych-smoke-" + Std.string(Std.random(0x7FFFFFFF))]);
+    var wrappedRoot:String = Path.join([tempRoot, "mods", "wrapped"]);
+    var contentRoot:String = Path.join([wrappedRoot, "mods", "actual-mod"]);
+    var chartFolder:String = Path.join([contentRoot, "data", "smoke-song"]);
+
+    try
+    {
+      createSmokeDirectoryTree(chartFolder);
+      File.saveContent(Path.join([chartFolder, "smoke-song.json"]),
+        '{"song":{"song":"smoke-song","notes":[],"bpm":100}}');
+
+      var resolved:String = resolvePsychContentRoot(wrappedRoot);
+      return Path.normalize(resolved) == Path.normalize(contentRoot);
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Nested package root smoke test failed: ' + Std.string(error));
+      return false;
+    }
+    finally
+    {
+      deleteSmokeDirectoryTree(tempRoot);
+    }
+  }
+
+  static function createSmokeDirectoryTree(path:String):Void
+  {
+    if (path == null || path.length == 0 || FileSystem.exists(path)) return;
+    var parent:String = Path.directory(path);
+    if (parent != null && parent.length > 0 && parent != path) createSmokeDirectoryTree(parent);
+    if (!FileSystem.exists(path)) FileSystem.createDirectory(path);
+  }
+
+  static function deleteSmokeDirectoryTree(path:String):Void
+  {
+    if (path == null || path.length == 0 || !FileSystem.exists(path) || !FileSystem.isDirectory(path)) return;
+    for (entry in FileSystem.readDirectory(path))
+    {
+      var child:String = Path.join([path, entry]);
+      if (FileSystem.isDirectory(child)) deleteSmokeDirectoryTree(child);
+      else FileSystem.deleteFile(child);
+    }
+    FileSystem.deleteDirectory(path);
   }
 
   static function findAudioFolder(modPath:String, songFolder:String):Null<String>
