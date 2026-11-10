@@ -1881,6 +1881,7 @@ class PsychModRuntime
           chartRoot, source.dataPath, difficultyName, source.songFolder
         );
         if (importedV2 == null) continue;
+        hasPsychSectionStates = true;
         if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
         {
@@ -2098,12 +2099,14 @@ class PsychModRuntime
     if (Std.isOfType(sections, Array))
     {
       var lastCameraChar:Int = -1;
-      for (section in (cast sections:Array<Dynamic>))
+      var sectionList:Array<Dynamic> = cast sections;
+      for (sectionIndex in 0...sectionList.length)
       {
+        var section:Dynamic = sectionList[sectionIndex];
         if (section == null) continue;
         events.push(new SongEventData(sectionStart, "PsychCompatibilityEvent", {
           name: "__PsychSectionState",
-          curSection: (cast sections:Array<Dynamic>).indexOf(section),
+          curSection: sectionIndex,
           mustHitSection: Reflect.field(section, "mustHitSection") == true,
           altAnim: Reflect.field(section, "altAnim") == true,
           gfSection: Reflect.field(section, "gfSection") == true
@@ -2218,7 +2221,13 @@ class PsychModRuntime
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
       if (converted.metadata.timeChanges[1].bpm != 120) return false;
-      if (converted.events.length != 4) return false;
+      if (converted.events.length != 6) return false;
+      var v2SectionState:Null<SongEventData> = converted.events.find(function(event:SongEventData)
+      {
+        return Reflect.field(event.value, "name") == "__PsychSectionState"
+          && Reflect.field(event.value, "curSection") == 1;
+      });
+      if (v2SectionState == null || v2SectionState.time != 1800) return false;
       if (!isSupportedBuiltinPsychEvent("Change Scroll Speed")) return false;
       if (getPsychNoteTypeName("psychhey") != "Hey!"
         || getPsychNoteTypeName("psychgfsing") != "GF Sing"
@@ -2262,6 +2271,17 @@ class PsychModRuntime
       ];
       applyPsychGFSectionOwnership(legacyGFSections, legacyGFNotes);
       if (legacyGFNotes[0].kind != "psychgfsection" || legacyGFNotes[1].kind != "psychgfsectionalt") return false;
+
+      var legacySectionEvents:Array<SongEventData> = [];
+      appendPsychSectionStateEvents([
+        {mustHitSection: true, altAnim: true, gfSection: false, lengthInSteps: 8},
+        {mustHitSection: false, altAnim: false, gfSection: true, lengthInSteps: 16, changeBPM: true, bpm: 200}
+      ], 100, legacySectionEvents);
+      if (legacySectionEvents.length != 2 || legacySectionEvents[1].time != 1200) return false;
+      if (Reflect.field(legacySectionEvents[0].value, "mustHitSection") != true
+        || Reflect.field(legacySectionEvents[0].value, "altAnim") != true
+        || Reflect.field(legacySectionEvents[1].value, "gfSection") != true
+        || Reflect.field(legacySectionEvents[1].value, "curSection") != 1) return false;
 
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
