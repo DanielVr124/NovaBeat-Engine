@@ -188,10 +188,18 @@ class MainMenuState extends MusicBeatState
         }
       }
 
-      openSubState(new FreeplayState({
-        character: targetCharacter,
-        psychOnly: ExperienceManager.hasActivePsychSongs()
-      }));
+      // Psych replaces the existing Freeplay destination only while the active
+      // experience has imported Psych songs. V-Slice Freeplay remains untouched.
+      if (ExperienceManager.hasActivePsychSongs())
+      {
+        openSubState(new funkin.ui.freeplay.PsychFreeplayState());
+      }
+      else
+      {
+        openSubState(new FreeplayState({
+          character: targetCharacter
+        }));
+      }
     });
 
     // Use the uploaded Sparrow atlas. mods.xml must export the "mods idle"
