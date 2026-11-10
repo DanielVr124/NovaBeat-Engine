@@ -1162,6 +1162,24 @@ class PsychModRuntime
     };
   }
 
+  /**
+   * Return the Psych-facing display label for an internally normalized
+   * built-in note kind. Keep private engine IDs out of Lua callback arguments.
+   */
+  public static function getPsychNoteTypeName(noteType:Null<String>):String
+  {
+    if (noteType == null) return "";
+    return switch (StringTools.trim(noteType).toLowerCase())
+    {
+      case "alt": "Alt Animation";
+      case "noanim": "No Animation";
+      case "psychhey": "Hey!";
+      case "psychgfsing": "GF Sing";
+      case "psychhurt": "Hurt Note";
+      default: noteType;
+    };
+  }
+
   #if sys
   static function scanSongSources(modPath:String):Array<PsychSongSource>
   {
@@ -1543,24 +1561,6 @@ class PsychModRuntime
     if (value == null) return null;
     var parsed:Float = Std.parseFloat(Std.string(value));
     return Math.isNaN(parsed) ? null : parsed;
-  }
-
-  /**
-   * Return the Psych-facing display label for an internally normalized
-   * built-in note kind. Keep private engine IDs out of Lua callback arguments.
-   */
-  public static function getPsychNoteTypeName(noteType:Null<String>):String
-  {
-    if (noteType == null) return "";
-    return switch (StringTools.trim(noteType).toLowerCase())
-    {
-      case "alt": "Alt Animation";
-      case "noanim": "No Animation";
-      case "psychhey": "Hey!";
-      case "psychgfsing": "GF Sing";
-      case "psychhurt": "Hurt Note";
-      default: noteType;
-    };
   }
 
   /**
