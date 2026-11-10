@@ -3,7 +3,6 @@ package funkin.ui.options;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxObject;
-import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -265,14 +264,6 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     onExit.dispatch();
   }
 
-  function makeLabel(x:Float, y:Float, width:Float, value:String, size:Int, color:FlxColor):FlxText
-  {
-    var label:FlxText = new FlxText(x, y, width, value, size);
-    label.setFormat(Paths.font('vcr.ttf'), size, color, FlxTextAlign.LEFT);
-    label.scrollFactor.set();
-    return label;
-  }
-
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
@@ -284,8 +275,6 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     }
 
     if (!enabled || optionRows.length == 0) return;
-
-    #end
 
     if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
     if (controls.UI_RIGHT_P || SwipeUtil.swipeRight) adjustSelected(1);
