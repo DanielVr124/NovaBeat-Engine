@@ -2513,6 +2513,22 @@ class PsychGameplayApi
         return (cast character:BaseCharacter).getPsychImageFile();
     }
 
+    var currentAnimationSuffix:String = ".animation.curanim.name";
+    if (StringTools.endsWith(lowerPath, currentAnimationSuffix))
+    {
+      var characterPath:String = path.substr(0, path.length - currentAnimationSuffix.length);
+      var character:Dynamic = getProperty(state, characterPath, allowMaps);
+      if (Std.isOfType(character, BaseCharacter))
+      {
+        var animationName:String = (cast character:BaseCharacter).getCurrentAnimation();
+        // NovaBeat uses a separate hold animation suffix; Psych keeps the
+        // base sing animation name while a note is being sustained.
+        if (StringTools.endsWith(animationName, Constants.ANIMATION_HOLD_SUFFIX))
+          animationName = animationName.substr(0, animationName.length - Constants.ANIMATION_HOLD_SUFFIX.length);
+        return animationName;
+      }
+    }
+
     var frameNameSuffix:String = ".animation.framename";
     if (StringTools.endsWith(lowerPath, frameNameSuffix))
     {
@@ -2612,6 +2628,14 @@ class PsychGameplayApi
         return getStageCharacter(state, "getDad");
       case "gf", "girlfriend":
         return getStageCharacter(state, "getGirlfriend");
+      case "scoreTxt":
+        return Reflect.field(state, "scoreText");
+      case "timeBar":
+        return activeTimeBar;
+      case "timeBarBG":
+        return activeTimeBar == null ? null : activeTimeBar.background;
+      case "timeTxt":
+        return activeTimeBar == null ? null : activeTimeBar.timeText;
       case "FlxG", "flixel.FlxG":
         return FlxG;
       case "camFollow", "cameraFollowPoint":

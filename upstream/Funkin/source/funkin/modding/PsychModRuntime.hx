@@ -274,8 +274,8 @@ class PsychModRuntime
               ? songEntry[0]
               : songEntry;
             if (rawSongName == null) continue;
-            var songId:String = buildSongId(directory, Std.string(rawSongName));
-            if (audioFolders.exists(songId) && songIds.indexOf(songId) < 0)
+            var songId:Null<String> = resolvePsychWeekSongId(directory, Std.string(rawSongName));
+            if (songId != null && songIds.indexOf(songId) < 0)
               songIds.push(songId);
           }
           if (songIds.length == 0) continue;
@@ -288,6 +288,27 @@ class PsychModRuntime
           var startUnlocked:Bool = Reflect.field(raw, "startUnlocked") == true;
           var background:String = buildPsychWeekBackground(raw);
           var props:Array<Dynamic> = buildPsychWeekProps(modPath, Reflect.field(raw, "weekCharacters"));
+          var psychDifficulties:Array<String> = [];
+          var rawDifficulties:Dynamic = Reflect.field(raw, "difficulties");
+          if (Std.isOfType(rawDifficulties, String))
+          {
+            for (part in Std.string(rawDifficulties).split(","))
+            {
+              var difficulty:String = StringTools.trim(part);
+              if (difficulty.length > 0 && !psychDifficulties.contains(difficulty))
+                psychDifficulties.push(difficulty);
+            }
+          }
+          else if (Std.isOfType(rawDifficulties, Array))
+          {
+            for (part in (cast rawDifficulties:Array<Dynamic>))
+            {
+              if (part == null) continue;
+              var difficulty:String = StringTools.trim(Std.string(part));
+              if (difficulty.length > 0 && !psychDifficulties.contains(difficulty))
+                psychDifficulties.push(difficulty);
+            }
+          }
 
           var data:Dynamic = {
             version: Std.string(LevelRegistry.LEVEL_DATA_VERSION),
@@ -298,7 +319,8 @@ class PsychModRuntime
             songs: songIds,
             background: background,
             psychImported: true,
-            psychStartUnlocked: startUnlocked || !hiddenUntilUnlocked
+            psychStartUnlocked: startUnlocked || !hiddenUntilUnlocked,
+            psychDifficulties: psychDifficulties
           };
           LevelRegistry.instance.registerPsychLevel(weekId, cast data);
           psychWeekIds.push(weekId);
@@ -333,6 +355,55 @@ class PsychModRuntime
     return "#202020";
   }
 
+  static function findPsychWeekCharacterDataFile(modPath:String, characterId:String):Null<String>
+  {
+    var menuRoot:String = Path.join([modPath, "images", "menucharacters"]);
+    if (!FileSystem.exists(menuRoot) || !FileSystem.isDirectory(menuRoot)) return null;
+
+    var requested:String = (characterId + ".json").toLowerCase();
+    for (entry in FileSystem.readDirectory(menuRoot))
+    {
+      var candidate:String = Path.join([menuRoot, entry]);
+      if (!FileSystem.isDirectory(candidate) && entry.toLowerCase() == requested)
+        return candidate;
+    }
+    return null;
+  }
+
+  /**
+   * Resolve a week song by its imported song ID first, then by its chart display
+   * name. Some Psych packs use a display title in weeks/*.json that differs
+   * from the data/<folder>/ directory name.
+   */
+  static function resolvePsychWeekSongId(modDirectory:String, requestedSongName:String):Null<String>
+  {
+    if (requestedSongName == null || StringTools.trim(requestedSongName).length == 0) return null;
+
+    var exactId:String = buildSongId(modDirectory, requestedSongName);
+    if (audioFolders.exists(exactId)) return exactId;
+
+    var requestedSlug:String = slug(requestedSongName);
+    var ownerPrefix:String = "psych-" + slug(modDirectory) + "-";
+    var matches:Array<String> = [];
+    for (songId in audioFolders.keys())
+    {
+      if (!StringTools.startsWith(songId, ownerPrefix)) continue;
+
+      var folderSlug:String = songId.substr(ownerPrefix.length);
+      if (folderSlug == requestedSlug)
+      {
+        matches.push(songId);
+        continue;
+      }
+
+      var song:Null<Song> = SongRegistry.instance.fetchEntry(songId);
+      if (song != null && slug(song.songName) == requestedSlug)
+        matches.push(songId);
+    }
+
+    return matches.length == 1 ? matches[0] : null;
+  }
+
   static function buildPsychWeekProps(modPath:String, rawCharacters:Dynamic):Array<Dynamic>
   {
     var result:Array<Dynamic> = [];
@@ -344,26 +415,40 @@ class PsychModRuntime
       var characterId:String = StringTools.trim(Std.string(rawId));
       if (characterId.length == 0 || result.length >= 3) continue;
 
-      var menuPath:String = Path.join([modPath, "images", "menucharacters", characterId + ".json"]);
-      if (FileSystem.exists(menuPath) && !FileSystem.isDirectory(menuPath))
+      var menuPath:Null<String> = findPsychWeekCharacterDataFile(modPath, characterId);
+      if (menuPath != null)
       {
         try
         {
           var menuData:Dynamic = Json.parse(File.getContent(menuPath));
           var image:String = readPsychString(menuData, "image", characterId);
           var idlePrefix:String = readPsychString(menuData, "idle_anim", "idle");
+          var confirmPrefix:String = readPsychString(menuData, "confirm_anim", "");
           var position:Array<Float> = readPsychStagePosition(menuData, "position") ?? [0.0, 0.0];
-          result.push({
-            assetPath: "menucharacters/" + image,
-            animations: [{
-              name: "idle",
-              prefix: idlePrefix,
+          var menuAnimations:Array<Dynamic> = [{
+            name: "idle",
+            prefix: idlePrefix,
+            frameRate: 24,
+            looped: true,
+            offsets: [0.0, 0.0],
+            flipX: false,
+            flipY: false
+          }];
+          if (confirmPrefix.length > 0)
+          {
+            menuAnimations.push({
+              name: "confirm",
+              prefix: confirmPrefix,
               frameRate: 24,
-              looped: true,
+              looped: false,
               offsets: [0.0, 0.0],
               flipX: false,
               flipY: false
-            }],
+            });
+          }
+          result.push({
+            assetPath: "menucharacters/" + image,
+            animations: menuAnimations,
             startingAnimation: "idle",
             danceEvery: 1.0,
             scale: readPsychFloat(menuData, "scale", 1.0),
@@ -1734,7 +1819,16 @@ class PsychModRuntime
         if (rawValue == null) continue;
         var actual:String = StringTools.trim(Std.string(rawValue));
         if (actual.length == 0 || actual.toLowerCase() == expected.toLowerCase()) continue;
-        if (!hasPsychCharacterDataFile(modPath, actual))
+        var characterAvailable:Bool = hasPsychCharacterDataFile(modPath, actual)
+          || CharacterDataParser.fetchCharacterData(actual) != null;
+        if (!characterAvailable && field == "player1")
+        {
+          // Some classic Psych packs assume their playable BF variant is part of
+          // the source engine rather than bundled in the mod. Keep the song
+          // playable with NovaBeat's standard BF instead of rejecting every song.
+          continue;
+        }
+        if (!characterAvailable)
           return "custom character '" + actual + "' is missing characters/" + actual + ".json";
       }
 
@@ -2282,8 +2376,24 @@ class PsychModRuntime
     return result.length == 0 ? fallback : result;
   }
 
+  static function resolvePsychPlayerCharacter(modPath:String, requestedId:String):String
+  {
+    var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
+    if (normalized.length == 0 || normalized.toLowerCase() == "bf" || normalized.toLowerCase() == "boyfriend")
+      return "bf";
+
+    if (hasPsychCharacterDataFile(modPath, normalized)
+      || CharacterDataParser.fetchCharacterData(normalized) != null)
+      return normalized;
+
+    trace('[Psych Compatibility] Player character "' + normalized
+      + '" is not bundled or registered; using NovaBeat BF for this song.');
+    return "bf";
+  }
+
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
   {
+    var modPath:String = Path.normalize(Path.directory(Path.directory(source.dataPath)));
     var metadata:Null<SongMetadata> = null;
     var psychPlayerId:String = "bf";
     var psychGirlfriendId:String = "gf";
@@ -2317,7 +2427,7 @@ class PsychModRuntime
         if (metadata == null)
         {
           metadata = importedV2.metadata;
-          psychPlayerId = importedV2.player;
+          psychPlayerId = resolvePsychPlayerCharacter(modPath, importedV2.player);
           psychGirlfriendId = importedV2.girlfriend;
           psychOpponentId = importedV2.opponent;
         }
@@ -2356,7 +2466,7 @@ class PsychModRuntime
       if (metadata == null)
       {
         metadata = importedMetadata;
-        psychPlayerId = readPsychString(chartSong, "player1", "bf");
+        psychPlayerId = resolvePsychPlayerCharacter(modPath, readPsychString(chartSong, "player1", "bf"));
         psychOpponentId = readPsychString(chartSong, "player2", "dad");
         psychGirlfriendId = readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf"));
       }

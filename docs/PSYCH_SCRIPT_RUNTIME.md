@@ -106,3 +106,18 @@ The test checks Lua/HScript execution, argument passing, injected globals, the F
 ## Platform note
 
 The interpreter dependencies are configured for native C++ and HTML5. Installed Psych mod discovery and runtime script lookup still use native filesystem access, so HTML5 local-mod launching is not available. Runtime shaders and mod-folder read/write helpers are native-only; their API names remain registered in the browser build and report unsupported operations. Windows and Android builds must still pass before native testing.
+
+
+## GorillaFunkin DEMO validation notes
+
+The inspected GorillaFunkin DEMO package uses classic Psych v1 charts with the normal four-key split (legacy note lanes 0–3 and 4–7), standard `Hurt Note` notes, song-local Lua, custom-event Lua, custom stage Lua plus Psych stage JSON, three pre-song MP4 videos, and Psych `weeks/*.json` story groups. Its nested legacy event arrays are already read by the event importer.
+
+The compatibility layer now also:
+- reads `character.animation.curAnim.name` as the active NovaBeat character animation name, normalizing NovaBeat's sustain-hold suffix for Psych camera scripts;
+- exposes the Psych HUD aliases `scoreTxt`, `timeBar`, `timeBarBG`, and `timeTxt` to custom-event property/tween helpers;
+- resolves week songs by either their folder ID or their imported display title, matches menu-character JSON filenames case-insensitively, imports each menu character's confirm animation, and respects the week JSON's difficulty restriction;
+- keeps a song launchable when a Psych chart names a player-side character that is not bundled in that mod or registered by the host engine, using NovaBeat's standard BF as a safe fallback. Missing opponent/GF character data remains a validation error.
+
+This fallback is intentionally limited to the playable character: the inspected package's `player1` names `bf capuchin`, `bf capuchin run`, and `KFIC` are not in the mod's own `characters/` folder (the first two exist only in the original GorillaFunkin installation's base assets, while `KFIC` has no definition in that install). To display those exact player-side variants in a different engine, the mod author would need to bundle their character JSON definitions with the mod.
+
+This is targeted compatibility for the inspected package, not a guarantee of complete Psych 0.7.3 or fork parity. A successful HTML/native compile still needs to be followed by an actual native gameplay test with the mod installed.

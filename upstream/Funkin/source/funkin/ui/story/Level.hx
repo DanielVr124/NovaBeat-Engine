@@ -211,6 +211,35 @@ class Level implements IRegistryEntry<LevelData>
       }
     }
 
+    var psychImported:Bool = Reflect.field(_data, "psychImported") == true;
+    var rawPsychDifficulties:Dynamic = Reflect.field(_data, "psychDifficulties");
+    if (psychImported && rawPsychDifficulties != null)
+    {
+      var requested:Array<String> = [];
+      if (Std.isOfType(rawPsychDifficulties, String))
+      {
+        for (part in Std.string(rawPsychDifficulties).split(","))
+        {
+          var value:String = StringTools.trim(part);
+          if (value.length > 0) requested.push(value.toLowerCase());
+        }
+      }
+      else if (Std.isOfType(rawPsychDifficulties, Array))
+      {
+        for (part in (cast rawPsychDifficulties:Array<Dynamic>))
+          if (part != null) requested.push(StringTools.trim(Std.string(part)).toLowerCase());
+      }
+
+      if (requested.length > 0)
+      {
+        var filtered:Array<String> = difficulties.filter(function(difficulty:String):Bool
+        {
+          return requested.indexOf(difficulty.toLowerCase()) >= 0;
+        });
+        if (filtered.length > 0) difficulties = filtered;
+      }
+    }
+
     if (difficulties.length == 0) difficulties = ['normal'];
 
     return difficulties;
