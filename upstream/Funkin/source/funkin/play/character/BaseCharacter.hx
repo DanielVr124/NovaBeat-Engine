@@ -553,41 +553,86 @@ class BaseCharacter extends Bopper
     // If another script cancelled the event, don't do anything.
     if (event.eventCanceled) return;
     curNoteKind = NoteKindManager.getNoteKind(event.note.noteData.kind);
+    var mustHitNote:Bool = event.note.noteData.getMustHitNote();
+    var noteDirection = event.note.noteData.getDirection();
 
-    if (event.note.noteData.getMustHitNote() && characterType == BF)
+    if (mustHitNote && characterType == BF)
     {
-      if (curNoteKind != null)
+      if (curNoteKind != null && curNoteKind.gfSing)
+      {
+        // Psych's GF Sing note redirects the lane animation to Girlfriend.
+        var girlfriend:Null<BaseCharacter> = PlayState.instance == null || PlayState.instance.currentStage == null
+          ? null : PlayState.instance.currentStage.getGirlfriend();
+        if (girlfriend != null)
+        {
+          girlfriend.playSingAnimation(noteDirection, false, curNoteKind.suffix);
+          girlfriend.holdTimer = 0;
+        }
+        holdTimer = 0;
+      }
+      else if (curNoteKind != null && curNoteKind.hey)
+      {
+        if (hasAnimation("hey")) playAnimation("hey", true);
+        else playSingAnimation(noteDirection, false);
+        holdTimer = 0;
+
+        var girlfriend:Null<BaseCharacter> = PlayState.instance == null || PlayState.instance.currentStage == null
+          ? null : PlayState.instance.currentStage.getGirlfriend();
+        if (girlfriend != null && girlfriend.hasAnimation("cheer"))
+          girlfriend.playAnimation("cheer", true);
+      }
+      else if (curNoteKind != null)
       {
         if (!curNoteKind.noanim)
         {
-          this.playSingAnimation(event.note.noteData.getDirection(), false, curNoteKind?.suffix);
+          this.playSingAnimation(noteDirection, false, curNoteKind.suffix);
           holdTimer = 0;
         }
       }
       else
       {
-        this.playSingAnimation(event.note.noteData.getDirection(), false);
+        this.playSingAnimation(noteDirection, false);
         holdTimer = 0;
       }
     }
-    else if (!event.note.noteData.getMustHitNote() && characterType == DAD)
+    else if (!mustHitNote && characterType == DAD)
     {
-      if (curNoteKind != null)
+      if (curNoteKind != null && curNoteKind.gfSing)
+      {
+        var girlfriend:Null<BaseCharacter> = PlayState.instance == null || PlayState.instance.currentStage == null
+          ? null : PlayState.instance.currentStage.getGirlfriend();
+        if (girlfriend != null)
+        {
+          girlfriend.playSingAnimation(noteDirection, false, curNoteKind.suffix);
+          girlfriend.holdTimer = 0;
+        }
+        holdTimer = 0;
+      }
+      else if (curNoteKind != null && curNoteKind.hey)
+      {
+        if (hasAnimation("hey")) playAnimation("hey", true);
+        else playSingAnimation(noteDirection, false);
+        holdTimer = 0;
+      }
+      else if (curNoteKind != null)
       {
         if (!curNoteKind.noanim)
         {
-          this.playSingAnimation(event.note.noteData.getDirection(), false, curNoteKind?.suffix);
+          this.playSingAnimation(noteDirection, false, curNoteKind.suffix);
           holdTimer = 0;
         }
       }
       else
       {
-        this.playSingAnimation(event.note.noteData.getDirection(), false);
+        this.playSingAnimation(noteDirection, false);
         holdTimer = 0;
       }
     }
-    else if (characterType == GF && event.note.noteData.getMustHitNote())
+    else if (characterType == GF && mustHitNote)
     {
+      // GF Sing, Hey!, and No Animation already specify their own note-hit
+      // animation behavior; do not replace it with a combo animation.
+      if (curNoteKind != null && (curNoteKind.gfSing || curNoteKind.hey || curNoteKind.noanim)) return;
       switch (event.judgement)
       {
         case 'sick' | 'good':
@@ -609,18 +654,32 @@ class BaseCharacter extends Bopper
     // If another script cancelled the event, don't do anything.
     if (event.eventCanceled) return;
 
-    if (event.note.noteData.getMustHitNote() && characterType == BF)
+    var missNoteKind:Null<NoteKind> = NoteKindManager.getNoteKind(event.note.noteData.kind);
+    var mustHitNote:Bool = event.note.noteData.getMustHitNote();
+    var noteDirection = event.note.noteData.getDirection();
+
+    if ((mustHitNote && characterType == BF) || (!mustHitNote && characterType == DAD))
     {
-      // If the note is from the same strumline, play the miss animation.
-      this.playSingAnimation(event.note.noteData.getDirection(), true);
+      if (missNoteKind != null && missNoteKind.gfSing)
+      {
+        var girlfriend:Null<BaseCharacter> = PlayState.instance == null || PlayState.instance.currentStage == null
+          ? null : PlayState.instance.currentStage.getGirlfriend();
+        if (girlfriend != null)
+        {
+          girlfriend.playSingAnimation(noteDirection, true, missNoteKind.suffix);
+          girlfriend.holdTimer = 0;
+        }
+      }
+      else if (missNoteKind == null || !missNoteKind.noanim)
+      {
+        // Keep the Psych animation suffix on both hit and miss animations.
+        this.playSingAnimation(noteDirection, true, missNoteKind == null ? null : missNoteKind.suffix);
+      }
     }
-    else if (!event.note.noteData.getMustHitNote() && characterType == DAD)
+    else if (mustHitNote && characterType == GF)
     {
-      // If the note is from the same strumline, play the miss animation.
-      this.playSingAnimation(event.note.noteData.getDirection(), true);
-    }
-    else if (event.note.noteData.getMustHitNote() && characterType == GF)
-    {
+      // No Animation and GF Sing notes deliberately bypass Girlfriend's combo-drop animation.
+      if (missNoteKind != null && (missNoteKind.noanim || missNoteKind.gfSing)) return;
       playComboDropAnimation(event.comboCount);
     }
   }
