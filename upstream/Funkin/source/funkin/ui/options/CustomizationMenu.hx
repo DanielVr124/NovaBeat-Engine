@@ -8,7 +8,6 @@ import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
 import funkin.graphics.FunkinCamera;
 import funkin.graphics.FunkinSprite;
-import funkin.Preferences;
 import funkin.util.DeviceUtil;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.Page;
@@ -51,8 +50,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     hudCamera.bgColor = 0x0;
     camera = menuCamera;
 
-    novaBeatStyle = Preferences.menuStyle == "NovaBeat";
-    NovaBeatOptionsChrome.apply(this, 'CUSTOMIZATION', menuCamera);
+    novaBeatStyle = false;
 
     items = new TextMenuList();
     // The category list is rendered through menuCamera. Assign that camera
@@ -63,16 +61,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     add(items);
 
     var itemY:Float = novaBeatStyle ? 112 : 30;
-    var item:TextMenuItem = items.createItem(0, itemY, 'NOVABEAT MENU', AtlasFont.BOLD, function()
-    {
-      codex.switchPage(MenuCustomization);
-    });
-    item.screenCenter(X);
-    item.cameras = [menuCamera];
-    categoryItems.push(item);
-    if (novaBeatStyle) styleNovaBeatCategory(item, 'NOVABEAT MENU');
-
-    var performanceItem:TextMenuItem = items.createItem(0, itemY + 112, 'PERFORMANCE', AtlasFont.BOLD, function()
+    var performanceItem:TextMenuItem = items.createItem(0, itemY, 'PERFORMANCE', AtlasFont.BOLD, function()
     {
       codex.switchPage(Performance);
     });
@@ -84,7 +73,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (DeviceUtil.isMobileBrowser)
     {
-      var mobileItem:TextMenuItem = items.createItem(0, itemY + 224, 'MOBILE', AtlasFont.BOLD, function()
+      var mobileItem:TextMenuItem = items.createItem(0, itemY + 112, 'MOBILE', AtlasFont.BOLD, function()
     {
       codex.switchPage(Mobile);
     });
@@ -109,18 +98,17 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
 
     itemDescBox = new FunkinSprite();
-    itemDescBox.makeSolidColor(1, 1, Preferences.menuStyle == "NovaBeat" ? 0xFF0D1935 : FlxColor.BLACK);
-    itemDescBox.alpha = Preferences.menuStyle == "NovaBeat" ? 0.9 : 0.6;
+    itemDescBox.makeSolidColor(1, 1, FlxColor.BLACK);
+    itemDescBox.alpha = 0.6;
     itemDescBox.cameras = [hudCamera];
     add(itemDescBox);
 
     itemDesc = new FlxText(0, 0, 1180, null, 32);
     itemDesc.cameras = [hudCamera];
-    itemDesc.setFormat(Paths.font('vcr.ttf'), 32,
-      Preferences.menuStyle == "NovaBeat" ? 0xFF48E7FF : FlxColor.WHITE,
+    itemDesc.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE,
       FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
     itemDesc.borderSize = 3;
-    itemDesc.text = 'Customize the NovaBeat menu colours, background, equalizer, layout, and animations.';
+    itemDesc.text = 'Adjust graphics and performance settings.';
     itemDesc.screenCenter();
     itemDesc.y += 270;
     itemDescBox.setPosition(itemDesc.x - 10, itemDesc.y - 10);
@@ -139,9 +127,8 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       {
         itemDesc.text = switch (items.selectedIndex)
         {
-          case 1: 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.';
-          case 2: 'Configure device orientation and other mobile-specific behavior.';
-          default: 'Customize the NovaBeat menu colours, background, equalizer, layout, and animations.';
+          case 1: 'Configure device orientation and other mobile-specific behavior.';
+          default: 'Tune visual effects and background rendering for lower-powered devices without changing rhythm timing.';
         };
       });
     }
