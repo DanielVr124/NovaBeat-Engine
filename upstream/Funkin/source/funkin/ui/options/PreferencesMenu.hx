@@ -448,7 +448,7 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
           textWidth = cast(item, NumberPreferenceItem).lefthandText.getWidth();
         default:
       }
-      var offset:Float = Type.typeof(item) == TClass(CheckboxPreferenceItem) ? 0 : textWidth - 75;
+      var offset:Float = Std.isOfType(item, CheckboxPreferenceItem) ? 0 : textWidth - 75;
       offset += items.selectedItem == item ? 150 : 120;
       item.x = offset + funkin.ui.FullScreenScaleMode.gameNotchSize.x;
       item.y = top + index * rowGap;
