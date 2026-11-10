@@ -1,6 +1,8 @@
 package funkin.ui.options;
 
 import flixel.FlxG;
+import flixel.FlxObject;
+import funkin.mobile.ui.MobileMenuTouchTargets;
 import flixel.util.FlxColor;
 import funkin.Preferences;
 import funkin.mobile.ui.FunkinHitbox.FunkinHitboxControlSchemes;
@@ -36,6 +38,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var orientationLockItem:TextMenuItem;
   var controlSchemeLabel:String;
   var orientationLockLabel:String;
+  var touchTargets:Array<FlxObject> = [];
   #if FEATURE_TOUCH_CONTROLS
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -47,6 +50,7 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     items = new TextMenuList(NavControls.Vertical);
     items.cameras = [FlxG.camera];
     items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
+    items.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     controlSchemeLabel = "MOBILE CONTROLS";
@@ -99,6 +103,9 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       item.y = top + index * gap;
       item.screenCenter(X);
     }
+
+    if (DeviceUtil.isMobileBrowser)
+      MobileMenuTouchTargets.sync(items, touchTargets, width, 72, 18);
 
     #if FEATURE_TOUCH_CONTROLS
     if (responsiveBackButton != null)
@@ -174,6 +181,14 @@ class MobileCustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     }
 
     layoutItems(FlxG.width, FlxG.height);
+  }
+
+  override function update(elapsed:Float):Void
+  {
+    super.update(elapsed);
+
+    if (enabled && DeviceUtil.isMobileBrowser)
+      MobileMenuTouchTargets.tryAccept(items, touchTargets, FlxG.camera);
   }
 
   function goBack():Void

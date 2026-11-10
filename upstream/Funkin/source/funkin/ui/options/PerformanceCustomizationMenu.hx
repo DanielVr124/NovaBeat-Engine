@@ -3,6 +3,7 @@ package funkin.ui.options;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxObject;
+import funkin.mobile.ui.MobileMenuTouchTargets;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -46,6 +47,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
   var itemDescBox:FunkinSprite;
   var fnfValueLabels:Array<AtlasText> = [];
   var optionRows:Array<TextMenuItem> = [];
+  var touchTargets:Array<FlxObject> = [];
   #if FEATURE_TOUCH_CONTROLS
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -70,6 +72,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     items.cameras = [menuCamera];
     // Activate submenu rows on the first tap in mobile browsers, matching the Options page.
     items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
+    items.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     descriptions = [
@@ -234,6 +237,9 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
       value.x = FlxG.width - valueWidth - Math.max(24, notch + 24);
       value.y = item.y;
     }
+
+    if (DeviceUtil.isMobileBrowser)
+      MobileMenuTouchTargets.sync(items, touchTargets, FlxG.width, 64, 14);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -283,6 +289,9 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
     }
 
     if (!enabled || optionRows.length == 0) return;
+
+    if (DeviceUtil.isMobileBrowser && MobileMenuTouchTargets.tryAccept(items, touchTargets, menuCamera))
+      return;
 
     if (controls.UI_LEFT_P || SwipeUtil.swipeLeft) adjustSelected(-1);
     if (controls.UI_RIGHT_P || SwipeUtil.swipeRight) adjustSelected(1);

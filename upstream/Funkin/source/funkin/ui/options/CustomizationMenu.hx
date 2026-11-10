@@ -3,6 +3,7 @@ package funkin.ui.options;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.FlxObject;
+import funkin.mobile.ui.MobileMenuTouchTargets;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.util.FlxColor;
@@ -32,6 +33,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
   var itemDesc:FlxText;
   var itemDescBox:FunkinSprite;
   var categoryItems:Array<TextMenuItem> = [];
+  var touchTargets:Array<FlxObject> = [];
   #if FEATURE_TOUCH_CONTROLS
   var responsiveBackButton:Null<FunkinBackButton> = null;
   #end
@@ -54,6 +56,7 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     // the same screen transform as the visible FNF-style entries.
     items.cameras = [menuCamera];
     items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
+    items.ignoreTouchPointerSelection = DeviceUtil.isMobileBrowser;
     add(items);
 
     var itemY:Float = 30;
@@ -161,6 +164,9 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
       var selectedIndent:Float = index == items.selectedIndex ? (portrait ? 18 : 30) : 0;
       item.setPosition(baseX + selectedIndent, top + index * gap);
     }
+
+    if (DeviceUtil.isMobileBrowser)
+      MobileMenuTouchTargets.sync(items, touchTargets, width, 72, 18);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
@@ -193,6 +199,8 @@ class CustomizationMenu extends Page<OptionsState.OptionsMenuPageName>
     super.update(elapsed);
 
     layoutFNFCategoryItems(FlxG.width, FlxG.height);
+    if (enabled && DeviceUtil.isMobileBrowser)
+      MobileMenuTouchTargets.tryAccept(items, touchTargets, menuCamera);
   }
 
   override function destroy():Void
