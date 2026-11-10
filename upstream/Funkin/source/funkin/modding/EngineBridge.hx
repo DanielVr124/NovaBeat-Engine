@@ -312,8 +312,11 @@ class EngineBridge
   }
 
   /**
-   * Looks for Lua/HScript files in a known Psych script root. The depth cap
-   * keeps discovery bounded when a mod includes large asset directories.
+   * Lua files in Psych's known roots are a distinctive engine marker. Do not
+   * identify a package from .hx alone: V-Slice/Polymod mods also use Haxe
+   * scripted classes under generic scripts/ folders. HScript remains supported
+   * by the runtime after another Psych marker (chart/layout/metadata) identifies
+   * the package. The depth cap bounds discovery in large asset directories.
    */
   static function containsPsychScript(path:String, remainingDepth:Int):Bool
   {
@@ -330,8 +333,7 @@ class EngineBridge
         continue;
       }
 
-      var lower:String = entry.toLowerCase();
-      if (StringTools.endsWith(lower, ".lua") || StringTools.endsWith(lower, ".hx")) return true;
+      if (StringTools.endsWith(entry.toLowerCase(), ".lua")) return true;
     }
 
     return false;
