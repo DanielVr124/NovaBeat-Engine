@@ -67,12 +67,12 @@ class PsychModRuntime
         }
       }
 
-      var externalEventsProblem:Null<String> = inspectUnsupportedEventFile(
-        Path.join([source.dataPath, "events.json"]),
-        modPath
-      );
-      if (externalEventsProblem != null)
-        return unavailable("This Psych package contains event data NovaBeat cannot safely load yet: " + externalEventsProblem);
+      for (eventsPath in findPsychEventsFiles(source.dataPath))
+      {
+        var externalEventsProblem:Null<String> = inspectUnsupportedEventFile(eventsPath, modPath);
+        if (externalEventsProblem != null)
+          return unavailable("This Psych package contains event data NovaBeat cannot safely load yet: " + externalEventsProblem);
+      }
     }
     var songScriptCount:Int = 0;
 
@@ -88,7 +88,7 @@ class PsychModRuntime
       return {
         launchable: false,
         supportedSongCount: 0,
-        explanation: "Psych charts were found, but this package also contains custom event, note-type, stage, character, or substate scripts. Those systems are not implemented yet, so this package is kept unavailable rather than launched with missing behavior."
+        explanation: "Psych charts were found, but this package contains custom_notes/ scripts. That legacy custom-note system is not supported yet, so the package is kept unavailable rather than launched with missing behavior."
       };
     }
 
@@ -993,7 +993,6 @@ class PsychModRuntime
   }
 
   #if sys
-  #if sys
   static function isPsychChartFile(path:String):Bool
   {
     try
@@ -1008,7 +1007,6 @@ class PsychModRuntime
       return false;
     }
   }
-  #end
   #end
 
   static function isBuiltinPsychStage(stageName:String):Bool
