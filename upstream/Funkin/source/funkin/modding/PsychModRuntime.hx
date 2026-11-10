@@ -10,6 +10,7 @@ import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.data.character.CharacterData.CharacterData;
 import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongRegistry;
+import funkin.data.story.level.LevelRegistry;
 import funkin.data.song.importer.FNFLegacyData;
 import funkin.data.song.importer.FNFLegacyImporter;
 import funkin.play.song.Song;
@@ -41,6 +42,7 @@ class PsychModRuntime
   static final psychSongModRoots:Map<String, String> = [];
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
   static final psychStageBaselines:Map<String, Dynamic> = [];
+  static var psychWeekIds:Array<String> = [];
   static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
@@ -231,6 +233,201 @@ class PsychModRuntime
     #end
     return loaded;
   }
+
+
+  /**
+   * Convert standard Psych weeks/<week>.json files into runtime-only native
+   * Story Mode levels. The source mod files remain untouched.
+   */
+  public static function loadWeeks(modDirs:Array<String>):Array<String>
+  {
+    var loaded:Array<String> = [];
+    for (oldId in psychWeekIds) LevelRegistry.instance.removePsychLevel(oldId);
+    psychWeekIds = [];
+
+    #if sys
+    var root:String = PolymodHandler.getModRoot();
+    for (directory in modDirs)
+    {
+      var modPath:String = Path.join([root, directory]);
+      if (!isPsychDirectory(modPath)) continue;
+      modPath = resolvePsychContentRoot(modPath);
+      var weekPath:String = Path.join([modPath, "weeks"]);
+      if (!FileSystem.exists(weekPath) || !FileSystem.isDirectory(weekPath)) continue;
+
+      var weekFiles:Array<String> = FileSystem.readDirectory(weekPath);
+      weekFiles.sort(Reflect.compare);
+      for (weekFile in weekFiles)
+      {
+        if (Path.extension(weekFile).toLowerCase() != "json") continue;
+        var fullPath:String = Path.join([weekPath, weekFile]);
+        try
+        {
+          var raw:Dynamic = Json.parse(File.getContent(fullPath));
+          var rawSongs:Dynamic = Reflect.field(raw, "songs");
+          if (rawSongs == null || !Std.isOfType(rawSongs, Array)) continue;
+
+          var songIds:Array<String> = [];
+          for (songEntry in (cast rawSongs:Array<Dynamic>))
+          {
+            var rawSongName:Dynamic = Std.isOfType(songEntry, Array) && songEntry.length > 0
+              ? songEntry[0]
+              : songEntry;
+            if (rawSongName == null) continue;
+            var songId:String = buildSongId(directory, Std.string(rawSongName));
+            if (audioFolders.exists(songId) && songIds.indexOf(songId) < 0)
+              songIds.push(songId);
+          }
+          if (songIds.length == 0) continue;
+
+          var weekId:String = "psych-week-" + slug(directory) + "-" + slug(Path.withoutExtension(weekFile));
+          var displayName:String = readPsychString(raw, "storyName",
+            readPsychString(raw, "weekName", Path.withoutExtension(weekFile)));
+          var hidden:Bool = Reflect.field(raw, "hideStoryMode") == true;
+          var hiddenUntilUnlocked:Bool = Reflect.field(raw, "hiddenUntilUnlocked") == true;
+          var startUnlocked:Bool = Reflect.field(raw, "startUnlocked") == true;
+          var background:String = buildPsychWeekBackground(raw);
+          var props:Array<Dynamic> = buildPsychWeekProps(modPath, Reflect.field(raw, "weekCharacters"));
+
+          var data:Dynamic = {
+            version: LevelRegistry.LEVEL_DATA_VERSION,
+            name: displayName,
+            titleAsset: "psych-week-title",
+            props: props,
+            visible: !hidden,
+            songs: songIds,
+            background: background,
+            psychImported: true,
+            psychStartUnlocked: startUnlocked || !hiddenUntilUnlocked
+          };
+          LevelRegistry.instance.registerPsychLevel(weekId, cast data);
+          psychWeekIds.push(weekId);
+          loaded.push(weekId);
+          trace('[Psych Compatibility] Registered Story Mode week: ' + displayName + ' (' + songIds.length + ' songs).');
+        }
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not import week ' + fullPath + ': ' + Std.string(error));
+        }
+      }
+    }
+    #end
+
+    return loaded;
+  }
+
+  #if sys
+  static function buildPsychWeekBackground(week:Dynamic):String
+  {
+    var requested:String = readPsychString(week, "weekBackground", "");
+    if (requested.length > 0) return requested;
+
+    var color:Dynamic = Reflect.field(week, "freeplayColor");
+    if (color != null && Std.isOfType(color, Array) && color.length >= 3)
+    {
+      var red:Int = Std.int(Math.max(0, Math.min(255, Std.parseFloat(Std.string(color[0])))));
+      var green:Int = Std.int(Math.max(0, Math.min(255, Std.parseFloat(Std.string(color[1])))));
+      var blue:Int = Std.int(Math.max(0, Math.min(255, Std.parseFloat(Std.string(color[2])))));
+      return "#" + StringTools.hex(red, 2) + StringTools.hex(green, 2) + StringTools.hex(blue, 2);
+    }
+    return "#202020";
+  }
+
+  static function buildPsychWeekProps(modPath:String, rawCharacters:Dynamic):Array<Dynamic>
+  {
+    var result:Array<Dynamic> = [];
+    if (rawCharacters == null || !Std.isOfType(rawCharacters, Array)) return result;
+
+    for (rawId in (cast rawCharacters:Array<Dynamic>))
+    {
+      if (rawId == null) continue;
+      var characterId:String = StringTools.trim(Std.string(rawId));
+      if (characterId.length == 0 || result.length >= 3) continue;
+
+      var menuPath:String = Path.join([modPath, "images", "menucharacters", characterId + ".json"]);
+      if (FileSystem.exists(menuPath) && !FileSystem.isDirectory(menuPath))
+      {
+        try
+        {
+          var menuData:Dynamic = Json.parse(File.getContent(menuPath));
+          var image:String = readPsychString(menuData, "image", characterId);
+          var idlePrefix:String = readPsychString(menuData, "idle_anim", "idle");
+          var position:Array<Float> = readPsychStagePosition(menuData, "position") ?? [0.0, 0.0];
+          result.push({
+            assetPath: "menucharacters/" + image,
+            animations: [{
+              name: "idle",
+              prefix: idlePrefix,
+              frameRate: 24,
+              looped: true,
+              offsets: [0.0, 0.0],
+              flipX: false,
+              flipY: false
+            }],
+            startingAnimation: "idle",
+            danceEvery: 1.0,
+            scale: readPsychFloat(menuData, "scale", 1.0),
+            alpha: 1.0,
+            isPixel: false,
+            offsets: position,
+            flipX: Reflect.field(menuData, "flipX") == true,
+            flipY: false
+          });
+          continue;
+        }
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not read week menu character ' + characterId + ': ' + Std.string(error));
+        }
+      }
+
+      var characterPath:Null<String> = findPsychCharacterDataFile(modPath, characterId);
+      if (characterPath == null) continue;
+      try
+      {
+        var characterData:Dynamic = Json.parse(File.getContent(characterPath));
+        var animations:Array<Dynamic> = [];
+        var rawAnimations:Dynamic = Reflect.field(characterData, "animations");
+        if (rawAnimations != null && Std.isOfType(rawAnimations, Array))
+        {
+          for (rawAnimation in (cast rawAnimations:Array<Dynamic>))
+          {
+            if (rawAnimation == null) continue;
+            var animName:String = readPsychString(rawAnimation, "anim", "idle");
+            animations.push({
+              name: animName,
+              prefix: readPsychString(rawAnimation, "name", animName),
+              frameRate: Std.int(readPsychFloat(rawAnimation, "fps", 24)),
+              looped: Reflect.field(rawAnimation, "loop") == true,
+              offsets: readPsychStagePosition(rawAnimation, "offsets") ?? [0.0, 0.0],
+              flipX: false,
+              flipY: false
+            });
+          }
+        }
+        if (animations.length == 0) continue;
+
+        result.push({
+          assetPath: readPsychString(characterData, "image", ""),
+          animations: animations,
+          startingAnimation: "idle",
+          danceEvery: 1.0,
+          scale: readPsychFloat(characterData, "scale", 1.0),
+          alpha: 1.0,
+          isPixel: Reflect.field(characterData, "no_antialiasing") == true,
+          offsets: [0.0, 0.0],
+          flipX: Reflect.field(characterData, "flip_x") == true,
+          flipY: false
+        });
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych Compatibility] Could not create week prop for ' + characterId + ': ' + Std.string(error));
+      }
+    }
+    return result;
+  }
+  #end
 
   /** True only for a song imported by this Psych compatibility loader. */
   public static function isImportedSong(songId:String):Bool
