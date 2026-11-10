@@ -2,7 +2,6 @@ package funkin.ui.freeplay;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxMath;
 import flixel.sound.FlxSound;
 import flixel.text.FlxText;
@@ -101,7 +100,9 @@ class PsychFreeplayState extends MusicBeatSubState
     }
 
     background = new FlxSprite().loadGraphic(Paths.image('menuDesat', 'shared'));
-    background.setGraphicSize(FlxG.width, FlxG.height);
+    background.antialiasing = true;
+    background.setGraphicSize(FlxG.width, 0);
+    if (background.height < FlxG.height) background.setGraphicSize(0, FlxG.height);
     background.updateHitbox();
     background.screenCenter();
     background.scrollFactor.set();
@@ -115,6 +116,8 @@ class PsychFreeplayState extends MusicBeatSubState
 
     selected = rememberedSelection;
     if (selected < 0 || selected >= songs.length) selected = 0;
+    background.color = songs[selected].color;
+    intendedColor = background.color;
     lerpSelected = selected;
     changeSelection(0, false);
     updateSongRows(0);
@@ -161,6 +164,7 @@ class PsychFreeplayState extends MusicBeatSubState
     {
       var songText = new PsychAlphabet(LIST_X, LIST_Y, songs[i].name);
       songText.targetY = i;
+      songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songTexts.push(songText);
       add(songText);
 
@@ -174,31 +178,40 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function createScorePanel():Void
   {
-    scoreBackground = new FlxSprite(FlxG.width * 0.55, 0).makeGraphic(Std.int(FlxG.width * 0.45), 66, FlxColor.BLACK);
+    scoreText = new FlxText(FlxG.width * 0.7, 5, 0, '', 32);
+    scoreText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
+    scoreText.scrollFactor.set();
+
+    scoreBackground = new FlxSprite(scoreText.x - 6, 0).makeGraphic(1, 66, FlxColor.BLACK);
     scoreBackground.alpha = 0.6;
     scoreBackground.scrollFactor.set();
     add(scoreBackground);
 
-    scoreText = new FlxText(0, 5, FlxG.width - 12, '', 32);
-    scoreText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
-    scoreText.scrollFactor.set();
-    add(scoreText);
-
-    difficultyText = new FlxText(0, 40, FlxG.width - 12, '', 24);
+    difficultyText = new FlxText(scoreText.x, scoreText.y + 36, 0, '', 24);
     difficultyText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.RIGHT);
     difficultyText.scrollFactor.set();
     add(difficultyText);
+    add(scoreText);
+  }
+
+  function positionHighscore():Void
+  {
+    scoreText.x = FlxG.width - scoreText.width - 6;
+    scoreBackground.scale.x = FlxG.width - scoreText.x + 6;
+    scoreBackground.x = FlxG.width - (scoreBackground.scale.x / 2);
+    difficultyText.x = Std.int(scoreBackground.x + (scoreBackground.width / 2));
+    difficultyText.x -= difficultyText.width / 2;
   }
 
   function createBottomHelp():Void
   {
-    bottomBackground = new FlxSprite(0, FlxG.height - 28).makeGraphic(FlxG.width, 28, FlxColor.BLACK);
+    bottomBackground = new FlxSprite(0, FlxG.height - 26).makeGraphic(FlxG.width, 26, FlxColor.BLACK);
     bottomBackground.alpha = 0.6;
     bottomBackground.scrollFactor.set();
     add(bottomBackground);
 
-    var help = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET SCORE AND ACCURACY';
-    bottomText = new FlxText(0, bottomBackground.y + 5, FlxG.width, help, 16);
+    var help = 'PRESS SPACE TO LISTEN  /  PRESS RESET TO RESET YOUR SCORE AND ACCURACY';
+    bottomText = new FlxText(0, bottomBackground.y + 4, FlxG.width, help, 16);
     bottomText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
     bottomText.scrollFactor.set();
     add(bottomText);
@@ -332,6 +345,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (Math.abs(lerpedRating - intendedRating) <= 0.0001) lerpedRating = intendedRating;
 
     updateScoreText();
+    positionHighscore();
     updateSongRows(elapsed);
   }
 
@@ -402,6 +416,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (parts.length == 1) parts.push('00');
     while (parts[1].length < 2) parts[1] += '0';
     scoreText.text = 'PERSONAL BEST: ' + Std.int(lerpedScore) + ' (' + parts[0] + '.' + parts[1] + '%)';
+    positionHighscore();
   }
 
   function updateSongRows(elapsed:Float):Void
@@ -611,12 +626,17 @@ class PsychFreeplayState extends MusicBeatSubState
     background?.setGraphicSize(width, height);
     background?.updateHitbox();
     background?.screenCenter();
-    bottomBackground?.makeGraphic(width, 28, FlxColor.BLACK);
-    bottomBackground?.setPosition(0, height - 28);
-    bottomText?.setSize(width, 16);
-    bottomText?.setPosition(0, height - 23);
-    scoreText?.setSize(width - 12, 32);
-    difficultyText?.setSize(width - 12, 24);
+    if (background != null)
+    {
+      background.setGraphicSize(width, 0);
+      if (background.height < height) background.setGraphicSize(0, height);
+      background.updateHitbox();
+      background.screenCenter();
+    }
+    bottomBackground?.makeGraphic(width, 26, FlxColor.BLACK);
+    bottomBackground?.setPosition(0, height - 26);
+    if (bottomText != null) bottomText.fieldWidth = width;
+    bottomText?.setPosition(0, height - 22);
     previewBackground?.makeGraphic(Std.int(width * 0.4), 100, FlxColor.BLACK);
     previewBackground?.setPosition(width * 0.6, 0);
     previewTitle?.setSize(width * 0.38, 24);
@@ -625,8 +645,10 @@ class PsychFreeplayState extends MusicBeatSubState
     previewTime?.setPosition(width * 0.6, 48);
     previewBarBack?.setPosition(width * 0.6, 78);
     previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
+    previewBarFill?.makeGraphic(Std.int(width * 0.38), 8, FlxColor.WHITE);
     previewBarFill?.setPosition(width * 0.6, 78);
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
+    positionHighscore();
   }
 
   override public function destroy():Void

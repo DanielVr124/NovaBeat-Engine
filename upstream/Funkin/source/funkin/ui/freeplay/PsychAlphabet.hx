@@ -16,6 +16,8 @@ class PsychAlphabet extends FlxSpriteGroup
   public var targetY:Int = 0;
   public var textWidth:Float = 0;
   var letters:Array<FlxSprite> = [];
+  var baseX:Array<Float> = [];
+  var baseOffsetY:Array<Float> = [];
 
   public function new(x:Float, y:Float, text:String)
   {
@@ -78,12 +80,32 @@ class PsychAlphabet extends FlxSpriteGroup
         default: 0;
       };
       letter.x = cursor;
-      letter.y = offsetY;
+      letter.y = 0;
+      letter.offset.y = offsetY - (70 - letter.height);
       add(letter);
       letters.push(letter);
+      baseX.push(cursor);
+      baseOffsetY.push(offsetY);
       cursor += letter.width;
     }
     textWidth = cursor;
+  }
+
+  /** Match the scale clamp used by Psych's original Alphabet Freeplay items. */
+  public function setMenuScale(value:Float):Void
+  {
+    var targetScale:Float = Math.max(0.01, value);
+    textWidth = 0;
+    for (i in 0...letters.length)
+    {
+      var letter = letters[i];
+      letter.scale.set(targetScale, targetScale);
+      letter.updateHitbox();
+      letter.x = baseX[i] * targetScale;
+      letter.y = 0;
+      letter.offset.y = baseOffsetY[i] * targetScale - (70 * targetScale - letter.height);
+      textWidth = Math.max(textWidth, letter.x + letter.width);
+    }
   }
 
   static function getAtlas():FlxAtlasFrames
