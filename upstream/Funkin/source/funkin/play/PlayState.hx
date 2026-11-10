@@ -997,8 +997,8 @@ class PlayState extends MusicBeatSubState
     // and it's important to call it last so all elements get affected.
     refresh();
 
-    // Psych's onCreatePost callback must run once, after the state and its
-    // scene children are fully initialized, and before countdown callbacks.
+    // Psych's onCreatePost callback must run exactly once, after the state
+    // and scene children are initialized, and before countdown callbacks.
     if (PsychScriptRuntime.getScriptPaths().length > 0)
       PsychScriptRuntime.dispatch("onCreatePost", []);
 
