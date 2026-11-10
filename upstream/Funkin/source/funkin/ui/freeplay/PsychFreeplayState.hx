@@ -74,7 +74,14 @@ class PsychFreeplayState extends MusicBeatSubState
   var previewBarBack:FlxSprite;
   var previewBarFill:FlxSprite;
   var resetPrompt:Bool = false;
-  var resetPromptText:FlxText;
+  var resetPromptAlpha:Float = 0;
+  var resetSelection:Int = 1;
+  var resetBackground:FlxSprite;
+  var resetHeader:PsychAlphabet;
+  var resetSongTitle:PsychAlphabet;
+  var resetYes:PsychAlphabet;
+  var resetNo:PsychAlphabet;
+  var resetIcon:HealthIcon;
 
   public function new()
   {
@@ -254,11 +261,91 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function createResetPrompt():Void
   {
-    resetPromptText = new FlxText(0, FlxG.height * 0.42, FlxG.width, 'RESET THIS SONG\'S SCORE AND ACCURACY?\nENTER: CONFIRM     ESC: CANCEL', 24);
-    resetPromptText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.CENTER);
-    resetPromptText.scrollFactor.set();
-    resetPromptText.visible = false;
-    add(resetPromptText);
+    resetBackground = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+    resetBackground.alpha = 0;
+    resetBackground.scrollFactor.set();
+    resetBackground.visible = false;
+    add(resetBackground);
+
+    resetHeader = new PsychAlphabet(0, 180, 'Reset the score of');
+    resetHeader.setMenuPosition((FlxG.width - resetHeader.textWidth) / 2, 180);
+    resetHeader.visible = false;
+    add(resetHeader);
+
+    resetSongTitle = new PsychAlphabet(0, 270, '');
+    resetSongTitle.visible = false;
+    add(resetSongTitle);
+
+    resetIcon = new HealthIcon('face');
+    resetIcon.visible = false;
+    add(resetIcon);
+
+    resetYes = new PsychAlphabet(0, 0, 'Yes');
+    resetYes.visible = false;
+    add(resetYes);
+
+    resetNo = new PsychAlphabet(0, 0, 'No');
+    resetNo.visible = false;
+    add(resetNo);
+  }
+
+  function showResetPrompt():Void
+  {
+    resetPrompt = true;
+    resetPromptAlpha = 0;
+    resetSelection = 1;
+    var entry = songs[selected];
+    var title:String = entry.name + ' (' + currentDifficulty.toUpperCase() + ')?';
+    var scale:Float = title.length > 18 ? 0.8 : 1.0;
+
+    remove(resetSongTitle, true);
+    resetSongTitle.destroy();
+    resetSongTitle = new PsychAlphabet(0, 270, title);
+    resetSongTitle.setMenuScale(scale);
+    resetSongTitle.setMenuPosition((FlxG.width - resetSongTitle.textWidth) / 2 + (60 * scale), 270);
+    resetSongTitle.visible = true;
+    add(resetSongTitle);
+
+    resetIcon.visible = true;
+    resetIcon.alpha = 0;
+    resetIcon.setGraphicSize(Std.int(resetIcon.width * scale));
+    resetIcon.updateHitbox();
+    resetIcon.setPosition(resetSongTitle.x - resetIcon.width + (10 * scale), resetSongTitle.y - 30);
+
+    resetYes.setMenuPosition((FlxG.width - resetYes.textWidth) / 2 - 200, resetSongTitle.y + 150);
+    resetNo.setMenuPosition((FlxG.width - resetNo.textWidth) / 2 + 200, resetSongTitle.y + 150);
+    for (item in [resetBackground, resetHeader, resetSongTitle, resetIcon, resetYes, resetNo])
+      item.visible = true;
+    updateResetSelection();
+  }
+
+  function updateResetSelection():Void
+  {
+    resetYes.setMenuScale(resetSelection == 0 ? 1.0 : 0.75);
+    resetNo.setMenuScale(resetSelection == 1 ? 1.0 : 0.75);
+    resetYes.setMenuAlpha(resetSelection == 0 ? 1.25 : 0.6);
+    resetNo.setMenuAlpha(resetSelection == 1 ? 1.25 : 0.6);
+  }
+
+  function updateResetPrompt(elapsed:Float):Void
+  {
+    resetPromptAlpha = Math.min(0.6, resetPromptAlpha + elapsed * 1.5);
+    resetBackground.alpha = resetPromptAlpha;
+    var textAlpha:Float = Math.min(1.0, resetPromptAlpha / 0.6);
+    resetHeader.setMenuAlpha(textAlpha);
+    resetSongTitle.setMenuAlpha(textAlpha);
+    resetIcon.alpha = textAlpha;
+  }
+
+  function closeResetPrompt():Void
+  {
+    resetPrompt = false;
+    resetBackground.visible = false;
+    resetHeader.visible = false;
+    resetSongTitle.visible = false;
+    resetIcon.visible = false;
+    resetYes.visible = false;
+    resetNo.visible = false;
   }
 
   override function update(elapsed:Float):Void
@@ -267,19 +354,27 @@ class PsychFreeplayState extends MusicBeatSubState
 
     if (resetPrompt)
     {
-      if (controls.ACCEPT)
+      updateResetPrompt(elapsed);
+      if (controls.UI_LEFT_P || controls.UI_RIGHT_P)
       {
-        var entry = songs[selected];
-        Save.instance.removeSongScore(entry.id, currentDifficulty, VARIATION);
-        resetPrompt = false;
-        resetPromptText.visible = false;
-        updateScore();
-        FunkinSound.playOnce(Paths.sound('confirmMenu', 'shared'));
+        resetSelection = 1 - resetSelection;
+        updateResetSelection();
+        FunkinSound.playOnce(Paths.sound('scrollMenu', 'shared'));
       }
-      else if (controls.BACK)
+      if (controls.BACK)
       {
-        resetPrompt = false;
-        resetPromptText.visible = false;
+        closeResetPrompt();
+        FunkinSound.playOnce(Paths.sound('cancelMenu', 'shared'));
+      }
+      else if (controls.ACCEPT)
+      {
+        if (resetSelection == 0)
+        {
+          var entry = songs[selected];
+          Save.instance.removeSongScore(entry.id, currentDifficulty, VARIATION);
+          updateScore();
+        }
+        closeResetPrompt();
         FunkinSound.playOnce(Paths.sound('cancelMenu', 'shared'));
       }
       return;
@@ -339,8 +434,7 @@ class PsychFreeplayState extends MusicBeatSubState
         startSelectedSong();
       else if (controls.RESET)
       {
-        resetPrompt = true;
-        resetPromptText.visible = true;
+        showResetPrompt();
       }
       else if (controls.BACK)
         goBack();
