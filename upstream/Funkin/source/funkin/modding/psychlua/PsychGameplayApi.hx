@@ -2494,6 +2494,29 @@ class PsychGameplayApi
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
   {
     if (path == null || path.length == 0) return null;
+
+    // Psych character objects expose imageFile and animation.frameName,
+    // properties that the native FlxAnimate character class does not name
+    // identically. Resolve these aliases before ordinary reflection.
+    var lowerPath:String = path.toLowerCase();
+    var imageFileSuffix:String = ".imagefile";
+    if (StringTools.endsWith(lowerPath, imageFileSuffix))
+    {
+      var characterPath:String = path.substr(0, path.length - imageFileSuffix.length);
+      var character:Dynamic = getProperty(state, characterPath, allowMaps);
+      if (Std.isOfType(character, BaseCharacter))
+        return (cast character:BaseCharacter).getPsychImageFile();
+    }
+
+    var frameNameSuffix:String = ".animation.framename";
+    if (StringTools.endsWith(lowerPath, frameNameSuffix))
+    {
+      var characterPath:String = path.substr(0, path.length - frameNameSuffix.length);
+      var character:Dynamic = getProperty(state, characterPath, allowMaps);
+      if (Std.isOfType(character, BaseCharacter))
+        return (cast character:BaseCharacter).getPsychFrameName();
+    }
+
     try
     {
       var parts:Array<String> = path.split(".");
