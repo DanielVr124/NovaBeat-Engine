@@ -3226,7 +3226,8 @@ class PsychGameplayApi
       case "change scroll speed":
         // Psych's event uses value1 as a multiplier against the chart's base
         // scroll speed and value2 as a duration in seconds. Reuse PlayState's
-        // native helper so both lanes tween together and pause/resume correctly.
+        // native helper so both lanes tween together, playback-rate scaling is
+        // respected, and pause/resume behavior stays consistent.
         if (state.currentChart != null && state.playerStrumline != null && state.opponentStrumline != null)
         {
           var multiplier:Float = parseFloatOr(value1, 1.0);
