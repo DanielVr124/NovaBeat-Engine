@@ -2163,6 +2163,13 @@ class PlayState extends MusicBeatSubState
         ? 'psych_v2 chart conversion smoke test passed.'
         : 'psych_v2 chart conversion smoke test failed.'));
     });
+    FlxG.console.registerFunction('testPsychGameplayApi', () ->
+    {
+      var passed:Bool = PsychGameplayApi.runApiSmokeTests(this);
+      trace('[Psych Compatibility] ' + (passed
+        ? 'Psych gameplay API registration and camera smoke tests passed.'
+        : 'One or more Psych gameplay API smoke tests failed.'));
+    });
   };
 
   /**
