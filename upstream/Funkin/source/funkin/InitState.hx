@@ -24,13 +24,14 @@ import funkin.data.event.SongEventRegistry;
 import funkin.data.stage.StageRegistry;
 import funkin.data.story.level.LevelRegistry;
 import funkin.modding.module.ModuleHandler;
+import funkin.modding.ExperienceManager;
+import funkin.modding.ExperienceManager.ExperienceInfo;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.play.notes.notekind.NoteKindManager;
 import funkin.play.PlayStatePlaylist;
 import funkin.ui.debug.charting.ChartEditorState;
 import funkin.ui.debug.stageeditor.StageEditorState;
 import funkin.ui.title.TitleState;
-import funkin.ui.mainmenu.ExperienceLibraryState;
 import funkin.ui.transition.LoadingState;
 import funkin.util.CLIUtil;
 import funkin.util.CLIUtil.CLIParams;
@@ -503,12 +504,47 @@ class InitState extends FlxState
       }
       else
       {
-        FlxG.switchState(() -> new ExperienceLibraryState());
+        startDefaultExperience();
       }
       #else
-      FlxG.switchState(() -> new ExperienceLibraryState());
+      startDefaultExperience();
       #end
     }
+  }
+
+  /**
+   * Restore the last selected experience automatically and continue to the
+   * normal Friday Night Funkin' title screen. The Mods menu is now the only
+   * player-facing place to browse and launch installed packages.
+   */
+  function startDefaultExperience():Void
+  {
+    // Always boot into the normal Friday Night Funkin' menu. Installed mods
+    // are browsed and launched explicitly from the main-menu Mods button.
+    // Enabled content extensions assigned to the base game still participate
+    // through the existing ExperienceManager activation path.
+    var official:Null<ExperienceInfo> = null;
+    for (info in ExperienceManager.scanInstalled())
+    {
+      if (info.isOfficial)
+      {
+        official = info;
+        break;
+      }
+    }
+
+    if (official != null)
+    {
+      var error:Null<String> = ExperienceManager.activate(official);
+      if (error != null)
+        trace("Could not activate the default Friday Night Funkin' experience: " + error);
+    }
+    else
+    {
+      trace("The built-in Friday Night Funkin' experience was not found during startup.");
+    }
+
+    FlxG.switchState(() -> new TitleState());
   }
 
   /**

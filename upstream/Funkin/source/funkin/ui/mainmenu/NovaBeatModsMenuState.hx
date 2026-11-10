@@ -42,7 +42,7 @@ class NovaBeatModsMenuState extends MusicBeatState
 
     FunkinSound.stopAllAudio(true, true);
     silenceMenuMusic();
-    Cursor.hide();
+    Cursor.show();
 
     modPage = new ModMenu();
     modPage.onExit.add(goBack);
@@ -56,8 +56,8 @@ class NovaBeatModsMenuState extends MusicBeatState
     // The previous menu theme can finish loading after the state switch.
     // Keep the music channel empty for the lifetime of this screen.
     silenceMenuMusic();
-    Cursor.hide();
-    FlxG.mouse.visible = false;
+    Cursor.show();
+    FlxG.mouse.visible = true;
   }
 
   function silenceMenuMusic():Void
