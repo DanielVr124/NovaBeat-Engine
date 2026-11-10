@@ -2115,6 +2115,7 @@ class PsychModRuntime
     var contentRoot:String = Path.join([wrappedRoot, "mods", "actual-mod"]);
     var chartFolder:String = Path.join([contentRoot, "data", "smoke-song"]);
 
+    var passed:Bool = false;
     try
     {
       createSmokeDirectoryTree(chartFolder);
@@ -2122,17 +2123,17 @@ class PsychModRuntime
         '{"song":{"song":"smoke-song","notes":[],"bpm":100}}');
 
       var resolved:String = resolvePsychContentRoot(wrappedRoot);
-      return Path.normalize(resolved) == Path.normalize(contentRoot);
+      passed = Path.normalize(resolved) == Path.normalize(contentRoot);
     }
     catch (error:Dynamic)
     {
       trace('[Psych Compatibility] Nested package root smoke test failed: ' + Std.string(error));
-      return false;
+      passed = false;
     }
-    finally
-    {
-      deleteSmokeDirectoryTree(tempRoot);
-    }
+
+    // Haxe has no try/finally construct; clean up after either result path.
+    deleteSmokeDirectoryTree(tempRoot);
+    return passed;
   }
 
   static function createSmokeDirectoryTree(path:String):Void
