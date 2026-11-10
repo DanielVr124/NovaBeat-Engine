@@ -99,11 +99,14 @@ class PsychAlphabet extends FlxSpriteGroup
     for (i in 0...letters.length)
     {
       var letter = letters[i];
-      letter.scale.set(targetScale, targetScale);
+      // Psych's original Freeplay Alphabet compresses long names horizontally,
+      // leaving glyph height and vertical offsets unchanged.
+      letter.scale.x = targetScale;
+      letter.scale.y = 1.0;
       letter.updateHitbox();
       letter.x = baseX[i] * targetScale;
       letter.y = 0;
-      letter.offset.y = baseOffsetY[i] * targetScale - (70 * targetScale - letter.height);
+      letter.offset.y = baseOffsetY[i] - (70 - letter.height);
       textWidth = Math.max(textWidth, letter.x + letter.width);
     }
   }

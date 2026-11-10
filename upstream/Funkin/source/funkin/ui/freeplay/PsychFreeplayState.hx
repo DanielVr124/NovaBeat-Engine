@@ -33,7 +33,7 @@ class PsychFreeplayState extends MusicBeatSubState
   static inline final DEFAULT_COLOR:Int = 0xFF9271FD;
   static inline final LIST_X:Float = 90;
   static inline final LIST_Y:Float = 320;
-  static inline final ITEM_SPACING_Y:Float = 156;
+  static inline final ITEM_SPACING_Y:Float = 91;
   static inline final DRAW_DISTANCE:Int = 4;
 
   static var rememberedSelection:Int = 0;
@@ -184,6 +184,7 @@ class PsychFreeplayState extends MusicBeatSubState
       var songText = new PsychAlphabet(LIST_X, LIST_Y, songs[i].name);
       songText.targetY = i;
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
+      songText.visible = false;
       songTexts.push(songText);
       add(songText);
 
@@ -207,7 +208,7 @@ class PsychFreeplayState extends MusicBeatSubState
     add(scoreBackground);
 
     difficultyText = new FlxText(scoreText.x, scoreText.y + 36, 0, '', 24);
-    difficultyText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.RIGHT);
+    difficultyText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, FlxTextAlign.CENTER);
     difficultyText.scrollFactor.set();
     add(difficultyText);
     add(scoreText);
@@ -238,7 +239,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   function createPreviewPanel():Void
   {
-    previewBackground = new FlxSprite(FlxG.width * 0.6, 0).makeGraphic(Std.int(FlxG.width * 0.4), 100, FlxColor.BLACK);
+    previewBackground = new FlxSprite(FlxG.width * 0.7, 0).makeGraphic(Std.int(FlxG.width * 0.3), 100, FlxColor.BLACK);
     previewBackground.alpha = 0.6;
     previewBackground.scrollFactor.set();
     add(previewBackground);
@@ -321,10 +322,10 @@ class PsychFreeplayState extends MusicBeatSubState
     resetSongTitle.visible = true;
     add(resetSongTitle);
 
+    resetIcon.characterId = entry.icon;
+    resetIcon.size.set(scale, scale);
     resetIcon.visible = true;
     resetIcon.alpha = 0;
-    resetIcon.setGraphicSize(Std.int(resetIcon.width * scale));
-    resetIcon.updateHitbox();
     resetIcon.setPosition(resetSongTitle.x - resetIcon.width + (10 * scale), resetSongTitle.y - 30);
 
     resetYes.setMenuPosition((FlxG.width - resetYes.textWidth) / 2 - 200, resetSongTitle.y + 150);
@@ -841,8 +842,8 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomBackground?.setPosition(0, height - 26);
     if (bottomText != null) bottomText.fieldWidth = width;
     bottomText?.setPosition(0, height - 22);
-    previewBackground?.makeGraphic(Std.int(width * 0.4), 100, FlxColor.BLACK);
-    previewBackground?.setPosition(width * 0.6, 0);
+    previewBackground?.makeGraphic(Std.int(width * 0.3), 100, FlxColor.BLACK);
+    previewBackground?.setPosition(width * 0.7, 0);
     previewPlaybackBackground?.makeGraphic(Std.int(width * 0.15), 100, FlxColor.BLACK);
     previewPlaybackBackground?.setPosition(width * 0.55, 0);
     if (previewPlaybackText != null) previewPlaybackText.fieldWidth = width * 0.15;
