@@ -71,7 +71,7 @@ class PerformanceCustomizationMenu extends Page<OptionsState.OptionsMenuPageName
   public function new()
   {
     super();
-    novaBeatLayout = Preferences.menuStyle == "NovaBeat";
+    novaBeatLayout = false;
     if (novaBeatLayout) buildNovaBeatLayout();
     else buildFNFLayout();
   }
