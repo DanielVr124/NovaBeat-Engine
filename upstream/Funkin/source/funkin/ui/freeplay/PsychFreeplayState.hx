@@ -453,10 +453,19 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     if (songs.length == 0) return;
     var entry = songs[selected];
+    var previewDifficulty = entry.song.getDifficulty(currentDifficulty, VARIATION);
+    if (previewDifficulty == null)
+    {
+      FlxG.log.warn('[Psych Freeplay] Missing preview difficulty ' + currentDifficulty + ' for ' + entry.id);
+      return;
+    }
+
+    // Keep the main menu theme alive underneath the preview, then restore it
+    // when preview playback ends.
     menuMusicBeforePreview = FlxG.sound.music;
     menuMusicBeforePreview?.pause();
 
-    entry.song.playInst(0.8, '', false);
+    previewDifficulty.playInst(0.8, '', false);
     if (FlxG.sound.music == null || !FlxG.sound.music.exists)
     {
       FlxG.log.warn('[Psych Freeplay] Could not load preview instrumental for ' + entry.id);
