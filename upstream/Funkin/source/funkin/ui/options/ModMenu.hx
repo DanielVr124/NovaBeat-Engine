@@ -2,6 +2,7 @@ package funkin.ui.options;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.addons.ui.FlxInputText;
 import flixel.group.FlxGroup;
 import flixel.math.FlxPoint;
 import flixel.text.FlxText;
@@ -47,6 +48,11 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   static inline final COLOR_MUTED:Int = 0xFFD0C4E5;
 
   var experiences:Array<ExperienceInfo> = [];
+  var allExperiences:Array<ExperienceInfo> = [];
+  var searchQuery:String = "";
+  var searchInput:Null<FlxInputText> = null;
+  var mobileCountLabel:Null<FlxText> = null;
+  var pendingSearchRefresh:Bool = false;
   var selectedIndex:Int = 0;
   var firstVisibleIndex:Int = 0;
   var visibleRows:Int = 1;
@@ -86,14 +92,15 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var previousId:String = experiences.length > 0 && selectedIndex < experiences.length
       ? experiences[selectedIndex].id : "";
 
-    experiences = ExperienceManager.scanInstalled().filter(function(info:ExperienceInfo):Bool
+    allExperiences = ExperienceManager.scanInstalled().filter(function(info:ExperienceInfo):Bool
     {
       return !info.isOfficial;
     });
-    experiences.sort(function(a:ExperienceInfo, b:ExperienceInfo):Int
+    allExperiences.sort(function(a:ExperienceInfo, b:ExperienceInfo):Int
     {
       return Reflect.compare(a.title.toLowerCase(), b.title.toLowerCase());
     });
+    applyModSearchFilter();
 
     selectedIndex = 0;
     if (previousId != "")
@@ -114,9 +121,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if web
     lastStatus = "Browser builds cannot scan local mod folders. Install and browse mods in a native build.";
     #else
-    lastStatus = experiences.length == 0
+    lastStatus = allExperiences.length == 0
       ? "No installed mods were detected. Add a mod to the mods folder, then refresh."
-      : experiences.length + (experiences.length == 1 ? " MOD INSTALLED" : " MODS INSTALLED");
+      : allExperiences.length + (allExperiences.length == 1 ? " MOD INSTALLED" : " MODS INSTALLED");
     #end
 
     renderLayout();
@@ -132,6 +139,9 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     rowObjects = [];
     buttonHitboxes = [];
     buttonActions = [];
+    searchInput = null;
+    mobileCountLabel = null;
+    pendingSearchRefresh = false;
 
     var width:Float = FlxG.width;
     var height:Float = FlxG.height;
@@ -193,6 +203,66 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   }
 
 
+
+  function mobileCountText():String
+  {
+    if (searchQuery.length == 0)
+      return allExperiences.length + (allExperiences.length == 1 ? " INSTALLED MOD" : " INSTALLED MODS");
+    return experiences.length + " OF " + allExperiences.length + " MODS MATCH";
+  }
+
+  function applyModSearchFilter():Void
+  {
+    var needle:String = searchQuery == null ? "" : StringTools.trim(searchQuery).toLowerCase();
+    experiences = allExperiences.filter(function(info:ExperienceInfo):Bool
+    {
+      if (needle.length == 0) return true;
+      var title:String = info.title == null ? "" : info.title.toLowerCase();
+      var author:String = info.author == null ? "" : info.author.toLowerCase();
+      return title.indexOf(needle) >= 0 || author.indexOf(needle) >= 0;
+    });
+    if (experiences.length == 0)
+      selectedIndex = 0;
+    else
+      selectedIndex = Std.int(Math.max(0, Math.min(selectedIndex, experiences.length - 1)));
+  }
+
+  function refreshMobileSearchResults():Void
+  {
+    applyModSearchFilter();
+    selectedIndex = 0;
+    firstVisibleIndex = 0;
+    mobileDetailView = false;
+    infoExpanded = false;
+    infoScroll = 0;
+    if (mobileCountLabel != null)
+      mobileCountLabel.text = mobileCountText() + "  •  TAP A CARD TO VIEW DETAILS";
+    renderMobileRows();
+  }
+
+  function addMobileSearchBox(x:Float, y:Float, width:Float, height:Float):Void
+  {
+    var backing:FlxSprite = addRect(x, y, width, height, COLOR_PURPLE);
+    buttonHitboxes.push(backing);
+    buttonActions.push("focusSearch");
+    addRect(x + 3, y + 3, width - 6, height - 6, COLOR_PANEL_DARK);
+    if (searchQuery.length == 0)
+      addLabel(x + 10, y + 9, width - 20, "SEARCH BY NAME OR CREATOR", 9, COLOR_MUTED);
+
+    var input:FlxInputText = new FlxInputText(x + 8, y + 5, Std.int(width - 16), searchQuery,
+      10, COLOR_TEXT, COLOR_PANEL_DARK, true);
+    input.background = false;
+    input.setFormat(Paths.font("vcr.ttf"), 10, COLOR_TEXT, FlxTextAlign.LEFT);
+    input.maxLength = 48;
+    input.callback = function(value:String, action:String):Void
+    {
+      searchQuery = value;
+      pendingSearchRefresh = true;
+    };
+    searchInput = input;
+    add(input);
+  }
+
   /**
    * Portrait phones use a dedicated master/detail flow. The desktop list and
    * preview remain untouched; mobile never tries to squeeze both panes together.
@@ -209,13 +279,19 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   function renderMobileList(width:Float, height:Float, margin:Float):Void
   {
     addGraffitiTitle(margin, 10, width - margin * 2);
-    addLabel(margin + 2, 52, width - margin * 2 - 4,
-      experiences.length + (experiences.length == 1 ? " INSTALLED MOD" : " INSTALLED MODS")
-        + "  •  TAP A CARD TO VIEW DETAILS",
-      9, COLOR_MUTED);
+    mobileCountLabel = addLabel(margin + 2, 52, width - margin * 2 - 4,
+      mobileCountText() + "  •  TAP A CARD TO VIEW DETAILS", 9, COLOR_MUTED);
+
+    var searchY:Float = 74;
+    var clearWidth:Float = 58;
+    var searchGap:Float = 8;
+    var searchWidth:Float = width - margin * 2 - clearWidth - searchGap;
+    addMobileSearchBox(margin, searchY, searchWidth, 32);
+    addActionButton(margin + searchWidth + searchGap, searchY, clearWidth, 32,
+      "CLEAR", "clearSearch", COLOR_PURPLE, false);
 
     var listX:Float = margin;
-    var listY:Float = 78;
+    var listY:Float = 114;
     var listWidth:Float = width - margin * 2;
     var footerY:Float = height - 64;
     var listHeight:Float = Math.max(96, footerY - listY - 10);
@@ -244,15 +320,18 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     if (experiences.length == 0)
     {
+      var emptyTitle:String = searchQuery.length > 0 ? "NO MATCHING MODS" : "NO MODS FOUND";
+      var emptyHint:String = searchQuery.length > 0
+        ? "TRY ANOTHER NAME OR CLEAR YOUR SEARCH."
+        : "ADD A MOD TO YOUR MODS FOLDER, THEN TAP REFRESH.";
+      #if web
+      if (searchQuery.length == 0)
+        emptyHint = "LOCAL MOD FOLDERS ARE NOT AVAILABLE IN THE BROWSER BUILD.";
+      #end
       addRowObject(addLabel(rowX + 12, rowY + 24, rowWidth - 24,
-        "NO MODS FOUND", 17, COLOR_TEXT));
+        emptyTitle, 17, COLOR_TEXT));
       addRowObject(addLabel(rowX + 12, rowY + 54, rowWidth - 24,
-        #if web
-        "LOCAL MOD FOLDERS ARE NOT AVAILABLE IN THE BROWSER BUILD."
-        #else
-        "ADD A MOD TO YOUR MODS FOLDER, THEN TAP REFRESH."
-        #end
-        , 9, COLOR_MUTED));
+        emptyHint, 9, COLOR_MUTED));
       return;
     }
 
@@ -725,7 +804,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     lines.push("MOD VERSION: " + readModVersion(info));
     lines.push("PACKAGE TYPE: " + packageTypeLabel(info.packageType));
     if (info.packageType == ExperienceManager.PACKAGE_EXTENSION)
-      lines.push("LOADS WITH: " + ExperienceManager.experienceTitle(info.ownerId, experiences));
+      lines.push("LOADS WITH: " + ExperienceManager.experienceTitle(info.ownerId, allExperiences));
     lines.push("ENGINE FORMAT: " + info.engineLabel
       + (info.engineVersion == null ? "" : "  •  " + info.engineVersion));
     lines.push("PACKAGE SCAN: " + (info.launchable ? "PASSED — PACKAGE IS ELIGIBLE TO LAUNCH" : "BLOCKED"));
@@ -929,6 +1008,16 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         renderLayout();
       case "refresh":
         refreshModList();
+      case "focusSearch":
+        if (searchInput != null) searchInput.hasFocus = true;
+      case "clearSearch":
+        searchQuery = "";
+        if (searchInput != null)
+        {
+          searchInput.text = "";
+          searchInput.hasFocus = false;
+        }
+        refreshMobileSearchResults();
       case "back":
         FunkinSound.playOnce(Paths.sound("cancelMenu"));
         if (portraitLayout && mobileDetailView)
@@ -1125,6 +1214,22 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   override function updateEnabled(elapsed:Float):Void
   {
     if (!enabled) return;
+
+    if (pendingSearchRefresh)
+    {
+      pendingSearchRefresh = false;
+      if (portraitLayout && !mobileDetailView)
+        refreshMobileSearchResults();
+    }
+
+    // While the search field owns keyboard focus, do not let menu navigation
+    // consume typed characters or launch the currently highlighted package.
+    if (searchInput != null && searchInput.hasFocus)
+    {
+      if (controls.BACK_P || FlxG.keys.justPressed.ESCAPE || FlxG.keys.justPressed.ENTER)
+        searchInput.hasFocus = false;
+      return;
+    }
 
     // Handle keyboard and controller Back exactly once. This Page subclass
     // owns its Back action so the base Page implementation cannot dispatch
