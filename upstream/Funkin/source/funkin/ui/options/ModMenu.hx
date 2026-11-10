@@ -55,6 +55,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
   var rowWidth:Float = 0;
   var rowHeight:Float = 58;
   var portraitLayout:Bool = false;
+  var mobileDetailView:Bool = false;
+  var mobileInfoY:Float = 0;
+  var mobileInfoWidth:Float = 0;
+  var mobileInfoHeight:Float = 0;
   var infoExpanded:Bool = false;
   var infoScroll:Int = 0;
   var lastStatus:String = "";
@@ -106,6 +110,7 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     infoExpanded = false;
     infoScroll = 0;
+    mobileDetailView = false;
     #if web
     lastStatus = "Browser builds cannot scan local mod folders. Install and browse mods in a native build.";
     #else
@@ -132,7 +137,12 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     var height:Float = FlxG.height;
     portraitLayout = height > width * 1.12 || width < 520;
     var compactLandscape:Bool = !portraitLayout && height < 520;
-    var margin:Float = portraitLayout ? 14 : (compactLandscape ? 20 : 34);
+    if (portraitLayout)
+    {
+      renderMobileLayout(width, height);
+      return;
+    }
+    var margin:Float = compactLandscape ? 20 : 34;
     var headerY:Float = portraitLayout ? 12 : (compactLandscape ? 8 : 18);
     var footerHeight:Float = compactLandscape ? 38 : 48;
     var contentY:Float = portraitLayout ? 76 : (compactLandscape ? 58 : 88);
@@ -180,6 +190,232 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
     buildPreview();
     buildFooter(width, height, margin, footerHeight, compactLandscape);
+  }
+
+
+  /**
+   * Portrait phones use a dedicated master/detail flow. The desktop list and
+   * preview remain untouched; mobile never tries to squeeze both panes together.
+   */
+  function renderMobileLayout(width:Float, height:Float):Void
+  {
+    var margin:Float = Std.int(Math.max(12, Math.min(20, width * 0.045)));
+    if (mobileDetailView && experiences.length > 0)
+      renderMobileDetails(width, height, margin);
+    else
+      renderMobileList(width, height, margin);
+  }
+
+  function renderMobileList(width:Float, height:Float, margin:Float):Void
+  {
+    addGraffitiTitle(margin, 10, width - margin * 2);
+    addLabel(margin + 2, 52, width - margin * 2 - 4,
+      experiences.length + (experiences.length == 1 ? " INSTALLED MOD" : " INSTALLED MODS")
+        + "  •  TAP A CARD TO VIEW DETAILS",
+      9, COLOR_MUTED);
+
+    var listX:Float = margin;
+    var listY:Float = 78;
+    var listWidth:Float = width - margin * 2;
+    var footerY:Float = height - 64;
+    var listHeight:Float = Math.max(96, footerY - listY - 10);
+
+    addPanel(listX, listY, listWidth, listHeight, COLOR_PURPLE);
+    rowX = listX + 10;
+    rowY = listY + 14;
+    rowWidth = listWidth - 20;
+    rowHeight = 96;
+    var availableRowsHeight:Float = listY + listHeight - rowY - 10;
+    visibleRows = Std.int(Math.max(1, Math.floor(availableRowsHeight / rowHeight)));
+    renderMobileRows();
+
+    var gap:Float = 10;
+    var buttonWidth:Float = (width - margin * 2 - gap) * 0.5;
+    addActionButton(margin, footerY, buttonWidth, 48, "REFRESH", "refresh", COLOR_BLUE, false);
+    addActionButton(margin + buttonWidth + gap, footerY, buttonWidth, 48, "BACK", "back", COLOR_PURPLE, false);
+  }
+
+  function renderMobileRows():Void
+  {
+    for (object in rowObjects)
+      remove(object, true);
+    rowObjects = [];
+    rowHitboxes = [];
+
+    if (experiences.length == 0)
+    {
+      addRowObject(addLabel(rowX + 12, rowY + 24, rowWidth - 24,
+        "NO MODS FOUND", 17, COLOR_TEXT));
+      addRowObject(addLabel(rowX + 12, rowY + 54, rowWidth - 24,
+        #if web
+        "LOCAL MOD FOLDERS ARE NOT AVAILABLE IN THE BROWSER BUILD."
+        #else
+        "ADD A MOD TO YOUR MODS FOLDER, THEN TAP REFRESH."
+        #end
+        , 9, COLOR_MUTED));
+      return;
+    }
+
+    if (selectedIndex < firstVisibleIndex) firstVisibleIndex = selectedIndex;
+    if (selectedIndex >= firstVisibleIndex + visibleRows)
+      firstVisibleIndex = selectedIndex - visibleRows + 1;
+    firstVisibleIndex = Std.int(Math.max(0, Math.min(firstVisibleIndex,
+      Math.max(0, experiences.length - visibleRows))));
+
+    for (visibleIndex in 0...visibleRows)
+    {
+      var index:Int = firstVisibleIndex + visibleIndex;
+      if (index >= experiences.length) break;
+
+      var info:ExperienceInfo = experiences[index];
+      var y:Float = rowY + visibleIndex * rowHeight;
+      var cardHeight:Float = rowHeight - 8;
+      var selected:Bool = index == selectedIndex;
+      var card:FlxSprite = addRect(rowX, y, rowWidth, cardHeight, selected ? COLOR_PINK : 0xFF080710);
+      rowHitboxes.push(card);
+      addRowObject(card);
+      addRowObject(addRect(rowX + 3, y + 3, rowWidth - 6, cardHeight - 6,
+        selected ? 0xFF3C2859 : 0xFF21172F));
+
+      var artSize:Float = Math.min(68, cardHeight - 12);
+      var artX:Float = rowX + 9;
+      var artY:Float = y + (cardHeight - artSize) * 0.5;
+      var art:FlxSprite = addRect(artX, artY, artSize, artSize, 0xFF49305F);
+      addRowObject(art);
+      if (!loadModArtwork(art, info, artSize))
+      {
+        var initials:String = info.title.length <= 3
+          ? info.title.toUpperCase()
+          : info.title.substr(0, 3).toUpperCase();
+        addRowObject(addLabel(artX + 3, artY + artSize * 0.28, artSize - 6,
+          initials, 18, COLOR_PINK, FlxTextAlign.CENTER));
+      }
+
+      var textX:Float = artX + artSize + 12;
+      var textWidth:Float = Math.max(1, rowWidth - (textX - rowX) - 27);
+      addRowObject(addLabel(textX, y + 16, textWidth, info.title, 14, COLOR_TEXT));
+      var author:String = info.author == null || info.author.length == 0
+        ? "Unknown creator" : info.author;
+      var state:String = info.launchable ? (info.enabled ? "READY" : "READY TO ENABLE") : "NOT LAUNCHABLE";
+      addRowObject(addLabel(textX, y + 41, textWidth, author, 9, COLOR_PINK));
+      addRowObject(addLabel(textX, y + 58, textWidth, state, 8,
+        info.launchable ? COLOR_BLUE : COLOR_MUTED));
+      addRowObject(addLabel(rowX + rowWidth - 25, y + 31, 18, "›", 22, COLOR_TEXT, FlxTextAlign.CENTER));
+    }
+  }
+
+  function renderMobileDetails(width:Float, height:Float, margin:Float):Void
+  {
+    var info:ExperienceInfo = experiences[selectedIndex];
+    addActionButton(margin, 10, 76, 42, "< BACK", "back", COLOR_PURPLE, false);
+    addLabel(margin + 88, 22, width - margin * 2 - 88,
+      "MOD DETAILS", 15, COLOR_PINK);
+
+    var heroX:Float = margin;
+    var heroY:Float = 62;
+    var heroWidth:Float = width - margin * 2;
+    var heroHeight:Float = 146;
+    addPanel(heroX, heroY, heroWidth, heroHeight, COLOR_PINK);
+
+    var artSize:Float = Math.min(94, Math.max(76, width * 0.255));
+    var artX:Float = heroX + 16;
+    var artY:Float = heroY + 28;
+    var art:FlxSprite = addRect(artX, artY, artSize, artSize, 0xFF49305F);
+    if (!loadModArtwork(art, info, artSize))
+    {
+      var initials:String = info.title.length <= 3
+        ? info.title.toUpperCase()
+        : info.title.substr(0, 3).toUpperCase();
+      addLabel(artX + 4, artY + artSize * 0.29, artSize - 8,
+        initials, 25, COLOR_PINK, FlxTextAlign.CENTER);
+    }
+
+    var titleX:Float = artX + artSize + 13;
+    var titleWidth:Float = Math.max(70, heroX + heroWidth - titleX - 12);
+    addLabel(titleX, heroY + 33, titleWidth, info.title, 16, COLOR_TEXT);
+    var creator:String = info.author == null || info.author.length == 0
+      ? "Unknown creator" : info.author;
+    addLabel(titleX, heroY + 65, titleWidth, "BY " + creator.toUpperCase(), 9, COLOR_PINK);
+    addLabel(titleX, heroY + 84, titleWidth, "VERSION " + readModVersion(info), 8, COLOR_BLUE);
+    addLabel(titleX, heroY + 103, titleWidth,
+      info.launchable ? (info.enabled ? "INSTALLED • ENABLED" : "INSTALLED • READY")
+        : "INSTALLED • BLOCKED",
+      8, info.launchable ? COLOR_MUTED : COLOR_PINK);
+
+    var dockY:Float = height - 68;
+    var contentY:Float = heroY + heroHeight + 10;
+    var contentHeight:Float = Math.max(74, dockY - contentY - 10);
+    addPanel(margin, contentY, heroWidth, contentHeight, COLOR_PURPLE);
+    addLabel(margin + 14, contentY + 14, heroWidth - 28,
+      infoExpanded ? "MOD INFORMATION" : "ABOUT THIS MOD", 10, COLOR_BLUE);
+
+    mobileInfoY = contentY + 38;
+    mobileInfoWidth = heroWidth - 28;
+    mobileInfoHeight = Math.max(22, contentHeight - 54);
+
+    var body:String = infoExpanded ? buildMoreInfo(info) : info.description;
+    if (body == null || body.length == 0) body = "No description was provided.";
+    var maxCharacters:Int = Std.int(Math.max(18, mobileInfoWidth / 6.5));
+    var lines:Array<String> = wrapInformationLines(body, maxCharacters);
+    var maxLines:Int = Std.int(Math.max(1, Math.floor(mobileInfoHeight / 14)));
+    var maxScroll:Int = Std.int(Math.max(0, lines.length - maxLines));
+    infoScroll = Std.int(Math.max(0, Math.min(infoScroll, maxScroll)));
+    var visibleText:String = lines.slice(infoScroll, infoScroll + maxLines).join("\n");
+    var bodyLabel:FlxText = addLabel(margin + 14, mobileInfoY, mobileInfoWidth,
+      visibleText, 10, COLOR_MUTED);
+    bodyLabel.wordWrap = false;
+    bodyLabel.autoSize = false;
+    bodyLabel.fieldWidth = mobileInfoWidth;
+    bodyLabel.fieldHeight = mobileInfoHeight;
+
+    if (maxScroll > 0)
+    {
+      addLabel(margin + 14, contentY + contentHeight - 18, heroWidth - 28,
+        "SWIPE OR USE UP / DOWN TO SCROLL", 7, COLOR_BLUE);
+    }
+
+    var status:String = lastStatus;
+    if (status != null && status.length > 0)
+    {
+      var maxStatus:Int = Std.int(Math.max(20, heroWidth / 6));
+      if (status.length > maxStatus) status = status.substr(0, maxStatus - 3) + "...";
+      addLabel(margin + 14, contentY + contentHeight - 32, heroWidth - 28,
+        status, 7, COLOR_MUTED);
+    }
+
+    var gap:Float = 8;
+    var innerWidth:Float = heroWidth - 20;
+    var playWidth:Float = innerWidth * 0.62;
+    var moreWidth:Float = innerWidth - playWidth - gap;
+    addActionButton(margin + 10, dockY, playWidth, 52, "PLAY MOD", "play", COLOR_PINK, true);
+    addActionButton(margin + 10 + playWidth + gap, dockY, moreWidth, 52,
+      infoExpanded ? "LESS INFO" : "MORE INFO", "more", COLOR_PURPLE, false);
+  }
+
+  function scrollMobileDetails(direction:Int):Void
+  {
+    if (!mobileDetailView || experiences.length == 0) return;
+    var info:ExperienceInfo = experiences[selectedIndex];
+    var body:String = infoExpanded ? buildMoreInfo(info) : info.description;
+    if (body == null || body.length == 0) body = "No description was provided.";
+    var maxCharacters:Int = Std.int(Math.max(18, mobileInfoWidth / 6.5));
+    var lineCount:Int = wrapInformationLines(body, maxCharacters).length;
+    var maxLines:Int = Std.int(Math.max(1, Math.floor(mobileInfoHeight / 14)));
+    var maxScroll:Int = Std.int(Math.max(0, lineCount - maxLines));
+    infoScroll = Std.int(Math.max(0, Math.min(maxScroll, infoScroll + direction)));
+    renderLayout();
+  }
+
+  function openMobileDetails(index:Int):Void
+  {
+    if (index < 0 || index >= experiences.length) return;
+    selectedIndex = index;
+    mobileDetailView = true;
+    infoExpanded = false;
+    infoScroll = 0;
+    lastStatus = "SELECTED: " + experiences[index].title;
+    FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.35);
+    renderLayout();
   }
 
   function addGraffitiTitle(x:Float, y:Float, width:Float):Void
@@ -695,7 +931,17 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         refreshModList();
       case "back":
         FunkinSound.playOnce(Paths.sound("cancelMenu"));
-        onExit.dispatch();
+        if (portraitLayout && mobileDetailView)
+        {
+          mobileDetailView = false;
+          infoExpanded = false;
+          infoScroll = 0;
+          renderLayout();
+        }
+        else
+        {
+          onExit.dispatch();
+        }
     }
   }
 
@@ -867,7 +1113,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var overMouse:Bool = mouseReleased && pointerOverAt(hitbox, mousePointer);
       if (overTouch || overMouse)
       {
-        selectMod(firstVisibleIndex + index);
+        if (portraitLayout)
+          openMobileDetails(firstVisibleIndex + index);
+        else
+          selectMod(firstVisibleIndex + index);
         return;
       }
     }
@@ -896,7 +1145,21 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
         selectMod(selectedIndex + (FlxG.mouse.deltaWheel.y < 0 ? 1 : -1));
     }
 
-    if (infoExpanded)
+    if (portraitLayout && mobileDetailView)
+    {
+      if (controls.UI_UP_P || FlxG.keys.justPressed.UP || SwipeUtil.swipeUp)
+        scrollMobileDetails(-3);
+      if (controls.UI_DOWN_P || FlxG.keys.justPressed.DOWN || SwipeUtil.swipeDown)
+        scrollMobileDetails(3);
+      if (controls.UI_LEFT_P || FlxG.keys.justPressed.LEFT)
+      {
+        performAction("back");
+        return;
+      }
+      if (controls.UI_RIGHT_P || FlxG.keys.justPressed.I)
+        performAction("more");
+    }
+    else if (infoExpanded)
     {
       if (controls.UI_UP_P || FlxG.keys.justPressed.UP || SwipeUtil.swipeUp) scrollMoreInfo(-3);
       if (controls.UI_DOWN_P || FlxG.keys.justPressed.DOWN || SwipeUtil.swipeDown) scrollMoreInfo(3);
