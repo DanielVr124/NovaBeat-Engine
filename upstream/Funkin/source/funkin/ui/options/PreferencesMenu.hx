@@ -62,7 +62,8 @@ class PreferencesMenu extends Page<OptionsState.OptionsMenuPageName>
 
     add(items = new TextMenuList());
     items.cameras = [menuCamera];
-    items.acceptOnTouchSelection = false;
+    // Mobile browsers should open the preference row on the first tap.
+    items.acceptOnTouchSelection = DeviceUtil.isMobileBrowser;
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
     preferenceItems.cameras = [menuCamera];
 
