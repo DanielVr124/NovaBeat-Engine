@@ -3223,6 +3223,21 @@ class PsychGameplayApi
         var girlfriend:Null<BaseCharacter> = state.currentStage == null ? null : state.currentStage.getGirlfriend();
         var speed:Int = Std.int(parseFloatOr(value1, 1));
         if (girlfriend != null) girlfriend.danceEvery = Std.int(Math.max(1, speed));
+      case "change scroll speed":
+        // Psych's event uses value1 as a multiplier against the chart's base
+        // scroll speed and value2 as a duration in seconds. Reuse PlayState's
+        // native helper so both lanes tween together and pause/resume correctly.
+        if (state.currentChart != null && state.playerStrumline != null && state.opponentStrumline != null)
+        {
+          var multiplier:Float = parseFloatOr(value1, 1.0);
+          var duration:Float = Math.max(0, parseFloatOr(value2, 0));
+          if (!Math.isNaN(multiplier) && multiplier > 0)
+          {
+            var targetSpeed:Float = state.currentChart.scrollSpeed * multiplier;
+            state.tweenScrollSpeed(targetSpeed, duration, FlxEase.linear,
+              ["playerStrumline", "opponentStrumline"]);
+          }
+        }
       case "change character":
         var role:String = value1 == null || value1.length == 0 ? "bf" : value1;
         changePsychCharacter(state, role, value2);
