@@ -29,7 +29,7 @@ The current V-Slice song data model has a single shared event timeline and two s
 
 ## Scripts and gameplay
 
-The compatibility runtime can discover global and song-local Lua/HScript files, as well as named stage, character, custom-event, and custom-note-type scripts. It exposes a bounded Psych-style callback and gameplay API. Script execution is sandboxed; arbitrary native libraries, host process access, and unrestricted filesystem/network access are not provided.
+The compatibility runtime can discover global and song-local Lua/HScript files, as well as named stage, character, custom-event, and custom-note-type scripts. It exposes a bounded Psych-style callback and gameplay API. For a song, global and referenced scripts load before note/event generation; `onCreate` and `onSongLoaded` run after chart generation; `onCreatePost` runs exactly once after the PlayState scene is initialized and before countdown callbacks. Script execution is sandboxed; arbitrary native libraries, host process access, and unrestricted filesystem/network access are not provided.
 
 A package using the legacy `custom_notes/` runtime is currently rejected. Custom stages still need a matching stage script, and custom character data must be in a format that the current character adapter can convert.
 
