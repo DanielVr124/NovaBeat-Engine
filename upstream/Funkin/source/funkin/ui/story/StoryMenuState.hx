@@ -23,7 +23,6 @@ import funkin.play.song.Song;
 import funkin.save.Save;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.mainmenu.MainMenuState;
-import funkin.ui.mainmenu.NovaBeatMainMenuState;
 import funkin.ui.MusicBeatState;
 import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.stickers.StickerSubState;
@@ -1134,11 +1133,8 @@ class StoryMenuState extends MusicBeatState
 
     exitingMenu = true;
     FlxG.keys.enabled = false;
-    if (Preferences.menuStyle == "NovaBeat")
-      FlxG.switchState(() -> new NovaBeatMainMenuState());
-    else
-      FlxG.switchState(() -> new MainMenuState());
-    FunkinSound.playOnce(Paths.sound(Preferences.menuStyle == "NovaBeat" ? 'novabeat/back' : 'cancelMenu'));
+    FlxG.switchState(() -> new MainMenuState());
+    FunkinSound.playOnce(Paths.sound('cancelMenu'));
   }
 
   /**
