@@ -1,7 +1,6 @@
 package funkin.ui.story;
 
 import flixel.FlxSprite;
-import flixel.math.FlxRect;
 import flixel.group.FlxSpriteGroup;
 import flixel.util.FlxColor;
 import funkin.util.MathUtil;
@@ -78,54 +77,6 @@ class LevelTitle extends FlxSpriteGroup
     displayVisible = value;
     title.visible = value;
     lock.visible = value && lockRequested;
-  }
-
-  /**
-   * Clip both the week title and its lock icon to NovaBeat's lower carousel
-   * panel. The crop is recalculated while the group animates so sprites never
-   * draw over the custom background above the panel.
-   */
-  public function clipToPanel(panelTop:Float, panelBottom:Float):Void
-  {
-    clipChildToPanel(title, panelTop, panelBottom);
-    clipChildToPanel(lock, panelTop, panelBottom);
-  }
-
-  public function clearPanelClip():Void
-  {
-    title.clipRect = null;
-    lock.clipRect = null;
-  }
-
-  function clipChildToPanel(sprite:FlxSprite, panelTop:Float, panelBottom:Float):Void
-  {
-    if (sprite == null || sprite.frame == null) return;
-
-    var scaleY:Float = Math.max(0.0001, Math.abs(sprite.scale.y));
-    var worldTop:Float = this.y + sprite.y;
-    var cropTop:Float = Math.max(0, (panelTop - worldTop) / scaleY);
-    var cropBottom:Float = Math.min(sprite.frameHeight, (panelBottom - worldTop) / scaleY);
-
-    if (cropTop <= 0 && cropBottom >= sprite.frameHeight)
-    {
-      if (sprite.clipRect != null) sprite.clipRect = null;
-      return;
-    }
-
-    // Clip rectangles are pixel-aligned. Rounding before comparing keeps
-    // fractional tween movement from replacing the rectangle every frame.
-    var clipY:Float = Math.floor(cropTop);
-    var clipBottom:Float = Math.ceil(cropBottom);
-    var clipHeight:Float = Math.max(0, clipBottom - clipY);
-    var currentClip:Null<FlxRect> = sprite.clipRect;
-
-    if (currentClip != null && currentClip.x == 0 && currentClip.y == clipY
-      && currentClip.width == sprite.frameWidth && currentClip.height == clipHeight) return;
-
-    if (clipHeight <= 0)
-      sprite.clipRect = FlxRect.get(0, 0, 0, 0);
-    else
-      sprite.clipRect = FlxRect.get(0, clipY, sprite.frameWidth, clipHeight);
   }
 
   public function showLock():Void
