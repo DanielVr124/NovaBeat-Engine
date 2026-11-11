@@ -652,3 +652,5 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+
+# Android validation trigger: [full-build-android]
