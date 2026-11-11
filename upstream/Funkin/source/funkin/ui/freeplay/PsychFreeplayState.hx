@@ -192,6 +192,11 @@ class PsychFreeplayState extends MusicBeatSubState
     for (i in 0...songs.length)
     {
       var songText = new PsychAlphabet(0, FlxG.height * 0.48, songs[i].name);
+      // PsychAlphabet is a FlxSpriteGroup: its own scroll factor also affects
+      // child glyph rendering, even when each glyph has a zero scroll factor.
+      // Keep both group and glyphs in screen space so gameplay camera scroll
+      // cannot move the Freeplay rows outside the viewport.
+      songText.scrollFactor.set(0, 0);
       songText.targetY = i;
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
