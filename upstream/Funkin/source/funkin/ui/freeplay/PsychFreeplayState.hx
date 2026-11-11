@@ -191,7 +191,7 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     for (i in 0...songs.length)
     {
-      var songText = new PsychAlphabet(0, LIST_Y, songs[i].name);
+      var songText = new PsychAlphabet(0, FlxG.height * 0.48, songs[i].name);
       songText.targetY = i;
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
