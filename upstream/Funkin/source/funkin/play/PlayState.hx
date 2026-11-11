@@ -1,5 +1,7 @@
 package funkin.play;
 
+// [full-build-windows] Validate Psych script-loader containment and Freeplay row restoration on native Windows.
+
 import funkin.play.event.SongEvent;
 import funkin.play.PauseSubState.PauseMode;
 import flixel.addons.transition.FlxTransitionableState;
