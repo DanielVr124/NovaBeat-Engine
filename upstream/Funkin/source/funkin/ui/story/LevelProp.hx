@@ -52,7 +52,7 @@ class LevelProp extends Bopper
     {
       // Reset animation state.
       this.shouldAlternate = null;
-  
+
       var isAnimated:Bool = propData.animations.length > 0;
       if (isAnimated)
       {
@@ -64,11 +64,11 @@ class LevelProp extends Bopper
       {
         // Initalize static sprite.
         this.loadGraphic(Paths.image(propData.assetPath));
-  
+
         // Disables calls to update() for a performance boost.
         this.active = false;
       }
-  
+
       if (this.frames == null || this.frames.numFrames == 0)
       {
         trace('ERROR: Could not build texture for level prop (${propData.assetPath}).');
@@ -76,7 +76,7 @@ class LevelProp extends Bopper
         this.active = false;
         return;
       }
-  
+
       var scale:Float = propData.scale * (propData.isPixel ? 6 : 1);
       this.scale.set(scale, scale);
       this.antialiasing = !propData.isPixel;
@@ -85,13 +85,13 @@ class LevelProp extends Bopper
       this.y = propData.offsets[1];
       this.flipX = propData.flipX;
       this.flipY = propData.flipY;
-  
+
       FlxAnimationUtil.addAtlasAnimations(this, propData.animations);
       for (propAnim in propData.animations)
       {
         this.setAnimationOffsets(propAnim.name, propAnim.offsets[0], propAnim.offsets[1]);
       }
-  
+
       if (propData.startingAnimation != "" && this.hasAnimation(propData.startingAnimation))
       {
         this.playAnimation(propData.startingAnimation, true);
@@ -102,13 +102,13 @@ class LevelProp extends Bopper
         this.animation.paused = true;
       }
     }
-    }
     catch (error:Dynamic)
     {
       this.visible = false;
       this.active = false;
       trace('[Story Mode] Could not build week character prop: ' + Std.string(error));
     }
+  }
 
   public static function build(propData:Null<LevelPropData>):Null<LevelProp>
   {
