@@ -781,6 +781,7 @@ class PlayState extends MusicBeatSubState
     overrideMusic = params.overrideMusic ?? false;
     previousCameraFollowPoint = params.cameraFollowPoint;
     mirrorSongData = params.mirrored ?? false;
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'PlayState.constructor.begin');
 
     // Basic object initialization
 
@@ -851,12 +852,14 @@ class PlayState extends MusicBeatSubState
       trace('WARNING: PlayState instance already exists. This should not happen.');
     }
     instance = this;
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'PlayState.create.begin');
     #if !mobile
     // TODO: Figure out how to do the flair for charting mode!! I can't figure it out for the love of god. -Zack
     if (!isChartingMode) FlxG.autoPause = false;
     #end
 
     if (!assertChartExists()) return;
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'chart.validated');
 
     #if mobile
     // Force allowScreenTimeout to be disabled
@@ -878,8 +881,10 @@ class PlayState extends MusicBeatSubState
       if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
       // Prepare the current song's instrumental and vocals to be played.
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'audio.cache.begin');
       currentChart.cacheInst(currentInstrumental);
       currentChart.cacheVocals();
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'audio.cache.complete');
     }
 
     // Prepare the Conductor.
@@ -900,15 +905,20 @@ class PlayState extends MusicBeatSubState
 
     // Register standard Psych character JSON before NovaBeat's character factory runs.
     var characterRegistrationDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'characters.prepare.begin');
     PsychModRuntime.prepareSongCharacters(characterRegistrationDirs, currentSong.id, currentChart.characters);
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'characters.prepare.complete');
 
     // The song is now loaded. We can continue to initialize the play state.
     initCameras();
     initHealthBar();
     if (!isMinimalMode)
     {
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'stage.initialize.begin');
       initStage();
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'stage.initialize.complete');
       initCharacters();
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'characters.initialize.complete');
       PsychGameplayApi.applyPsychHealthBarColors(this);
     }
     else
@@ -960,11 +970,15 @@ class PlayState extends MusicBeatSubState
     // Load Psych scripts before note/event generation. This lets
     // eventEarlyTrigger and onEventPushed run while chart events are built.
     var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'scripts.load.begin');
     PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this, true);
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'scripts.load.complete');
 
     // Read the song's note data and pass it to the strumlines. Psych chart-event
     // hooks run during this step, after all matching scripts have been loaded.
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'chart.generate.begin');
     generateSong();
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'chart.generate.complete');
     PsychScriptRuntime.dispatchLoadedCallbacks();
 
     // Reset the camera's zoom and force it to focus on the camera follow point.
@@ -993,6 +1007,7 @@ class PlayState extends MusicBeatSubState
     #end
 
     initialized = true;
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'PlayState.create.complete');
 
     // This step ensures z-indexes are applied properly,
     // and it's important to call it last so all elements get affected.
@@ -2768,7 +2783,10 @@ class PlayState extends MusicBeatSubState
     {
       // Stop the vocals if they already exist.
       vocals?.stop();
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'vocals.build.begin');
       vocals = currentChart?.buildVocals(currentInstrumental);
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'vocals.build.complete',
+        'count=' + (vocals?.members?.length ?? 0));
 
       if (vocals?.members?.length == 0)
       {
@@ -2776,7 +2794,9 @@ class PlayState extends MusicBeatSubState
       }
     }
 
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'notes.generate.begin');
     regenNoteData(startTimestamp);
+    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'notes.generate.complete');
 
     var event:ScriptEvent = new ScriptEvent(CREATE, false);
     ScriptEventDispatcher.callEvent(currentSong, event);
@@ -2943,12 +2963,16 @@ class PlayState extends MusicBeatSubState
 
     if (!overrideMusic && !isGamePaused && currentChart != null)
     {
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'instrumental.load.begin');
       currentChart?.playInst(1.0, currentInstrumental, false);
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'instrumental.load.complete',
+        'music=' + (FlxG.sound.music != null));
     }
 
     if (FlxG.sound.music == null)
     {
       FlxG.log.error('PlayState failed to initialize instrumental!');
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'instrumental.load.failed');
       return;
     }
 

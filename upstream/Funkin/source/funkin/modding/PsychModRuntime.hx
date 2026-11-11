@@ -1,6 +1,7 @@
 package funkin.modding;
 
 import funkin.Assets;
+import funkin.util.FileUtil;
 import flixel.FlxG;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.data.song.SongData.SongChartData;
@@ -235,6 +236,31 @@ class PsychModRuntime
     return loaded;
   }
 
+
+  /**
+   * Persist the last reached phase of an imported Psych song launch.
+   * This file log is separate from trace output and creates the logs folder
+   * automatically on the first write on native targets.
+   */
+  public static function logSongLaunchStep(songId:String, difficulty:String, phase:String, ?details:String = ""):Void
+  {
+    #if sys
+    if (!isImportedSong(songId)) return;
+
+    var cleanDetails:String = details == null ? "" : StringTools.replace(StringTools.replace(details, "\n", " "), "\r", " ");
+    var line:String = Date.now().toString() + " | " + songId + " | " + difficulty + " | " + phase;
+    if (cleanDetails.length > 0) line += " | " + cleanDetails;
+
+    try
+    {
+      FileUtil.appendStringToPath("logs/psych-song-launch.log", line + "\n");
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not write launch diagnostic: ' + Std.string(error));
+    }
+    #end
+  }
 
   /** Return songs in the same week-file order used by classic Psych Freeplay. */
   public static function getPsychFreeplaySongOrder():Array<String>

@@ -983,6 +983,8 @@ class PsychFreeplayState extends MusicBeatSubState
     previewPlaying = false;
 
     var instrumental:String = entry.song.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? VARIATION) ?? '';
+    funkin.modding.PsychModRuntime.logSongLaunchStep(entry.id, currentDifficulty, 'freeplay.selection.confirmed',
+      'instrumental-id=' + instrumental);
     LoadingState.loadPlayState({
       targetSong: entry.song,
       targetDifficulty: currentDifficulty,
