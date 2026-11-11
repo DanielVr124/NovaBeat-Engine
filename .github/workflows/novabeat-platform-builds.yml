@@ -352,6 +352,7 @@ jobs:
           }
 
       # Store binaries without spending runner time recompressing assets.
+      # The commit-keyed cache above is the retry source if this transfer fails.
       - name: Upload Windows distribution
         uses: actions/upload-artifact@v4
         with:
