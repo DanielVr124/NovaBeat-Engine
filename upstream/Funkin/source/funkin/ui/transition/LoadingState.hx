@@ -153,12 +153,24 @@ class LoadingState extends MusicBeatSubState
       loadStatus = 'Song audio ready for streamed playback';
       lastLoadActivityTime = haxe.Timer.stamp();
       #else
-      var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
-      var voicesPaths:Array<String> = targetChart.buildVoiceList();
+      // Imported Psych stems are loose files inside the mod directory. They
+      // are loaded by FunkinSound.loadFromFile when PlayState starts, and
+      // must not be sent through Assets.loadSound (which only accepts
+      // asset-library keys).
+      if (PsychModRuntime.isImportedSong(playParams.targetSong.id))
+      {
+        loadStatus = 'Psych song audio ready for direct file playback';
+        lastLoadActivityTime = haxe.Timer.stamp();
+      }
+      else
+      {
+        var instPath:String = targetChart.getInstPath(playParams.targetInstrumental);
+        var voicesPaths:Array<String> = targetChart.buildVoiceList();
 
-      var audioPaths:Array<String> = [instPath].concat(voicesPaths);
-      var audioSequenceComplete:Void->Void = callbacks.add('songAudioSequence');
-      loadSongAudioSequentially(audioPaths, 0, audioSequenceComplete);
+        var audioPaths:Array<String> = [instPath].concat(voicesPaths);
+        var audioSequenceComplete:Void->Void = callbacks.add('songAudioSequence');
+        loadSongAudioSequentially(audioPaths, 0, audioSequenceComplete);
+      }
       #end
     }
 
