@@ -253,7 +253,16 @@ class PsychModRuntime
   /** Return the week-defined icon character, falling back to the chart opponent. */
   public static function getPsychFreeplayIcon(songId:String, fallback:String = 'face'):String
   {
-    return psychFreeplayIcons.get(songId) ?? fallback;
+    var iconId:Null<String> = psychFreeplayIcons.get(songId);
+    if (iconId == null || StringTools.trim(iconId).length == 0) return fallback;
+
+    iconId = StringTools.trim(iconId);
+    // Psych week files name the asset (icon-gorilla), while HealthIcon expects
+    // the character ID (gorilla) and adds the icon- prefix itself.
+    if (StringTools.startsWith(iconId.toLowerCase(), "icon-"))
+      iconId = iconId.substr(5);
+
+    return iconId.length == 0 ? fallback : iconId;
   }
 
   /**

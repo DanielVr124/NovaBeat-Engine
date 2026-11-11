@@ -66,8 +66,11 @@ class ExperienceManager
       var novaBeatMetadata:Dynamic = readJson(Path.join([modPath, "_novabeat.json"]));
       // Keep each metadata source separate so an engine declaration in
       // meta.json/pack.json is still visible when Polymod metadata also exists.
-      var packageMetadata:Dynamic = readJson(Path.join([modPath, "meta.json"]));
-      if (packageMetadata == null) packageMetadata = readJson(Path.join([modPath, "pack.json"]));
+      // Psych packages use pack.json as their manifest. Read it independently
+      // so it remains authoritative even when a generic meta.json is present.
+      var packMetadata:Dynamic = readJson(Path.join([modPath, "pack.json"]));
+      var metaFileMetadata:Dynamic = readJson(Path.join([modPath, "meta.json"]));
+      var packageMetadata:Dynamic = packMetadata != null ? packMetadata : metaFileMetadata;
 
       var genericMetadata:Dynamic = polymodMetadata;
       if (genericMetadata == null) genericMetadata = novaBeatMetadata;
@@ -82,6 +85,8 @@ class ExperienceManager
       var displayEngineLabel:String = psychAssessment != null && psychAssessment.launchable
         ? engine.label + " • LEGACY CHARTS"
         : engine.label;
+      if (engine.id == EngineBridge.ENGINE_PSYCH && packMetadata != null)
+        genericMetadata = packMetadata;
       var packageType:String = resolvePackageType(directory, engine, novaBeatMetadata, packageLaunchable);
       var enabledDirs:Array<String> = Save.instance.enabledModDirs.value;
       var title:Null<String> = metadataString(genericMetadata, "title");
@@ -106,7 +111,7 @@ class ExperienceManager
         packageType: packageType,
         ownerId: packageType == PACKAGE_EXTENSION ? getExtensionOwner(directory) : directory,
         enabled: enabledDirs != null && enabledDirs.indexOf(directory) >= 0,
-        iconPath: findIcon(modPath),
+        iconPath: findIcon(modPath, engine.id == EngineBridge.ENGINE_PSYCH),
         isOfficial: false,
         launchable: packageLaunchable,
         explanation: packageExplanation
@@ -421,9 +426,11 @@ class ExperienceManager
     return text.length == 0 ? null : text;
   }
 
-  static function findIcon(modPath:String):Null<String>
+  static function findIcon(modPath:String, isPsych:Bool = false):Null<String>
   {
-    var candidates:Array<String> = ["_polymod_icon.png", "icon.png", "modIcon.png", "images/icon.png"];
+    var candidates:Array<String> = isPsych
+      ? ["pack.png", "_polymod_icon.png", "icon.png", "modIcon.png", "images/icon.png"]
+      : ["_polymod_icon.png", "icon.png", "modIcon.png", "images/icon.png"];
     for (candidate in candidates)
     {
       var path:String = Path.join([modPath, candidate]);

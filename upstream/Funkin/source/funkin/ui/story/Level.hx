@@ -1,6 +1,7 @@
 package funkin.ui.story;
 
 import funkin.util.SortUtil;
+import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
@@ -139,8 +140,20 @@ class Level implements IRegistryEntry<LevelData>
   {
     if (!_data.background.startsWith('#'))
     {
-      // Image specified
-      return new FlxSprite().loadGraphic(Paths.image(_data.background));
+      // A Psych week may refer to an image that is missing from the extracted
+      // package. Never let a preview-only background asset crash Story Mode.
+      try
+      {
+        var imagePath:String = Paths.image(_data.background);
+        if (!Assets.exists(imagePath))
+          throw 'Background image does not exist: ' + _data.background;
+        return new FlxSprite().loadGraphic(imagePath);
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Story Mode] Could not load background for week ' + id + ': ' + Std.string(error));
+        return new FlxSprite().makeGraphic(FlxG.width, 400, FlxColor.fromRGB(32, 32, 32));
+      }
     }
 
     // Color specified
@@ -178,9 +191,10 @@ class Level implements IRegistryEntry<LevelData>
     var difficulties:Array<String> = [];
 
     var songList:Array<String> = getSongs();
+    if (songList.length == 0) return [Constants.DEFAULT_DIFFICULTY];
 
     var firstSongId:String = songList[0];
-    var firstSong:Song = SongRegistry.instance.fetchEntry(firstSongId, {variation: Constants.DEFAULT_VARIATION});
+    var firstSong:Null<Song> = SongRegistry.instance.fetchEntry(firstSongId, {variation: Constants.DEFAULT_VARIATION});
 
     if (firstSong != null)
     {
@@ -198,7 +212,7 @@ class Level implements IRegistryEntry<LevelData>
     for (songIndex in 1...songList.length)
     {
       var songId:String = songList[songIndex];
-      var song:Song = SongRegistry.instance.fetchEntry(songId, {variation: Constants.DEFAULT_VARIATION});
+      var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: Constants.DEFAULT_VARIATION});
 
       if (song == null) continue;
 

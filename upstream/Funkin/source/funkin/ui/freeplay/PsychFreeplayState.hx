@@ -32,7 +32,6 @@ class PsychFreeplayState extends MusicBeatSubState
 {
   static final VARIATION:String = Constants.DEFAULT_VARIATION;
   static inline final DEFAULT_COLOR:Int = 0xFF9271FD;
-  static inline final LIST_X:Float = 90;
   static inline final LIST_Y:Float = 320;
   static inline final ITEM_SPACING_Y:Float = 156;
   static inline final DRAW_DISTANCE:Int = 4;
@@ -194,7 +193,7 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     for (i in 0...songs.length)
     {
-      var songText = new PsychAlphabet(LIST_X, LIST_Y, songs[i].name);
+      var songText = new PsychAlphabet(0, LIST_Y, songs[i].name);
       songText.targetY = i;
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
@@ -688,10 +687,11 @@ class PsychFreeplayState extends MusicBeatSubState
       if (!visible) continue;
 
       var offset:Float = item.targetY - lerpSelected;
-      var x:Float = LIST_X + offset * 20;
+      var totalWidth:Float = icon.width + 12 + item.textWidth;
+      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20;
       var y:Float = LIST_Y + offset * ITEM_SPACING_Y;
-      item.setMenuPosition(x, y);
-      icon.setPosition(x + item.textWidth + 12, y - 30);
+      icon.setPosition(x, y - 30);
+      item.setMenuPosition(x + icon.width + 12, y);
     }
   }
 

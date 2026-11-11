@@ -27,6 +27,7 @@ import openfl.display.BitmapData;
 import haxe.Json;
 import haxe.io.Path;
 import sys.FileSystem;
+import sys.io.File;
 #end
 
 /**
@@ -482,12 +483,15 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       var iconY:Float = y + (cardHeight - iconSize) * 0.5;
       var iconPlate:FlxSprite = addRect(iconX, iconY, iconSize, iconSize,
         selected ? 0xFF8F4BAE : 0xFF47325C);
+      if (!loadModArtwork(iconPlate, info, iconSize))
+      {
+        var initials:String = info.title.length <= 3
+          ? info.title.toUpperCase() : info.title.substr(0, 3).toUpperCase();
+        var iconLabel:FlxText = addLabel(iconX + 2, iconY + iconSize * 0.28, iconSize - 4,
+          initials, portraitLayout ? 11 : 13, COLOR_TEXT, FlxTextAlign.CENTER);
+        addRowObject(iconLabel);
+      }
       addRowObject(iconPlate);
-
-      var initials:String = info.title.length <= 3 ? info.title.toUpperCase() : info.title.substr(0, 3).toUpperCase();
-      var iconLabel:FlxText = addLabel(iconX + 2, iconY + iconSize * 0.28, iconSize - 4,
-        initials, portraitLayout ? 11 : 13, COLOR_TEXT, FlxTextAlign.CENTER);
-      addRowObject(iconLabel);
 
       var labelX:Float = iconX + iconSize + 9;
       var labelWidth:Float = Math.max(1, rowWidth - (labelX - rowX) - 8);
@@ -669,16 +673,14 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
 
   function loadModArtwork(art:FlxSprite, info:ExperienceInfo, size:Float):Bool
   {
-    #if !web
-    if (info.directory == null) return false;
-    for (mod in PolymodHandler.getAllMods())
+    // Prefer the explicit image resolved by ExperienceManager. For Psych mods
+    // this is pack.png from the installed mod's root directory.
+    #if sys
+    if (info.iconPath != null && FileSystem.exists(info.iconPath) && !FileSystem.isDirectory(info.iconPath))
     {
-      if (mod.dirName != info.directory) continue;
-      var iconBytes:Dynamic = Reflect.field(mod, "icon");
-      if (iconBytes == null) break;
       try
       {
-        var bitmap:Null<BitmapData> = BitmapData.fromBytes(cast iconBytes);
+        var bitmap:Null<BitmapData> = BitmapData.fromBytes(File.getBytes(info.iconPath));
         if (bitmap != null)
         {
           art.loadGraphic(bitmap);
@@ -691,9 +693,38 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
       }
       catch (error:Dynamic)
       {
-        trace("Could not load mod artwork for " + info.title + ": " + Std.string(error));
+        trace("Could not load mod artwork at " + info.iconPath + " for " + info.title + ": " + Std.string(error));
       }
-      break;
+    }
+    #end
+
+    #if !web
+    if (info.directory != null)
+    {
+      for (mod in PolymodHandler.getAllMods())
+      {
+        if (mod.dirName != info.directory) continue;
+        var iconBytes:Dynamic = Reflect.field(mod, "icon");
+        if (iconBytes == null) break;
+        try
+        {
+          var bitmap:Null<BitmapData> = BitmapData.fromBytes(cast iconBytes);
+          if (bitmap != null)
+          {
+            art.loadGraphic(bitmap);
+            var scale:Float = Math.min(size / Math.max(1, bitmap.width), size / Math.max(1, bitmap.height));
+            art.setGraphicSize(Std.int(bitmap.width * scale), Std.int(bitmap.height * scale));
+            art.updateHitbox();
+            art.setPosition(art.x + (size - art.width) * 0.5, art.y + (size - art.height) * 0.5);
+            return true;
+          }
+        }
+        catch (error:Dynamic)
+        {
+          trace("Could not load mod artwork for " + info.title + ": " + Std.string(error));
+        }
+        break;
+      }
     }
     #end
     return false;
@@ -830,7 +861,10 @@ class ModMenu extends Page<OptionsState.OptionsMenuPageName>
     #if sys
     if (info.directory == null) return result;
     var root:String = modRootPath(info);
-    for (name in ["_polymod_meta.json", "_novabeat.json", "meta.json", "pack.json"])
+    var metadataFiles:Array<String> = info.engineId == "psych-engine"
+      ? ["pack.json", "_polymod_meta.json", "_novabeat.json", "meta.json"]
+      : ["_polymod_meta.json", "_novabeat.json", "meta.json", "pack.json"];
+    for (name in metadataFiles)
     {
       var path:String = Path.join([root, name]);
       if (!FileSystem.exists(path) || FileSystem.isDirectory(path)) continue;

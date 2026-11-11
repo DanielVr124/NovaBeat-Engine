@@ -155,6 +155,13 @@ class StoryMenuState extends MusicBeatState
     persistentUpdate = persistentDraw = true;
 
     rememberSelection();
+    // The previous experience may have been unloaded since the last visit.
+    // A remembered Psych week ID must not be used if it is no longer registered.
+    if (levelList.indexOf(currentLevelId) < 0)
+    {
+      currentLevelId = levelList[0];
+      rememberedLevelId = currentLevelId;
+    }
 
     updateData();
 
@@ -558,6 +565,7 @@ class StoryMenuState extends MusicBeatState
   function changeLevel(change:Int = 0):Void
   {
     var currentIndex:Int = levelList.indexOf(currentLevelId);
+    if (currentIndex < 0) currentIndex = 0;
     var prevIndex:Int = currentIndex;
 
     currentIndex += change;
@@ -598,10 +606,15 @@ class StoryMenuState extends MusicBeatState
   {
     // "For now, NO erect in story mode" -Dave
 
-    var difficultyList:Array<String> = currentLevel.getDifficulties().filter(e -> Constants.DEFAULT_DIFFICULTY_LIST.contains(e));
-    // Use this line to displays all difficulties
-    // var difficultyList:Array<String> = currentLevel.getDifficulties();
-    var currentIndex:Int = difficultyList.indexOf(currentDifficultyId);
+    var difficultyList:Array<String> = currentLevel.getDifficulties()
+      .map(function(value:String):String return value.toLowerCase())
+      .filter(function(value:String):Bool return Constants.DEFAULT_DIFFICULTY_LIST.contains(value));
+    if (difficultyList.length == 0) difficultyList = [Constants.DEFAULT_DIFFICULTY];
+
+    // Some Psych week definitions use a difficulty spelling/case that is not
+    // present in the imported chart list. Fall back to the first valid option.
+    var currentIndex:Int = difficultyList.indexOf(currentDifficultyId.toLowerCase());
+    if (currentIndex < 0) currentIndex = 0;
 
     currentIndex += change;
 
@@ -692,9 +705,23 @@ class StoryMenuState extends MusicBeatState
     PlayStatePlaylist.isStoryMode = true;
     PlayStatePlaylist.campaignScore = 0;
 
+    if (PlayStatePlaylist.playlistSongIds.length == 0)
+    {
+      FlxG.log.warn('[Story Mode] Week ' + currentLevel.id + ' does not contain any imported songs.');
+      selectedLevel = false;
+      currentLevelTitle.isFlashing = false;
+      return;
+    }
     var targetSongId:String = PlayStatePlaylist.playlistSongIds.shift();
 
-    var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId, {variation: Constants.DEFAULT_VARIATION});
+    var targetSong:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId, {variation: Constants.DEFAULT_VARIATION});
+    if (targetSong == null)
+    {
+      FlxG.log.warn('[Story Mode] Week ' + currentLevel.id + ' references a song that is not registered: ' + targetSongId);
+      selectedLevel = false;
+      currentLevelTitle.isFlashing = false;
+      return;
+    }
 
     PlayStatePlaylist.campaignId = currentLevel.id;
     PlayStatePlaylist.campaignTitle = currentLevel.getTitle();
@@ -777,14 +804,25 @@ class StoryMenuState extends MusicBeatState
 
   function updateProps():Void
   {
-    for (ind => prop in currentLevel.buildProps(levelProps.members))
+    var builtProps:Array<LevelProp> = currentLevel.buildProps(levelProps.members);
+    for (ind in 0...builtProps.length)
     {
+      var prop:LevelProp = builtProps[ind];
       // Story Mode previews use one consistent beat cadence. Gameplay stage
       // props keep their own data-defined cadence.
       prop.danceEvery = 1.0;
       prop.x += (FullScreenScaleMode.gameCutoutSize.x / 4);
       prop.zIndex = 1000;
-      if (levelProps.members[ind] != prop) levelProps.replace(levelProps.members[ind], prop) ?? levelProps.add(prop);
+
+      if (ind < levelProps.members.length)
+      {
+        var existingProp:LevelProp = levelProps.members[ind];
+        if (existingProp != prop) levelProps.replace(existingProp, prop) ?? levelProps.add(prop);
+      }
+      else
+      {
+        levelProps.add(prop);
+      }
     }
 
     refresh();
