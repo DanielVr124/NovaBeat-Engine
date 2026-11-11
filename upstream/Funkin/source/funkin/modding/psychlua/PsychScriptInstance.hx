@@ -67,7 +67,7 @@ class PsychScriptInstance
   static inline final LUA_INSTRUCTION_BUDGET:Int = 5000;
   static inline final LUA_HOOK_INTERVAL:Int = 1000;
 
-  public function new(sourcePath:String, source:String, initialVariables:Map<String, Dynamic>)
+  public function new(sourcePath:String, source:String, initialVariables:Map<String, Dynamic>, ?diagnosticSongId:String, ?diagnosticDifficulty:String)
   {
     if (sourcePath == null || sourcePath.length == 0)
       throw new Exception("A source path is required for a Psych script.");
@@ -82,7 +82,7 @@ class PsychScriptInstance
         createHScript(source, initialVariables);
       case "lua":
         language = "lua";
-        createLua(source, initialVariables);
+        createLua(source, initialVariables, diagnosticSongId, diagnosticDifficulty);
       default:
         throw new Exception("Unsupported Psych script extension: ." + extension);
     }
@@ -176,7 +176,7 @@ class PsychScriptInstance
     hscript = runtime;
   }
 
-  function createLua(source:String, initialVariables:Map<String, Dynamic>):Void
+  function createLua(source:String, initialVariables:Map<String, Dynamic>, ?diagnosticSongId:String, ?diagnosticDifficulty:String):Void
   {
     #if (cpp || js)
     var runtime = new Lua();
@@ -202,7 +202,9 @@ class PsychScriptInstance
 
     try
     {
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.bootstrap.begin', sourcePath);
       runtime.run(bootstrap);
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.bootstrap.complete', sourcePath);
       luaResetBudget = runtime.getGlobalVar("__novabeat_reset_budget");
       luaHasFunction = runtime.getGlobalVar("__novabeat_has_function");
       runtime.setGlobalVar("__novabeat_reset_budget", null);
@@ -217,11 +219,14 @@ class PsychScriptInstance
         runtime.setGlobalVar(name, value);
 
       resetLuaBudget();
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.source.run.begin', sourcePath);
       runtime.run(source);
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.source.run.complete', sourcePath);
       lua = runtime;
     }
     catch (error:Dynamic)
     {
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.source.failed', sourcePath + ' | ' + Std.string(error));
       runtime.destroy();
       throw new Exception("Lua error in " + sourcePath + ": " + Std.string(error));
     }

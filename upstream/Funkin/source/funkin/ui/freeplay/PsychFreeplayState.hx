@@ -196,6 +196,8 @@ class PsychFreeplayState extends MusicBeatSubState
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
       songText.active = false;
+      // Freeplay rows are screen-space UI and must not follow gameplay camera scroll.
+      songText.scrollFactor.set(0, 0);
       songTexts.push(songText);
       add(songText);
 
@@ -204,6 +206,7 @@ class PsychFreeplayState extends MusicBeatSubState
       icon.alpha = 0.6;
       icon.visible = false;
       icon.active = false;
+      icon.scrollFactor.set(0, 0);
       icons.push(icon);
       add(icon);
     }

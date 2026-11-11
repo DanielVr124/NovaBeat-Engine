@@ -721,7 +721,7 @@ class PsychScriptRuntime
 
     try
     {
-      var script = new PsychScriptInstance(sourcePath, source, initial);
+      var script = new PsychScriptInstance(sourcePath, source, initial, diagnosticSongId, diagnosticDifficulty);
       scripts.push(script);
       return script;
     }
