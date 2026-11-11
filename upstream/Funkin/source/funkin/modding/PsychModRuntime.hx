@@ -51,6 +51,7 @@ class PsychModRuntime
    * Normalize image names supplied by Psych JSON/Lua before passing them to
    * NovaBeat's Paths helpers. Psych mods store images under <mod>/images/,
    * while Paths.image/getSparrowAtlas already add the images/ prefix.
+   * This is shared by character JSON registration and the Psych Lua sprite API.
    *
    * Accept common explicit forms such as "images/foo.png" and
    * "assets/images/foo.png", but reject absolute paths and traversal.
