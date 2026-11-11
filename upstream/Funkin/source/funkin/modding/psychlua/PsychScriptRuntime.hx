@@ -195,6 +195,7 @@ class PsychScriptRuntime
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.begin');
       clear();
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.complete');
+      activeModDirs = modDirs == null ? [] : modDirs.copy();
 
       phase = 'globals.create';
       var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
@@ -205,7 +206,6 @@ class PsychScriptRuntime
       globals.set("stepCrochet", Conductor.instance.stepLengthMs);
       globals.set("scrollSpeed", playState.currentChart == null ? 1.0 : playState.currentChart.scrollSpeed);
       globals.set("difficulty", playState.currentDifficulty);
-      activeModDirs = modDirs == null ? [] : modDirs.copy();
       activeGlobals = new Map<String, Dynamic>();
       for (name => value in globals)
         activeGlobals.set(name, value);
@@ -259,6 +259,16 @@ class PsychScriptRuntime
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.load.failed', phase + ' | ' + message);
       trace('[Psych Script Runtime] Song script initialization failed during ' + phase + ': ' + message);
       pendingSongLifecycleCallbacks = false;
+      // Do not leave a partially loaded script set running without its normal
+      // onCreate/onSongLoaded lifecycle when song initialization was aborted.
+      try
+      {
+        clear();
+      }
+      catch (cleanupError:Dynamic)
+      {
+        trace('[Psych Script Runtime] Cleanup after failed song script initialization also failed: ' + Std.string(cleanupError));
+      }
     }
 
     return loaded;
