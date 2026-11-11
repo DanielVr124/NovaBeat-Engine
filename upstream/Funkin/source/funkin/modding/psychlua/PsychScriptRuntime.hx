@@ -186,46 +186,81 @@ class PsychScriptRuntime
    */
   public static function loadForSong(modDirs:Array<String>, songId:String, playState:PlayState, ?deferLifecycleCallbacks:Bool = false):Int
   {
-    clear();
-    activeModDirs = modDirs == null ? [] : modDirs.copy();
-    var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
-    globals.set("songName", playState.currentSong == null ? "" : playState.currentSong.songName);
-    globals.set("bpm", Conductor.instance.bpm);
-    globals.set("curBpm", Conductor.instance.bpm);
-    globals.set("crochet", Conductor.instance.beatLengthMs);
-    globals.set("stepCrochet", Conductor.instance.stepLengthMs);
-    globals.set("scrollSpeed", playState.currentChart == null ? 1.0 : playState.currentChart.scrollSpeed);
-    globals.set("difficulty", playState.currentDifficulty);
-    activeGlobals = new Map<String, Dynamic>();
-    for (name => value in globals)
-      activeGlobals.set(name, value);
-
-    // Psych scripts can read globals in their top-level declarations, before
-    // onCreate is dispatched. Populate the complete song state before parsing
-    // and executing the first line of any mod script.
-    PsychGameplayApi.updateGlobals(playState);
-
     var loaded:Int = 0;
-    var hasCustomStageScript:Bool = false;
-    var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
-    for (source in sources)
+    var phase:String = 'scripts.clear';
+    var difficulty:String = playState == null ? '' : playState.currentDifficulty;
+
+    try
     {
-      if (loadSource(source.path, source.source, activeGlobals) != null)
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.begin');
+      clear();
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.complete');
+
+      phase = 'globals.create';
+      var globals:Map<String, Dynamic> = PsychGameplayApi.createGlobals(playState);
+      globals.set("songName", playState.currentSong == null ? "" : playState.currentSong.songName);
+      globals.set("bpm", Conductor.instance.bpm);
+      globals.set("curBpm", Conductor.instance.bpm);
+      globals.set("crochet", Conductor.instance.beatLengthMs);
+      globals.set("stepCrochet", Conductor.instance.stepLengthMs);
+      globals.set("scrollSpeed", playState.currentChart == null ? 1.0 : playState.currentChart.scrollSpeed);
+      globals.set("difficulty", playState.currentDifficulty);
+      activeModDirs = modDirs == null ? [] : modDirs.copy();
+      activeGlobals = new Map<String, Dynamic>();
+      for (name => value in globals)
+        activeGlobals.set(name, value);
+
+      // Psych scripts can read globals in their top-level declarations, before
+      // onCreate is dispatched. Populate the complete song state before parsing
+      // and executing the first line of any mod script.
+      phase = 'globals.update';
+      PsychGameplayApi.updateGlobals(playState);
+
+      phase = 'scripts.discover';
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.sources.discover.begin');
+      var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.sources.discover.complete',
+        'count=' + sources.length);
+
+      var hasCustomStageScript:Bool = false;
+      for (source in sources)
       {
-        loaded++;
-        var normalizedPath:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
-        if (StringTools.contains(normalizedPath, "/stages/")) hasCustomStageScript = true;
+        phase = 'scripts.source.load';
+        PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.source.begin', source.path);
+        var script:Null<PsychScriptInstance> = loadSource(source.path, source.source, activeGlobals, songId, difficulty);
+        if (script != null)
+        {
+          loaded++;
+          var normalizedPath:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
+          if (StringTools.contains(normalizedPath, "/stages/")) hasCustomStageScript = true;
+          PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.source.complete', source.path);
+        }
+        else
+        {
+          PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.source.rejected', source.path);
+        }
       }
+
+      phase = 'scripts.stage.setup';
+      if (loaded > 0)
+      {
+        if (hasCustomStageScript) PsychGameplayApi.hideDefaultStageProps(playState);
+        if (deferLifecycleCallbacks)
+          pendingSongLifecycleCallbacks = true;
+        else
+          dispatchLoadedCallbacks();
+      }
+
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.load.complete', 'count=' + loaded);
+    }
+    catch (error:Dynamic)
+    {
+      var message:String = Std.string(error);
+      PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.load.failed', phase + ' | ' + message);
+      trace('[Psych Script Runtime] Song script initialization failed during ' + phase + ': ' + message);
+      pendingSongLifecycleCallbacks = false;
     }
 
-    if (loaded > 0)
-    {
-      if (hasCustomStageScript) PsychGameplayApi.hideDefaultStageProps(playState);
-      if (deferLifecycleCallbacks)
-        pendingSongLifecycleCallbacks = true;
-      else
-        dispatchLoadedCallbacks();
-    }
     return loaded;
   }
 
@@ -659,7 +694,8 @@ class PsychScriptRuntime
    * File access is kept outside the interpreter so browser and native targets
    * can share the same runtime API.
    */
-  public static function loadSource(sourcePath:String, source:String, ?variables:Map<String, Dynamic>):Null<PsychScriptInstance>
+  public static function loadSource(sourcePath:String, source:String, ?variables:Map<String, Dynamic>,
+      ?diagnosticSongId:String, ?diagnosticDifficulty:String):Null<PsychScriptInstance>
   {
     var initial:Map<String, Dynamic> = new Map<String, Dynamic>();
     for (name => value in sharedGlobals)
@@ -681,7 +717,11 @@ class PsychScriptRuntime
     }
     catch (error:Dynamic)
     {
-      trace('[Psych Script Runtime] Failed to load ' + sourcePath + ': ' + Std.string(error));
+      var message:String = Std.string(error);
+      trace('[Psych Script Runtime] Failed to load ' + sourcePath + ': ' + message);
+      if (diagnosticSongId != null)
+        PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '',
+          'scripts.source.failed', sourcePath + ' | ' + message);
       return null;
     }
   }

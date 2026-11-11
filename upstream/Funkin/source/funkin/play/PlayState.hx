@@ -972,7 +972,6 @@ class PlayState extends MusicBeatSubState
     var activePsychDirs:Array<String> = ExperienceManager.getActivePsychModDirs();
     PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'scripts.load.begin');
     PsychScriptRuntime.loadForSong(activePsychDirs, currentSong.id, this, true);
-    PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, 'scripts.load.complete');
 
     // Read the song's note data and pass it to the strumlines. Psych chart-event
     // hooks run during this step, after all matching scripts have been loaded.
