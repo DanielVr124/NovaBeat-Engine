@@ -180,7 +180,7 @@ class PsychScriptInstance
   function createLua(source:String, initialVariables:Map<String, Dynamic>, ?diagnosticSongId:String, ?diagnosticDifficulty:String):Void
   {
     #if (cpp || js)
-    var runtime = new Lua();
+    var runtime:Null<Lua> = null;
 
     // Install the instruction hook while the debug library is still present.
     // The hook remains active after its global library is removed below.
@@ -203,6 +203,9 @@ class PsychScriptInstance
 
     try
     {
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.runtime.create.begin', sourcePath);
+      runtime = new Lua();
+      if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.runtime.create.complete', sourcePath);
       if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.bootstrap.begin', sourcePath);
       runtime.run(bootstrap);
       if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.bootstrap.complete', sourcePath);
@@ -228,7 +231,7 @@ class PsychScriptInstance
     catch (error:Dynamic)
     {
       if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.source.failed', sourcePath + ' | ' + Std.string(error));
-      runtime.destroy();
+      if (runtime != null) runtime.destroy();
       throw new Exception("Lua error in " + sourcePath + ": " + Std.string(error));
     }
     #else

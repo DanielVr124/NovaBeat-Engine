@@ -905,11 +905,72 @@ class PsychScriptRuntime
     }
     if (lua != null) lua.destroy();
 
+    // Regression test the exact stage-script API shape used by common Psych
+    // 0.7.3 stage files (including the legacy close(true) call).
+    var forestStageLuaPassed:Bool = false;
+    var forestStageLua:Null<PsychScriptInstance> = null;
+    var forestStageCalls:Array<String> = [];
+    var forestStageArgumentsValid:Bool = true;
+    try
+    {
+      forestStageLua = new PsychScriptInstance(
+        "novabeat-forest-stage-smoke-test.lua",
+        "function onCreate()\n"
+          + "makeLuaSprite('forestfront', 'forestfront', -160, -456)\n"
+          + "setScrollFactor('forestfront', 1.0, 1.0)\n"
+          + "makeLuaSprite('foresttree', 'foresttree', -850, -630)\n"
+          + "setScrollFactor('foresttree', 1.0, 1.0)\n"
+          + "makeLuaSprite('forestback', 'forestback', -900, -950)\n"
+          + "setScrollFactor('forestback', 1.0, 1.0)\n"
+          + "addLuaSprite('forestback', false)\n"
+          + "addLuaSprite('forestfront', false)\n"
+          + "addLuaSprite('foresttree', false)\n"
+          + "close(true)\n"
+          + "end",
+        [
+          "makeLuaSprite" => function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
+          {
+            forestStageCalls.push("make:" + tag);
+            if (tag != image || (tag == "forestfront" && (x != -160 || y != -456))
+              || (tag == "foresttree" && (x != -850 || y != -630))
+              || (tag == "forestback" && (x != -900 || y != -950)))
+              forestStageArgumentsValid = false;
+            return true;
+          },
+          "setScrollFactor" => function(tag:String, x:Float, ?y:Null<Float>):Bool
+          {
+            forestStageCalls.push("scroll:" + tag);
+            if (x != 1.0 || (y != null && y != 1.0)) forestStageArgumentsValid = false;
+            return true;
+          },
+          "addLuaSprite" => function(tag:String, ?inFront:Bool = false):Bool
+          {
+            forestStageCalls.push("add:" + tag);
+            if (inFront) forestStageArgumentsValid = false;
+            return true;
+          },
+          "close" => function(?_ignoreSelf:Bool = false):Bool return PsychScriptRuntime.closeCurrentScript()
+        ]
+      );
+      callScriptInstance(forestStageLua, "onCreate", []);
+      forestStageLuaPassed = forestStageLua.closed && forestStageLua.lastError == null
+        && forestStageArgumentsValid && forestStageCalls.join("|")
+          == "make:forestfront|scroll:forestfront|make:foresttree|scroll:foresttree|make:forestback|scroll:forestback|add:forestback|add:forestfront|add:foresttree";
+      if (!forestStageLuaPassed)
+        trace('[Psych Script Runtime] Forest.lua stage API smoke test failed: calls=' + forestStageCalls.join(",")
+          + ' argsValid=' + forestStageArgumentsValid + ' error=' + forestStageLua.lastError);
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Script Runtime] Forest.lua stage API smoke test failed: ' + Std.string(error));
+    }
+    if (forestStageLua != null && !forestStageLua.closed) forestStageLua.destroy();
+
     var apiPassed:Bool = PlayState.instance != null && PsychGameplayApi.runApiSmokeTests(PlayState.instance);
     if (!apiPassed)
       trace('[Psych Script Runtime] Gameplay API registration smoke test failed.');
 
-    return hscriptPassed && closePassed && luaPassed && apiPassed;
+    return hscriptPassed && closePassed && luaPassed && forestStageLuaPassed && apiPassed;
     #else
     return false;
     #end

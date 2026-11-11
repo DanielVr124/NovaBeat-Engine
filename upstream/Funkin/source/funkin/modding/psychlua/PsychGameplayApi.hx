@@ -154,7 +154,7 @@ class PsychGameplayApi
       vars.set("timeBarType", activeTimeBar.timeBarType);
     }
 
-    vars.set("close", function():Bool return PsychScriptRuntime.closeCurrentScript());
+    vars.set("close", function(?_ignoreSelf:Bool = false):Bool return PsychScriptRuntime.closeCurrentScript());
 
     vars.set("getProperty", function(path:String, ?allowMaps:Bool = false):Dynamic return getProperty(state, path, allowMaps));
     vars.set("setProperty", function(path:String, value:Dynamic, ?allowMaps:Bool = false):Dynamic return setProperty(state, path, value, allowMaps));

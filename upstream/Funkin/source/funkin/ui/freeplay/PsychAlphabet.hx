@@ -65,6 +65,10 @@ class PsychAlphabet extends FlxSpriteGroup
       var prefix:String = animationName + " bold";
 
       var letter:FlxSprite = new FlxSprite();
+      // Each glyph is drawn as its own sprite by FlxSpriteGroup. Keep the
+      // glyph itself in screen space so gameplay camera scroll cannot hide
+      // the Psych Freeplay song list.
+      letter.scrollFactor.set(0, 0);
       letter.frames = atlas;
       letter.antialiasing = true;
       letter.animation.addByPrefix(prefix, prefix, 24);
