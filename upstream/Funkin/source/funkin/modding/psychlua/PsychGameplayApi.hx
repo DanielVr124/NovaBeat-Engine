@@ -301,7 +301,9 @@ class PsychGameplayApi
       if (name == null || name.length == 0) return false;
       try
       {
-        FlxG.bitmap.add(Paths.image(name));
+        var imageKey:String = PsychModRuntime.normalizePsychImageKey(name);
+        if (imageKey.length == 0) return false;
+        FlxG.bitmap.add(Paths.image(imageKey));
         return true;
       }
       catch (error:Dynamic)
@@ -470,7 +472,9 @@ class PsychGameplayApi
     {
       var shader:Dynamic = getRuntimeShader(state, objectPath);
       if (shader == null || imagePath == null || imagePath.length == 0) return false;
-      var graphic = FlxG.bitmap.add(Paths.image(imagePath));
+      var imageKey:String = PsychModRuntime.normalizePsychImageKey(imagePath);
+      if (imageKey.length == 0) return false;
+      var graphic = FlxG.bitmap.add(Paths.image(imageKey));
       if (graphic == null || graphic.bitmap == null) return false;
       // The pinned flixel-addons release may not expose setSampler2D().
       // Its ShaderInput objects are still available through the OpenFL shader
@@ -984,8 +988,9 @@ class PsychGameplayApi
       var sprite = new FlxSprite(x, y);
       try
       {
-        if (image != null && image.length > 0)
-          sprite.loadGraphic(Paths.image(image));
+        var imageKey:String = PsychModRuntime.normalizePsychImageKey(image);
+        if (imageKey.length > 0)
+          sprite.loadGraphic(Paths.image(imageKey));
         scriptVariables.set(tag, sprite);
         return true;
       }
@@ -1133,7 +1138,9 @@ class PsychGameplayApi
       var sprite = new FlxSprite(x, y);
       try
       {
-        sprite.frames = Paths.getSparrowAtlas(image);
+        var imageKey:String = PsychModRuntime.normalizePsychImageKey(image);
+        if (imageKey.length == 0) throw "Invalid Psych image path: " + image;
+        sprite.frames = Paths.getSparrowAtlas(imageKey);
         scriptVariables.set(tag, sprite);
         return true;
       }
@@ -1211,7 +1218,9 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null || image == null || image.length == 0) return false;
-      sprite.loadGraphic(Paths.image(image), gridX > 0 && gridY > 0, gridX, gridY);
+      var imageKey:String = PsychModRuntime.normalizePsychImageKey(image);
+      if (imageKey.length == 0) return false;
+      sprite.loadGraphic(Paths.image(imageKey), gridX > 0 && gridY > 0, gridX, gridY);
       return true;
     });
     vars.set("loadFrames", function(tag:String, image:String, ?spriteType:String = "sparrow"):Bool
@@ -1220,9 +1229,11 @@ class PsychGameplayApi
       if (sprite == null || image == null || image.length == 0) return false;
       try
       {
+        var imageKey:String = PsychModRuntime.normalizePsychImageKey(image);
+        if (imageKey.length == 0) return false;
         sprite.frames = StringTools.trim(spriteType).toLowerCase() == "packer"
-          ? Paths.getPackerAtlas(image)
-          : Paths.getSparrowAtlas(image);
+          ? Paths.getPackerAtlas(imageKey)
+          : Paths.getSparrowAtlas(imageKey);
         return true;
       }
       catch (error:Dynamic)

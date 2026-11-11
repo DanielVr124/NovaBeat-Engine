@@ -47,6 +47,40 @@ class PsychModRuntime
   static var psychFreeplayIcons:Map<String, String> = [];
   static var psychFreeplaySongOrder:Array<String> = [];
 
+  /**
+   * Normalize image names supplied by Psych JSON/Lua before passing them to
+   * NovaBeat's Paths helpers. Psych mods store images under <mod>/images/,
+   * while Paths.image/getSparrowAtlas already add the images/ prefix.
+   *
+   * Accept common explicit forms such as "images/foo.png" and
+   * "assets/images/foo.png", but reject absolute paths and traversal.
+   */
+  public static function normalizePsychImageKey(requestedPath:String):String
+  {
+    if (requestedPath == null) return "";
+    var result:String = StringTools.trim(StringTools.replace(requestedPath, "\\", "/"));
+    if (result.length == 0 || StringTools.startsWith(result, "/")
+      || (result.length > 1 && result.charAt(1) == ":")) return "";
+
+    while (StringTools.startsWith(result.toLowerCase(), "assets/"))
+      result = result.substr("assets/".length);
+    while (StringTools.startsWith(result.toLowerCase(), "images/"))
+      result = result.substr("images/".length);
+
+    for (part in result.split("/"))
+      if (part == "." || part == ".." || part.length == 0) return "";
+
+    var slash:Int = result.lastIndexOf("/");
+    var dot:Int = result.lastIndexOf(".");
+    if (dot > slash)
+    {
+      var extension:String = result.substr(dot + 1).toLowerCase();
+      if (["png", "jpg", "jpeg", "webp", "bmp"].indexOf(extension) >= 0)
+        result = result.substr(0, dot);
+    }
+    return result;
+  }
+
   public static function inspectPackage(modPath:String):PsychPackageAssessment
   {
     #if sys
@@ -797,6 +831,24 @@ class PsychModRuntime
     #end
   }
 
+  /** True when a named stage script is stored directly in the Psych mod root. */
+  public static function isRootPsychStageScript(songId:String, sourcePath:String):Bool
+  {
+    #if sys
+    if (songId == null || sourcePath == null) return false;
+    var stageName:Null<String> = psychSongStageNames.get(songId);
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (stageName == null || modRoot == null || stageName.length == 0) return false;
+
+    var sourceDirectory:String = Path.normalize(Path.directory(sourcePath));
+    var expectedDirectory:String = Path.normalize(modRoot);
+    if (sourceDirectory != expectedDirectory) return false;
+    return Path.withoutExtension(Path.withoutDirectory(sourcePath)).toLowerCase() == stageName.toLowerCase();
+    #else
+    return false;
+    #end
+  }
+
   /** Place a Psych character at the x/y coordinates from stages/<stage>.json. */
   public static function applyPsychStageCharacterPosition(character:Dynamic, role:String):Void
   {
@@ -1304,6 +1356,10 @@ class PsychModRuntime
         }
 
         stageSources = stageSources.concat(readNamedScriptSources(Path.join([modPath, "stages"]), stageNames));
+        // Some Psych packs keep the named stage script beside images/,
+        // characters/, and songs/ instead of inside stages/. Only exact
+        // stage-name matches are loaded from the package root.
+        stageSources = stageSources.concat(readNamedScriptSources(modPath, stageNames));
         characterSources = characterSources.concat(readNamedScriptSources(Path.join([modPath, "characters"]), characterNames));
         customEventSources = customEventSources.concat(readNamedScriptSources(Path.join([modPath, "custom_events"]), eventNames));
         customNoteSources = customNoteSources.concat(readNamedScriptSources(Path.join([modPath, "custom_notetypes"]), noteTypeNames));
@@ -1461,7 +1517,8 @@ class PsychModRuntime
           var converted:Null<CharacterData> = convertPsychCharacterData(characterId, raw);
           if (converted != null && CharacterDataParser.registerModCharacterData(characterId, converted))
           {
-            trace('[Psych Compatibility] Registered custom Psych character: ' + characterId);
+            trace('[Psych Compatibility] Registered custom Psych character: ' + characterId
+              + ' (JSON: ' + jsonPath + ', atlas: images/' + converted.assetPath + ')');
             registered = true;
             break;
           }
@@ -1557,6 +1614,12 @@ class PsychModRuntime
     var image:Dynamic = Reflect.field(raw, "image");
     var rawAnimations:Dynamic = Reflect.field(raw, "animations");
     if (image == null || !Std.isOfType(rawAnimations, Array)) return null;
+    var imageKey:String = normalizePsychImageKey(Std.string(image));
+    if (imageKey.length == 0) return null;
+    // Psych character atlases conventionally live in images/characters/.
+    // Some packs omit "characters/" from the JSON image field, so complete
+    // that standard path when the value is only a bare atlas name.
+    if (imageKey.indexOf("/") < 0) imageKey = "characters/" + imageKey;
 
     var animations:Array<Dynamic> = [];
     var startingAnimation:String = "idle";
@@ -1602,7 +1665,7 @@ class PsychModRuntime
       version: CharacterDataParser.CHARACTER_DATA_VERSION,
       name: characterId,
       renderType: "sparrow",
-      assetPath: Std.string(image),
+      assetPath: imageKey,
       scale: scale,
       healthIcon: {
         id: Std.string(healthIconId), shouldBop: true, scale: 1, flipX: false,
@@ -2021,8 +2084,10 @@ class PsychModRuntime
       if (stageValue == null) stageValue = Reflect.field(metadata, "stage");
       var stageName:String = stageValue == null ? "" : StringTools.trim(Std.string(stageValue));
       if (stageName.length > 0 && !isBuiltinPsychStage(stageName)
-        && !hasNamedPsychScript(Path.join([modPath, "stages"]), stageName))
-        return "custom stage '" + stageName + "' needs a matching stages/" + stageName + ".lua or .hx script";
+        && !hasNamedPsychScript(Path.join([modPath, "stages"]), stageName)
+        && !hasNamedPsychScript(modPath, stageName))
+        return "custom stage '" + stageName + "' needs a matching stages/" + stageName
+          + ".lua/.hx script or a root-level " + stageName + ".lua/.hx script";
 
       for (field in ["arrowSkin", "splashSkin", "noteStyle", "uiSkin"])
       {
@@ -2983,6 +3048,12 @@ class PsychModRuntime
     #if sys
     try
     {
+      // Psych image fields may include the physical images/ prefix and file
+      // extension even though NovaBeat's Paths helpers add both themselves.
+      if (normalizePsychImageKey("images/characters/Gorilla.png") != "characters/Gorilla") return false;
+      if (normalizePsychImageKey("assets/images/stages/forestback.png") != "stages/forestback") return false;
+      if (normalizePsychImageKey("../outside.png") != "") return false;
+
       var fixture:Dynamic = Json.parse(
         '{"metadata":{"songName":"NovaBeat Psych v2 Smoke Test","artist":"Test","charter":"Test","bpm":100,"speed":1,"stage":"philly"},' +
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +

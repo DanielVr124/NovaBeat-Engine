@@ -256,7 +256,9 @@ class PsychScriptRuntime
         {
           loaded++;
           var normalizedPath:String = StringTools.replace(source.path, "\\", "/").toLowerCase();
-          if (StringTools.contains(normalizedPath, "/stages/")) hasCustomStageScript = true;
+          if (StringTools.contains(normalizedPath, "/stages/")
+            || PsychModRuntime.isRootPsychStageScript(songId, source.path))
+            hasCustomStageScript = true;
           PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.source.complete', source.path);
         }
         else
