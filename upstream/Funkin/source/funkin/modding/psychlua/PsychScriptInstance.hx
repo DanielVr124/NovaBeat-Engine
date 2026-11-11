@@ -19,6 +19,7 @@ import flixel.util.FlxTimer;
 import funkin.Conductor;
 import funkin.Paths;
 import funkin.play.PlayState;
+import funkin.modding.PsychModRuntime;
 import funkin.play.character.BaseCharacter;
 import funkin.play.notes.NoteSprite;
 import funkin.Preferences;

@@ -1,6 +1,7 @@
 package funkin.play;
 
 // [full-build-windows] Validate Psych script-loader containment and Freeplay row restoration on native Windows.
+// [full-build-windows] Validate the complete Psych compatibility bug batch.
 
 import funkin.play.event.SongEvent;
 import funkin.play.PauseSubState.PauseMode;
