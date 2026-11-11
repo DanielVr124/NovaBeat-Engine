@@ -685,17 +685,10 @@ class PsychFreeplayState extends MusicBeatSubState
     // The newer adaptive viewport-centering calculation moved rows away from
     // the established menu coordinates and made the list disappear on some
     // window sizes. Keep the original scrolling window and row spacing here.
+    var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - DRAW_DISTANCE)));
+    var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + DRAW_DISTANCE)));
+    var rowSpacing:Float = Math.min(156, Math.max(88, FlxG.height * 0.19));
     var centerY:Float = FlxG.height * 0.48;
-    // Keep every rendered row inside the available viewport. A fixed 88-156px
-    // spacing with an unconditional four-row draw distance pushed the lower
-    // entries below short game windows (and high-DPI laptop viewports).
-    var rowSpacing:Float = Math.min(132, Math.max(72, FlxG.height * 0.10));
-    var roomAbove:Float = Math.max(0, centerY - 72);
-    var roomBelow:Float = Math.max(0, FlxG.height - centerY - 84);
-    var visibleDistance:Int = Std.int(Math.min(DRAW_DISTANCE,
-      Math.max(1, Math.floor(Math.min(roomAbove, roomBelow) / rowSpacing))));
-    var min:Int = Std.int(Math.max(0, Math.floor(lerpSelected - visibleDistance)));
-    var max:Int = Std.int(Math.min(songs.length, Math.ceil(lerpSelected + visibleDistance) + 1));
 
     for (i in 0...songTexts.length)
     {
@@ -709,7 +702,7 @@ class PsychFreeplayState extends MusicBeatSubState
       if (!visible) continue;
 
       var totalWidth:Float = icon.width + 12 + item.textWidth;
-      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20;
+      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
       var y:Float = centerY + offset * rowSpacing;
 
       icon.setPosition(x, y - 30);
