@@ -177,6 +177,100 @@ class PsychScriptInstance
     hscript = runtime;
   }
 
+  /**
+   * hxvm-lua serializes Haxe class instances by recursively walking every
+   * instance field. Gameplay objects (PlayState, Stage, FlxCamera, characters)
+   * contain cyclic references, so passing them directly can recurse until the
+   * native process dies before the first mod source is executed.
+   *
+   * Convert values at the Lua boundary instead: keep primitives, arrays,
+   * functions and anonymous tables, but expose class instances as bounded
+   * snapshots of commonly useful scalar fields. Gameplay mutations should go
+   * through the Psych API callbacks (setProperty, setPropertyFromGroup, etc.).
+   */
+  static final LUA_BRIDGE_OBJECT_FIELDS:Array<String> = [
+    "x", "y", "width", "height", "alpha", "angle", "zoom", "visible", "active", "exists", "alive",
+    "flipX", "flipY", "antialiasing", "color", "ID", "name", "text", "health",
+    "curCharacter", "characterId", "isPlayer", "finished", "curFrame", "frameRate",
+    "scale", "offset", "origin", "scrollFactor", "velocity", "acceleration", "drag",
+    "camGame", "camHUD", "camPause", "boyfriend", "dad", "gf", "girlfriend", "currentStage"
+  ];
+
+  static function prepareLuaBridgeValue(value:Dynamic, ?depth:Int = 0, ?visited:Array<Dynamic>):Dynamic
+  {
+    if (value == null || depth > 4) return null;
+    if (visited == null) visited = [];
+
+    switch (Type.typeof(value))
+    {
+      case TBool, TInt, TFloat:
+        return value;
+
+      case TClass(cls) if (cls == String):
+        return value;
+
+      case TClass(cls) if (cls == Array):
+        if (visited.indexOf(value) >= 0) return [];
+        visited.push(value);
+        var source:Array<Dynamic> = cast value;
+        var result:Array<Dynamic> = [];
+        var count:Int = Std.int(Math.min(source.length, 256));
+        for (i in 0...count)
+          result.push(prepareLuaBridgeValue(source[i], depth + 1, visited));
+        visited.pop();
+        return result;
+
+      case TFunction:
+        // Lua callbacks can return Haxe objects too. Sanitize both arguments
+        // and return values so those results cannot re-enter hxvm-lua's
+        // recursive class-instance serializer.
+        var callback:Dynamic = value;
+        return Reflect.makeVarArgs(function(args:Array<Dynamic>):Dynamic
+        {
+          var safeArgs:Array<Dynamic> = [];
+          for (arg in args)
+            safeArgs.push(prepareLuaBridgeValue(arg));
+          var result:Dynamic = Reflect.callMethod(null, callback, safeArgs);
+          return prepareLuaBridgeValue(result);
+        });
+
+      case TObject:
+        if (visited.indexOf(value) >= 0) return {};
+        visited.push(value);
+        var table:Dynamic = {};
+        var fields:Array<String> = Reflect.fields(value);
+        var count:Int = Std.int(Math.min(fields.length, 128));
+        for (i in 0...count)
+        {
+          var field:String = fields[i];
+          Reflect.setField(table, field, prepareLuaBridgeValue(Reflect.field(value, field), depth + 1, visited));
+        }
+        visited.pop();
+        return table;
+
+      case TEnum(_):
+        return Std.string(value);
+
+      case TClass(_):
+        if (visited.indexOf(value) >= 0) return {};
+        visited.push(value);
+        var snapshot:Dynamic = {};
+        var classType:Class<Dynamic> = Type.getClass(value);
+        Reflect.setField(snapshot, "__novabeatObjectType", classType == null ? "Object" : Type.getClassName(classType));
+        for (field in LUA_BRIDGE_OBJECT_FIELDS)
+        {
+          var fieldValue:Dynamic = Reflect.field(value, field);
+          if (fieldValue == null) continue;
+          Reflect.setField(snapshot, field, prepareLuaBridgeValue(fieldValue, depth + 1, visited));
+        }
+        visited.pop();
+        return snapshot;
+
+      default:
+        return null;
+    }
+  }
+
   function createLua(source:String, initialVariables:Map<String, Dynamic>, ?diagnosticSongId:String, ?diagnosticDifficulty:String):Void
   {
     #if (cpp || js)
@@ -220,7 +314,10 @@ class PsychScriptInstance
         runtime.setGlobalVar(name, null);
 
       for (name => value in initialVariables)
-        runtime.setGlobalVar(name, value);
+      {
+        // Do not hand cyclic PlayState/FlxSprite object graphs to hxvm-lua.
+        runtime.setGlobalVar(name, prepareLuaBridgeValue(value));
+      }
 
       resetLuaBudget();
       if (diagnosticSongId != null) PsychModRuntime.logSongLaunchStep(diagnosticSongId, diagnosticDifficulty ?? '', 'lua.source.run.begin', sourcePath);
@@ -286,7 +383,10 @@ class PsychScriptInstance
       if (lua != null)
       {
         resetLuaBudget();
-        return lua.call(name, args);
+        var safeArgs:Array<Dynamic> = [];
+        for (arg in args)
+          safeArgs.push(prepareLuaBridgeValue(arg));
+        return lua.call(name, safeArgs);
       }
       #end
     }
@@ -340,7 +440,7 @@ class PsychScriptInstance
     if (destroyed || name == null || name.length == 0) return;
     if (hscript != null) hscript.set(name, value);
     #if (cpp || js)
-    if (lua != null) lua.setGlobalVar(name, value);
+    if (lua != null) lua.setGlobalVar(name, prepareLuaBridgeValue(value));
     #end
   }
 
