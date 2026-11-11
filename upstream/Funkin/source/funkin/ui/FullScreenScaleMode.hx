@@ -464,6 +464,20 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
         var gameHeight:Float = gameSize.y / scale.y;
 
         #if desktop
+        // On landscape displays narrower than the 16:9 game canvas (for example,
+        // 16:10 monitors), expand the logical game height to the viewport instead
+        // of centering a 16:9 canvas and leaving permanent top/bottom bars.
+        // Uniform scaling is preserved; the game simply shows more vertical space.
+        if (screenRatio > 1.0)
+        {
+          untyped FlxG.height = Math.ceil(gameHeight);
+          wideScale.y = FlxG.height / FlxG.initialHeight;
+          cutoutSize.set(0, 0);
+          gameCutoutSize.set(0, 0);
+          updateGamePosition();
+          return;
+        }
+
         if (MathUtil.gcd(FlxG.width, Math.ceil(gameHeight)) == 1 || maxRatioAxis != ratioAxis)
         {
           gameSize.y -= cutoutSize.y;
@@ -546,7 +560,7 @@ class FullScreenScaleMode extends flixel.system.scaleModes.BaseScaleMode
     // a small 16:9 landscape game inside the phone screen.
     final isMobileWebBrowser:Bool = #if web funkin.util.DeviceUtil.isMobileBrowser #else false #end;
 
-    if ((ratioAxis == FlxAxes.X || isMobileWebBrowser) #if android
+    if ((ratioAxis == FlxAxes.X || (ratioAxis == FlxAxes.Y && screenRatio > 1.0) || isMobileWebBrowser) #if android
       && (extension.androidtools.os.Build.VERSION.SDK_INT >= extension.androidtools.os.Build.VERSION_CODES.P
         || extension.androidtools.Tools.isTablet()) #end)
     {
