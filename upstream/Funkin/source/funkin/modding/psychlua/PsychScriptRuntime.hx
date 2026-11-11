@@ -25,6 +25,10 @@ class PsychScriptRuntime
   static var inlineLuaBridge:Null<PsychScriptInstance> = null;
   static var executingScript:Null<PsychScriptInstance> = null;
   static var pendingSongLifecycleCallbacks:Bool = false;
+  // Retain the active imported-song context so failures swallowed by an
+  // interpreter callback are still written to the persistent launch log.
+  static var activeDiagnosticSongId:String = "";
+  static var activeDiagnosticDifficulty:String = "";
   static inline final FUNCTION_STOP:String = "##PSYCHLUA_FUNCTIONSTOP";
   static inline final FUNCTION_CONTINUE:String = "##PSYCHLUA_FUNCTIONCONTINUE";
   static inline final FUNCTION_STOP_LUA:String = "##PSYCHLUA_FUNCTIONSTOPLUA";
@@ -123,6 +127,16 @@ class PsychScriptRuntime
     return executingScript != null && executingScript.close();
   }
 
+  /** Persist script callback failures even when an interpreter handles the exception internally. */
+  static function logScriptCallbackFailure(script:PsychScriptInstance, callback:String, message:String):Void
+  {
+    var detail:String = script.sourcePath + " | callback=" + callback + " | " + message;
+    trace('[Psych Script Runtime] Callback failed: ' + detail);
+    if (activeDiagnosticSongId != null && activeDiagnosticSongId.length > 0)
+      PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty,
+        'scripts.callback.failed', detail);
+  }
+
   /** Invoke a script with a scoped current-script context for close/ignoreSelf helpers. */
   static function callScriptInstance(script:PsychScriptInstance, callback:String, args:Array<Dynamic>):Dynamic
   {
@@ -137,9 +151,17 @@ class PsychScriptRuntime
     catch (error:Dynamic)
     {
       executingScript = previous;
+      logScriptCallbackFailure(script, callback, Std.string(error));
       throw error;
     }
     executingScript = previous;
+
+    // PsychScriptInstance.call() intentionally catches interpreter exceptions
+    // so one bad callback cannot take down gameplay. Do not let that safety
+    // behavior hide the exact script and callback from the launch diagnostic.
+    if (script.lastError != null)
+      logScriptCallbackFailure(script, callback, script.lastError);
+
     if (script.closed)
     {
       scripts.remove(script);
@@ -195,6 +217,8 @@ class PsychScriptRuntime
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.begin');
       clear();
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.complete');
+      activeDiagnosticSongId = songId == null ? "" : songId;
+      activeDiagnosticDifficulty = difficulty == null ? "" : difficulty;
       activeModDirs = modDirs == null ? [] : modDirs.copy();
 
       phase = 'globals.create';
@@ -280,8 +304,18 @@ class PsychScriptRuntime
     if (!pendingSongLifecycleCallbacks) return;
     pendingSongLifecycleCallbacks = false;
     if (scripts.length == 0) return;
+
+    if (activeDiagnosticSongId.length > 0)
+      PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onCreate.begin');
     dispatch("onCreate", []);
+    if (activeDiagnosticSongId.length > 0)
+      PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onCreate.complete');
+
+    if (activeDiagnosticSongId.length > 0)
+      PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onSongLoaded.begin');
     dispatch("onSongLoaded", []);
+    if (activeDiagnosticSongId.length > 0)
+      PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onSongLoaded.complete');
   }
 
   public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
@@ -822,6 +856,8 @@ class PsychScriptRuntime
     if (inlineHScriptBridge != null) inlineHScriptBridge.destroy();
     if (inlineLuaBridge != null) inlineLuaBridge.destroy();
     activeModDirs = [];
+    activeDiagnosticSongId = "";
+    activeDiagnosticDifficulty = "";
     inlineHScriptBridge = null;
     inlineLuaBridge = null;
     activeGlobals = new Map<String, Dynamic>();
