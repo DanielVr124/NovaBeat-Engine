@@ -240,7 +240,8 @@ class PsychModRuntime
   /**
    * Persist the last reached phase of an imported Psych song launch.
    * This file log is separate from trace output and creates the logs folder
-   * automatically on the first write on native targets.
+   * automatically on the first write on native targets. Writes are synchronous
+   * so the final recorded phase survives an abrupt native process exit.
    */
   public static function logSongLaunchStep(songId:String, difficulty:String, phase:String, ?details:String = ""):Void
   {
