@@ -505,6 +505,41 @@ class FunkinSound extends FlxSound implements ICloneable<FunkinSound>
     return sound;
   }
 
+  /**
+   * Load an external audio file on native targets. Psych mods keep song
+   * stems in loose files under their own songs/<folder>/ directories; these
+   * paths cannot be passed to FlxSound.loadEmbedded as asset-library IDs.
+   */
+  public static function loadFromFile(path:String, volume:Float = 1.0, looped:Bool = false, autoDestroy:Bool = false,
+      autoPlay:Bool = false, persist:Bool = false, ?onComplete:Void->Void, ?onLoad:Void->Void,
+      important:Bool = false):Null<FunkinSound>
+  {
+    #if sys
+    if (path == null || StringTools.trim(path).length == 0) return null;
+
+    var externalSound:Null<openfl.media.Sound> = null;
+    try
+    {
+      externalSound = openfl.media.Sound.fromFile(path);
+    }
+    catch (error:Dynamic)
+    {
+      FlxG.log.error('Failed to load external audio file "$path": ' + Std.string(error));
+      return null;
+    }
+
+    if (externalSound == null)
+    {
+      FlxG.log.error('Could not decode external audio file "$path".');
+      return null;
+    }
+
+    return load(externalSound, volume, looped, autoDestroy, autoPlay, persist, onComplete, onLoad, important);
+    #else
+    return null;
+    #end
+  }
+
   #if web
   /**
    * Load a music asset through OpenFL's streaming music path instead of

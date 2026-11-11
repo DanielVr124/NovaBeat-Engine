@@ -853,10 +853,11 @@ class SongDifficulty
 
   public function cacheInst(instrumental = ''):Void
   {
-    // Web gameplay uses streamed music assets; pre-decoding here would keep
-    // another full copy of the instrumental in browser memory.
+    // Psych stems are loose files inside their owning mod and are loaded
+    // directly during playback, rather than through the OpenFL asset cache.
     #if !web
-    funkin.FunkinMemory.cacheSound(getInstPath(instrumental));
+    if (!PsychModRuntime.isImportedSong(this.song.id))
+      funkin.FunkinMemory.cacheSound(getInstPath(instrumental));
     #end
   }
 
@@ -864,10 +865,19 @@ class SongDifficulty
   {
     var suffix:String = (instId != '') ? '-$instId' : '';
     var psychAsset:Null<String> = PsychModRuntime.getInstrumentalAssetPath(this.song.id, suffix);
-    var instrumentalPath:String = psychAsset ?? Paths.inst(this.song.id, suffix);
 
-    FlxG.sound.music = FunkinSound.load(instrumentalPath, volume, looped, false, true, false, null, null, true,
-      #if web true #else false #end);
+    if (psychAsset != null)
+    {
+      // Psych stems are outside the compiled asset library; open the exact
+      // file discovered under the selected mod's songs/ directory.
+      FlxG.sound.music = FunkinSound.loadFromFile(psychAsset, volume, looped, false, true, false, null, null, true);
+    }
+    else
+    {
+      var instrumentalPath:String = Paths.inst(this.song.id, suffix);
+      FlxG.sound.music = FunkinSound.load(instrumentalPath, volume, looped, false, true, false, null, null, true,
+        #if web true #else false #end);
+    }
 
     // Workaround for a bug where FlxG.sound.music.update() was being called twice.
     FlxG.sound.list.remove(FlxG.sound.music);
@@ -879,13 +889,16 @@ class SongDifficulty
    */
   public function cacheVocals():Void
   {
-    // Do not decode/retain every full vocal stem on the HTML5 target. The
-    // streamed VoicesGroup loads these tracks when gameplay is created.
+    // Psych vocals are loose files, loaded from the owning mod when gameplay
+    // is created. Keep the normal V-Slice asset-cache route unchanged.
     #if !web
-    for (voice in buildVoiceList())
+    if (!PsychModRuntime.isImportedSong(this.song.id))
     {
-      trace(' SONG '.bold().bg_note_down() + ' Caching vocal track "$voice" for song "${song.id}"');
-      funkin.FunkinMemory.cacheSound(voice);
+      for (voice in buildVoiceList())
+      {
+        trace(' SONG '.bold().bg_note_down() + ' Caching vocal track "$voice" for song "${song.id}"');
+        funkin.FunkinMemory.cacheSound(voice);
+      }
     }
     #end
   }
@@ -901,7 +914,7 @@ class SongDifficulty
     var result:Array<String> = [];
     result = result.concat(buildPlayerVoiceList());
     result = result.concat(buildOpponentVoiceList());
-    if (result.length == 0)
+    if (result.length == 0 && !PsychModRuntime.isImportedSong(this.song.id))
     {
       var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
       // Try to use `Voices.ogg` if no other voices are found.
@@ -915,7 +928,8 @@ class SongDifficulty
     var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
 
     var psychPlayerVoice:Null<String> = PsychModRuntime.getVoiceAssetPath(this.song.id, characters.player, "player", suffix);
-    if (psychPlayerVoice != null) return [psychPlayerVoice];
+    if (PsychModRuntime.isImportedSong(this.song.id))
+      return psychPlayerVoice == null ? [] : [psychPlayerVoice];
 
     if (characters.playerVocals != null)
     {
@@ -969,7 +983,8 @@ class SongDifficulty
     var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
 
     var psychOpponentVoice:Null<String> = PsychModRuntime.getVoiceAssetPath(this.song.id, characters.opponent, "opponent", suffix);
-    if (psychOpponentVoice != null) return [psychOpponentVoice];
+    if (PsychModRuntime.isImportedSong(this.song.id))
+      return psychOpponentVoice == null ? [] : [psychOpponentVoice];
 
     if (characters.opponentVocals != null)
     {
@@ -1028,22 +1043,39 @@ class SongDifficulty
 
     var playerVoiceList:Array<String> = this.buildPlayerVoiceList();
     var opponentVoiceList:Array<String> = this.buildOpponentVoiceList();
+    var importedPsychSong:Bool = PsychModRuntime.isImportedSong(this.song.id);
 
     // Add player vocals.
     for (playerVoice in playerVoiceList)
     {
-      if (!Assets.exists(playerVoice)) continue;
-      result.addPlayerVoice(FunkinSound.load(playerVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
+      if (importedPsychSong)
+      {
+        var psychVoice:Null<FunkinSound> = FunkinSound.loadFromFile(playerVoice, 1.0, false, false, false, false, null, null, true);
+        if (psychVoice != null) result.addPlayerVoice(psychVoice);
+      }
+      else
+      {
+        if (!Assets.exists(playerVoice)) continue;
+        result.addPlayerVoice(FunkinSound.load(playerVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
+      }
     }
 
     // Add opponent vocals.
     for (opponentVoice in opponentVoiceList)
     {
-      if (!Assets.exists(opponentVoice)) continue;
-      result.addOpponentVoice(FunkinSound.load(opponentVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
+      if (importedPsychSong)
+      {
+        var psychVoice:Null<FunkinSound> = FunkinSound.loadFromFile(opponentVoice, 1.0, false, false, false, false, null, null, true);
+        if (psychVoice != null) result.addOpponentVoice(psychVoice);
+      }
+      else
+      {
+        if (!Assets.exists(opponentVoice)) continue;
+        result.addOpponentVoice(FunkinSound.load(opponentVoice, 1.0, false, false, false, false, null, null, true, #if web true #else false #end));
+      }
     }
 
-    if (result.members.length == 0)
+    if (result.members.length == 0 && !importedPsychSong)
     {
       var suffix:String = (variation != null && variation != '' && variation != 'default') ? '-$variation' : '';
       // Try to use `Voices.ogg` if no other voices are found.

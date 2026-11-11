@@ -16,7 +16,6 @@ import funkin.data.song.importer.FNFLegacyImporter;
 import funkin.play.song.Song;
 import funkin.play.PlayState;
 import haxe.Json;
-import openfl.utils.AssetType;
 
 #if sys
 import haxe.io.Path;
@@ -36,7 +35,7 @@ import sys.io.File;
 @:nullSafety(Off)
 class PsychModRuntime
 {
-  static final audioFolders:Map<String, String> = [];
+  static final audioPaths:Map<String, String> = [];
   static final songDataFolders:Map<String, String> = [];
   static final psychSongStageNames:Map<String, String> = [];
   static final psychSongModRoots:Map<String, String> = [];
@@ -46,7 +45,6 @@ class PsychModRuntime
   static var psychFreeplayColors:Map<String, Int> = [];
   static var psychFreeplayIcons:Map<String, String> = [];
   static var psychFreeplaySongOrder:Array<String> = [];
-  static var cachedSoundAssetKeys:Null<Array<String>> = null;
 
   public static function inspectPackage(modPath:String):PsychPackageAssessment
   {
@@ -195,12 +193,11 @@ class PsychModRuntime
   {
     var loaded:Array<String> = [];
     #if sys
-    audioFolders.clear();
+    audioPaths.clear();
     songDataFolders.clear();
     psychSongStageNames.clear();
     psychSongModRoots.clear();
     psychSongStagePositions.clear();
-    cachedSoundAssetKeys = null;
 
     var root:String = PolymodHandler.getModRoot();
     for (directory in modDirs)
@@ -216,13 +213,14 @@ class PsychModRuntime
       {
         if (source.instrumentFile == null || source.chartFiles.length == 0) continue;
 
+        if (source.audioPath == null) continue;
         var songId:String = buildSongId(directory, source.songFolder);
         try
         {
           var song:Null<Song> = buildNativeSong(songId, source);
           if (song == null) continue;
 
-          audioFolders.set(songId, source.songFolder);
+          audioPaths.set(songId, Path.normalize(FileSystem.fullPath(source.audioPath)));
           songDataFolders.set(songId, source.dataPath);
           SongRegistry.instance.registerCompatibilitySong(song);
           loaded.push(songId);
@@ -462,12 +460,12 @@ class PsychModRuntime
     if (requestedSongName == null || StringTools.trim(requestedSongName).length == 0) return null;
 
     var exactId:String = buildSongId(modDirectory, requestedSongName);
-    if (audioFolders.exists(exactId)) return exactId;
+    if (audioPaths.exists(exactId)) return exactId;
 
     var requestedSlug:String = slug(requestedSongName);
     var ownerPrefix:String = "psych-" + slug(modDirectory) + "-";
     var matches:Array<String> = [];
-    for (songId in audioFolders.keys())
+    for (songId in audioPaths.keys())
     {
       if (!StringTools.startsWith(songId, ownerPrefix)) continue;
 
@@ -628,7 +626,7 @@ class PsychModRuntime
   /** True only for a song imported by this Psych compatibility loader. */
   public static function isImportedSong(songId:String):Bool
   {
-    return songId != null && audioFolders.exists(songId);
+    return songId != null && audioPaths.exists(songId);
   }
 
 
@@ -1111,7 +1109,7 @@ class PsychModRuntime
 
   public static function getInstrumentalAssetPath(songId:String, suffix:String = ""):Null<String>
   {
-    var folder:Null<String> = audioFolders.get(songId);
+    var folder:Null<String> = audioPaths.get(songId);
     if (folder == null) return null;
 
     var normalizedSuffix:String = suffix == null ? "" : suffix;
@@ -1130,7 +1128,7 @@ class PsychModRuntime
    */
   public static function getVoiceAssetPath(songId:String, characterId:String, role:String, suffix:String = ""):Null<String>
   {
-    var folder:Null<String> = audioFolders.get(songId);
+    var folder:Null<String> = audioPaths.get(songId);
     if (folder == null) return null;
 
     var normalizedSuffix:String = suffix == null ? "" : suffix;
@@ -3136,15 +3134,28 @@ class PsychModRuntime
 
   static function findAudioFolder(modPath:String, songFolder:String):Null<String>
   {
-    var candidates:Array<String> = [
-      Path.join([modPath, "songs", songFolder]),
-      Path.join([modPath, "assets", "songs", songFolder])
+    // Psych charts store a data-folder name, while their audio may live in
+    // songs/<folder> or assets/songs/<folder>. Match the physical directory
+    // case-insensitively instead of deriving it from the generated song ID.
+    var roots:Array<String> = [
+      Path.join([modPath, "songs"]),
+      Path.join([modPath, "assets", "songs"])
     ];
 
-    for (candidate in candidates)
+    for (root in roots)
     {
-      if (FileSystem.exists(candidate) && FileSystem.isDirectory(candidate)) return candidate;
+      if (!FileSystem.exists(root) || !FileSystem.isDirectory(root)) continue;
+
+      for (entry in FileSystem.readDirectory(root))
+      {
+        if (entry.toLowerCase() != songFolder.toLowerCase()) continue;
+
+        var candidate:String = Path.join([root, entry]);
+        if (FileSystem.exists(candidate) && FileSystem.isDirectory(candidate))
+          return Path.normalize(FileSystem.fullPath(candidate));
+      }
     }
+
     return null;
   }
 
@@ -3249,36 +3260,21 @@ class PsychModRuntime
   public static function runPsychV2SmokeTests():Bool return false;
   #end
 
-  static function findSongAsset(songFolder:String, baseName:String):Null<String>
+  static function findSongAsset(audioFolder:String, baseName:String):Null<String>
   {
+    #if sys
+    if (audioFolder == null || StringTools.trim(audioFolder).length == 0) return null;
+
+    // Resolve stems only inside the directory discovered for this Psych
+    // package. Never synthesize a songs:<song-id> asset-library key.
     var fileCandidates:Array<String> = [baseName + ".ogg", baseName + ".mp3", baseName + ".wav"];
-    var soundKeys:Array<String> = cachedSoundAssetKeys ??= Assets.list(AssetType.SOUND);
-
     for (fileName in fileCandidates)
     {
-      var suffix:String = "/" + songFolder.toLowerCase() + "/" + fileName.toLowerCase();
-      for (assetKey in soundKeys)
-      {
-        var normalized:String = assetKey.toLowerCase().replace("\\", "/");
-        if (StringTools.endsWith(normalized, suffix) && Assets.exists(assetKey, AssetType.SOUND))
-          return assetKey;
-      }
+      var candidate:String = Path.join([audioFolder, fileName]);
+      if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate))
+        return Path.normalize(FileSystem.fullPath(candidate));
     }
-
-    // These aliases cover both legacy Psych mods (songs/<song>/...) and
-    // source-built Psych content placed under assets/songs/<song>/...
-    for (fileName in fileCandidates)
-    {
-      var candidates:Array<String> = [
-        "songs:" + songFolder + "/" + fileName,
-        "songs:songs/" + songFolder + "/" + fileName,
-        "songs:assets/songs/" + songFolder + "/" + fileName
-      ];
-      for (candidate in candidates)
-      {
-        if (Assets.exists(candidate, AssetType.SOUND)) return candidate;
-      }
-    }
+    #end
 
     return null;
   }
