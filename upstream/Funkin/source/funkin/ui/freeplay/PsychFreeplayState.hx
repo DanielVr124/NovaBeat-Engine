@@ -32,8 +32,6 @@ class PsychFreeplayState extends MusicBeatSubState
 {
   static final VARIATION:String = Constants.DEFAULT_VARIATION;
   static inline final DEFAULT_COLOR:Int = 0xFF9271FD;
-  static inline final LIST_Y:Float = 320;
-  static inline final ITEM_SPACING_Y:Float = 156;
   static inline final DRAW_DISTANCE:Int = 4;
 
   static var rememberedSelection:Int = 0;
@@ -686,10 +684,14 @@ class PsychFreeplayState extends MusicBeatSubState
       icon.visible = icon.active = visible;
       if (!visible) continue;
 
+      // Anchor the selected row to the actual game viewport. Fixed 320/156
+      // coordinates pushed rows below the visible area on smaller window sizes.
       var offset:Float = item.targetY - lerpSelected;
       var totalWidth:Float = icon.width + 12 + item.textWidth;
       var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20;
-      var y:Float = LIST_Y + offset * ITEM_SPACING_Y;
+      var rowSpacing:Float = Math.min(156, Math.max(88, FlxG.height * 0.19));
+      var centerY:Float = FlxG.height * 0.48;
+      var y:Float = centerY + offset * rowSpacing;
       icon.setPosition(x, y - 30);
       item.setMenuPosition(x + icon.width + 12, y);
     }
