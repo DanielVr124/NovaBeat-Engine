@@ -24,7 +24,12 @@ on:
           - both
           - windows
           - android
+          - publish-windows
         default: both
+      source_sha:
+        description: Commit SHA of the cached Windows build to republish; blank uses the selected branch HEAD
+        required: false
+        type: string
   push:
     branches: [main, "feature/**"]
     paths:
@@ -325,15 +330,74 @@ jobs:
             "- $relative ($($file.Length) bytes)" >> $env:GITHUB_STEP_SUMMARY
           }
 
-      # upload-artifact creates the one download ZIP; upload the folder contents
-      # directly so users do not get a ZIP nested inside that ZIP.
+      # Keep a commit-scoped recovery copy before attempting the user download.
+      # If the artifact service fails, publish-windows can restore this cache and
+      # upload it again without rerunning Haxe/Lime or compiling the game.
+      - name: Preserve Windows distribution for upload-only recovery
+        id: preserve-windows
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: upstream/Funkin/export/release/windows/bin/
+          key: novabeat-windows-dist-${{ github.sha }}
+
+      - name: Record Windows recovery-cache status
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.preserve-windows.outcome }}" -eq "success") {
+            "Windows distribution recovery cache: saved or already present." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "Windows distribution recovery cache: unavailable; the primary artifact upload will still be attempted." >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      # Store binaries without spending runner time recompressing assets.
       - name: Upload Windows distribution
         uses: actions/upload-artifact@v4
         with:
           name: NovaBeat-Windows
           path: upstream/Funkin/export/release/windows/bin/
           if-no-files-found: error
-          retention-days: 3
+          compression-level: 0
+          retention-days: 30
+
+  publish_windows:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_target == 'publish-windows'
+    name: Re-publish cached Windows build
+    runs-on: windows-2022
+    steps:
+      - name: Restore cached Windows distribution
+        id: restore-windows
+        uses: actions/cache/restore@v4
+        with:
+          path: upstream/Funkin/export/release/windows/bin/
+          key: novabeat-windows-dist-${{ inputs.source_sha || github.sha }}
+
+      - name: Verify restored Windows distribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ("${{ steps.restore-windows.outputs.cache-hit }}" -ne "true") {
+            throw "No cached Windows distribution exists for SHA '${{ inputs.source_sha || github.sha }}'. Select the branch and SHA used by the original Windows build, then run publish-windows."
+          }
+          $binaryDir = "upstream/Funkin/export/release/windows/bin"
+          $exe = Join-Path $binaryDir "Funkin.exe"
+          if (!(Test-Path $exe)) { throw "Cached Windows executable is missing: $exe" }
+          $files = @(Get-ChildItem -LiteralPath $binaryDir -File -Recurse)
+          if ($files.Count -lt 1) { throw "Cached Windows distribution is empty." }
+          $digest = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "Republished build SHA: ${{ inputs.source_sha || github.sha }}" >> $env:GITHUB_STEP_SUMMARY
+          "Windows files restored: $($files.Count)" >> $env:GITHUB_STEP_SUMMARY
+          "Funkin.exe SHA-256: $digest" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaBeat-Windows
+          path: upstream/Funkin/export/release/windows/bin/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
 
   android:
     if: (github.event_name == 'workflow_dispatch' && (inputs.build_target == 'both' || inputs.build_target == 'android')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[full-build]') || contains(github.event.head_commit.message, '[full-build-android]'))) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[full-build]') || contains(github.event.pull_request.title, '[full-build-android]')))
