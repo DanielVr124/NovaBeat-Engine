@@ -268,47 +268,60 @@ class Level implements IRegistryEntry<LevelData>
   {
     var props:Array<LevelProp> = existingProps == null ? [] : [for (x in existingProps) x];
 
-    if (_data.props.length == 0) return props;
-
-    // Hides unused props
-    if (_data.props.length < props.length)
+    // A level with no props must still retire props from the previously
+    // selected week; otherwise stale sprites can remain in the camera draw list.
+    if (_data.props.length == 0)
     {
-      for (i in _data.props.length...props.length)
+      for (prop in props)
       {
-        props[i].visible = false;
+        if (prop == null) continue;
+        prop.visible = false;
+        prop.active = false;
       }
+      return props;
+    }
+
+    // Hide surplus entries before rebuilding the active set.
+    for (i in _data.props.length...props.length)
+    {
+      props[i].visible = false;
+      props[i].active = false;
     }
 
     for (propIndex in 0..._data.props.length)
     {
       var propData:LevelPropData = _data.props[propIndex];
+      var existingProp:Null<LevelProp> = propIndex < props.length ? props[propIndex] : null;
 
-      // Attempt to reuse the `LevelProp` object.
-      // This prevents animations from resetting.
-      var existingProp:Null<LevelProp> = props[propIndex];
-      if (existingProp != null)
+      // Reuse only a live sprite with the same underlying asset. Replacing a
+      // destroyed sprite (or one whose texture changes) avoids queuing stale
+      // frames in FunkinCamera after switching weeks.
+      if (existingProp != null && existingProp.exists && existingProp.propData != null
+        && existingProp.propData.assetPath == propData.assetPath)
       {
         existingProp.propData = propData;
-        if (existingProp.propData == null)
-        {
-          existingProp.visible = false;
-        }
-        else
-        {
-          existingProp.visible = true;
-          existingProp.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
-        }
+        existingProp.visible = true;
+        existingProp.active = true;
+        existingProp.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
       }
       else
       {
+        if (existingProp != null)
+        {
+          existingProp.visible = false;
+          existingProp.active = false;
+        }
+
         var propSprite:Null<LevelProp> = LevelProp.build(propData);
         if (propSprite == null) continue;
 
         propSprite.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
-        props.push(propSprite);
+        if (propIndex < props.length)
+          props[propIndex] = propSprite;
+        else
+          props.push(propSprite);
       }
     }
 
     return props;
-  }
-}
+  }}
