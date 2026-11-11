@@ -159,6 +159,7 @@ class LoadingState extends MusicBeatSubState
       // asset-library keys).
       if (PsychModRuntime.isImportedSong(playParams.targetSong.id))
       {
+        trace('[Psych Compatibility] Skipping asset-library preload for imported song: ' + playParams.targetSong.id);
         loadStatus = 'Psych song audio ready for direct file playback';
         lastLoadActivityTime = haxe.Timer.stamp();
       }
