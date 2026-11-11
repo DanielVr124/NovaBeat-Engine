@@ -196,6 +196,7 @@ class PsychFreeplayState extends MusicBeatSubState
       songText.setMenuScale(Math.min(1, 980 / Math.max(1, songText.textWidth)));
       songText.visible = false;
       songText.active = false;
+      songText.scrollFactor.set(0, 0);
       songTexts.push(songText);
       add(songText);
 
@@ -204,6 +205,7 @@ class PsychFreeplayState extends MusicBeatSubState
       icon.alpha = 0.6;
       icon.visible = false;
       icon.active = false;
+      icon.scrollFactor.set(0, 0);
       icons.push(icon);
       add(icon);
     }
@@ -672,26 +674,33 @@ class PsychFreeplayState extends MusicBeatSubState
   function updateSongRows(elapsed:Float):Void
   {
     lerpSelected = FlxMath.lerp(selected, lerpSelected, Math.exp(-elapsed * 9.6));
-    var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - DRAW_DISTANCE)));
-    var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + DRAW_DISTANCE)));
+
+    // Keep the list inside the usable part of the viewport. A fixed 88-156px
+    // spacing pushed the first/last rows outside shorter windows, while the
+    // old index window could hide rows before they had scrolled into view.
+    var topPadding:Float = 110;
+    var bottomPadding:Float = 76;
+    var usableHeight:Float = Math.max(1, FlxG.height - topPadding - bottomPadding);
+    var visibleRadius:Int = Std.int(Math.max(1, Math.min(DRAW_DISTANCE, Math.floor(usableHeight / 180))));
+    var rowSpacing:Float = Math.min(116, usableHeight / (visibleRadius * 2));
+    var centerY:Float = (topPadding + FlxG.height - bottomPadding) * 0.5;
 
     for (i in 0...songTexts.length)
     {
       var item:PsychAlphabet = songTexts[i];
       var icon:HealthIcon = icons[i];
-      var visible:Bool = i >= min && i < max;
+      var offset:Float = item.targetY - lerpSelected;
+      var visible:Bool = Math.abs(offset) <= visibleRadius + 0.5;
+
       item.visible = item.active = visible;
       icon.visible = icon.active = visible;
       if (!visible) continue;
 
-      // Anchor the selected row to the actual game viewport. Fixed 320/156
-      // coordinates pushed rows below the visible area on smaller window sizes.
-      var offset:Float = item.targetY - lerpSelected;
       var totalWidth:Float = icon.width + 12 + item.textWidth;
-      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20;
-      var rowSpacing:Float = Math.min(156, Math.max(88, FlxG.height * 0.19));
-      var centerY:Float = FlxG.height * 0.48;
+      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 16;
+      x = Math.max(16, Math.min(x, FlxG.width - totalWidth - 16));
       var y:Float = centerY + offset * rowSpacing;
+
       icon.setPosition(x, y - 30);
       item.setMenuPosition(x + icon.width + 12, y);
     }
@@ -1009,6 +1018,7 @@ class PsychFreeplayState extends MusicBeatSubState
     if (previewBackground != null) positionPreview();
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
     if (scoreText != null) positionHighscore();
+    updateSongRows(0);
   }
 
   override public function destroy():Void
