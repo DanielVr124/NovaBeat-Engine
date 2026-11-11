@@ -2740,6 +2740,13 @@ class PsychModRuntime
           chartRoot, source.dataPath, difficultyName, source.songFolder
         );
         if (importedV2 == null) continue;
+        var v2StageName:String = readPsychString(getPsychChartMetadata(chartRoot), "stage",
+          readPsychString(chartRoot, "stage", ""));
+        if (v2StageName.length > 0)
+        {
+          psychSongStageNames.set(songId, v2StageName);
+          psychSongModRoots.set(songId, Path.normalize(modPath));
+        }
         hasPsychSectionStates = true;
         if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
