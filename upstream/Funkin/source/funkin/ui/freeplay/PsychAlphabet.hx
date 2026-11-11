@@ -108,6 +108,12 @@ class PsychAlphabet extends FlxSpriteGroup
     textWidth = baseTextWidth;
   }
 
+  /** Fit the original unscaled glyph run to the current viewport width. */
+  public function setMenuMaxWidth(maxWidth:Float):Void
+  {
+    setMenuScale(Math.min(1, Math.max(0.01, maxWidth) / Math.max(1, baseTextWidth)));
+  }
+
   /** Match Psych's Freeplay long-song-name horizontal compression. */
   public function setMenuScale(value:Float):Void
   {

@@ -701,8 +701,15 @@ class PsychFreeplayState extends MusicBeatSubState
       icon.visible = icon.active = visible;
       if (!visible) continue;
 
+      // Fit long song names to the actual window, not a fixed 980px
+      // allowance. On narrower desktop windows the fixed cap pushed the
+      // centered row's left edge offscreen.
+      var availableTextWidth:Float = Math.max(1, FlxG.width - icon.width - 12 - 48);
+      item.setMenuMaxWidth(availableTextWidth);
+
       var totalWidth:Float = icon.width + 12 + item.textWidth;
-      var x:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
+      var preferredX:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
+      var x:Float = Math.max(16, Math.min(preferredX, FlxG.width - totalWidth - 16));
       var y:Float = centerY + offset * rowSpacing;
 
       icon.setPosition(x, y - 30);
