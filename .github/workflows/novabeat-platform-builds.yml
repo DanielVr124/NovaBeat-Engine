@@ -833,8 +833,18 @@ jobs:
           concept derived_from = std::is_base_of_v<Base, Derived>
               and std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
+          template<typename To, typename From>
+          constexpr auto bit_cast(From const &value) noexcept -> To
+          {
+              static_assert(sizeof(To) == sizeof(From), "bit_cast requires equal sizes");
+              static_assert(std::is_trivially_copyable_v<To> and std::is_trivially_copyable_v<From>,
+                  "bit_cast requires trivially copyable types");
+              return __builtin_bit_cast(To, value);
+          }
+
           struct narrowing_error : std::runtime_error {"""
           source = source.replace(anchor, compatibility, 1)
+          source = source.replace("std::bit_cast", "bit_cast")
           for standard, local in (
               ("std::same_as", "same_as"),
               ("std::integral", "integral"),
@@ -852,7 +862,22 @@ jobs:
               "std::signed_integral", "std::unsigned_integral", "std::derived_from"
           )):
               raise SystemExit("Unsupported standard concept references remain in Android altypes.hpp.")
-          print(f"Installed Android-local standard-concept equivalents in {path}")
+          # Global arithmetic operators follow the closing al namespace and
+          # must explicitly qualify the local concepts.
+          namespace_close = "} /* namespace al */"
+          close_at = source.rfind(namespace_close)
+          if close_at < 0:
+              raise SystemExit("Could not find the al namespace close in altypes.hpp.")
+          close_at += len(namespace_close)
+          global_part = source[close_at:]
+          for name in ("integral", "floating_point", "signed_integral", "unsigned_integral", "same_as"):
+              global_part = global_part.replace(name + "<", "al::" + name + "<")
+              global_part = global_part.replace(name + " auto", "al::" + name + " auto")
+          source = source[:close_at] + global_part
+          path.write_text(source)
+          if "std::bit_cast" in source:
+              raise SystemExit("std::bit_cast remains in Android altypes.hpp.")
+          print(f"Installed Android-local concepts and bit_cast compatibility in {path}")
           PY
 
           cd "$lime_project"
