@@ -44,7 +44,13 @@ class Paths implements ConsoleClass
 
   static function getPath(file:String, type:AssetType, library:Null<String>):String
   {
-    if (library != null) return getLibraryPath(file, library);
+    if (library != null)
+    {
+      var explicitPath:String = getLibraryPath(file, library);
+      var exists:Bool = Assets.exists(explicitPath, type);
+      traceModImageResolution(file, type, [explicitPath + '=' + exists], explicitPath);
+      return explicitPath;
+    }
 
     if (currentLevel != null)
     {
