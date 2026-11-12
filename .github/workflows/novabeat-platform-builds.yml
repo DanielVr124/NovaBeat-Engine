@@ -802,12 +802,69 @@ jobs:
           print(f"Replaced PFFFT std::numbers constants with equivalent literals in {path}")
           PY
 
+          # NDK r25 libc++ is missing parts of the standard concepts library.
+          # Re-express the OpenAL altypes concepts locally using type_traits so
+          # the checks retain their standard semantics on Android.
+          python3 - "$lime_project/lib/openal/common/altypes.hpp" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          anchor = "namespace al {\\n\\nstruct narrowing_error"
+          if source.count(anchor) != 1:
+              raise SystemExit("OpenAL altypes.hpp namespace anchor did not match; refusing an unsafe patch.")
+          compatibility = """namespace al {
+
+          template<typename T, typename U>
+          concept same_as = std::is_same_v<T, U> and std::is_same_v<U, T>;
+
+          template<typename T>
+          concept integral = std::is_integral_v<T>;
+
+          template<typename T>
+          concept floating_point = std::is_floating_point_v<T>;
+
+          template<typename T>
+          concept signed_integral = integral<T> and std::is_signed_v<T>;
+
+          template<typename T>
+          concept unsigned_integral = integral<T> and std::is_unsigned_v<T>;
+
+          template<typename Derived, typename Base>
+          concept derived_from = std::is_base_of_v<Base, Derived>
+              and std::is_convertible_v<const volatile Derived*, const volatile Base*>;
+
+          struct narrowing_error"""
+          source = source.replace(anchor, compatibility, 1)
+          for standard, local in (
+              ("std::same_as", "same_as"),
+              ("std::integral", "integral"),
+              ("std::floating_point", "floating_point"),
+              ("std::signed_integral", "signed_integral"),
+              ("std::unsigned_integral", "unsigned_integral"),
+              ("std::derived_from", "derived_from"),
+          ):
+              if standard not in source:
+                  raise SystemExit(f"Expected {standard} in altypes.hpp; refusing an unsafe patch.")
+              source = source.replace(standard, local)
+          path.write_text(source)
+          if any(token in source for token in (
+              "std::same_as", "std::integral", "std::floating_point",
+              "std::signed_integral", "std::unsigned_integral", "std::derived_from"
+          )):
+              raise SystemExit("Unsupported standard concept references remain in Android altypes.hpp.")
+          print(f"Installed Android-local standard-concept equivalents in {path}")
+          PY
+
           cd "$lime_project"
           clang="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
           test -x "$clang"
           probe="$RUNNER_TEMP/novabeat-openal-format-check.cpp"
           cat > "$probe" <<'CPP'
           #include "common/alformat.hpp"
+          #include "common/altypes.hpp"
+          #include "common/pffft.h"
           void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }
           CPP
           "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
