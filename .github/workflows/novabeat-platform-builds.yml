@@ -899,6 +899,27 @@ jobs:
           print(f"Installed Android-local concepts and bit_cast compatibility in {path}")
           PY
 
+          # alnumeric.h independently uses std::integral and related concepts.
+          # Include the C++20 concepts header there as well; altypes.hpp's local
+          # fallback does not declare names in namespace std.
+          python3 - "$lime_project/lib/openal/common/alnumeric.h" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          include = "#include <concepts>"
+          if include not in source:
+              first_include = source.find("#include")
+              if first_include < 0:
+                  raise SystemExit("OpenAL alnumeric.h has no include section; refusing an unsafe patch.")
+              source = source[:first_include] + include + "\n" + source[first_include:]
+              path.write_text(source)
+          if include not in path.read_text():
+              raise SystemExit("OpenAL alnumeric.h concepts include was not installed.")
+          print(f"Added <concepts> to {path}")
+          PY
+
           # NDK r25 libc++ lacks <numbers>. Supply its standard mathematical
           # constants through Lime's existing -Ilib/openal include directory,
           # so every OpenAL translation unit gets the same C++20 API.
@@ -946,6 +967,7 @@ jobs:
           cat > "$probe" <<'CPP'
           #include "common/alformat.hpp"
           #include "common/altypes.hpp"
+          #include "common/alnumeric.h"
           #include "common/pffft.h"
           #include "core/ambidefs.h"
           void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }
