@@ -3,6 +3,7 @@ name: NovaBeat platform build checks
 # [full-build-windows] Compile-check Psych Freeplay and the current Lua runtime regression coverage.
 
 # [full-build-android] Verify APK compilation without HXCPP precompiled headers.
+# [full-build-android] Validate all OpenAL alignment fixes on the extended native-build window.
 
 # [full-build] Build Windows and Android for the current native test pass.
 # [full-build] Validate Windows and Android after Haxe/Neko tool-cache priming.
