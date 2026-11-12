@@ -64,20 +64,38 @@ class Paths implements ConsoleClass
       'default:assets/$file',
       getPreloadPath(file)
     ];
+    var defaultChecks:Array<String> = [];
     for (defaultPath in defaultPaths)
     {
-      if (Assets.exists(defaultPath, type)) return defaultPath;
+      var exists:Bool = Assets.exists(defaultPath, type);
+      defaultChecks.push(defaultPath + '=' + exists);
+      if (exists)
+      {
+        traceModImageResolution(file, type, defaultChecks, defaultPath);
+        return defaultPath;
+      }
     }
 
     var levelPath:String = getLibraryPathForce(file, 'shared');
-    if (Assets.exists(levelPath, type)) return levelPath;
-
-    // Backward compatibility: older V-Slice packages may keep default-library
-    // assets under preload/.
+    var sharedExists:Bool = Assets.exists(levelPath, type);
     var legacyPreloadPath:String = getLibraryPathForce(file, 'preload');
-    if (Assets.exists(legacyPreloadPath, type)) return legacyPreloadPath;
+    var legacyPreloadExists:Bool = Assets.exists(legacyPreloadPath, type);
+    var resolvedPath:String = sharedExists ? levelPath : (legacyPreloadExists ? legacyPreloadPath : getPreloadPath(file));
 
-    return getPreloadPath(file);
+    // Diagnostic output records the exact asset keys tested and which one won,
+    // distinguishing missing mod files from atlas parsing/rendering failures.
+    traceModImageResolution(file, type, defaultChecks.concat([
+      levelPath + '=' + sharedExists,
+      legacyPreloadPath + '=' + legacyPreloadExists
+    ]), resolvedPath);
+
+    return resolvedPath;
+  }
+
+  static function traceModImageResolution(file:String, type:AssetType, checks:Array<String>, resolvedPath:String):Void
+  {
+    if (!StringTools.startsWith(file, 'images/')) return;
+    trace('[Mod Asset Diagnostic] type=' + type + ' request=' + file + ' checks=[' + checks.join(' | ') + '] resolved=' + resolvedPath);
   }
 
   public static function getLibraryPath(file:String, library = 'preload'):String
