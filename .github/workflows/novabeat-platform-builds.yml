@@ -950,7 +950,7 @@ jobs:
           #include "core/ambidefs.h"
           void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }
           CPP
-          "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/gsl/include -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
+          "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/common -Ilib/openal/core -Ilib/openal/gsl/include -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
 
       - name: Build Lime Android native libraries
         timeout-minutes: 45
