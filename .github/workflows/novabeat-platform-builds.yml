@@ -811,12 +811,10 @@ jobs:
 
           path = Path(sys.argv[1])
           source = path.read_text()
-          anchor = "namespace al {\\n\\nstruct narrowing_error"
+          anchor = "struct narrowing_error : std::runtime_error {"
           if source.count(anchor) != 1:
-              raise SystemExit("OpenAL altypes.hpp namespace anchor did not match; refusing an unsafe patch.")
-          compatibility = """namespace al {
-
-          template<typename T, typename U>
+              raise SystemExit("OpenAL altypes.hpp narrowing_error anchor did not match; refusing an unsafe patch.")
+          compatibility = """template<typename T, typename U>
           concept same_as = std::is_same_v<T, U> and std::is_same_v<U, T>;
 
           template<typename T>
@@ -835,7 +833,7 @@ jobs:
           concept derived_from = std::is_base_of_v<Base, Derived>
               and std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
-          struct narrowing_error"""
+          struct narrowing_error : std::runtime_error {"""
           source = source.replace(anchor, compatibility, 1)
           for standard, local in (
               ("std::same_as", "same_as"),
