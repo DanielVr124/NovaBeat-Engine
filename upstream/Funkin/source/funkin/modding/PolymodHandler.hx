@@ -539,7 +539,9 @@ class PolymodHandler
   {
     return {
       assetLibraryPaths: [
-        'default' => 'preload',
+        // Psych and V-Slice mods place images/data at the mod root (e.g. images/characters),
+        // not under a synthetic preload/ directory. Keep the default library rooted at the mod folder.
+        'default' => '',
         'shared' => 'shared',
         'songs' => 'songs',
         'videos' => 'videos',
