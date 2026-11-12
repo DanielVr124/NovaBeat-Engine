@@ -808,6 +808,7 @@ jobs:
           python3 - "$lime_project/lib/openal/common/altypes.hpp" <<'PY'
           from pathlib import Path
           import sys
+          import re
 
           path = Path(sys.argv[1])
           source = path.read_text()
@@ -877,11 +878,11 @@ jobs:
           if next_namespace < 0:
               raise SystemExit("Could not find the subsequent al namespace block in altypes.hpp.")
           global_part = source[close_end:next_namespace]
-          # Match longer names first so signed_integral is not partially
-          # rewritten as signed_al::integral.
-          for name in ("unsigned_integral", "signed_integral", "floating_point", "same_as", "derived_from", "integral"):
-              global_part = global_part.replace(name + "<", "al::" + name + "<")
-              global_part = global_part.replace(name + " auto", "al::" + name + " auto")
+          # Qualify only whole concept identifiers. The negative lookbehind
+          # avoids rewriting the integral suffix in signed_integral/unsigned_integral
+          # and avoids double-qualifying names that already start with al::.
+          concept_pattern = r"(?<![A-Za-z0-9_:])(unsigned_integral|signed_integral|floating_point|same_as|derived_from|integral)(?=\\s*(?:<|auto))"
+          global_part = re.sub(concept_pattern, r"al::\\1", global_part)
           source = source[:close_end] + global_part + source[next_namespace:]
 
           # std::common_type specializations are outside namespace al too.
@@ -890,8 +891,7 @@ jobs:
           if std_start < 0 or std_end < 0:
               raise SystemExit("Could not find the std common_type specialization block.")
           std_part = source[std_start:std_end]
-          for name in ("derived_from", "same_as", "unsigned_integral", "signed_integral", "floating_point", "integral"):
-              std_part = std_part.replace(name + "<", "al::" + name + "<")
+          std_part = re.sub(concept_pattern, r"al::\\1", std_part)
           source = source[:std_start] + std_part + source[std_end:]
           path.write_text(source)
           if "std::bit_cast" in source:
