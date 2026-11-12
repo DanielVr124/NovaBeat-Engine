@@ -909,7 +909,7 @@ jobs:
           path = Path(sys.argv[1])
           source = path.read_text()
           source = source.replace("#include <concepts>\\n", "")
-          source = source.replace("std::bit_cast", "al::bit_cast")
+          # NDK r26d provides std::bit_cast; keep the standard implementation.
           source = source.replace(
               "template<std::integral T>",
               "template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>"
