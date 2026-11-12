@@ -429,20 +429,20 @@ jobs:
             /usr/local/lib/android/sdk/platforms
             /usr/local/lib/android/sdk/build-tools
             /usr/local/lib/android/sdk/ndk
-          key: android-sdk-ubuntu-24.04-cmdline-15859902-api29-api35-build35-ndk26d
+          key: android-sdk-ubuntu-24.04-cmdline-15859902-api29-api35-build35-ndk25c
           save-always: true
 
       - name: Set up Android SDK, build tools, and the Lime-compatible NDK
         uses: android-actions/setup-android@v4
         with:
-          packages: "platform-tools platforms;android-29 platforms;android-35 build-tools;35.0.0 ndk;26.3.11579264"
+          packages: "platform-tools platforms;android-29 platforms;android-35 build-tools;35.0.0 ndk;25.2.9519653"
 
       - name: Configure Android SDK and NDK paths
         shell: bash
         run: |
           set -euo pipefail
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/.android/sdk}}"
-          ndk_root="$sdk_root/ndk/26.3.11579264"
+          ndk_root="$sdk_root/ndk/25.2.9519653"
           test -d "$sdk_root/platforms/android-35"
           test -d "$ndk_root"
           {
@@ -650,7 +650,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: android-gradle-ubuntu-24.04-jdk17-ndk26d-${{ hashFiles('upstream/Funkin/hmm.json') }}
+          key: android-gradle-ubuntu-24.04-jdk17-ndk25c-${{ hashFiles('upstream/Funkin/hmm.json') }}
 
       - name: Configure Lime Android SDK paths
         shell: bash
@@ -818,4 +818,4 @@ jobs:
           retention-days: 3
 
 
-# Android validation trigger: [full-build-android] (NDK r26d compiler regression check)
+# Android validation trigger: [full-build-android] (NDK r25c compiler comparison)
