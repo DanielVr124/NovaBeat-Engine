@@ -1099,3 +1099,4 @@ jobs:
 
 # Android validation trigger: [full-build-android] (NDK r25c compiler comparison)
 # [full-build-windows] User-requested Windows build including current GorillaFunkin asset diagnostics.
+# [full-build-windows] Trigger Windows diagnostics build for current GorillaFunkin image-resolution investigation.
