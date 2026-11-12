@@ -2390,7 +2390,7 @@ class PlayState extends MusicBeatSubState
     //
     // GIRLFRIEND
     //
-    var requestedGirlfriendId:Null<String> = currentCharacterData.girlfriend;
+    var requestedGirlfriendId:String = currentCharacterData.girlfriend;
     var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedGirlfriendId);
 
     if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
@@ -2445,7 +2445,7 @@ class PlayState extends MusicBeatSubState
     //
     // BOYFRIEND
     //
-    var requestedBoyfriendId:Null<String> = currentCharacterData.player;
+    var requestedBoyfriendId:String = currentCharacterData.player;
     var boyfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedBoyfriendId);
 
     if (boyfriend == null)
