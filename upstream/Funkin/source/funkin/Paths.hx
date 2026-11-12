@@ -55,7 +55,12 @@ class Paths implements ConsoleClass
     if (currentLevel != null)
     {
       var levelPath:String = getLibraryPathForce(file, currentLevel);
-      if (Assets.exists(levelPath, type)) return levelPath;
+      var levelExists:Bool = Assets.exists(levelPath, type);
+      if (levelExists)
+      {
+        traceModImageResolution(file, type, [levelPath + '=' + levelExists], levelPath);
+        return levelPath;
+      }
     }
 
     // Psych mods store assets directly at the mod root (for example,
