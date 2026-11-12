@@ -958,6 +958,29 @@ jobs:
           print(f"Fixed Android OpenAL RoundFromZero argument types in {path}")
           PY
 
+          # OpenAL also passes int alignment literals beside unsigned channel lengths.
+          # Match each literal to the type of its first argument for Android Clang.
+          python3 - "$lime_project/lib/openal/alc/panning.cpp" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          replacements = {
+              "RoundFromZero(ChanDelay[idx].Length, 4)": "RoundFromZero(ChanDelay[idx].Length, decltype(ChanDelay[idx].Length){4})",
+              "RoundFromZero(data.Length, 4)": "RoundFromZero(data.Length, decltype(data.Length){4})",
+          }
+          for old, new in replacements.items():
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one {old!r} in panning.cpp, found {count}; refusing an unsafe patch.")
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          if any(old in source for old in replacements):
+              raise SystemExit("An untyped RoundFromZero alignment call remains in panning.cpp.")
+          print(f"Fixed Android OpenAL panning alignment argument types in {path}")
+          PY
+
           # NDK r25 libc++ lacks <numbers>. Supply its standard mathematical
           # constants through Lime's existing -Ilib/openal include directory,
           # so every OpenAL translation unit gets the same C++20 API.
@@ -1012,7 +1035,7 @@ jobs:
           "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/common -Ilib/openal/core -Ilib/openal/gsl/include -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
 
       - name: Build Lime Android native libraries
-        timeout-minutes: 45
+        timeout-minutes: 90
         shell: bash
         working-directory: upstream/Funkin
         run: |
