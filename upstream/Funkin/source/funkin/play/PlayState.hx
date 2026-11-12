@@ -2390,20 +2390,22 @@ class PlayState extends MusicBeatSubState
     //
     // GIRLFRIEND
     //
-    var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(currentCharacterData.girlfriend);
+    var requestedGirlfriendId:Null<String> = currentCharacterData.girlfriend;
+    var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedGirlfriendId);
 
-    if (girlfriend != null)
+    if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
     {
-      // Don't need to do anything.
+      // A mod may replace GF without replacing every other character. If its
+      // requested GF definition is unavailable, fall back to the original GF.
+      trace('[Character Fallback] Could not load GF "' + requestedGirlfriendId + '"; trying the original GF.');
+      girlfriend = CharacterDataParser.fetchCharacter('gf');
     }
-    else if (currentCharacterData.girlfriend != '')
+
+    if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
     {
-      trace('WARNING: Could not load girlfriend character with ID ${currentCharacterData.girlfriend}, skipping...');
+      trace('WARNING: Could not load girlfriend character with ID ' + requestedGirlfriendId + ', and the original GF fallback was unavailable.');
     }
-    else
-    {
-      // Chosen GF was '' so we don't load one.
-    }
+    // An explicitly empty GF ID means the song intentionally has no GF.
 
     //
     // DAD
@@ -2443,7 +2445,21 @@ class PlayState extends MusicBeatSubState
     //
     // BOYFRIEND
     //
-    var boyfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(currentCharacterData.player);
+    var requestedBoyfriendId:Null<String> = currentCharacterData.player;
+    var boyfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedBoyfriendId);
+
+    if (boyfriend == null)
+    {
+      // BF is required for the player lane. Use a mod-provided character when
+      // it resolves; otherwise keep the song playable with the original BF.
+      trace('[Character Fallback] Could not load player character "' + requestedBoyfriendId + '"; trying the original BF.');
+      boyfriend = CharacterDataParser.fetchCharacter('bf');
+    }
+
+    if (boyfriend == null)
+    {
+      trace('ERROR: Could not load the requested player character or the original BF fallback.');
+    }
 
     if (boyfriend != null)
     {
