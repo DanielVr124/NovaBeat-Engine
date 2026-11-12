@@ -752,6 +752,25 @@ jobs:
           print(f"Patched Android-compatible case_compare in {path}")
           PY
 
+          # NDK r25 libc++ predates the std::contiguous_iterator concept.
+          # Lime's bundled PFFFT only needs generic C++20 abbreviated parameters here.
+          python3 - "$lime_project/lib/openal/common/pffft.h" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          old = "std::contiguous_iterator auto"
+          count = source.count(old)
+          if count == 0:
+              raise SystemExit("PFFFT iterator constraints did not match the pinned Lime source; refusing an unsafe patch.")
+          source = source.replace(old, "auto")
+          path.write_text(source)
+          if old in path.read_text():
+              raise SystemExit("PFFFT contiguous_iterator constraints remain after Android compatibility patch.")
+          print(f"Removed {count} unavailable iterator concepts from Android PFFFT declarations in {path}")
+          PY
+
           cd "$lime_project"
           clang="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
           test -x "$clang"
