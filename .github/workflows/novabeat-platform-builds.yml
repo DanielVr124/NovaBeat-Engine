@@ -792,7 +792,7 @@ jobs:
               raise SystemExit("PFFFT <numbers> include did not match the pinned source; refusing an unsafe patch.")
           if source.count(sqrt2) == 0 or source.count(pi) == 0:
               raise SystemExit("PFFFT numeric constant usage did not match the pinned source; refusing an unsafe patch.")
-          source = source.replace(include + "\\n", "")
+          source = source.replace(include + "\n", "")
           source = source.replace(sqrt2, "1.4142135623730950488f")
           source = source.replace(pi, "3.14159265358979323846")
           path.write_text(source)
