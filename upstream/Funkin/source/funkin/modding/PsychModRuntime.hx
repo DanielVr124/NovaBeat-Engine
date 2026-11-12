@@ -298,6 +298,28 @@ class PsychModRuntime
     #end
   }
 
+  /**
+   * Write image/atlas resolution details into the same persistent log used by
+   * imported Psych song launch diagnostics. This is intentionally separate
+   * from trace(), which is not included in psych-song-launch.log.
+   */
+  public static function logAssetResolution(request:String, assetType:String, checks:Array<String>, resolvedPath:String):Void
+  {
+    #if sys
+    var playState:Null<PlayState> = PlayState.instance;
+    if (playState == null || playState.currentSong == null) return;
+
+    var songId:String = playState.currentSong.id;
+    if (!isImportedSong(songId)) return;
+
+    var details:String = "type=" + assetType
+      + " request=" + request
+      + " checks=[" + checks.join(" | ") + "]"
+      + " resolved=" + resolvedPath;
+    logSongLaunchStep(songId, playState.currentDifficulty, "asset.resolve", details);
+    #end
+  }
+
   /** Return songs in the same week-file order used by classic Psych Freeplay. */
   public static function getPsychFreeplaySongOrder():Array<String>
   {
