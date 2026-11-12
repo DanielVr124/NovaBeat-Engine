@@ -865,15 +865,22 @@ jobs:
           # Global arithmetic operators follow the closing al namespace and
           # must explicitly qualify the local concepts.
           namespace_close = "} /* namespace al */"
-          close_at = source.rfind(namespace_close)
+          global_marker = "/* Prefix and postfix increment and decrement operators."
+          global_start = source.find(global_marker)
+          if global_start < 0:
+              raise SystemExit("Could not find the global operator block in altypes.hpp.")
+          close_at = source.rfind(namespace_close, 0, global_start)
           if close_at < 0:
-              raise SystemExit("Could not find the al namespace close in altypes.hpp.")
-          close_at += len(namespace_close)
-          global_part = source[close_at:]
+              raise SystemExit("Could not find the al namespace close before global operators.")
+          close_end = close_at + len(namespace_close)
+          next_namespace = source.find("namespace al {", global_start)
+          if next_namespace < 0:
+              raise SystemExit("Could not find the subsequent al namespace block in altypes.hpp.")
+          global_part = source[close_end:next_namespace]
           for name in ("integral", "floating_point", "signed_integral", "unsigned_integral", "same_as"):
               global_part = global_part.replace(name + "<", "al::" + name + "<")
               global_part = global_part.replace(name + " auto", "al::" + name + " auto")
-          source = source[:close_at] + global_part
+          source = source[:close_end] + global_part + source[next_namespace:]
           path.write_text(source)
           if "std::bit_cast" in source:
               raise SystemExit("std::bit_cast remains in Android altypes.hpp.")
