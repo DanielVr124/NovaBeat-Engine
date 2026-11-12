@@ -2542,6 +2542,7 @@ class PlayState extends MusicBeatSubState
       opponentStrumline.y = strumlineY;
     }
 
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (pauseButton != null)
     {
       pauseButton.setPosition(width - pauseButton.width - 35, 35);
@@ -2551,6 +2552,7 @@ class PlayState extends MusicBeatSubState
         pauseCircle.y = pauseButton.y + (pauseButton.height - pauseCircle.height) / 2;
       }
     }
+    #end
   }
 
   /**
