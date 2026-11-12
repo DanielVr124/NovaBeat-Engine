@@ -54,6 +54,12 @@ class Paths implements ConsoleClass
     var levelPath:String = getLibraryPathForce(file, 'shared');
     if (Assets.exists(levelPath, type)) return levelPath;
 
+    // Backward compatibility: older V-Slice packages may keep default-library
+    // assets under preload/. Root-level Psych/V-Slice assets are checked by the
+    // dedicated default-library mapping before this legacy location.
+    var legacyPreloadPath:String = getLibraryPathForce(file, 'preload');
+    if (Assets.exists(legacyPreloadPath, type)) return legacyPreloadPath;
+
     return getPreloadPath(file);
   }
 
