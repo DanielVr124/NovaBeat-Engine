@@ -1064,6 +1064,10 @@ jobs:
         run: |
           set -euo pipefail
           test "${HXCPP_COMPILE_THREADS}" = "1"
+          # HXCPP emits very large generated C++ translation units. Clang can
+          # exhaust the runner's default 8 MiB process stack while compiling them.
+          ulimit -s unlimited
+          echo "Compiler stack limit: $(ulimit -s) KiB (unlimited)"
           haxelib run lime build android -v -debug -DGITHUB_BUILD -DNO_PRECOMPILED_HEADERS
 
       - name: Verify Android APK
