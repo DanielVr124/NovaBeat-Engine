@@ -899,25 +899,36 @@ jobs:
           print(f"Installed Android-local concepts and bit_cast compatibility in {path}")
           PY
 
-          # alnumeric.h independently uses std::integral and related concepts.
-          # Include the C++20 concepts header there as well; altypes.hpp's local
-          # fallback does not declare names in namespace std.
+          # NDK r25 libc++ does not implement C++20 concepts or type_identity.
+          # Express the small set of integral constraints in alnumeric.h with
+          # enable_if/type_traits instead; preserve the same accepted types.
           python3 - "$lime_project/lib/openal/common/alnumeric.h" <<'PY'
           from pathlib import Path
           import sys
 
           path = Path(sys.argv[1])
           source = path.read_text()
-          include = "#include <concepts>"
-          if include not in source:
-              first_include = source.find("#include")
-              if first_include < 0:
-                  raise SystemExit("OpenAL alnumeric.h has no include section; refusing an unsafe patch.")
-              source = source[:first_include] + include + "\n" + source[first_include:]
-              path.write_text(source)
-          if include not in path.read_text():
-              raise SystemExit("OpenAL alnumeric.h concepts include was not installed.")
-          print(f"Added <concepts> to {path}")
+          source = source.replace("#include <concepts>\\n", "")
+          source = source.replace(
+              "template<std::integral T>",
+              "template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>"
+          )
+          source = source.replace(
+              "template<std::integral R, std::integral T>",
+              "template<typename R, typename T, std::enable_if_t<std::is_integral_v<R> && std::is_integral_v<T>, int> = 0>"
+          )
+          source = source.replace("std::signed_integral<R>", "std::is_signed_v<R>")
+          source = source.replace("std::signed_integral<T>", "std::is_signed_v<T>")
+          source = source.replace("std::unsigned_integral<R>", "std::is_unsigned_v<R>")
+          source = source.replace("std::type_identity_t<T>", "T")
+          if "std::integral" in source or "std::signed_integral" in source or "std::unsigned_integral" in source or "std::type_identity_t" in source:
+              raise SystemExit("Unsupported C++20 constraints remain in alnumeric.h.")
+          if source.count("std::enable_if_t<std::is_integral_v<T>, int> = 0") != 5:
+              raise SystemExit("Unexpected number of integral-only templates in alnumeric.h.")
+          if "std::enable_if_t<std::is_integral_v<R> && std::is_integral_v<T>, int> = 0" not in source:
+              raise SystemExit("Two-type saturate_cast constraint was not converted.")
+          path.write_text(source)
+          print(f"Replaced unavailable concepts in {path}")
           PY
 
           # NDK r25 libc++ lacks <numbers>. Supply its standard mathematical
