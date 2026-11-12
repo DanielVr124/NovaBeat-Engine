@@ -967,7 +967,6 @@ jobs:
           cat > "$probe" <<'CPP'
           #include "common/alformat.hpp"
           #include "common/altypes.hpp"
-          #include "common/alnumeric.h"
           #include "common/pffft.h"
           #include "core/ambidefs.h"
           void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }
