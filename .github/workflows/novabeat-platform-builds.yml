@@ -689,6 +689,69 @@ jobs:
           print(f"Patched {path}")
           PY
 
+          python3 - "$lime_project/lib/openal/common/alstring.cpp" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          start = source.find("namespace al {")
+          end_marker = "} // namespace al"
+          end = source.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("OpenAL alstring.cpp namespace block not found; refusing an unsafe patch.")
+          end += len(end_marker)
+          old = source[start:end]
+          if old.count("std::lexicographical_compare_three_way") != 2:
+              raise SystemExit("Unexpected OpenAL case_compare implementation; refusing an unsafe patch.")
+          replacement = """namespace al {
+
+          auto case_compare(const std::string_view str0, const std::string_view str1) noexcept
+              -> std::weak_ordering
+          {
+              using Traits = std::string_view::traits_type;
+              std::size_t i{};
+              while(i < str0.size() && i < str1.size())
+              {
+                  const auto ch0 = std::toupper(Traits::to_int_type(str0[i]));
+                  const auto ch1 = std::toupper(Traits::to_int_type(str1[i]));
+                  if(ch0 < ch1) return std::weak_ordering::less;
+                  if(ch0 > ch1) return std::weak_ordering::greater;
+                  ++i;
+              }
+              if(str0.size() < str1.size()) return std::weak_ordering::less;
+              if(str0.size() > str1.size()) return std::weak_ordering::greater;
+              return std::weak_ordering::equivalent;
+          }
+
+          auto case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept
+              -> std::weak_ordering
+          {
+              using Traits = std::wstring_view::traits_type;
+              std::size_t i{};
+              while(i < str0.size() && i < str1.size())
+              {
+                  const auto ch0 = std::towupper(Traits::to_int_type(str0[i]));
+                  const auto ch1 = std::towupper(Traits::to_int_type(str1[i]));
+                  if(ch0 < ch1) return std::weak_ordering::less;
+                  if(ch0 > ch1) return std::weak_ordering::greater;
+                  ++i;
+              }
+              if(str0.size() < str1.size()) return std::weak_ordering::less;
+              if(str0.size() > str1.size()) return std::weak_ordering::greater;
+              return std::weak_ordering::equivalent;
+          }
+
+          } // namespace al"""
+          path.write_text(source[:start] + replacement + source[end:])
+          patched = path.read_text()
+          if "std::lexicographical_compare_three_way" in patched:
+              raise SystemExit("OpenAL three-way standard algorithm remains in alstring.cpp.")
+          if patched.count("auto case_compare(") != 2:
+              raise SystemExit("Expected both narrow and wide case_compare overloads.")
+          print(f"Patched Android-compatible case_compare in {path}")
+          PY
+
           cd "$lime_project"
           clang="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
           test -x "$clang"
