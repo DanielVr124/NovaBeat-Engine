@@ -126,8 +126,12 @@ class PsychAlphabet extends FlxSpriteGroup
       letter.scale.x = targetScale;
       letter.scale.y = 1.0;
       letter.updateHitbox();
-      letter.x = baseX[i] * targetScale;
-      letter.y = baseY[i];
+      // FlxSpriteGroup stores child positions in world space. Rebuild each
+      // glyph relative to the group's current origin instead of resetting it
+      // to (0, 0); otherwise resizing a row discards its menu position and
+      // causes every song title to bunch up at the top-left of the screen.
+      letter.x = x + baseX[i] * targetScale;
+      letter.y = y + baseY[i];
       letter.offset.x = baseOffsetX[i] * targetScale;
       letter.offset.y = baseOffsetY[i] - (70 - letter.height);
     }
