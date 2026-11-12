@@ -2500,6 +2500,60 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
+   * Reflow gameplay controls when the available viewport changes.
+   *
+   * Quest's floating 2D window can be resized without changing Android's
+   * device orientation, so use the live viewport dimensions rather than
+   * relying on an orientation-change event.
+   */
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+
+    FlxG.worldBounds.set(0, 0, width, height);
+
+    if (playerStrumline == null || opponentStrumline == null) return;
+
+    final cutoutSize:Float = FullScreenScaleMode.gameCutoutSize.x / 2.5;
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (shouldUseMobileHitbox() && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
+    {
+      // Keep the player's four-lane touch target centered at the bottom of
+      // portrait and narrow Quest windows. The opponent remains a compact
+      // reference lane near the top.
+      playerStrumline.x = (width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
+      playerStrumline.y = (height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+      opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize - 30;
+      opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
+    }
+    else
+    #end
+    {
+      // Preserve the classic split layout while recalculating both halves
+      // against the resized viewport.
+      playerStrumline.x = (width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0);
+      opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
+
+      final strumlineY:Float = Preferences.downscroll
+        ? height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1]
+        : Constants.STRUMLINE_Y_OFFSET;
+      playerStrumline.y = strumlineY;
+      opponentStrumline.y = strumlineY;
+    }
+
+    if (pauseButton != null)
+    {
+      pauseButton.setPosition(width - pauseButton.width - 35, 35);
+      if (pauseCircle != null)
+      {
+        pauseCircle.x = pauseButton.x + (pauseButton.width - pauseCircle.width) / 2;
+        pauseCircle.y = pauseButton.y + (pauseButton.height - pauseCircle.height) / 2;
+      }
+    }
+  }
+
+  /**
      * Constructs the strumlines for each player.
      */
   function initStrumlines():Void
