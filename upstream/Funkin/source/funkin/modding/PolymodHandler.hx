@@ -542,7 +542,7 @@ class PolymodHandler
         // Psych and V-Slice mods place images/data at the mod root (e.g. images/characters),
         // not under a synthetic preload/ directory. Keep the default library rooted at the mod folder so both Psych and V-Slice root-level assets are discoverable.
         'default' => '',
-        // Preserve legacy V-Slice packages which place default-library assets in preload/.
+        // Preserve legacy V-Slice packages which place default-library assets in preload/. Windows build validates both paths.
         'preload' => 'preload',
         'shared' => 'shared',
         'songs' => 'songs',
