@@ -435,14 +435,14 @@ jobs:
       - name: Set up Android SDK, build tools, and the Lime-compatible NDK
         uses: android-actions/setup-android@v4
         with:
-          packages: "platform-tools platforms;android-29 platforms;android-35 build-tools;35.0.0 ndk;25.2.9519653"
+          packages: "platform-tools platforms;android-29 platforms;android-35 build-tools;35.0.0 ndk;26.3.11579264"
 
       - name: Configure Android SDK and NDK paths
         shell: bash
         run: |
           set -euo pipefail
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/.android/sdk}}"
-          ndk_root="$sdk_root/ndk/25.2.9519653"
+          ndk_root="$sdk_root/ndk/26.3.11579264"
           test -d "$sdk_root/platforms/android-35"
           test -d "$ndk_root"
           {
@@ -909,6 +909,7 @@ jobs:
           path = Path(sys.argv[1])
           source = path.read_text()
           source = source.replace("#include <concepts>\\n", "")
+          source = source.replace("std::bit_cast", "al::bit_cast")
           source = source.replace(
               "template<std::integral T>",
               "template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>"
