@@ -51,12 +51,23 @@ class Paths implements ConsoleClass
       if (Assets.exists(levelPath, type)) return levelPath;
     }
 
-    // Psych and V-Slice mods commonly store assets directly at the mod root.
-    // Polymod mounts that location as the "default" library, so check it before
-    // shared/preload fallbacks. Without this lookup, Paths.image() and
-    // Paths.getSparrowAtlas() silently miss root-level mod PNG/XML atlases.
-    var defaultPath:String = getLibraryPathForce(file, 'default');
-    if (Assets.exists(defaultPath, type)) return defaultPath;
+    // Psych mods store assets directly at the mod root (for example,
+    // mods/MyMod/images/icons/icon-bf.png). With Polymod's default library
+    // mapped to the mod root, OpenFL can expose these files under different
+    // asset-key forms depending on the framework version. Probe the canonical
+    // library key and the root-relative variants before falling back to game
+    // assets. Keep the resolved key so image, XML, and other assets all use
+    // the same lookup behavior.
+    var defaultPaths:Array<String> = [
+      getLibraryPathForce(file, 'default'),
+      'default:$file',
+      'default:assets/$file',
+      getPreloadPath(file)
+    ];
+    for (defaultPath in defaultPaths)
+    {
+      if (Assets.exists(defaultPath, type)) return defaultPath;
+    }
 
     var levelPath:String = getLibraryPathForce(file, 'shared');
     if (Assets.exists(levelPath, type)) return levelPath;
