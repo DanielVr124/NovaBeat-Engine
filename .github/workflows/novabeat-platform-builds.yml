@@ -1,5 +1,7 @@
 name: NovaBeat platform build checks
 
+# [full-build-windows] User-requested Windows build for BF/GF fallback validation.
+
 # [full-build-windows] Compile-check Psych Freeplay and the current Lua runtime regression coverage.
 
 # [full-build-android] Verify APK compilation without HXCPP precompiled headers.
