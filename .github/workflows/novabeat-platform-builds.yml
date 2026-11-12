@@ -718,4 +718,4 @@ jobs:
           retention-days: 3
 
 
-# Android validation trigger: [full-build-android]
+# Android validation trigger: [full-build-android] (NDK r26d compiler regression check)
