@@ -51,12 +51,18 @@ class Paths implements ConsoleClass
       if (Assets.exists(levelPath, type)) return levelPath;
     }
 
+    // Psych and V-Slice mods commonly store assets directly at the mod root.
+    // Polymod mounts that location as the "default" library, so check it before
+    // shared/preload fallbacks. Without this lookup, Paths.image() and
+    // Paths.getSparrowAtlas() silently miss root-level mod PNG/XML atlases.
+    var defaultPath:String = getLibraryPathForce(file, 'default');
+    if (Assets.exists(defaultPath, type)) return defaultPath;
+
     var levelPath:String = getLibraryPathForce(file, 'shared');
     if (Assets.exists(levelPath, type)) return levelPath;
 
     // Backward compatibility: older V-Slice packages may keep default-library
-    // assets under preload/. Root-level Psych/V-Slice assets are checked by the
-    // dedicated default-library mapping before this legacy location.
+    // assets under preload/.
     var legacyPreloadPath:String = getLibraryPathForce(file, 'preload');
     if (Assets.exists(legacyPreloadPath, type)) return legacyPreloadPath;
 
