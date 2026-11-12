@@ -932,6 +932,32 @@ jobs:
           print(f"Replaced unavailable concepts in {path}")
           PY
 
+          # OpenAL's RoundFromZero second parameter is intentionally the same
+          # template type as the first. These two alignment calls pass an int
+          # literal beside size_t/ptrdiff_t values, which makes template
+          # deduction fail under Android Clang. Cast the alignment to the
+          # corresponding first-argument type without changing the helper.
+          python3 - "$lime_project/lib/openal/core/hrtf_loader.cpp" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          replacements = {
+              "RoundFromZero(total, 16)": "RoundFromZero(total, decltype(total){16})",
+              "RoundFromZero(storeiter-base, 16)": "RoundFromZero(storeiter-base, decltype(storeiter-base){16})",
+          }
+          for old, new in replacements.items():
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one {old!r} in hrtf_loader.cpp, found {count}; refusing an unsafe patch.")
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          if any(old in source for old in replacements):
+              raise SystemExit("An untyped RoundFromZero alignment call remains in hrtf_loader.cpp.")
+          print(f"Fixed Android OpenAL RoundFromZero argument types in {path}")
+          PY
+
           # NDK r25 libc++ lacks <numbers>. Supply its standard mathematical
           # constants through Lime's existing -Ilib/openal include directory,
           # so every OpenAL translation unit gets the same C++20 API.
