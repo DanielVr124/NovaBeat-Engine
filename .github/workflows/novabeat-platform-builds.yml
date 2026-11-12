@@ -662,6 +662,47 @@ jobs:
           haxelib run lime config JAVA_HOME "$JAVA_HOME"
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Patch OpenAL format detection for Android libc++
+        shell: bash
+        working-directory: upstream/Funkin
+        run: |
+          set -euo pipefail
+          lime_project=".haxelib/lime/git/project"
+          header="$lime_project/lib/openal/common/alformat.hpp"
+          test -s "$header"
+
+          python3 - "$header" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          old = (
+              "#if (defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 130300) \\\n"
+              "    || !__has_include(<format>)"
+          )
+          new = (
+              "#if defined(__ANDROID__) || \\\n"
+              "    (defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 130300) \\\n"
+              "    || !__has_include(<format>)"
+          )
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif "defined(__ANDROID__)" not in source:
+              raise SystemExit("OpenAL alformat.hpp did not match the expected pinned source; refusing an unsafe patch.")
+          path.write_text(source)
+          if "defined(__ANDROID__)" not in source or '#include "fmt/format.h"' not in source:
+              raise SystemExit("Android fmt fallback was not installed as expected.")
+          print(f"Patched {path}")
+          PY
+
+          cd "$lime_project"
+          clang="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
+          test -x "$clang"
+          printf '%s\\n' '#include "common/alformat.hpp"' 'void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }' |
+            "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ \\
+              -Ilib/openal -Ilib/openal/fmt-11.2.0/include -fsyntax-only -x c++ -
+
       - name: Build Lime Android native libraries
         timeout-minutes: 45
         shell: bash
