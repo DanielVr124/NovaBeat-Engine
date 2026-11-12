@@ -881,8 +881,8 @@ jobs:
           # Qualify only whole concept identifiers. The negative lookbehind
           # avoids rewriting the integral suffix in signed_integral/unsigned_integral
           # and avoids double-qualifying names that already start with al::.
-          concept_pattern = r"(?<![A-Za-z0-9_:])(unsigned_integral|signed_integral|floating_point|same_as|derived_from|integral)(?=\\s*(?:<|auto))"
-          global_part = re.sub(concept_pattern, r"al::\\1", global_part)
+          concept_pattern = r"(?<![A-Za-z0-9_:])(unsigned_integral|signed_integral|floating_point|same_as|derived_from|integral)(?=\s*(?:<|auto))"
+          global_part = re.sub(concept_pattern, r"al::\1", global_part)
           source = source[:close_end] + global_part + source[next_namespace:]
 
           # std::common_type specializations are outside namespace al too.
@@ -891,7 +891,7 @@ jobs:
           if std_start < 0 or std_end < 0:
               raise SystemExit("Could not find the std common_type specialization block.")
           std_part = source[std_start:std_end]
-          std_part = re.sub(concept_pattern, r"al::\\1", std_part)
+          std_part = re.sub(concept_pattern, r"al::\1", std_part)
           source = source[:std_start] + std_part + source[std_end:]
           path.write_text(source)
           if "std::bit_cast" in source:
