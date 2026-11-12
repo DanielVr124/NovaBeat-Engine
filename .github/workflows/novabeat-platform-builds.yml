@@ -752,23 +752,54 @@ jobs:
           print(f"Patched Android-compatible case_compare in {path}")
           PY
 
-          # NDK r25 libc++ predates the std::contiguous_iterator concept.
-          # Lime's bundled PFFFT only needs generic C++20 abbreviated parameters here.
+          # NDK r25 libc++ predates the C++20 iterator and floating-point concepts.
+          # PFFFT only uses these for parameter constraints, so generic abbreviated
+          # parameters retain the same call behavior without requiring libc++ concepts.
           python3 - "$lime_project/lib/openal/common/pffft.h" <<'PY'
           from pathlib import Path
           import sys
 
           path = Path(sys.argv[1])
           source = path.read_text()
-          old = "std::contiguous_iterator auto"
-          count = source.count(old)
-          if count == 0:
-              raise SystemExit("PFFFT iterator constraints did not match the pinned Lime source; refusing an unsafe patch.")
-          source = source.replace(old, "auto")
+          substitutions = {
+              "std::contiguous_iterator auto": "auto",
+              "std::floating_point auto": "auto",
+          }
+          for old, new in substitutions.items():
+              count = source.count(old)
+              if count == 0:
+                  raise SystemExit(f"PFFFT declaration did not contain expected token {old!r}; refusing an unsafe patch.")
+              source = source.replace(old, new)
           path.write_text(source)
-          if old in path.read_text():
-              raise SystemExit("PFFFT contiguous_iterator constraints remain after Android compatibility patch.")
-          print(f"Removed {count} unavailable iterator concepts from Android PFFFT declarations in {path}")
+          patched = path.read_text()
+          if any(token in patched for token in substitutions):
+              raise SystemExit("PFFFT C++20 concept constraints remain after Android compatibility patch.")
+          print(f"Removed unsupported PFFFT concepts from Android header {path}")
+          PY
+
+          # NDK r25 libc++ does not provide <numbers>. Replace its two standard
+          # constants with the exact float/double literals used by PFFFT.
+          python3 - "$lime_project/lib/openal/common/pffft.cpp" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          include = "#include <numbers>"
+          sqrt2 = "std::numbers::sqrt2_v<float>"
+          pi = "std::numbers::pi"
+          if source.count(include) != 1:
+              raise SystemExit("PFFFT <numbers> include did not match the pinned source; refusing an unsafe patch.")
+          if source.count(sqrt2) == 0 or source.count(pi) == 0:
+              raise SystemExit("PFFFT numeric constant usage did not match the pinned source; refusing an unsafe patch.")
+          source = source.replace(include + "\\n", "")
+          source = source.replace(sqrt2, "1.4142135623730950488f")
+          source = source.replace(pi, "3.14159265358979323846")
+          path.write_text(source)
+          patched = path.read_text()
+          if include in patched or "std::numbers::" in patched:
+              raise SystemExit("PFFFT still references the unavailable <numbers> API after Android compatibility patch.")
+          print(f"Replaced PFFFT std::numbers constants with equivalent literals in {path}")
           PY
 
           cd "$lime_project"
