@@ -899,6 +899,46 @@ jobs:
           print(f"Installed Android-local concepts and bit_cast compatibility in {path}")
           PY
 
+          # NDK r25 libc++ lacks <numbers>. Supply its standard mathematical
+          # constants through Lime's existing -Ilib/openal include directory,
+          # so every OpenAL translation unit gets the same C++20 API.
+          cat > "$lime_project/lib/openal/numbers" <<'CPP'
+          #pragma once
+
+          namespace std::numbers {
+          inline constexpr double e = 2.718281828459045235360287471352662498;
+          inline constexpr double log2e = 1.442695040888963407359924681001892137;
+          inline constexpr double log10e = 0.434294481903251827651128918916605082;
+          inline constexpr double pi = 3.141592653589793238462643383279502884;
+          inline constexpr double inv_pi = 0.318309886183790671537767526745028724;
+          inline constexpr double inv_sqrtpi = 0.564189583547756286948079451560772586;
+          inline constexpr double ln2 = 0.693147180559945309417232121458176568;
+          inline constexpr double ln10 = 2.302585092994045684017991454684364208;
+          inline constexpr double sqrt2 = 1.414213562373095048801688724209698079;
+          inline constexpr double sqrt3 = 1.732050807568877293527446341505872367;
+          inline constexpr double sqrt5 = 2.236067977499789696409173668731276235;
+          inline constexpr double sqrt10 = 3.162277660168379331998893544432718534;
+          inline constexpr double egamma = 0.577215664901532860606512090082402431;
+          inline constexpr double phi = 1.618033988749894848204586834365638118;
+
+          template<class T> inline constexpr T e_v = static_cast<T>(e);
+          template<class T> inline constexpr T log2e_v = static_cast<T>(log2e);
+          template<class T> inline constexpr T log10e_v = static_cast<T>(log10e);
+          template<class T> inline constexpr T pi_v = static_cast<T>(pi);
+          template<class T> inline constexpr T inv_pi_v = static_cast<T>(inv_pi);
+          template<class T> inline constexpr T inv_sqrtpi_v = static_cast<T>(inv_sqrtpi);
+          template<class T> inline constexpr T ln2_v = static_cast<T>(ln2);
+          template<class T> inline constexpr T ln10_v = static_cast<T>(ln10);
+          template<class T> inline constexpr T sqrt2_v = static_cast<T>(sqrt2);
+          template<class T> inline constexpr T sqrt3_v = static_cast<T>(sqrt3);
+          template<class T> inline constexpr T sqrt5_v = static_cast<T>(sqrt5);
+          template<class T> inline constexpr T sqrt10_v = static_cast<T>(sqrt10);
+          template<class T> inline constexpr T egamma_v = static_cast<T>(egamma);
+          template<class T> inline constexpr T phi_v = static_cast<T>(phi);
+          }
+          CPP
+          test -s "$lime_project/lib/openal/numbers"
+
           cd "$lime_project"
           clang="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
           test -x "$clang"
@@ -907,6 +947,7 @@ jobs:
           #include "common/alformat.hpp"
           #include "common/altypes.hpp"
           #include "common/pffft.h"
+          #include "core/ambidefs.h"
           void novabeat_format_check() { (void)al::format("OpenAL {}", 1); }
           CPP
           "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/gsl/include -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
