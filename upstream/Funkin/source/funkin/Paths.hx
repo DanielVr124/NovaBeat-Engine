@@ -6,6 +6,7 @@ import funkin.graphics.FunkinSprite.AtlasSpriteSettings;
 import openfl.utils.AssetType;
 import funkin.util.macro.ConsoleMacro;
 import haxe.io.Path;
+import funkin.modding.PsychModRuntime;
 
 /**
  * A core class which handles determining asset paths.
@@ -95,7 +96,15 @@ class Paths implements ConsoleClass
   static function traceModImageResolution(file:String, type:AssetType, checks:Array<String>, resolvedPath:String):Void
   {
     if (!StringTools.startsWith(file, 'images/')) return;
-    trace('[Mod Asset Diagnostic] type=' + type + ' request=' + file + ' checks=[' + checks.join(' | ') + '] resolved=' + resolvedPath);
+
+    var assetType:String = Std.string(type);
+    var detail:String = 'type=' + assetType + ' request=' + file
+      + ' checks=[' + checks.join(' | ') + '] resolved=' + resolvedPath;
+
+    // The song-launch log is the diagnostic file available in release builds.
+    // Keep trace output too for developers running with a console attached.
+    PsychModRuntime.logAssetResolution(file, assetType, checks, resolvedPath);
+    trace('[Mod Asset Diagnostic] ' + detail);
   }
 
   public static function getLibraryPath(file:String, library = 'preload'):String
