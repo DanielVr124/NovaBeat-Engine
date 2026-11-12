@@ -1,5 +1,7 @@
 package;
 
+// Android-only validation trigger: build the current NovaBeat APK for mobile portrait testing.
+
 // I don't think we can import `funkin` classes here. Macros? Recursion? IDK.
 import hxp.*;
 import lime.tools.*;
