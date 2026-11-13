@@ -1148,3 +1148,5 @@ jobs:
 # [full-build-android] Verify cached native-library reuse and corrected Haxe mobile callbacks.
 
 # [full-build-android] Validate native-only Android run with warm toolchain caches.
+
+# [full-build-android] Rebuild APK for portrait camera and mobile receptor layout fix.
