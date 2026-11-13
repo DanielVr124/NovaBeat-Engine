@@ -244,10 +244,9 @@ class TitleState extends MusicBeatState
 
     if (titleText != null)
     {
-      if (portraitMobile)
-        titleText.setPosition((width - titleText.width) * 0.5, height * 0.81);
-      else
-        titleText.setPosition((mobileTitleLayout ? 50 : 100) + (FullScreenScaleMode.gameCutoutSize.x / 2), height * 0.8);
+      // Keep the original FNF "Tap the Screen" prompt position on phones.
+      // Only the logo/character layout changes for portrait screens.
+      titleText.setPosition((mobileTitleLayout ? 50 : 100) + (FullScreenScaleMode.gameCutoutSize.x / 2), height * 0.8);
     }
   }
 

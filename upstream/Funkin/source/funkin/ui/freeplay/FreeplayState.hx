@@ -890,6 +890,9 @@ class FreeplayState extends MusicBeatSubState
     }
     #end
 
+    // Apply the responsive layout on initial entry, not only after rotation.
+    onViewportResize(FlxG.width, FlxG.height);
+
     if (prepForNewRank)
     {
       rankCamera.fade(0xFF000000, 0, false, null, true);

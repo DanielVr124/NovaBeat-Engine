@@ -342,10 +342,10 @@ class PlayState extends MusicBeatSubState
   {
     if (currentStage != null)
     {
-      // The mobile gameplay framing is slightly wider than the desktop
-      // baseline so stage props/details are easier to see on phone screens.
+      // Give portrait phones a wider field of view so the stage and
+      // characters are less likely to be cropped at the sides.
       #if mobile
-      return currentStage.camZoom * 1.10;
+      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 0.90 : 1.0);
       #else
       return currentStage.camZoom;
       #end
@@ -2288,6 +2288,8 @@ class PlayState extends MusicBeatSubState
     healthBarBG.cameras = [camHUD];
     scoreText.cameras = [camHUD];
 
+    layoutMobileHud(FlxG.width, FlxG.height);
+
     // Create subtitles if they are enabled.
     if (Preferences.subtitles)
     {
@@ -2525,9 +2527,46 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
+   * Lay out the health bar and score within the live mobile viewport.
+   * Scaling the HUD sprites together keeps the bar and fill aligned on
+   * narrow portrait devices without changing desktop presentation.
+   */
+  function layoutMobileHud(width:Int, height:Int):Void
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (!isMobileTouchDevice() || width <= 0 || height <= 0
+      || healthBarBG == null || healthBar == null || scoreText == null) return;
+
+    var hudScale:Float = Math.min(1.0, (width - 40) / Math.max(1, healthBarBG.frameWidth));
+    hudScale = Math.max(0.55, hudScale);
+
+    healthBarBG.scale.set(hudScale, hudScale);
+    healthBarBG.updateHitbox();
+    healthBar.scale.set(hudScale, hudScale);
+    healthBar.updateHitbox();
+
+    var useTopHud:Bool = Preferences.downscroll
+      || (shouldUseMobileHitbox() && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows);
+    var sideInset:Float = Math.max(78, height * 0.075);
+    var barX:Float = (width - healthBarBG.width) * 0.5;
+    var barY:Float = useTopHud ? sideInset : height - healthBarBG.height - sideInset;
+
+    healthBarBG.setPosition(barX, barY);
+    healthBar.setPosition(barX + (4 * hudScale), barY + (4 * hudScale));
+
+    scoreText.scale.set(Math.min(1.0, hudScale), Math.min(1.0, hudScale));
+    scoreText.updateHitbox();
+    scoreText.x = (width - scoreText.width) * 0.5;
+    scoreText.y = useTopHud
+      ? barY + healthBarBG.height + 4
+      : barY - scoreText.height - 4;
+    #end
+  }
+
+  /**
    * Measure the visible receptor row, excluding the full-screen strumline
-   * background. Using the parent group's height would place mobile receptors
-   * at the top of the screen because that background spans the full viewport.
+   * background. Use rendered dimensions, not stale hitbox values, so enlarged
+   * receptors remain fully inside the viewport.
    */
   function getPlayerStrumlineReceptorHeight():Float
   {
@@ -2535,7 +2574,9 @@ class PlayState extends MusicBeatSubState
     for (receptor in playerStrumline.strumlineNotes.members)
     {
       if (receptor == null) continue;
-      receptorHeight = Math.max(receptorHeight, receptor.height);
+      var renderedHeight:Float = receptor.frameHeight * Math.abs(receptor.scale.y);
+      if (renderedHeight <= 0) renderedHeight = receptor.height;
+      receptorHeight = Math.max(receptorHeight, renderedHeight);
     }
 
     if (receptorHeight <= 0)
@@ -2556,6 +2597,7 @@ class PlayState extends MusicBeatSubState
     super.onViewportResize(width, height);
 
     FlxG.worldBounds.set(0, 0, width, height);
+    layoutMobileHud(width, height);
 
     if (playerStrumline == null || opponentStrumline == null) return;
 
@@ -2564,6 +2606,14 @@ class PlayState extends MusicBeatSubState
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (shouldUseMobileHitbox() && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
     {
+      // Recalculate scale from the live viewport. Android can resize the
+      // game surface without recreating the PlayState.
+      final amplification:Float = (width / height) / (FlxG.initialWidth / FlxG.initialHeight);
+      final mobileScale:Float = ((height / width) * 2.45) * amplification;
+      final mobileSpacing:Float = ((height / width) * 3.05) * amplification;
+      playerStrumline.strumlineScale.set(mobileScale, mobileScale);
+      playerStrumline.setNoteSpacing(mobileSpacing);
+
       // Keep the player's four-lane touch target centered at the bottom of
       // portrait and narrow Quest windows. The opponent remains a compact
       // reference lane near the top.
@@ -2574,6 +2624,14 @@ class PlayState extends MusicBeatSubState
       // bottom where downscroll notes and mobile touch arrows meet.
       final receptorHeight:Float = getPlayerStrumlineReceptorHeight();
       playerStrumline.y = height - receptorHeight - Constants.STRUMLINE_Y_OFFSET;
+      if (currentChart?.noteStyle != 'pixel')
+      {
+        #if android playerStrumline.y += 10; #end
+      }
+      else
+      {
+        playerStrumline.y -= 10;
+      }
       opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize - 30;
       opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
     }
@@ -2682,8 +2740,8 @@ class PlayState extends MusicBeatSubState
     final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
     // Give mobile receptors a little more visual weight while keeping the
     // lanes spaced far enough apart for thumbs.
-    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 2.25) * amplification;
-    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 2.95) * amplification;
+    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 2.45) * amplification;
+    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 3.05) * amplification;
 
     playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
     playerStrumline.setNoteSpacing(playerNoteSpacing);

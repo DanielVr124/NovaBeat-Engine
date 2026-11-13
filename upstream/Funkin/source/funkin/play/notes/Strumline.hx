@@ -498,6 +498,9 @@ class Strumline extends FlxSpriteGroup
     {
       var styleScale = noteStyle.getStrumlineScale();
       note.scale.set(styleScale * scale.x, styleScale * scale.y);
+      // Refresh cached hitbox size after changing the visual receptor scale.
+      // Mobile layout measures these dimensions to place the bottom row.
+      note.updateHitbox();
     });
     setNoteSpacing(noteSpacingScale);
   }

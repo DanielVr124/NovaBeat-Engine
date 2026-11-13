@@ -307,6 +307,7 @@ class PauseSubState extends MusicBeatSubState
     buildMetadata();
 
     regenerateMenu();
+    layoutMobilePauseUI(camera.width, camera.height);
 
     transitionIn();
 
@@ -677,6 +678,82 @@ class PauseSubState extends MusicBeatSubState
     }
   }
 
+  /** Keep pause controls readable and tappable in narrow portrait layouts. */
+  inline function mobilePauseMenuX(width:Float):Float
+  {
+    return Math.max(24, Math.min(150, width * 0.12));
+  }
+
+  function layoutMobilePauseUI(width:Int, height:Int):Void
+  {
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (!isMobileTouchLayout() || width <= 0 || height <= 0) return;
+
+    if (background != null)
+    {
+      background.makeSolidColor(width, height, FlxColor.BLACK);
+      background.setPosition(0, 0);
+      background.scrollFactor.set(0, 0);
+    }
+
+    var metadataCount:Int = metadata == null ? 0 : metadata.members.length;
+    var metadataFontSize:Int = Std.int(Math.min(28, Math.max(16, width * 0.055)));
+    var metadataRowHeight:Float = metadataFontSize + 6;
+    var metadataTop:Float = height - (metadataRowHeight * metadataCount) - 18;
+
+    if (metadata != null)
+    {
+      for (index in 0...metadata.members.length)
+      {
+        var item:Null<FlxText> = metadata.members[index];
+        if (item == null) continue;
+        item.setFormat(Paths.font('vcr.ttf'), metadataFontSize, FlxColor.WHITE, FlxTextAlign.RIGHT);
+        item.x = 16;
+        item.fieldWidth = Math.max(1, width - 32);
+        item.y = metadataTop + (index * metadataRowHeight);
+      }
+    }
+
+    if (menuEntryText != null)
+    {
+      var count:Int = menuEntryText.members.length;
+      var menuTop:Float = Math.max(72, height * 0.18);
+      var availableHeight:Float = Math.max(0, metadataTop - menuTop - 18);
+      var rowGap:Float = count > 1 ? Math.max(42, Math.min(92, availableHeight / (count - 1))) : 0;
+      var targetX:Float = mobilePauseMenuX(width);
+      var availableWidth:Float = Math.max(80, width - targetX - 18);
+
+      for (index in 0...count)
+      {
+        var item:Null<AtlasText> = menuEntryText.members[index];
+        if (item == null) continue;
+        FlxTween.globalManager.cancelTweensOf(item);
+        var fitScale:Float = Math.min(1.0, availableWidth / Math.max(1, item.width));
+        item.scale.set(fitScale, fitScale);
+        item.setPosition(targetX, menuTop + (index * rowGap));
+      }
+    }
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    if (pauseButton != null)
+    {
+      pauseButton.setPosition(width - pauseButton.width - 24, 24);
+      if (pauseCircle != null)
+      {
+        pauseCircle.x = pauseButton.x + (pauseButton.width - pauseCircle.width) * 0.5;
+        pauseCircle.y = pauseButton.y + (pauseButton.height - pauseCircle.height) * 0.5;
+      }
+    }
+    #end
+    #end
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    layoutMobilePauseUI(width, height);
+  }
+
   // ===============
   // Input Handling
   // ===============
@@ -855,9 +932,10 @@ class PauseSubState extends MusicBeatSubState
         // Preserve the original native mobile slide-in treatment.
         if (isCurrent && currentEntry != prevEntry)
         {
+          var targetX:Float = mobilePauseMenuX(camera.width);
           FlxTween.globalManager.cancelTweensOf(text);
-          text.x = 165;
-          FlxTween.tween(text, {x: 150}, 0.2, {ease: FlxEase.backInOut});
+          text.x = targetX + 12;
+          FlxTween.tween(text, {x: targetX}, 0.2, {ease: FlxEase.backInOut});
         }
       }
       else
@@ -890,6 +968,7 @@ class PauseSubState extends MusicBeatSubState
     clearAndAddMenuEntries();
     updateMetadataText();
     changeSelection();
+    layoutMobilePauseUI(camera.width, camera.height);
   }
 
   /**
