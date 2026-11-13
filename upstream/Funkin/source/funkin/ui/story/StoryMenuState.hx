@@ -226,6 +226,7 @@ class StoryMenuState extends MusicBeatState
     changeDifficulty();
     changeLevel();
     refresh();
+    layoutStoryMenu(FlxG.width, FlxG.height);
 
     #if FEATURE_DISCORD_RPC
     // Updating Discord Rich Presence
@@ -596,6 +597,7 @@ class StoryMenuState extends MusicBeatState
     updateBackground(previousLevelId);
     updateProps();
     refresh();
+    layoutStoryMenu(FlxG.width, FlxG.height);
   }
 
   /**
@@ -802,6 +804,73 @@ class StoryMenuState extends MusicBeatState
     }
   }
 
+  /**
+   * Recompose Story Mode for narrow portrait screens. Keep the original
+   * landscape composition untouched, but give phones clear, non-overlapping
+   * zones for the week selector, track list, score, and difficulty controls.
+   */
+  function layoutStoryMenu(width:Int, height:Int):Void
+  {
+    if (width <= 0 || height <= 0) return;
+    if (height <= width * 1.12) return;
+
+    if (scoreText != null)
+    {
+      scoreText.setFormat('VCR OSD Mono', 18, FlxColor.WHITE, LEFT);
+      scoreText.setPosition(16, 14);
+      scoreText.fieldWidth = width * 0.48;
+    }
+
+    if (levelTitleText != null)
+    {
+      levelTitleText.setFormat('VCR OSD Mono', 18, FlxColor.WHITE, RIGHT);
+      levelTitleText.fieldWidth = width * 0.48;
+      levelTitleText.setPosition(width * 0.50, 14);
+    }
+
+    if (tracklistText != null)
+    {
+      tracklistText.setFormat('VCR OSD Mono', 19, 0xFFE55777, CENTER);
+      tracklistText.fieldWidth = width - 32;
+      tracklistText.setPosition(16, height * 0.66);
+      tracklistText.alignment = CENTER;
+    }
+
+    if (leftDifficultyArrow != null && rightDifficultyArrow != null)
+    {
+      leftDifficultyArrow.scale.set(0.72, 0.72);
+      rightDifficultyArrow.scale.set(0.72, 0.72);
+      leftDifficultyArrow.updateHitbox();
+      rightDifficultyArrow.updateHitbox();
+      leftDifficultyArrow.setPosition(width * 0.19, height * 0.86);
+      rightDifficultyArrow.setPosition(width * 0.72, height * 0.86);
+    }
+
+    if (difficultySprite != null)
+    {
+      difficultySprite.scale.set(0.72, 0.72);
+      difficultySprite.updateHitbox();
+      difficultySprite.setPosition((width - difficultySprite.width) * 0.5, height * 0.855);
+    }
+
+    if (levelTitles != null)
+    {
+      for (item in levelTitles.members)
+      {
+        if (item == null) continue;
+        item.scale.set(0.82, 0.82);
+        item.updateHitbox();
+        item.x = (width - item.width) * 0.5;
+      }
+    }
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    layoutStoryMenu(width, height);
+  }
+
   function updateProps():Void
   {
     var builtProps:Array<LevelProp> = currentLevel.buildProps(levelProps.members);
@@ -864,7 +933,8 @@ class StoryMenuState extends MusicBeatState
     if (currentIndex < 0 || currentIndex >= levelTitles.members.length) return;
 
     currentLevelTitle = levelTitles.members[currentIndex];
-    levelTitles.members[currentIndex].targetY = 480;
+    final portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
+    levelTitles.members[currentIndex].targetY = portraitLayout ? FlxG.height * 0.40 : 480;
 
     // Every item above it should be positioned in relation to the next item.
     if (currentIndex > 0)
@@ -873,7 +943,8 @@ class StoryMenuState extends MusicBeatState
       {
         var itemIndex:Int = currentIndex - 1 - i;
         var nextItem:LevelTitle = levelTitles.members[itemIndex + 1];
-        levelTitles.members[itemIndex].targetY = nextItem.targetY - Math.max(levelTitles.members[itemIndex].height + 20, 125);
+        final titleGap:Float = portraitLayout ? Math.max(72, Math.min(112, FlxG.height * 0.12)) : 125;
+        levelTitles.members[itemIndex].targetY = nextItem.targetY - Math.max(levelTitles.members[itemIndex].height + 16, titleGap);
       }
     }
 
@@ -883,7 +954,8 @@ class StoryMenuState extends MusicBeatState
       for (i in (currentIndex + 1)...levelTitles.members.length)
       {
         var previousItem:LevelTitle = levelTitles.members[i - 1];
-        levelTitles.members[i].targetY = previousItem.targetY + (previousItem.height + 20);
+        final titleGap:Float = portraitLayout ? Math.max(72, Math.min(112, FlxG.height * 0.12)) : 125;
+        levelTitles.members[i].targetY = previousItem.targetY + Math.max(previousItem.height + 16, titleGap);
       }
     }
   }
