@@ -158,3 +158,8 @@ Controls, Offset, and Save Data pages now use the original FNF options chrome; n
 The debug console command `testPsychV2Compatibility` runs a synthetic psych_v2 converter fixture covering note lanes, sustains, alt notes, 3/4 timing, BPM changes, camera targets, stage aliases, and the additional-strumline guard.
 
 The FNF Preferences responsive layout uses a runtime type test for checkbox rows so it compiles under the pinned Haxe toolchain.
+
+
+## Psych compatibility Windows validation
+
+The `[full-build-windows]` commit-message marker requests a native Windows build for validating the current Psych compatibility changes. Test the artifact from the workflow run whose source SHA matches the validation branch head; older artifacts do not contain later commits.
