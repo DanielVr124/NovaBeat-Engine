@@ -205,13 +205,13 @@ class PsychFreeplayState extends MusicBeatSubState
       // Freeplay rows are screen-space UI and must not follow gameplay camera scroll.
       songText.scrollFactor.set(0, 0);
       songTexts.push(songText);
-      add(songText);
 
       var icon = new HealthIcon(songs[i].icon);
       // A freshly constructed HealthIcon does not load its graphic until
       // configure() is called. Supply the Psych song's icon ID explicitly,
       // including pixel metadata when the icon belongs to a pixel character.
       var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
+      var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
       icon.configure({
         id: songs[i].icon,
         shouldBop: false,
@@ -220,14 +220,19 @@ class PsychFreeplayState extends MusicBeatSubState
         isPixel: iconCharacterData?.isPixel ?? false,
         offsets: [0.0, 0.0]
       });
+      icon.size.set(iconScale, iconScale);
       icon.autoUpdate = false;
       icon.alpha = 0.6;
       icon.visible = false;
       icon.active = false;
       icon.scrollFactor.set(0, 0);
       icons.push(icon);
-      add(icon);
     }
+
+    // Draw the complete icon column first, then every song title above it.
+    // Long/tall icons can no longer paint over neighboring song names.
+    for (icon in icons) add(icon);
+    for (songText in songTexts) add(songText);
   }
 
   function createScorePanel():Void
@@ -578,10 +583,11 @@ class PsychFreeplayState extends MusicBeatSubState
           var item = songTexts[i];
           if (!item.visible) continue;
 
-          var left:Float = item.x - 20;
-          var right:Float = item.x + item.textWidth + 170;
-          var top:Float = item.y - 18;
-          var bottom:Float = item.y + 82;
+          var icon:HealthIcon = icons[i];
+          var left:Float = Math.min(item.x - 20, icon.x - 10);
+          var right:Float = item.x + item.textWidth + 20;
+          var top:Float = Math.min(item.y - 18, icon.y - 10);
+          var bottom:Float = Math.max(item.y + 82, icon.y + icon.height + 10);
           if (FlxG.mouse.x < left || FlxG.mouse.x > right || FlxG.mouse.y < top || FlxG.mouse.y > bottom) continue;
 
           if (i == selected)
@@ -704,13 +710,15 @@ class PsychFreeplayState extends MusicBeatSubState
     // Reserving icon space even when an icon fails to load prevents titles
     // from jumping horizontally between songs.
     var iconX:Float = Math.max(16, FlxG.width * 0.14);
-    var titleX:Float = iconX + 82;
+    var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
+    var titleX:Float = iconX + (HealthIcon.HEALTH_ICON_SIZE * iconScale) + 14;
     var availableTextWidth:Float = Math.max(1, FlxG.width - titleX - 24);
 
     for (i in 0...songTexts.length)
     {
       var item:PsychAlphabet = songTexts[i];
       var icon:HealthIcon = icons[i];
+      if (Math.abs(icon.size.x - iconScale) > 0.01) icon.size.set(iconScale, iconScale);
       var offset:Float = item.targetY - lerpSelected;
       var visible:Bool = i >= min && i < max;
 
@@ -721,7 +729,7 @@ class PsychFreeplayState extends MusicBeatSubState
       item.setMenuMaxWidth(availableTextWidth);
       var y:Float = centerY + offset * rowSpacing;
 
-      icon.setPosition(iconX, y - 30);
+      icon.setPosition(iconX, y - (icon.height * 0.5));
       item.setMenuPosition(titleX, y);
     }
   }
@@ -1039,6 +1047,13 @@ class PsychFreeplayState extends MusicBeatSubState
     bottomText?.setPosition(0, height - 22);
     if (previewBackground != null) positionPreview();
     bottomText?.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, FlxTextAlign.CENTER);
+    #if mobile
+    if (bottomText != null) bottomText.text = 'Tap a song to select it. Tap it again to play.';
+    if (scoreText != null) scoreText.setFormat(Paths.font('vcr.ttf'), Std.int(Math.max(16, Math.min(26, width * 0.06))),
+      FlxColor.WHITE, FlxTextAlign.RIGHT);
+    if (difficultyText != null) difficultyText.setFormat(Paths.font('vcr.ttf'), Std.int(Math.max(14, Math.min(22, width * 0.05))),
+      FlxColor.WHITE, FlxTextAlign.CENTER);
+    #end
     if (scoreText != null) positionHighscore();
   }
 
