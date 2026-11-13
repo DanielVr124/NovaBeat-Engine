@@ -593,7 +593,7 @@ class GameOverSubState extends MusicBeatSubState
     else
     {
       var targetState:funkin.ui.transition.stickers.StickerSubState->FlxState = (PlayStatePlaylist.isStoryMode) ? (sticker) ->
-        new StoryMenuState(sticker) : (sticker) -> FreeplayState.build(sticker);
+        new StoryMenuState(sticker) : (sticker) -> FreeplayState.buildForActiveExperience(null, sticker);
 
       if (PlayStatePlaylist.isStoryMode)
       {

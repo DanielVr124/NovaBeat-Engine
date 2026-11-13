@@ -15,6 +15,7 @@ import funkin.util.SortUtil;
 import funkin.util.GRhythmUtil;
 import funkin.play.notes.notekind.NoteKind;
 import funkin.play.notes.notekind.NoteKindManager;
+import funkin.graphics.shaders.PsychHurtNoteShader;
 import flixel.math.FlxPoint;
 import funkin.util.DeviceUtil;
 #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -1158,6 +1159,10 @@ class Strumline extends FlxSpriteGroup
       if (noteKindStyle == null) noteKindStyle = this.noteStyle;
 
       noteSprite.setupNoteGraphic(noteKindStyle);
+      // Psych 0.7.3 Hurt Notes use a red/black RGB palette rather than a
+      // separate HURTNOTE_assets sheet. Set this on every pooled note so the
+      // shader cannot leak onto a regular note.
+      noteSprite.shader = noteKind != null && noteKind.hurt ? PsychHurtNoteShader.shared() : null;
 
       var trueScale = new FlxPoint(strumlineScale.x, strumlineScale.y);
       #if (mobile || FEATURE_TOUCH_CONTROLS)
@@ -1206,6 +1211,7 @@ class Strumline extends FlxSpriteGroup
       if (noteKindStyle == null) noteKindStyle = this.noteStyle;
 
       holdNoteSprite.setupHoldNoteGraphic(noteKindStyle);
+      holdNoteSprite.shader = noteKind != null && noteKind.hurt ? PsychHurtNoteShader.shared() : null;
 
       holdNoteSprite.parentStrumline = this;
       holdNoteSprite.noteData = note;

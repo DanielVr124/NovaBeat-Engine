@@ -4137,6 +4137,22 @@ class PlayState extends MusicBeatSubState
     if (AdMobUtil.PLAYING_COUNTER < AdMobUtil.MAX_BEFORE_AD) AdMobUtil.PLAYING_COUNTER++;
     #end
 
+    // Psych freeplay songs do not use NovaBeat's results screen. When launched
+    // from Psych Freeplay, close this PlayState substate to reveal the menu again.
+    // Keep a fallback for any Psych song launched as a root state.
+    if (ExperienceManager.isPsychSong(currentSong.id))
+    {
+      if (isSubState)
+      {
+        this.close();
+      }
+      else
+      {
+        FlxG.switchState(() -> funkin.ui.freeplay.FreeplayState.buildForActiveExperience());
+      }
+      return;
+    }
+
     if (PlayStatePlaylist.isStoryMode)
     {
       isNewHighscore = false;
