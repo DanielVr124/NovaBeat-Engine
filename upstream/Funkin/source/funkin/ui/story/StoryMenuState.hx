@@ -862,6 +862,7 @@ class StoryMenuState extends MusicBeatState
         item.updateHitbox();
         item.x = (width - item.width) * 0.5;
       }
+      repositionTitles();
     }
   }
 
