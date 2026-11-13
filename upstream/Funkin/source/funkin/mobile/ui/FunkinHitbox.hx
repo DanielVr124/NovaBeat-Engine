@@ -376,17 +376,19 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
           }
         }
       case FunkinHitboxControlSchemes.Arrows:
-        final hintWidth:Int = 146;
-        final hintHeight:Int = 149;
-        final noteSpacing:Int = 80;
-
-        final xPos:Int = Math.floor((FlxG.width - (hintWidth + noteSpacing) * hintsNoteDirections.length) / 2);
-        final yPos:Int = Math.floor(FlxG.height - hintHeight * 2 - 24);
+        // Spread the four touch arrows evenly across the full screen width.
+        // This keeps LEFT and RIGHT close to the screen edges, with DOWN
+        // and UP centered between them, while scaling the graphics to fit
+        // both portrait and landscape logical viewport sizes.
+        final arrowLaneWidth:Float = FlxG.width / hintsNoteDirections.length;
+        final hintWidth:Int = Std.int(Math.min(arrowLaneWidth * 0.88, Math.max(146, arrowLaneWidth * 0.78)));
+        final hintHeight:Int = Std.int(hintWidth * (149 / 146));
+        final yPos:Int = Std.int(FlxG.height - hintHeight * 2 - 24);
 
         for (i in 0...hintsNoteDirections.length)
         {
-          add(createHintTransparentNote(xPos + i * hintWidth + noteSpacing * i, yPos, hintsNoteDirections[i % hintsNoteDirections.length], hintWidth,
-            hintHeight));
+          final xPos:Int = Std.int(i * arrowLaneWidth + (arrowLaneWidth - hintWidth) * 0.5);
+          add(createHintTransparentNote(xPos, yPos, hintsNoteDirections[i % hintsNoteDirections.length], hintWidth, hintHeight));
         }
     }
     #end
@@ -511,7 +513,12 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
 
     hint.animation.play('static', true);
 
-    hint.onDown.add(() ->
+    // Scale the rendered arrow graphic as well as its touch area. setSize()
+    // alone only changes the hitbox and leaves the visible arrow unchanged.
+    hint.setGraphicSize(width, height);
+    hint.updateHitbox();
+
+    hint.onDown.add(() =>
     {
       hint.animation.play('press', true);
       hint.centerOrigin();
