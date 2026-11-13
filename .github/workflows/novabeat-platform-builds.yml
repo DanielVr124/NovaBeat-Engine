@@ -54,8 +54,11 @@ on:
 permissions:
   contents: read
 
+# Coalesce rapid pushes on the same branch instead of launching one expensive
+# native build per commit. A running build is allowed to finish; only the newest
+# pending run for the branch is retained.
 concurrency:
-  group: novabeat-platform-builds-${{ github.ref }}-${{ github.sha }}
+  group: novabeat-platform-builds-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -235,7 +238,9 @@ jobs:
             ${{ steps.haxelib-cache-path.outputs.path }}
             upstream/Funkin/.haxelib
             ~/.lime
-          key: ${{ runner.os }}-haxe-4.3.7-${{ hashFiles('upstream/Funkin/hmm.json') }}
+          key: ${{ runner.os }}-haxe-4.3.7-${{ hashFiles('upstream/Funkin/hmm.json', 'upstream/Funkin/hmm.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-haxe-4.3.7-
 
       - name: Confirm upstream assets were checked out
         shell: bash
@@ -653,7 +658,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: android-gradle-ubuntu-24.04-jdk17-ndk25c-${{ hashFiles('upstream/Funkin/hmm.json') }}
+          key: android-gradle-ubuntu-24.04-jdk17-ndk26d-${{ hashFiles('upstream/Funkin/hmm.json', 'upstream/Funkin/hmm.lock') }}
+          restore-keys: |
+            android-gradle-ubuntu-24.04-jdk17-ndk26d-
 
       - name: Configure Lime Android SDK paths
         shell: bash
@@ -1037,16 +1044,31 @@ jobs:
           CPP
           "$clang" --target=aarch64-linux-android28 -std=c++20 -D__ANDROID__ -Ilib/openal -Ilib/openal/common -Ilib/openal/core -Ilib/openal/gsl/include -Ilib/openal/fmt-11.2.0/include -fsyntax-only "$probe"
 
+      # Lime's Android native libraries are expensive to compile. Cache the
+      # completed outputs separately so a source-only game change does not
+      # force another full Lime/OpenAL native rebuild.
+      - name: Restore Lime Android native-library cache
+        id: lime-android-cache
+        uses: actions/cache@v4
+        with:
+          path: upstream/Funkin/.haxelib/lime/git/ndll/Android/
+          key: lime-android-ubuntu-24.04-ndk26.3.11579264-${{ hashFiles('upstream/Funkin/hmm.json', 'upstream/Funkin/hmm.lock', '.github/workflows/novabeat-platform-builds.yml') }}
+          restore-keys: |
+            lime-android-ubuntu-24.04-ndk26.3.11579264-
+
       - name: Build Lime Android native libraries
         timeout-minutes: 90
         shell: bash
         working-directory: upstream/Funkin
         run: |
           set -euo pipefail
-          # Reuse the Lime Android native libraries restored from the Haxe/Lime cache.
-          # Do not pass -clean here: it deletes the cached outputs on every run.
-          haxelib run lime rebuild android -v
           ndll=".haxelib/lime/git/ndll/Android"
+          if [[ -s "$ndll/liblime-64.so" ]]; then
+            echo "Using cached Lime Android ARM64 native library."
+          else
+            echo "No complete Lime Android native cache found; compiling native libraries."
+            haxelib run lime rebuild android -v
+          fi
           if [[ ! -s "$ndll/liblime-64.so" ]]; then
             echo "::error title=Android Lime ARM64 library missing::Lime rebuild completed without producing $ndll/liblime-64.so"
             find "$ndll" -maxdepth 1 -type f -printf '%f (%s bytes)\\n' 2>/dev/null || true
