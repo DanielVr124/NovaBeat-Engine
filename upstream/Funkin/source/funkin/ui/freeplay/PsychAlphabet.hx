@@ -137,6 +137,11 @@ class PsychAlphabet extends FlxSpriteGroup
     }
   }
 
+  public static function clearAtlasCache():Void
+  {
+    sharedAtlas = null;
+  }
+
   static function getAtlas():FlxAtlasFrames
   {
     if (sharedAtlas == null)

@@ -9,6 +9,7 @@ import flixel.text.FlxText.FlxTextAlign;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;
+import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.data.song.SongRegistry;
 import funkin.modding.ExperienceManager;
 import funkin.play.PlayStatePlaylist;
@@ -207,6 +208,18 @@ class PsychFreeplayState extends MusicBeatSubState
       add(songText);
 
       var icon = new HealthIcon(songs[i].icon);
+      // A freshly constructed HealthIcon does not load its graphic until
+      // configure() is called. Supply the Psych song's icon ID explicitly,
+      // including pixel metadata when the icon belongs to a pixel character.
+      var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
+      icon.configure({
+        id: songs[i].icon,
+        shouldBop: false,
+        scale: 1.0,
+        flipX: false,
+        isPixel: iconCharacterData?.isPixel ?? false,
+        offsets: [0.0, 0.0]
+      });
       icon.autoUpdate = false;
       icon.alpha = 0.6;
       icon.visible = false;
@@ -709,7 +722,10 @@ class PsychFreeplayState extends MusicBeatSubState
 
       var totalWidth:Float = icon.width + 12 + item.textWidth;
       var preferredX:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
-      var x:Float = Math.max(16, Math.min(preferredX, FlxG.width - totalWidth - 16));
+      // Move only the Psych song list left by a visible, viewport-relative
+      // amount. The row scale, spacing, and vertical placement stay unchanged.
+      var horizontalShift:Float = FlxG.width * 0.055;
+      var x:Float = Math.max(16, Math.min(preferredX - horizontalShift, FlxG.width - totalWidth - 16));
       var y:Float = centerY + offset * rowSpacing;
 
       icon.setPosition(x, y - 30);
@@ -1038,6 +1054,9 @@ class PsychFreeplayState extends MusicBeatSubState
     colorTween?.cancel();
     if (previewPlaying) stopPreviewAudioOnly(false);
     super.destroy();
+    // Don't carry a frame-atlas wrapper across Freeplay state lifetimes. Its
+    // underlying bitmap may be released while this substate is being replaced.
+    PsychAlphabet.clearAtlasCache();
   }
 }
 

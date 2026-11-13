@@ -554,7 +554,14 @@ class PsychGameplayApi
       var previous:Null<FlxSprite> = getSprite(state, normalizedTag);
       if (previous != null)
       {
-        state.remove(previous, true);
+        // addLuaSprite() stores stage sprites inside currentStage. Remove a
+        // replaced Animate sprite from its actual parent before destroying it;
+        // otherwise the stage keeps drawing a destroyed FlxAnimate on retry.
+        var stage = state.currentStage;
+        if (stage != null && stage.members.indexOf(previous) >= 0)
+          stage.remove(previous, true);
+        else
+          state.remove(previous, true);
         previous.destroy();
         scriptVariables.remove(normalizedTag);
       }

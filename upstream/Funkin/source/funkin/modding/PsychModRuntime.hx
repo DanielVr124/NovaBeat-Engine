@@ -862,7 +862,17 @@ class PsychModRuntime
     #if sys
     var stageName:Null<String> = psychSongStageNames.get(songId);
     var modRoot:Null<String> = psychSongModRoots.get(songId);
-    if (stageName == null || modRoot == null) return;
+    if (modRoot == null) return;
+
+    // Classic Psych's built-in fallback stage places BF at (770, 100). NovaBeat
+    // stage data uses feet-based coordinates, so without this Psych-only
+    // fallback the native stage position leaves every BF variant too low.
+    // Preserve the opponent's native position unless the mod supplies one.
+    var positions:Map<String, Array<Float>> = [];
+    positions.set("boyfriend", [770.0, 100.0]);
+    psychSongStagePositions.set(songId, positions);
+
+    if (stageName == null || stageName.length == 0) return;
 
     // Stage names are file basenames, never arbitrary paths.
     if (stageName.indexOf("/") >= 0 || stageName.indexOf("\\") >= 0
@@ -879,7 +889,6 @@ class PsychModRuntime
       var zoom:Float = readPsychFloat(raw, "defaultZoom", stage.camZoom);
       if (zoom > 0 && !Math.isNaN(zoom)) Reflect.setField(stageData, "cameraZoom", zoom);
 
-      var positions:Map<String, Array<Float>> = [];
       var boyfriend:Array<Float> = readPsychStagePosition(raw, "boyfriend");
       var girlfriend:Array<Float> = readPsychStagePosition(raw, "girlfriend");
       var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");

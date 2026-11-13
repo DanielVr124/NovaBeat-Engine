@@ -420,7 +420,8 @@ class HealthIcon extends FunkinSprite
 
   function isNewSpritesheet(charId:String):Bool
   {
-    return Assets.exists(Paths.file('images/icons/icon-$characterId.xml'));
+    // Use the ID being loaded, not the icon object's previous character ID.
+    return Assets.exists(Paths.file('images/icons/icon-$charId.xml'));
   }
 
   function loadCharacter(charId:Null<String>):Void
