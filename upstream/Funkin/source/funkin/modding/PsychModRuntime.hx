@@ -86,6 +86,41 @@ class PsychModRuntime
     return result;
   }
 
+  /**
+   * Correct case mismatches in image assets inside the active Psych mod.
+   * OpenFL asset keys are case-sensitive even on case-insensitive host systems.
+   */
+  public static function resolveActivePsychAssetCase(requestedFile:String):String
+  {
+    #if sys
+    if (requestedFile == null || !StringTools.startsWith(requestedFile, "images/")) return requestedFile;
+    if (lastLaunchSongId == null) return requestedFile;
+    var modRoot:Null<String> = psychSongModRoots.get(lastLaunchSongId);
+    if (modRoot == null || !FileSystem.exists(modRoot) || !FileSystem.isDirectory(modRoot)) return requestedFile;
+    var parts:Array<String> = requestedFile.split("/");
+    for (part in parts)
+      if (part.length == 0 || part == "." || part == "..") return requestedFile;
+    var current:String = modRoot;
+    var resolved:Array<String> = [];
+    for (part in parts)
+    {
+      if (!FileSystem.exists(current) || !FileSystem.isDirectory(current)) return requestedFile;
+      var entries:Array<String> = FileSystem.readDirectory(current);
+      var match:Null<String> = null;
+      for (entry in entries) if (entry == part) { match = entry; break; }
+      if (match == null)
+        for (entry in entries) if (entry.toLowerCase() == part.toLowerCase()) { match = entry; break; }
+      if (match == null) return requestedFile;
+      resolved.push(match);
+      current = Path.join([current, match]);
+    }
+    if (!FileSystem.exists(current) || FileSystem.isDirectory(current)) return requestedFile;
+    return resolved.join("/");
+    #else
+    return requestedFile;
+    #end
+  }
+
   public static function inspectPackage(modPath:String):PsychPackageAssessment
   {
     #if sys
@@ -2757,6 +2792,8 @@ class PsychModRuntime
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
   {
     var modPath:String = Path.normalize(Path.directory(Path.directory(source.dataPath)));
+    // Keep the owning package available for image/XML path case correction.
+    psychSongModRoots.set(songId, modPath);
     var metadata:Null<SongMetadata> = null;
     var psychPlayerId:String = "bf";
     var psychGirlfriendId:String = "gf";
