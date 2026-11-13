@@ -5,6 +5,7 @@ import funkin.data.song.SongData.NoteParamData;
 import funkin.play.notes.notestyle.NoteStyle;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.HSVShader;
+import funkin.graphics.shaders.PsychHurtNoteShader;
 
 class NoteSprite extends FunkinSprite
 {
@@ -123,6 +124,12 @@ class NoteSprite extends FunkinSprite
     psychTexture = normalized;
     if (noteData != null) noteData.texture = normalized;
     rebuildNoteGraphic(true);
+
+    // Active-note texture changes must also switch the built-in Hurt Note
+    // palette shader on/off, matching the initial spawn path.
+    shader = noteData != null && noteData.kind == "psychhurt" && psychTexture == null
+      ? PsychHurtNoteShader.shared()
+      : null;
     return psychTexture;
   }
 
