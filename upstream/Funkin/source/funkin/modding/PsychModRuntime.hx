@@ -3333,7 +3333,7 @@ class PsychModRuntime
       // entry in its hidden line. It must stay empty rather than defaulting
       // to the base-game girlfriend.
       var noGFV2:Dynamic = Json.parse(
-        '{"metadata":{"songName":"No GF","gfVersion":""},' +
+        '{"metadata":{"songName":"No GF"},' +
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},' +
         '{"type":1,"characters":["bf"],"keyCount":4},' +
         '{"type":2,"id":"gf","visible":false,"characters":[""],"keyCount":4},' +
@@ -3344,6 +3344,16 @@ class PsychModRuntime
         Path.join(["mods", "__novabeat_psych_v2_smoke__", "songs", "no-gf"]),
         "normal", "no-gf");
       if (noGFConverted == null || noGFConverted.girlfriend != "") return false;
+
+      // Stage hide_girlfriend and GF-prefixed opponents are both independent
+      // Psych reasons to omit the separate GF sprite.
+      var hideGFTestSong:String = "__psych_smoke_hide_gf";
+      psychSongHideGirlfriend.set(hideGFTestSong, true);
+      if (!shouldHidePsychGirlfriend(hideGFTestSong)) return false;
+      psychSongHideGirlfriend.remove(hideGFTestSong);
+      psychSongOpponentUsesGFPosition.set(hideGFTestSong, true);
+      if (!shouldHidePsychGirlfriend(hideGFTestSong)) return false;
+      psychSongOpponentUsesGFPosition.remove(hideGFTestSong);
 
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
