@@ -3,6 +3,7 @@ package funkin.ui.transition;
 import funkin.data.notestyle.NoteStyleRegistry;
 import funkin.modding.PsychModRuntime;
 import flixel.FlxSprite;
+import flixel.FlxState;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
@@ -33,6 +34,8 @@ class LoadingState extends MusicBeatSubState
   static inline var LOAD_STALL_SECONDS:Float = 12.0;
 
   var asSubState:Bool = false;
+  /** Optional owner for nested loading/gameplay substates. */
+  var subStateParent:Null<FlxState> = null;
   var target:NextState;
   var playParams:Null<PlayStateParams>;
   var stopMusic:Bool = false;
@@ -44,12 +47,13 @@ class LoadingState extends MusicBeatSubState
   var loadStatus:String = 'Preparing song assets...';
   var lastLoadActivityTime:Float = 0.0;
 
-  function new(target:NextState, stopMusic:Bool, ?playParams:PlayStateParams)
+  function new(target:NextState, stopMusic:Bool, ?playParams:PlayStateParams, ?subStateParent:FlxState)
   {
     super();
     this.target = target;
     this.playParams = playParams;
     this.stopMusic = stopMusic;
+    this.subStateParent = subStateParent;
 
     this.loadBar = new FunkinSprite(0, FlxG.height - 20).makeSolidColor(0, 10, 0xFFff16d2);
     this.funkay = FunkinSprite.create('funkay');
@@ -404,8 +408,8 @@ class LoadingState extends MusicBeatSubState
     if (asSubState)
     {
       this.close();
-      // We will assume the target is a valid substate.
-      FlxG.state.openSubState(cast target);
+      // Preserve the caller's parent when loading from an existing substate.
+      (subStateParent ?? FlxG.state).openSubState(cast target);
     }
     else
     {
@@ -422,7 +426,8 @@ class LoadingState extends MusicBeatSubState
    * @param asSubState Whether to open as a substate rather than switching to the `PlayState`.
    * @param shouldStopMusic Whether to stop the current music while loading.
    */
-  public static function loadPlayState(params:PlayStateParams, shouldStopMusic = false, asSubState = false, ?onConstruct:PlayState->Void):Void
+  public static function loadPlayState(params:PlayStateParams, shouldStopMusic = false, asSubState = false,
+      ?onConstruct:PlayState->Void, ?subStateParent:FlxState):Void
   {
     var daChart:Null<SongDifficulty> = params.targetSong?.getDifficulty(params.targetDifficulty ?? Constants.DEFAULT_DIFFICULTY,
       params.targetVariation ?? Constants.DEFAULT_VARIATION);
@@ -452,14 +457,14 @@ class LoadingState extends MusicBeatSubState
     // Switch to loading state while we load assets (default on HTML5 target).
     var loadStateCtor = function()
     {
-      var result = new LoadingState(playStateCtor, shouldStopMusic, params);
+      var result = new LoadingState(playStateCtor, shouldStopMusic, params, subStateParent);
       @:privateAccess
       result.asSubState = asSubState;
       return result;
     }
     if (asSubState)
     {
-      FlxG.state.openSubState(cast loadStateCtor());
+      (subStateParent ?? FlxG.state).openSubState(cast loadStateCtor());
     }
     else
     {
@@ -558,7 +563,7 @@ class LoadingState extends MusicBeatSubState
 
     if (asSubState)
     {
-      FlxG.state.openSubState(cast playStateCtor());
+      (subStateParent ?? FlxG.state).openSubState(cast playStateCtor());
     }
     else
     {
