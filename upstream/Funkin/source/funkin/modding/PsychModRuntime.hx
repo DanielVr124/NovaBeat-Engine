@@ -46,6 +46,10 @@ class PsychModRuntime
   static var psychFreeplayColors:Map<String, Int> = [];
   static var psychFreeplayIcons:Map<String, String> = [];
   static var psychFreeplaySongOrder:Array<String> = [];
+  // Paths lookups can happen before PlayState.instance is assigned during song construction.
+  // Retain the active imported-song context from the launch logger for those early lookups.
+  static var lastLaunchSongId:Null<String> = null;
+  static var lastLaunchDifficulty:String = 'normal';
 
   /**
    * Normalize image names supplied by Psych JSON/Lua before passing them to
@@ -283,6 +287,9 @@ class PsychModRuntime
     #if sys
     if (!isImportedSong(songId)) return;
 
+    lastLaunchSongId = songId;
+    lastLaunchDifficulty = difficulty;
+
     var cleanDetails:String = details == null ? "" : StringTools.replace(StringTools.replace(details, "\n", " "), "\r", " ");
     var line:String = Date.now().toString() + " | " + songId + " | " + difficulty + " | " + phase;
     if (cleanDetails.length > 0) line += " | " + cleanDetails;
@@ -307,16 +314,17 @@ class PsychModRuntime
   {
     #if sys
     var playState:Null<PlayState> = PlayState.instance;
-    if (playState == null || playState.currentSong == null) return;
+    var songId:Null<String> = playState != null && playState.currentSong != null
+      ? playState.currentSong.id
+      : lastLaunchSongId;
+    if (songId == null || !isImportedSong(songId)) return;
 
-    var songId:String = playState.currentSong.id;
-    if (!isImportedSong(songId)) return;
-
+    var difficulty:String = playState != null ? playState.currentDifficulty : lastLaunchDifficulty;
     var details:String = "type=" + assetType
       + " request=" + request
       + " checks=[" + checks.join(" | ") + "]"
       + " resolved=" + resolvedPath;
-    logSongLaunchStep(songId, playState.currentDifficulty, "asset.resolve", details);
+    logSongLaunchStep(songId, difficulty, "asset.resolve", details);
     #end
   }
 
