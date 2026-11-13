@@ -304,6 +304,20 @@ class TouchPointer extends FlxSprite
       loadGraphic('assets/images/cursor/michael.png');
     }
 
+    // Make the tap marker easier to see on portrait phones. Keep the
+    // existing landscape size unchanged, where the pointer is already clear.
+    var portrait:Bool = FlxG.height > FlxG.width * 1.12;
+    scale.set(portrait ? 2.0 : 1.0, portrait ? 2.0 : 1.0);
+    updateHitbox();
+    x = viewPoint.x - width / 2;
+    y = viewPoint.y - height / 2;
+
+    if (camera.target != null)
+    {
+      x -= camera.target.x;
+      y -= camera.target.y;
+    }
+
     lastPosition.copyFrom(viewPoint);
   }
 
