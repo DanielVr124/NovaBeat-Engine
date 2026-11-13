@@ -17,6 +17,7 @@ import funkin.play.PlayStatePlaylist;
 import funkin.play.scoring.Scoring;
 import funkin.play.song.Song;
 import funkin.play.components.HealthIcon;
+import funkin.graphics.FunkinCamera;
 import funkin.save.Save;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.MusicBeatSubState;
@@ -1060,6 +1061,20 @@ class PsychFreeplayState extends MusicBeatSubState
     var menu:Null<PsychFreeplayState> = activeInstance;
     if (menu == null) return;
 
+    // PlayState replaces FlxG's camera stack with gameplay cameras. The
+    // preserved Freeplay substate would otherwise render through that stale
+    // gameplay viewport (black edges and a cropped menu), so restore a normal
+    // full-screen menu camera before revealing the parent.
+    FlxG.cameras.reset(new FunkinCamera('default'));
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    // Gameplay camera setup also removes the menu's touch camera. Recreate the
+    // controls against the restored default camera.
+    menu.camControls = null;
+    menu.addHitbox(true);
+    menu.addBackButton(FlxG.width - 92, FlxG.height - 92, FlxColor.WHITE, menu.goBack, 0.65);
+    #end
+
     // Restore the hidden parent only after the PlayState has closed.
     menu.persistentDraw = true;
     menu.persistentUpdate = true;
@@ -1069,6 +1084,7 @@ class PsychFreeplayState extends MusicBeatSubState
     menu.updateScore();
     menu.updateScoreText();
     menu.updateSongRows(0);
+    menu.onViewportResize(FlxG.width, FlxG.height);
 
     // LoadingState stops the menu track when entering gameplay. Restore the
     // Psych Freeplay music after the nested PlayState has actually closed.
