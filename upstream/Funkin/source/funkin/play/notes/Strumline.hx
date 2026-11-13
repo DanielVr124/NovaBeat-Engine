@@ -1348,10 +1348,10 @@ class Strumline extends FlxSpriteGroup
 
   function getXPos(direction:NoteDirection):Float
   {
+    // Keep the four mobile lanes evenly spaced like the desktop strumline.
+    // Aspect-ratio offsets pushed the outer receptors and falling notes away
+    // from their matching lanes, producing different spacing after rotation.
     var pos:Float = 0;
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (inArrowControlSchemeMode && isPlayer) pos = 35 * (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-    #end
     return switch (direction)
     {
       case NoteDirection.LEFT:
