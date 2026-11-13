@@ -412,6 +412,15 @@ class HealthIcon extends FunkinSprite
     this.animation.addByPrefix(ToLosing, ToLosing, 24, false);
     this.animation.addByPrefix(FromWinning, FromWinning, 24, false);
     this.animation.addByPrefix(FromLosing, FromLosing, 24, false);
+
+    // Some Psych mods ship a valid Sparrow atlas but use a different case or
+    // naming convention for the idle prefix. Keep the icon visible rather than
+    // rendering a blank sprite when the atlas contains frames but no "idle".
+    if (!hasAnimation(Idle) && animation.numFrames > 0)
+    {
+      trace('Health icon atlas has no idle prefix; using its first frame as a static idle icon.');
+      this.animation.add(Idle, [0], 0, false, false);
+    }
   }
 
   /**
