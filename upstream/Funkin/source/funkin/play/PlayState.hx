@@ -888,9 +888,11 @@ class PlayState extends MusicBeatSubState
     // This state receives draw calls even when a substate is active.
     this.persistentDraw = true;
 
-    // Make the player unable to pause if they're moving from the chart editor while the focus is still on since the input persists.
+    // Prevent the confirm key used to launch a Psych Freeplay song from being
+    // interpreted as a pause press on the first gameplay frame.
     @:privateAccess
-    justUnpaused = isChartingMode && !FlxG.game._lostFocus;
+    justUnpaused = (isChartingMode || (isSubState && currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id))) && !FlxG.game._lostFocus;
 
     // Stop any pre-existing music.
     if (!overrideMusic)
@@ -2018,6 +2020,14 @@ class PlayState extends MusicBeatSubState
      */
   override public function onFocusLost():Void
   {
+    // Loading a Psych song as a nested Freeplay substate can briefly report a
+    // focus-loss transition. Do not open the pause menu during the intro/countdown.
+    if (isSubState && startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id))
+    {
+      super.onFocusLost();
+      return;
+    }
+
     #if html5
     if (Preferences.autoPause) VideoCutscene.pauseVideo();
     #end
