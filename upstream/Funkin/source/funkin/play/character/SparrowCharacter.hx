@@ -50,7 +50,7 @@ class SparrowCharacter extends BaseCharacter
 
       this.frames = tex;
       PsychModRuntime.logActiveAssetPipelineStep("character.atlas.loaded",
-        "character=" + characterId + " atlas=" + _data.assetPath + " frameCount=" + tex.frames.length);
+        "character=" + characterId + " atlas=" + _data.assetPath + " loaded=true");
     }
     catch (error:Dynamic)
     {
