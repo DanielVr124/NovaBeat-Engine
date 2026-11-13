@@ -37,6 +37,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   static var rememberedSelection:Int = 0;
   static var rememberedDifficulty:Map<String, String> = [];
+  public static var activeInstance:Null<PsychFreeplayState> = null;
   static var lastDifficultyName:String = Constants.DEFAULT_DIFFICULTY;
 
   var songs:Array<PsychFreeplaySong> = [];
@@ -45,6 +46,7 @@ class PsychFreeplayState extends MusicBeatSubState
   var selected:Int = 0;
   var lerpSelected:Float = 0;
   var holdTime:Float = 0;
+  var launchingSong:Bool = false;
   var currentDifficulties:Array<String> = [];
   var difficultyIndex:Int = 0;
   var currentDifficulty:String = Constants.DEFAULT_DIFFICULTY;
@@ -110,6 +112,8 @@ class PsychFreeplayState extends MusicBeatSubState
       close();
       return;
     }
+
+    activeInstance = this;
 
     if (stickerSubState != null)
     {
@@ -467,6 +471,11 @@ class PsychFreeplayState extends MusicBeatSubState
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    // Psych Freeplay remains alive beneath its gameplay substate. It must not
+    // keep consuming menu input while a song is launching, playing, paused,
+    // or in Game Over; that can launch another song over the active countdown.
+    if (launchingSong || (PlayState.instance != null && PlayState.instance.isSubState)) return;
 
     if (stickerSubState?.isSwitchingState() ?? false) return;
 
@@ -1010,6 +1019,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
     rememberedSelection = selected;
     rememberedDifficulty.set(entry.id, currentDifficulty);
+    launchingSong = true;
     PlayStatePlaylist.isStoryMode = false;
     PlayStatePlaylist.campaignId = null;
 
@@ -1029,6 +1039,26 @@ class PsychFreeplayState extends MusicBeatSubState
       minimalMode: false,
       botPlayMode: false
     }, true, true, null, this);
+  }
+
+  public static function onSongClosed():Void
+  {
+    var menu:Null<PsychFreeplayState> = activeInstance;
+    if (menu == null) return;
+
+    menu.launchingSong = false;
+    menu.updateScore();
+    menu.updateScoreText();
+    menu.updateSongRows(0);
+
+    // LoadingState stops the menu track when entering gameplay. Restore the
+    // Psych Freeplay music after the nested PlayState has actually closed.
+    FunkinSound.playMusic('freakyMenu', {
+      overrideExisting: true,
+      restartTrack: false,
+      loop: true,
+      mapTimeChanges: false
+    });
   }
 
   function goBack():Void
@@ -1066,6 +1096,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
+    if (activeInstance == this) activeInstance = null;
     colorTween?.cancel();
     if (previewPlaying) stopPreviewAudioOnly(false);
     super.destroy();
