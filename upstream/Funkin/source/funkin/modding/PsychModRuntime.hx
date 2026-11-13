@@ -938,8 +938,11 @@ class PsychModRuntime
       if (zoom > 0 && !Math.isNaN(zoom)) Reflect.setField(stageData, "cameraZoom", zoom);
 
       var boyfriend:Array<Float> = readPsychStagePosition(raw, "boyfriend");
+      if (boyfriend == null) boyfriend = readPsychStagePosition(raw, "bf");
       var girlfriend:Array<Float> = readPsychStagePosition(raw, "girlfriend");
+      if (girlfriend == null) girlfriend = readPsychStagePosition(raw, "gf");
       var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");
+      if (opponent == null) opponent = readPsychStagePosition(raw, "dad");
       if (Reflect.field(raw, "hide_girlfriend") == true)
         psychSongHideGirlfriend.set(songId, true);
       if (boyfriend != null) positions.set("boyfriend", boyfriend);
