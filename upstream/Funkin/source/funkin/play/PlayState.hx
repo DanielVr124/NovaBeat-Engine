@@ -2422,7 +2422,13 @@ class PlayState extends MusicBeatSubState
     // enters the stage or remains visible behind the opponent.
     var hidePsychGirlfriend:Bool = PsychModRuntime.shouldHidePsychGirlfriend(currentSong.id);
     var requestedGirlfriendId:String = hidePsychGirlfriend ? "" : currentCharacterData.girlfriend;
-    var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedGirlfriendId);
+    // Do not pass an empty ID to fetchCharacter: its normal fallback behavior
+    // can resolve that to the default GF. A hidden/absent Psych GF must remain
+    // null so no base-game girlfriend is constructed or added to the stage.
+    var girlfriend:Null<BaseCharacter> = hidePsychGirlfriend || requestedGirlfriendId == null
+      || requestedGirlfriendId.length == 0
+      ? null
+      : CharacterDataParser.fetchCharacter(requestedGirlfriendId);
 
     if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
     {
