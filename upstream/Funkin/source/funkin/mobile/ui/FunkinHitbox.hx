@@ -355,6 +355,13 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
         final hintsAngles:Array<Float> = [Math.PI, Math.PI / 2, Math.PI * 1.5, 0];
         final hintsZoneRadius:Int = Std.int(hintSize * 1.55);
         final centerY:Float = FlxG.height - (hintSize * 3.75);
+        // A portrait camera cutout is normally on the top/bottom edge. Its
+        // width is not a horizontal safe-area inset, so applying it here
+        // incorrectly pushes the left cluster right and the right cluster
+        // left. Only apply the legacy horizontal compensation in landscape.
+        final horizontalNotchCompensation:Float = FullScreenScaleMode.ratioAxis == flixel.util.FlxAxes.X
+          ? FullScreenScaleMode.gameNotchSize.x
+          : 0;
 
         for (i in 0...2)
         {
@@ -364,7 +371,7 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
             final x:Float = centerX + Math.cos(hintsAngles[j]) * hintsZoneRadius;
             final y:Float = centerY + Math.sin(hintsAngles[j]) * hintsZoneRadius;
 
-            add(createHintCircle(i == 0 ? x + FullScreenScaleMode.gameNotchSize.x : x - FullScreenScaleMode.gameNotchSize.x, y,
+            add(createHintCircle(i == 0 ? x + horizontalNotchCompensation : x - horizontalNotchCompensation, y,
               hintsNoteDirections[j % hintsNoteDirections.length], hintSize, outlineThickness, hintsColors[j % hintsColors.length]));
           }
         }
