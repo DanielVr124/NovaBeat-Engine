@@ -1,6 +1,7 @@
 package funkin.play.components;
 
 import funkin.data.character.CharacterData;
+import funkin.modding.PsychModRuntime;
 import flixel.FlxSprite;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
@@ -435,20 +436,29 @@ class HealthIcon extends FunkinSprite
 
     trace('Loading health icon for character: $charId (legacy: $isLegacyStyle)');
 
-    if (!isLegacyStyle)
+    try
     {
-      loadSparrow('icons/icon-$charId');
+      if (!isLegacyStyle)
+      {
+        loadSparrow('icons/icon-$charId');
+        loadAnimationNew();
+      }
+      else
+      {
+        loadGraphic(Paths.image('icons/icon-$charId'), true, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE);
+        loadAnimationOld();
+      }
 
-      loadAnimationNew();
+      this.antialiasing = !isPixel;
+      PsychModRuntime.logActiveAssetPipelineStep("health-icon.loaded",
+        "character=" + charId + " legacy=" + isLegacyStyle + " pixel=" + isPixel);
     }
-    else
+    catch (error:Dynamic)
     {
-      loadGraphic(Paths.image('icons/icon-$charId'), true, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE);
-
-      loadAnimationOld();
+      PsychModRuntime.logActiveAssetPipelineStep("health-icon.failed",
+        "character=" + charId + " legacy=" + isLegacyStyle + " error=" + Std.string(error));
+      throw error;
     }
-
-    this.antialiasing = !isPixel;
   }
 
   /**
