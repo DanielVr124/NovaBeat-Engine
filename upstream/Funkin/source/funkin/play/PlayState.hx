@@ -534,6 +534,10 @@ class PlayState extends MusicBeatSubState
    */
   var criticalFailure:Bool = false;
 
+  // close() performs cleanup before revealing a nested parent. Flixel later
+  // calls destroy(), so guard the shared teardown against running twice.
+  var cleanupComplete:Bool = false;
+
   /**
    * False as long as the countdown has not finished yet.
    */
@@ -4351,6 +4355,12 @@ class PlayState extends MusicBeatSubState
      */
   function performCleanup():Void
   {
+    // close() and destroy() can both reach this routine for nested PlayStates.
+    // Running teardown twice re-dispatches DESTROY and can destroy the same
+    // audio/stage objects a second time, corrupting subsequent Psych launches.
+    if (cleanupComplete) return;
+    cleanupComplete = true;
+
     // If the camera is being tweened, stop it.
     cancelAllCameraTweens();
 
