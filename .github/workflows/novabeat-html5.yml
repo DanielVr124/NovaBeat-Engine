@@ -49,7 +49,9 @@ jobs:
     # Any watched change pushed to the integration branch must build and publish.
     # PR checks remain opt-in via [web-build] in the PR title; workflow_dispatch
     # remains available for a deliberate rebuild without changing source files.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
+    # Native-only build commits should not also launch the unrelated browser build.
+    # HTML5 remains automatic for ordinary feature pushes and manual via workflow_dispatch.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/optional-novabeat-menu-mod-manager') && !contains(github.event.head_commit.message, '[full-build]') && !contains(github.event.head_commit.message, '[full-build-android]') && !contains(github.event.head_commit.message, '[full-build-windows]')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[web-build]'))
     name: HTML5 browser test build
     runs-on: ubuntu-24.04
     timeout-minutes: 180
