@@ -557,11 +557,7 @@ class PsychGameplayApi
         // addLuaSprite() stores stage sprites inside currentStage. Remove a
         // replaced Animate sprite from its actual parent before destroying it;
         // otherwise the stage keeps drawing a destroyed FlxAnimate on retry.
-        var stage = state.currentStage;
-        if (stage != null && stage.members.indexOf(previous) >= 0)
-          stage.remove(previous, true);
-        else
-          state.remove(previous, true);
+        removeFromParent(state, previous);
         previous.destroy();
         scriptVariables.remove(normalizedTag);
       }
@@ -1134,7 +1130,7 @@ class PsychGameplayApi
     {
       var object:Null<FlxSprite> = getSprite(state, tag);
       if (object == null || !Std.isOfType(object, FlxText)) return false;
-      state.remove(object, true);
+      removeFromParent(state, object);
       if (destroy)
       {
         object.kill();
@@ -2335,11 +2331,10 @@ class PsychGameplayApi
     var object:Null<FlxSprite> = getSprite(state, tag);
     if (object == null) return false;
 
-    // A sprite should belong to either the main PlayState or the custom
-    // substate, never both. Remove it from both groups before reinserting so
-    // repeated calls cannot leave duplicate members behind.
-    state.remove(object, false);
-    activeCustomSubstate.remove(object, false);
+    // A sprite should belong to exactly one parent. It may previously have
+    // been placed in currentStage by addLuaSprite(), or in the PlayState /
+    // another custom substate. Remove it from its actual owner before moving.
+    removeFromParent(state, object);
     if (position < 0 || position >= activeCustomSubstate.members.length)
       activeCustomSubstate.add(object);
     else
@@ -2613,6 +2608,13 @@ class PsychGameplayApi
   static function removeFromParent(state:PlayState, object:FlxBasic):Void
   {
     if (object == null) return;
+
+    // Custom substates also own sprites transferred with insertToCustomSubstate().
+    if (activeCustomSubstate != null && activeCustomSubstate.members.indexOf(object) >= 0)
+    {
+      activeCustomSubstate.remove(object, true);
+      return;
+    }
 
     var stage = state.currentStage;
     if (stage != null && stage.members.indexOf(object) >= 0)
