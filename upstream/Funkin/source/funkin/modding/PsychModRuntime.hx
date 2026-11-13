@@ -943,7 +943,9 @@ class PsychModRuntime
       if (girlfriend == null) girlfriend = readPsychStagePosition(raw, "gf");
       var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");
       if (opponent == null) opponent = readPsychStagePosition(raw, "dad");
-      if (Reflect.field(raw, "hide_girlfriend") == true)
+      if (Reflect.field(raw, "hide_girlfriend") == true
+        || Reflect.field(raw, "hide_gf") == true
+        || Reflect.field(raw, "hideGirlfriend") == true)
         psychSongHideGirlfriend.set(songId, true);
       if (boyfriend != null) positions.set("boyfriend", boyfriend);
       if (girlfriend != null) positions.set("girlfriend", girlfriend);
