@@ -4140,7 +4140,7 @@ class PlayState extends MusicBeatSubState
     // Psych freeplay songs do not use NovaBeat's results screen. When launched
     // from Psych Freeplay, close this PlayState substate to reveal the menu again.
     // Keep a fallback for any Psych song launched as a root state.
-    if (ExperienceManager.isPsychSong(currentSong.id))
+    if (ExperienceManager.isPsychSong(currentSong.id) && !PlayStatePlaylist.isStoryMode)
     {
       if (isSubState)
       {
@@ -4203,7 +4203,14 @@ class PlayState extends MusicBeatSubState
           }
         }
 
-        if (isSubState)
+        if (ExperienceManager.isPsychSong(currentSong.id))
+        {
+          // Finish Psych Story Mode without the NovaBeat results screen.
+          // Return to the selected week after all playlist songs have played.
+          PlayStatePlaylist.reset();
+          FlxG.switchState(() -> new funkin.ui.story.StoryMenuState());
+        }
+        else if (isSubState)
         {
           this.close();
         }
