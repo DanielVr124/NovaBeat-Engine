@@ -1195,7 +1195,9 @@ class PlayState extends MusicBeatSubState
         if (opponentStrumline.notes.length == 0) opponentStrumline.updateNotes();
         playerStrumline.vwooshInNotes();
         opponentStrumline.vwooshInNotes();
-        Countdown.performCountdown();
+        // Re-enter through PlayState's normal countdown path so Psych's
+        // onStartCountdown/onCountdownStarted lifecycle and HUD setup run on retry.
+        startCountdown();
       });
 
       // Stops any existing countdown.
