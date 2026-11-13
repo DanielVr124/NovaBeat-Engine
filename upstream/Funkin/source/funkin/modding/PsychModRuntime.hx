@@ -41,6 +41,8 @@ class PsychModRuntime
   static final psychSongStageNames:Map<String, String> = [];
   static final psychSongModRoots:Map<String, String> = [];
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
+  static final psychSongHideGirlfriend:Map<String, Bool> = [];
+  static final psychSongOpponentUsesGFPosition:Map<String, Bool> = [];
   static final psychStageBaselines:Map<String, Dynamic> = [];
   static var psychWeekIds:Array<String> = [];
   static var psychFreeplayColors:Map<String, Int> = [];
@@ -285,6 +287,8 @@ class PsychModRuntime
     psychSongStageNames.clear();
     psychSongModRoots.clear();
     psychSongStagePositions.clear();
+    psychSongHideGirlfriend.clear();
+    psychSongOpponentUsesGFPosition.clear();
 
     var root:String = PolymodHandler.getModRoot();
     for (directory in modDirs)
@@ -841,8 +845,16 @@ class PsychModRuntime
    * every stage load so Psych overrides cannot leak into ordinary V-Slice
    * songs that reuse the same native Stage instance.
    */
+  /** Whether the current Psych song explicitly hides GF or uses GF as opponent. */
+  public static function shouldHidePsychGirlfriend(songId:String):Bool
+  {
+    return psychSongHideGirlfriend.get(songId) == true
+      || psychSongOpponentUsesGFPosition.get(songId) == true;
+  }
+
   public static function applyPsychStageData(stage:Dynamic, songId:String):Void
   {
+    psychSongHideGirlfriend.remove(songId);
     if (stage == null) return;
     var stageId:String = Std.string(Reflect.field(stage, "id"));
     if (stageId.length == 0) return;
@@ -875,17 +887,12 @@ class PsychModRuntime
     var modRoot:Null<String> = psychSongModRoots.get(songId);
     if (modRoot == null) return;
 
-    // Classic Psych's built-in fallback stage places BF at (770, 100). NovaBeat
-    // stage data uses feet-based coordinates, so without this Psych-only
-    // fallback the native stage position leaves every BF variant too low.
-    // Preserve the opponent's native position unless the mod supplies one.
+    // Psych's fallback stage anchors all three character roles. A package's
+    // stages/<name>.json can override each one independently.
     var positions:Map<String, Array<Float>> = [];
-    // Psych Engine's fallback stage anchors all three character roles.
-    // A mod stage JSON can override any of these independently below.
-    // Without a GF fallback, NovaBeat was leaving GF at the unrelated
-    // built-in V-Slice stage coordinate even while BF used Psych coordinates.
     positions.set("boyfriend", [770.0, 100.0]);
     positions.set("girlfriend", [400.0, 130.0]);
+    positions.set("opponent", [100.0, 100.0]);
     psychSongStagePositions.set(songId, positions);
 
     if (stageName == null || stageName.length == 0) return;
@@ -908,6 +915,8 @@ class PsychModRuntime
       var boyfriend:Array<Float> = readPsychStagePosition(raw, "boyfriend");
       var girlfriend:Array<Float> = readPsychStagePosition(raw, "girlfriend");
       var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");
+      if (Reflect.field(raw, "hide_girlfriend") == true)
+        psychSongHideGirlfriend.set(songId, true);
       if (boyfriend != null) positions.set("boyfriend", boyfriend);
       if (girlfriend != null) positions.set("girlfriend", girlfriend);
       if (opponent != null) positions.set("opponent", opponent);
@@ -963,7 +972,10 @@ class PsychModRuntime
     if (character == null || PlayState.instance == null || PlayState.instance.currentSong == null) return;
     var positions:Null<Map<String, Array<Float>>> = psychSongStagePositions.get(PlayState.instance.currentSong.id);
     if (positions == null) return;
-    var position:Null<Array<Float>> = positions.get(role);
+    var positionRole:String = role;
+    if (role == "opponent" && psychSongOpponentUsesGFPosition.get(PlayState.instance.currentSong.id) == true)
+      positionRole = "girlfriend";
+    var position:Null<Array<Float>> = positions.get(positionRole);
     if (position == null || position.length < 2) return;
 
     var offsets:Dynamic = Reflect.field(character, "globalOffsets");
@@ -2830,6 +2842,9 @@ class PsychModRuntime
       if (role == "girlfriend") return "";
       normalized = role == "player" ? "bf" : "dad";
     }
+
+    if (role == "opponent")
+      psychSongOpponentUsesGFPosition.set(songId, StringTools.startsWith(normalized.toLowerCase(), "gf"));
 
     #if sys
     var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
