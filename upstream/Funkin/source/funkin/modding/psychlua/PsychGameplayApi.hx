@@ -1345,15 +1345,52 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
-      if (inFront) state.add(sprite);
-      else state.insert(0, sprite);
+
+      // Stage is a nested group in NovaBeat. Add Psych props inside that group
+      // so "behind characters" means behind the characters, not behind the
+      // entire stage (which used to cover every background-level Lua sprite).
+      var stage = state.currentStage;
+      if (stage != null)
+      {
+        // Stage.preAdd assigns the stage camera. Preserve a camera explicitly
+        // selected by the Psych script before addLuaSprite(), e.g. "hud".
+        var requestedCameras = sprite.cameras;
+        if (inFront)
+        {
+          stage.add(sprite);
+        }
+        else
+        {
+          var firstCharacterIndex:Int = -1;
+          for (i in 0...stage.members.length)
+          {
+            if (Std.isOfType(stage.members[i], BaseCharacter))
+            {
+              firstCharacterIndex = i;
+              break;
+            }
+          }
+          if (firstCharacterIndex >= 0) stage.insert(firstCharacterIndex, sprite);
+          else stage.add(sprite);
+        }
+        if (requestedCameras != null) sprite.cameras = requestedCameras;
+      }
+      else
+      {
+        if (inFront) state.add(sprite);
+        else state.insert(0, sprite);
+      }
       return true;
     });
     vars.set("removeLuaSprite", function(tag:String, ?destroy:Bool = true):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
-      state.remove(sprite, true);
+      var stage = state.currentStage;
+      if (stage != null && stage.members.indexOf(sprite) >= 0)
+        stage.remove(sprite, true);
+      else
+        state.remove(sprite, true);
       scriptVariables.remove(tag);
       if (destroy) sprite.destroy();
       return true;
@@ -1491,15 +1528,28 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
-      state.remove(sprite, false);
-      var target:Int = Std.int(Math.max(0, Math.min(index, state.members.length)));
-      state.insert(target, sprite);
+      var stage = state.currentStage;
+      if (stage != null && stage.members.indexOf(sprite) >= 0)
+      {
+        stage.remove(sprite, false);
+        var target:Int = Std.int(Math.max(0, Math.min(index, stage.members.length)));
+        stage.insert(target, sprite);
+      }
+      else
+      {
+        state.remove(sprite, false);
+        var target:Int = Std.int(Math.max(0, Math.min(index, state.members.length)));
+        state.insert(target, sprite);
+      }
       return true;
     });
     vars.set("getObjectOrder", function(tag:String):Int
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
-      return sprite == null ? -1 : state.members.indexOf(sprite);
+      if (sprite == null) return -1;
+      var stage = state.currentStage;
+      var stageIndex:Int = stage == null ? -1 : stage.members.indexOf(sprite);
+      return stageIndex >= 0 ? stageIndex : state.members.indexOf(sprite);
     });
 
     vars.set("triggerEvent", function(name:String, ?value1:String = "", ?value2:String = ""):Void
