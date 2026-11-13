@@ -225,6 +225,9 @@ class PsychFreeplayState extends MusicBeatSubState
         isPixel: iconCharacterData?.isPixel ?? false,
         offsets: [0.0, 0.0]
       }, songs[i].id);
+      // Imported Psych icons load their animation definitions but do not
+      // automatically enter the idle state when autoUpdate is disabled.
+      icon.playAnimation("idle", "idle", true);
       icon.size.set(iconScale, iconScale);
       icon.autoUpdate = false;
       icon.alpha = 0.6;
@@ -1028,6 +1031,16 @@ class PsychFreeplayState extends MusicBeatSubState
     stopPreviewAudioOnly();
     previewPlaying = false;
 
+    // Do not draw or update the Freeplay parent underneath the loading/gameplay
+    // substates. This prevents its background flashing over the new song during
+    // the camera transition and prevents stale menu input during re-entry.
+    persistentDraw = false;
+    persistentUpdate = false;
+
+    // LoadingState will finish cleanup of the previous menu track, but stop it
+    // immediately so it cannot leak into the next song's countdown.
+    if (FlxG.sound.music != null) FlxG.sound.music.stop();
+
     var instrumental:String = entry.song.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? VARIATION) ?? '';
     funkin.modding.PsychModRuntime.logSongLaunchStep(entry.id, currentDifficulty, 'freeplay.selection.confirmed',
       'instrumental-id=' + instrumental);
@@ -1047,6 +1060,11 @@ class PsychFreeplayState extends MusicBeatSubState
     var menu:Null<PsychFreeplayState> = activeInstance;
     if (menu == null) return;
 
+    // Restore the hidden parent only after the PlayState has closed.
+    menu.persistentDraw = true;
+    menu.persistentUpdate = true;
+    menu.active = true;
+    menu.visible = true;
     menu.launchingSong = false;
     menu.updateScore();
     menu.updateScoreText();
