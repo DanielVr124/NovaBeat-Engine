@@ -3243,6 +3243,13 @@ class PsychModRuntime
     #if sys
     try
     {
+      // An explicitly empty legacy gfVersion hides Girlfriend; a missing
+      // field must still receive the caller's normal fallback.
+      var emptyGFMetadata:Dynamic = Json.parse('{"gfVersion":""}');
+      var missingGFMetadata:Dynamic = Json.parse('{}');
+      if (readPsychStringPreserveEmpty(emptyGFMetadata, "gfVersion", "gf") != "") return false;
+      if (readPsychStringPreserveEmpty(missingGFMetadata, "gfVersion", "gf") != "gf") return false;
+
       // Psych image fields may include the physical images/ prefix and file
       // extension even though NovaBeat's Paths helpers add both themselves.
       if (normalizePsychImageKey("images/characters/Gorilla.png") != "characters/Gorilla") return false;
