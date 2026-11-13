@@ -2780,23 +2780,69 @@ class PsychModRuntime
   }
   #end
 
-  static function resolvePsychPlayerCharacter(modPath:String, requestedId:String):String
+  /**
+   * Resolve one of a Psych song's three character roles.
+   *
+   * A mod may ship characters/bf.json or characters/gf.json even though
+   * NovaBeat already has built-in characters with those IDs. Register the
+   * mod definition under a song-scoped ID so it takes priority for this song
+   * without replacing the global base-game definition used by other songs.
+   */
+  static function resolvePsychSongCharacter(modPath:String, songId:String, requestedId:String, role:String):String
   {
     var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
-    if (normalized.length == 0 || normalized.toLowerCase() == "bf" || normalized.toLowerCase() == "boyfriend")
-      return "bf";
-
-    if (hasPsychCharacterDataFile(modPath, normalized)
-      || CharacterDataParser.fetchCharacterData(normalized) != null)
-      return normalized;
+    if (normalized.length == 0)
+      normalized = role == "player" ? "bf" : "gf";
 
     #if sys
-    if (registerKnownPsychPlayerAtlasAlias(modPath, normalized)) return normalized;
+    var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
+    if (jsonPath != null)
+    {
+      var aliasId:String = "psych-" + StringTools.replace(StringTools.replace(songId, "/", "-"), "\\", "-")
+        + "-" + role;
+      if (CharacterDataParser.fetchCharacterData(aliasId) == null)
+      {
+        try
+        {
+          var raw:Dynamic = Json.parse(File.getContent(jsonPath));
+          var converted:Null<CharacterData> = convertPsychCharacterData(aliasId, raw);
+          if (converted != null)
+          {
+            // When Psych omits healthicon, its conventional fallback is the
+            // source character ID, not the internal song-scoped alias.
+            var sourceIcon:Dynamic = Reflect.field(raw, "healthicon");
+            if ((sourceIcon == null || StringTools.trim(Std.string(sourceIcon)).length == 0)
+              && converted.healthIcon != null)
+              converted.healthIcon.id = normalized;
+
+            CharacterDataParser.registerModCharacterData(aliasId, converted);
+          }
+        }
+        catch (error:Dynamic)
+        {
+          trace('[Psych Compatibility] Could not register mod ' + role + ' character "' + normalized
+            + '" from ' + jsonPath + ': ' + Std.string(error));
+        }
+      }
+
+      if (CharacterDataParser.fetchCharacterData(aliasId) != null)
+      {
+        trace('[Psych Compatibility] Using mod-provided ' + role + ' character "' + normalized
+          + '" for ' + songId + ' (JSON: ' + jsonPath + ').');
+        return aliasId;
+      }
+    }
     #end
 
-    trace('[Psych Compatibility] Player character "' + normalized
-      + '" is not bundled or registered; using NovaBeat BF for this song.');
-    return "bf";
+    if (role == "player")
+      return resolvePsychPlayerCharacter(modPath, normalized);
+
+    if (CharacterDataParser.fetchCharacterData(normalized) != null)
+      return normalized;
+
+    trace('[Psych Compatibility] Girlfriend character "' + normalized
+      + '" is not bundled or registered; using NovaBeat GF for this song.');
+    return "gf";
   }
 
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
@@ -2844,8 +2890,8 @@ class PsychModRuntime
         if (metadata == null)
         {
           metadata = importedV2.metadata;
-          psychPlayerId = resolvePsychPlayerCharacter(modPath, importedV2.player);
-          psychGirlfriendId = importedV2.girlfriend;
+          psychPlayerId = resolvePsychSongCharacter(modPath, songId, importedV2.player, "player");
+          psychGirlfriendId = resolvePsychSongCharacter(modPath, songId, importedV2.girlfriend, "girlfriend");
           psychOpponentId = importedV2.opponent;
         }
         combinedNotes.set(difficultyName, importedV2.notes);
@@ -2883,9 +2929,10 @@ class PsychModRuntime
       if (metadata == null)
       {
         metadata = importedMetadata;
-        psychPlayerId = resolvePsychPlayerCharacter(modPath, readPsychString(chartSong, "player1", "bf"));
+        psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
         psychOpponentId = readPsychString(chartSong, "player2", "dad");
-        psychGirlfriendId = readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf"));
+        psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
+          readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
