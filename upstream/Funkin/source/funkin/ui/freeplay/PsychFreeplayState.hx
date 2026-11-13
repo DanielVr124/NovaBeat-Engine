@@ -12,6 +12,7 @@ import funkin.audio.FunkinSound;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.data.song.SongRegistry;
 import funkin.modding.ExperienceManager;
+import funkin.play.PlayState;
 import funkin.play.PlayStatePlaylist;
 import funkin.play.scoring.Scoring;
 import funkin.play.song.Song;
