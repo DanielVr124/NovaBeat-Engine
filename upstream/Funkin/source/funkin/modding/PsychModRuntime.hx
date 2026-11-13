@@ -1942,6 +1942,30 @@ class PsychModRuntime
     };
   }
 
+  /**
+   * Return the classic Psych stage filename when a chart omits its stage
+   * field. Keep this separate from resolvePsychStage(), whose result is a
+   * NovaBeat StageRegistry ID rather than a Psych stages/<name>.json basename.
+   */
+  static function inferPsychStageName(songFolder:String):String
+  {
+    var songKey:String = songFolder == null ? "" : songFolder.toLowerCase();
+    return switch (songKey)
+    {
+      case "spookeez", "south", "monster": "spooky";
+      case "pico", "philly", "philly-nice", "blammed": "philly";
+      case "milf", "satin-panties", "high": "limo";
+      case "cocoa", "eggnog": "mall";
+      case "winter-horrorland": "mallEvil";
+      case "senpai", "roses": "school";
+      case "thorns": "schoolEvil";
+      case "ugh", "guns", "stress": "tank";
+      case "darnell", "lit-up", "2hot": "phillyStreets";
+      case "blazin": "phillyBlazin";
+      default: "stage";
+    };
+  }
+
   static function resolvePsychStage(stageName:String, ?songFolder:String):String
   {
     if (stageName == null || StringTools.trim(stageName).length == 0)
@@ -2943,11 +2967,9 @@ class PsychModRuntime
         if (importedV2 == null) continue;
         var v2StageName:String = readPsychString(getPsychChartMetadata(chartRoot), "stage",
           readPsychString(chartRoot, "stage", ""));
-        if (v2StageName.length > 0)
-        {
-          psychSongStageNames.set(songId, v2StageName);
-          psychSongModRoots.set(songId, Path.normalize(modPath));
-        }
+        if (v2StageName.length == 0) v2StageName = inferPsychStageName(source.songFolder);
+        psychSongStageNames.set(songId, v2StageName);
+        psychSongModRoots.set(songId, Path.normalize(modPath));
         hasPsychSectionStates = true;
         if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
@@ -3000,11 +3022,9 @@ class PsychModRuntime
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
-      if (stageName.length > 0)
-      {
-        psychSongStageNames.set(songId, stageName);
-        psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
-      }
+      if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder);
+      psychSongStageNames.set(songId, stageName);
+      psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
