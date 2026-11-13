@@ -518,21 +518,21 @@ class FunkinHitbox extends FlxTypedSpriteGroup<FunkinHint>
     hint.setGraphicSize(width, height);
     hint.updateHitbox();
 
-    hint.onDown.add(() =>
+    hint.onDown.add(function()
     {
       hint.animation.play('press', true);
       hint.centerOrigin();
       hint.centerOffsets();
     });
 
-    hint.onUp.add(() ->
+    hint.onUp.add(function()
     {
       hint.animation.play('static', true);
       hint.centerOrigin();
       hint.centerOffsets();
     });
 
-    hint.onOut.add(() ->
+    hint.onOut.add(function()
     {
       hint.animation.play('static', true);
       hint.centerOrigin();
