@@ -1113,6 +1113,12 @@ class PlayState extends MusicBeatSubState
       previousDifficulty = currentDifficulty;
 
       currentStage?.resetStage();
+      // Stage.resetStage restores native stage anchors. Reapply the imported Psych
+      // coordinates immediately so a retry keeps the same character layout as
+      // the first launch instead of snapping BF/GF/opponent back to V-Slice spots.
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getBoyfriend(), "boyfriend");
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getGirlfriend(), "girlfriend");
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getDad(), "opponent");
 
       dispatchEvent(retryEvent);
 
