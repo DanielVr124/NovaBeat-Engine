@@ -1997,6 +1997,7 @@ class PsychModRuntime
     // Some older Psych charts omit their stage field but still ship a
     // song-named stage JSON/script. Prefer that real stage over the generic
     // "stage" fallback so its GF/BF coordinates and stage behavior are used.
+    #if sys
     if (modPath != null && songKey.length > 0)
     {
       var stageBaseName:String = StringTools.trim(songFolder);
@@ -2007,6 +2008,7 @@ class PsychModRuntime
           return stageBaseName;
       }
     }
+    #end
 
     return switch (songKey)
     {
