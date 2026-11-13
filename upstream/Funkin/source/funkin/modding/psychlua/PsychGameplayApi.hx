@@ -2605,28 +2605,56 @@ class PsychGameplayApi
    * Destroying one through PlayState.remove() alone leaves a dead member in
    * the stage draw list and can crash FlxAnimate during retry.
    */
+  /**
+   * Remove an object from an owner or any nested FlxGroup it contains.
+   * Psych scripts can nest sprite groups inside stages/custom substates; a
+   * direct-parent-only cleanup leaves destroyed FlxAnimate instances in the
+   * nested group's draw list.
+   */
+  static function removeFromGroupTree(owner:Dynamic, object:FlxBasic,
+      visited:Array<Dynamic>, depth:Int = 0):Bool
+  {
+    if (owner == null || object == null || owner == object || depth > 32
+      || visited.indexOf(owner) >= 0) return false;
+    visited.push(owner);
+
+    var membersValue:Dynamic = Reflect.field(owner, "members");
+    if (!Std.isOfType(membersValue, Array)) return false;
+
+    var members:Array<Dynamic> = cast membersValue;
+    var snapshot:Array<Dynamic> = members.copy();
+    var removed:Bool = false;
+    for (member in snapshot)
+    {
+      if (member == object)
+      {
+        var removeMethod:Dynamic = Reflect.field(owner, "remove");
+        if (removeMethod != null)
+        {
+          Reflect.callMethod(owner, removeMethod, [object, true]);
+          removed = true;
+        }
+      }
+      else if (Std.isOfType(member, FlxBasic))
+      {
+        if (removeFromGroupTree(member, object, visited, depth + 1))
+          removed = true;
+      }
+    }
+    return removed;
+  }
+
   static function removeFromParent(state:PlayState, object:FlxBasic):Void
   {
-    if (object == null) return;
+    if (state == null || object == null) return;
 
-    // Remove every stale copy defensively. A script may have moved an object
-    // through multiple groups before calling remove(), and FlxGroup.add()
-    // does not guarantee that old parents no longer retain it.
-    if (activeCustomSubstate != null && activeCustomSubstate.members.indexOf(object) >= 0)
-      activeCustomSubstate.remove(object, true);
-
-    var stage = state.currentStage;
-    // Stage members are FlxSprite-typed; Lua APIs can still hand this
-    // cleanup routine a broader FlxBasic, so narrow before querying/removing.
-    if (stage != null && Std.isOfType(object, FlxSprite))
-    {
-      var stageSprite:FlxSprite = cast object;
-      if (stage.members.indexOf(stageSprite) >= 0)
-        stage.remove(stageSprite, true);
-    }
-
-    if (state.members.indexOf(object) >= 0)
-      state.remove(object, true);
+    // Remove every stale copy defensively from the active custom substate,
+    // the current stage, and PlayState, recursively including nested groups.
+    var visited:Array<Dynamic> = [];
+    if (activeCustomSubstate != null)
+      removeFromGroupTree(activeCustomSubstate, object, visited);
+    removeFromGroupTree(state.currentStage, object, visited);
+    removeFromGroupTree(state, object, visited);
   }
 
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
