@@ -1990,9 +1990,24 @@ class PsychModRuntime
    * field. Keep this separate from resolvePsychStage(), whose result is a
    * NovaBeat StageRegistry ID rather than a Psych stages/<name>.json basename.
    */
-  static function inferPsychStageName(songFolder:String):String
+  static function inferPsychStageName(songFolder:String, ?modPath:String):String
   {
-    var songKey:String = songFolder == null ? "" : songFolder.toLowerCase();
+    var songKey:String = songFolder == null ? "" : StringTools.trim(songFolder).toLowerCase();
+
+    // Some older Psych charts omit their stage field but still ship a
+    // song-named stage JSON/script. Prefer that real stage over the generic
+    // "stage" fallback so its GF/BF coordinates and stage behavior are used.
+    if (modPath != null && songKey.length > 0)
+    {
+      var stageBaseName:String = StringTools.trim(songFolder);
+      for (extension in [".json", ".lua", ".hx"])
+      {
+        var stageFile:String = Path.join([modPath, "stages", stageBaseName + extension]);
+        if (FileSystem.exists(stageFile) && !FileSystem.isDirectory(stageFile))
+          return stageBaseName;
+      }
+    }
+
     return switch (songKey)
     {
       case "spookeez", "south", "monster": "spooky";
@@ -3037,7 +3052,7 @@ class PsychModRuntime
         if (importedV2 == null) continue;
         var v2StageName:String = readPsychString(getPsychChartMetadata(chartRoot), "stage",
           readPsychString(chartRoot, "stage", ""));
-        if (v2StageName.length == 0) v2StageName = inferPsychStageName(source.songFolder);
+        if (v2StageName.length == 0) v2StageName = inferPsychStageName(source.songFolder, modPath);
         psychSongStageNames.set(songId, v2StageName);
         psychSongModRoots.set(songId, Path.normalize(modPath));
         hasPsychSectionStates = true;
