@@ -819,9 +819,14 @@ class StoryMenuState extends MusicBeatState
       if (scoreText != null)
       {
         scoreText.setFormat('VCR OSD Mono', 32);
+        scoreText.fieldWidth = 0;
         scoreText.setPosition(Math.max(FullScreenScaleMode.gameNotchSize.x, 10), 10);
       }
-      if (levelTitleText != null) levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
+      if (levelTitleText != null)
+      {
+        levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
+        levelTitleText.fieldWidth = 0;
+      }
       if (tracklistText != null)
       {
         tracklistText.setFormat('VCR OSD Mono', 32);
