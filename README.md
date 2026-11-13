@@ -50,3 +50,4 @@ The upstream source code is licensed under Apache-2.0; retain its notice in `ups
 
 For a private HTML5 test build from a feature branch, include `[web-build]` in the commit message. The build is packaged and published separately from the Windows and Android packages.
 
+<!-- [full-build-android] -->
