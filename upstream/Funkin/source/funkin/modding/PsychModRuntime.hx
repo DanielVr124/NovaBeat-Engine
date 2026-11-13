@@ -93,10 +93,21 @@ class PsychModRuntime
    */
   public static function resolveActivePsychAssetCase(requestedFile:String):String
   {
+    return resolvePsychAssetCaseForSong(lastLaunchSongId, requestedFile);
+  }
+
+  /**
+   * Resolve an image path against the specific imported Psych package that
+   * owns a Freeplay row. Freeplay can show songs from multiple enabled mods
+   * before any song has launched, so lastLaunchSongId is not a reliable
+   * asset owner while constructing that menu.
+   */
+  public static function resolvePsychAssetCaseForSong(songId:Null<String>, requestedFile:String):String
+  {
     #if sys
     if (requestedFile == null || !StringTools.startsWith(requestedFile, "images/")) return requestedFile;
-    if (lastLaunchSongId == null) return requestedFile;
-    var modRoot:Null<String> = psychSongModRoots.get(lastLaunchSongId);
+    if (songId == null || songId.length == 0) return requestedFile;
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
     if (modRoot == null || !FileSystem.exists(modRoot) || !FileSystem.isDirectory(modRoot)) return requestedFile;
     var parts:Array<String> = requestedFile.split("/");
     for (part in parts)
