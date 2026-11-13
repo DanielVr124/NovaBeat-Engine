@@ -225,7 +225,7 @@ class TitleState extends MusicBeatState
     {
       if (logoBl != null)
       {
-        var logoScale:Float = Math.min(1.0, Math.min((width * 0.94) / Math.max(1, logoBl.frameWidth),
+        var logoScale:Float = Math.min(1.25, Math.min((width * 0.94) / Math.max(1, logoBl.frameWidth),
           (height * 0.23) / Math.max(1, logoBl.frameHeight)));
         logoBl.scale.set(logoScale, logoScale);
         logoBl.updateHitbox();
@@ -234,7 +234,7 @@ class TitleState extends MusicBeatState
 
       if (gfDance != null)
       {
-        var gfScale:Float = Math.min(1.0, Math.min((width * 0.62) / Math.max(1, gfDance.frameWidth),
+        var gfScale:Float = Math.min(1.25, Math.min((width * 0.72) / Math.max(1, gfDance.frameWidth),
           (height * 0.28) / Math.max(1, gfDance.frameHeight)));
         gfDance.scale.set(gfScale, gfScale);
         gfDance.updateHitbox();
@@ -474,10 +474,9 @@ class TitleState extends MusicBeatState
     {
       var money:AtlasText = new AtlasText(0, 0, textArray[i], AtlasFont.BOLD);
       money.screenCenter(X);
-      money.y += (i * 60) + 200;
-      // credGroup.add(money);
       textGroup.add(money);
     }
+    layoutIntroText();
   }
 
   function addMoreText(text:String):Void
@@ -488,8 +487,35 @@ class TitleState extends MusicBeatState
 
     var coolText:AtlasText = new AtlasText(0, 0, text.trim(), AtlasFont.BOLD);
     coolText.screenCenter(X);
-    coolText.y += (textGroup.length * 60) + 200;
     textGroup.add(coolText);
+    layoutIntroText();
+  }
+
+  /**
+   * Center the randomized opening credits as one vertically balanced block.
+   */
+  function layoutIntroText():Void
+  {
+    if (textGroup == null || textGroup.members.length == 0) return;
+
+    final gap:Float = 12;
+    var totalHeight:Float = 0;
+    for (member in textGroup.members)
+    {
+      if (member == null) continue;
+      totalHeight += cast(member, AtlasText).height;
+    }
+    totalHeight += gap * Math.max(0, textGroup.members.length - 1);
+
+    var nextY:Float = (FlxG.height - totalHeight) * 0.5;
+    for (member in textGroup.members)
+    {
+      if (member == null) continue;
+      var introLine:AtlasText = cast member;
+      introLine.screenCenter(X);
+      introLine.y = nextY;
+      nextY += introLine.height + gap;
+    }
   }
 
   function deleteCoolText():Void
