@@ -3,7 +3,6 @@ package funkin.play.notes;
 import funkin.data.song.SongData.SongNoteData;
 import funkin.data.song.SongData.NoteParamData;
 import funkin.play.notes.notestyle.NoteStyle;
-import funkin.modding.PsychModRuntime;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.HSVShader;
 
@@ -243,7 +242,27 @@ class NoteSprite extends FunkinSprite
   {
     if (value == null || StringTools.trim(value).length == 0) return null;
 
-    var normalized:String = PsychModRuntime.normalizePsychImageKey(value);
+    var normalized:String = StringTools.trim(StringTools.replace(value, "\\", "/"));
+    if (normalized.length == 0 || StringTools.startsWith(normalized, "/")
+      || (normalized.length > 1 && normalized.charAt(1) == ":")) return null;
+
+    while (StringTools.startsWith(normalized.toLowerCase(), "assets/"))
+      normalized = normalized.substr("assets/".length);
+    while (StringTools.startsWith(normalized.toLowerCase(), "images/"))
+      normalized = normalized.substr("images/".length);
+
+    for (part in normalized.split("/"))
+      if (part == "." || part == ".." || part.length == 0) return null;
+
+    var slash:Int = normalized.lastIndexOf("/");
+    var dot:Int = normalized.lastIndexOf(".");
+    if (dot > slash)
+    {
+      var extension:String = normalized.substr(dot + 1).toLowerCase();
+      if (["png", "jpg", "jpeg", "webp", "bmp"].indexOf(extension) >= 0)
+        normalized = normalized.substr(0, dot);
+    }
+
     return normalized.length == 0 ? null : normalized;
   }
 
@@ -263,6 +282,7 @@ class NoteSprite extends FunkinSprite
       if (psychTexture == null) throw error;
       trace('[Psych Compatibility] Could not load note texture "' + psychTexture + '": ' + Std.string(error));
       psychTexture = null;
+      if (noteData != null) noteData.texture = null;
       style.buildNoteSprite(this);
     }
 

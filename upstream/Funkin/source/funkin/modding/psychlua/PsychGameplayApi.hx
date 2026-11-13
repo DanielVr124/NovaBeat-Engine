@@ -2976,11 +2976,23 @@ class PsychGameplayApi
   {
     var result:Array<SongNoteData> = [];
     if (state.playerStrumline != null)
-      for (note in state.playerStrumline.noteData)
+    {
+      var playerStart:Int = Std.int(Math.max(0, state.playerStrumline.nextNoteIndex));
+      for (i in playerStart...state.playerStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.playerStrumline.noteData[i];
         if (note != null) result.push(note);
+      }
+    }
     if (state.opponentStrumline != null)
-      for (note in state.opponentStrumline.noteData)
+    {
+      var opponentStart:Int = Std.int(Math.max(0, state.opponentStrumline.nextNoteIndex));
+      for (i in opponentStart...state.opponentStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.opponentStrumline.noteData[i];
         if (note != null) result.push(note);
+      }
+    }
 
     result.sort(function(a:SongNoteData, b:SongNoteData):Int
     {

@@ -1158,10 +1158,11 @@ class Strumline extends FlxSpriteGroup
       if (noteKindStyle == null) noteKindStyle = NoteKindManager.getNoteStyle(note.kind, null);
       if (noteKindStyle == null) noteKindStyle = this.noteStyle;
 
+      noteSprite.noteData = note;
       noteSprite.setupNoteGraphic(noteKindStyle, note.texture);
       // Keep Psych's optimized Hurt Note palette for the built-in appearance,
       // but do not tint a mod-supplied texture such as HURTNOTE_assets.
-      noteSprite.shader = noteKind != null && noteKind.hurt && note.texture == null
+      noteSprite.shader = noteKind != null && noteKind.hurt && noteSprite.texture == null
         ? PsychHurtNoteShader.shared()
         : null;
 
@@ -1179,7 +1180,6 @@ class Strumline extends FlxSpriteGroup
       noteSprite.updateHitbox();
 
       noteSprite.direction = note.getDirection();
-      noteSprite.noteData = note;
 
       noteSprite.x = this.x;
       noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
