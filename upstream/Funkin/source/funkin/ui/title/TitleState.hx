@@ -225,8 +225,8 @@ class TitleState extends MusicBeatState
     {
       if (logoBl != null)
       {
-        var logoScale:Float = Math.min(1.25, Math.min((width * 0.94) / Math.max(1, logoBl.frameWidth),
-          (height * 0.23) / Math.max(1, logoBl.frameHeight)));
+        var logoScale:Float = Math.min(1.25, Math.min((width * 0.98) / Math.max(1, logoBl.frameWidth),
+          (height * 0.27) / Math.max(1, logoBl.frameHeight)));
         logoBl.scale.set(logoScale, logoScale);
         logoBl.updateHitbox();
         logoBl.setPosition((width - logoBl.width) * 0.5, height * 0.14);
@@ -234,8 +234,8 @@ class TitleState extends MusicBeatState
 
       if (gfDance != null)
       {
-        var gfScale:Float = Math.min(1.25, Math.min((width * 0.72) / Math.max(1, gfDance.frameWidth),
-          (height * 0.28) / Math.max(1, gfDance.frameHeight)));
+        var gfScale:Float = Math.min(1.25, Math.min((width * 0.82) / Math.max(1, gfDance.frameWidth),
+          (height * 0.32) / Math.max(1, gfDance.frameHeight)));
         gfDance.scale.set(gfScale, gfScale);
         gfDance.updateHitbox();
         gfDance.setPosition((width - gfDance.width) * 0.5, height * 0.43);
