@@ -1855,21 +1855,6 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
-   * Close this gameplay overlay and restore its Psych Freeplay parent, when
-   * present. Root-state transitions and V-Slice gameplay keep their existing
-   * behavior; the callback is a no-op unless a Psych Freeplay instance owns
-   * the nested song launch.
-   */
-  override public function close():Void
-  {
-    var restorePsychMenu:Bool = isSubState && currentSong != null
-      && ExperienceManager.isPsychSong(currentSong.id);
-    super.close();
-    if (restorePsychMenu)
-      funkin.ui.freeplay.PsychFreeplayState.onSongClosed();
-  }
-
-  /**
      * Function called before closing the current substate.
      * @param subState
      */
@@ -4348,9 +4333,17 @@ class PlayState extends MusicBeatSubState
 
   override public function close():Void
   {
+    var restorePsychMenu:Bool = isSubState && currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id);
+
     criticalFailure = true; // Stop game updates.
     performCleanup();
     super.close();
+
+    // Restore the preserved Psych Freeplay parent only after gameplay cleanup
+    // and the normal Flixel close operation have completed.
+    if (restorePsychMenu)
+      funkin.ui.freeplay.PsychFreeplayState.onSongClosed();
   }
 
   /**
