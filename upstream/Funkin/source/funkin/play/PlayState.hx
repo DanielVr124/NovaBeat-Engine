@@ -2525,6 +2525,26 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
+   * Measure the visible receptor row, excluding the full-screen strumline
+   * background. Using the parent group's height would place mobile receptors
+   * at the top of the screen because that background spans the full viewport.
+   */
+  function getPlayerStrumlineReceptorHeight():Float
+  {
+    var receptorHeight:Float = 0;
+    for (receptor in playerStrumline.strumlineNotes.members)
+    {
+      if (receptor == null) continue;
+      receptorHeight = Math.max(receptorHeight, receptor.height);
+    }
+
+    if (receptorHeight <= 0)
+      receptorHeight = Strumline.STRUMLINE_SIZE * playerStrumline.strumlineScale.y;
+
+    return receptorHeight;
+  }
+
+  /**
    * Reflow gameplay controls when the available viewport changes.
    *
    * Quest's floating 2D window can be resized without changing Android's
@@ -2548,7 +2568,12 @@ class PlayState extends MusicBeatSubState
       // portrait and narrow Quest windows. The opponent remains a compact
       // reference lane near the top.
       playerStrumline.x = (width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-      playerStrumline.y = (height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+      // The Strumline group also contains a full-screen background sprite, so
+      // playerStrumline.height is the viewport height, not the receptor height.
+      // Use the four actual receptor sprites to keep the player lane at the
+      // bottom where downscroll notes and mobile touch arrows meet.
+      final receptorHeight:Float = getPlayerStrumlineReceptorHeight();
+      playerStrumline.y = height - receptorHeight - Constants.STRUMLINE_Y_OFFSET;
       opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize - 30;
       opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
     }
@@ -2655,8 +2680,10 @@ class PlayState extends MusicBeatSubState
   function initNoteHitbox()
   {
     final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 1.95) * amplification;
-    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 2.8) * amplification;
+    // Give mobile receptors a little more visual weight while keeping the
+    // lanes spaced far enough apart for thumbs.
+    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 2.25) * amplification;
+    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 2.95) * amplification;
 
     playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
     playerStrumline.setNoteSpacing(playerNoteSpacing);
@@ -2668,7 +2695,8 @@ class PlayState extends MusicBeatSubState
     opponentStrumline.enterMiniMode(0.4 * amplification);
 
     playerStrumline.x = (FlxG.width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-    playerStrumline.y = (FlxG.height - playerStrumline.height) * 0.95 - Constants.STRUMLINE_Y_OFFSET;
+    // Exclude the full-screen background from the vertical measurement.
+    playerStrumline.y = FlxG.height - getPlayerStrumlineReceptorHeight() - Constants.STRUMLINE_Y_OFFSET;
     if (currentChart?.noteStyle != 'pixel')
     {
       #if android playerStrumline.y += 10; #end

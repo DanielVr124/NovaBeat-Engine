@@ -133,7 +133,7 @@ class TitleState extends MusicBeatState
     add(logoBl);
     add(gfDance);
 
-    var mobileTitleLayout:Bool = DeviceUtil.isMobileBrowser;
+    var mobileTitleLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
     var titleTextPath:String = 'title-screen-text' + (mobileTitleLayout ? '-mobile' : '');
 
     // On mobile-sized browsers and Quest, use the same title-text atlas placement
@@ -148,6 +148,7 @@ class TitleState extends MusicBeatState
     titleText.shader = swagShader.shader;
 
     add(titleText);
+    layoutTitleSprites(FlxG.width, FlxG.height, mobileTitleLayout);
 
     if (!initialized) // Fix an issue where returning to the credits would play a black screen.
     {
@@ -201,6 +202,60 @@ class TitleState extends MusicBeatState
     trace('Opening Attract state in ${Constants.TITLE_ATTRACT_DELAY} seconds...');
     attractTimer = new FlxTimer().start(Constants.TITLE_ATTRACT_DELAY, (_:FlxTimer) -> moveToAttract());
     #end
+  }
+
+  function layoutTitleSprites(width:Int, height:Int, mobileTitleLayout:Bool):Void
+  {
+    if (logoBl != null)
+    {
+      logoBl.scale.set(1, 1);
+      logoBl.updateHitbox();
+      logoBl.setPosition(-150 + (FullScreenScaleMode.gameCutoutSize.x / 2.5), -100);
+    }
+
+    if (gfDance != null)
+    {
+      gfDance.scale.set(1, 1);
+      gfDance.updateHitbox();
+      gfDance.setPosition((width * 0.4) + FullScreenScaleMode.gameCutoutSize.x / 2.5, height * 0.07);
+    }
+
+    var portraitMobile:Bool = mobileTitleLayout && height > width * 1.12;
+    if (portraitMobile)
+    {
+      if (logoBl != null)
+      {
+        var logoScale:Float = Math.min(1.0, Math.min((width * 0.94) / Math.max(1, logoBl.frameWidth),
+          (height * 0.23) / Math.max(1, logoBl.frameHeight)));
+        logoBl.scale.set(logoScale, logoScale);
+        logoBl.updateHitbox();
+        logoBl.setPosition((width - logoBl.width) * 0.5, height * 0.14);
+      }
+
+      if (gfDance != null)
+      {
+        var gfScale:Float = Math.min(1.0, Math.min((width * 0.62) / Math.max(1, gfDance.frameWidth),
+          (height * 0.28) / Math.max(1, gfDance.frameHeight)));
+        gfDance.scale.set(gfScale, gfScale);
+        gfDance.updateHitbox();
+        gfDance.setPosition((width - gfDance.width) * 0.5, height * 0.43);
+      }
+    }
+
+    if (titleText != null)
+    {
+      if (portraitMobile)
+        titleText.setPosition((width - titleText.width) * 0.5, height * 0.81);
+      else
+        titleText.setPosition((mobileTitleLayout ? 50 : 100) + (FullScreenScaleMode.gameCutoutSize.x / 2), height * 0.8);
+    }
+  }
+
+  override public function onViewportResize(width:Int, height:Int):Void
+  {
+    super.onViewportResize(width, height);
+    var mobileTitleLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
+    layoutTitleSprites(width, height, mobileTitleLayout);
   }
 
   /**

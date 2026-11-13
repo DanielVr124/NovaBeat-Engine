@@ -123,18 +123,15 @@ class MainMenuState extends MusicBeatState
     bg = new FlxSprite(Paths.image('menuBG'));
     bg.scrollFactor.x = #if !mobile 0 #else 0.17 #end; // we want a lil x scroll on mobile
     bg.scrollFactor.y = 0.17;
-    bg.setGraphicSize(Std.int(FlxG.width * 1.2));
-    bg.updateHitbox();
-    bg.screenCenter();
+    layoutBackground(FlxG.width, FlxG.height);
     add(bg);
 
     add(camFollow);
 
     magenta.scrollFactor.copyFrom(bg.scrollFactor);
-    magenta.setGraphicSize(Std.int(bg.width));
+    magenta.setGraphicSize(Std.int(bg.width), Std.int(bg.height));
     magenta.updateHitbox();
-    magenta.x = bg.x;
-    magenta.y = bg.y;
+    magenta.setPosition(bg.x, bg.y);
     magenta.visible = false;
 
     if (Preferences.flashingLights) add(magenta);
@@ -329,6 +326,32 @@ class MainMenuState extends MusicBeatState
     initLeftWatermarkText();
   }
 
+  function layoutBackground(width:Int, height:Int):Void
+  {
+    if (bg == null || width <= 0 || height <= 0) return;
+
+    if (height > width * 1.12)
+    {
+      // Cover the full portrait viewport instead of scaling only to width,
+      // which leaves the top and bottom of the phone screen uncovered.
+      var coverScale:Float = Math.max(width / Math.max(1, bg.frameWidth), height / Math.max(1, bg.frameHeight)) * 1.12;
+      bg.scale.set(coverScale, coverScale);
+      bg.updateHitbox();
+      bg.setPosition((width - bg.width) * 0.5, (height - bg.height) * 0.5);
+    }
+    else
+    {
+      // Preserve the original FNF parallax framing in landscape.
+      bg.setGraphicSize(Std.int(width * 1.2));
+      bg.updateHitbox();
+      bg.screenCenter();
+    }
+
+    magenta.setGraphicSize(Std.int(bg.width), Std.int(bg.height));
+    magenta.updateHitbox();
+    magenta.setPosition(bg.x, bg.y);
+  }
+
   function layoutMenuItems():Void
   {
     if (menuItems == null || menuItems.length == 0) return;
@@ -336,10 +359,10 @@ class MainMenuState extends MusicBeatState
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     var mobileBrowser:Bool = DeviceUtil.isMobileBrowser;
     var spacing:Float = portrait
-      ? Math.min(mobileBrowser ? 124 : 122, (FlxG.height * (mobileBrowser ? 0.60 : 0.54)) / Math.max(1, menuItems.length - 1))
+      ? (FlxG.height * 0.76) / Math.max(1, menuItems.length - 1)
       : Math.min(160, (FlxG.height - (mobileBrowser ? 110 : 140)) / Math.max(1, menuItems.length - 1));
     var top:Float = portrait
-      ? FlxG.height * (mobileBrowser ? 0.20 : 0.23)
+      ? (menuItems.length > 1 ? FlxG.height * 0.12 : FlxG.height * 0.5)
       : (FlxG.height - (spacing * (menuItems.length - 1))) / 2;
 
     for (index => menuItem in menuItems)
@@ -356,27 +379,26 @@ class MainMenuState extends MusicBeatState
 
       atlasItem.x = FlxG.width / 2;
       atlasItem.y = top + spacing * index;
-      atlasItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
-      atlasItem.scrollFactor.y = 0.4;
+      if (portrait)
+        atlasItem.scrollFactor.set(0, 0);
+      else
+      {
+        atlasItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
+        atlasItem.scrollFactor.y = 0.4;
+      }
     }
 
     var selectedItem:MenuListItem = menuItems.members[menuItems.selectedIndex];
-    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+    if (portrait)
+      camFollow.setPosition(FlxG.width / 2, FlxG.height / 2);
+    else if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
       camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
   }
 
   override public function onViewportResize(width:Int, height:Int):Void
   {
     super.onViewportResize(width, height);
-    if (bg != null)
-    {
-      bg.setGraphicSize(Std.int(width * 1.2));
-      bg.updateHitbox();
-      bg.screenCenter();
-      magenta.setGraphicSize(Std.int(bg.width));
-      magenta.updateHitbox();
-      magenta.setPosition(bg.x, bg.y);
-    }
+    layoutBackground(width, height);
 
     layoutMenuItems();
 
@@ -475,7 +497,9 @@ class MainMenuState extends MusicBeatState
   function onMenuItemChange(selected:MenuListItem)
   {
     layoutMenuItems();
-    if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+    if (FlxG.height > FlxG.width * 1.12)
+      camFollow.setPosition(FlxG.width / 2, FlxG.height / 2);
+    else if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
       camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
   }
 
