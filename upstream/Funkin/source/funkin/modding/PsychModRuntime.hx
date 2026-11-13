@@ -2990,12 +2990,14 @@ class PsychModRuntime
     }
     #end
 
+    #if sys
     if (role == "player" && CharacterDataParser.fetchCharacterData(normalized) == null
       && registerKnownPsychPlayerAtlasAlias(modPath, normalized, songId))
     {
       trace('[Psych Compatibility] Using bundled atlas-only player character "' + normalized + '" for ' + songId + '.');
       return normalized;
     }
+    #end
 
     if (CharacterDataParser.fetchCharacterData(normalized) != null)
       return normalized;
