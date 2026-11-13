@@ -2721,6 +2721,18 @@ class PsychModRuntime
     return result.length == 0 ? fallback : result;
   }
 
+  /**
+   * Read a Psych string field while preserving an explicitly empty value.
+   * This matters for gfVersion: an empty value means the song has no GF,
+   * whereas a missing field should use the caller-provided legacy fallback.
+   */
+  static function readPsychStringPreserveEmpty(source:Dynamic, field:String, fallback:String):String
+  {
+    var value:Dynamic = source == null ? null : Reflect.field(source, field);
+    if (value == null) return fallback;
+    return StringTools.trim(Std.string(value));
+  }
+
   #if sys
   /**
    * A small number of Psych packs ship a playable BF atlas but omit its
@@ -2953,7 +2965,7 @@ class PsychModRuntime
         psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
         psychOpponentId = readPsychString(chartSong, "player2", "dad");
         psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
-          readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
+          readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
