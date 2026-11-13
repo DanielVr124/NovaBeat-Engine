@@ -1122,12 +1122,33 @@ class SongNoteDataRaw implements ICloneable<SongNoteDataRaw>
 
   function get_noteType():Null<String>
   {
-    return this.kind;
+    return switch (StringTools.trim(this.kind ?? "").toLowerCase())
+    {
+      case "alt": "Alt Animation";
+      case "noanim": "No Animation";
+      case "psychhey": "Hey!";
+      case "psychgfsing": "GF Sing";
+      case "psychhurt": "Hurt Note";
+      case "psychgfsection": "";
+      case "psychgfsectionalt": "Alt Animation";
+      default: this.kind;
+    };
   }
 
   function set_noteType(value:Null<String>):Null<String>
   {
-    return this.kind = value;
+    if (value == null) return this.kind = null;
+
+    var normalized:String = switch (StringTools.trim(value).toLowerCase())
+    {
+      case "alt animation": "alt";
+      case "no animation": "noanim";
+      case "hey!": "psychhey";
+      case "gf sing": "psychgfsing";
+      case "hurt note": "psychhurt";
+      default: value;
+    };
+    return this.kind = normalized;
   }
 
   @:jignored

@@ -131,12 +131,12 @@ class NoteSprite extends FunkinSprite
 
   function get_noteType():Null<String>
   {
-    return this.kind;
+    return noteData == null ? null : noteData.noteType;
   }
 
   function set_noteType(value:Null<String>):Null<String>
   {
-    if (noteData != null) noteData.kind = value;
+    if (noteData != null) noteData.noteType = value;
     return value;
   }
 
