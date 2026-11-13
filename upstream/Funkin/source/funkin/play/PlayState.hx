@@ -2758,24 +2758,41 @@ class PlayState extends MusicBeatSubState
    */
   function initNoteHitbox()
   {
-    final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-    // Give mobile receptors a little more visual weight while keeping the
-    // lanes spaced far enough apart for thumbs.
-    final playerStrumlineScale:Float = ((FlxG.height / FlxG.width) * 2.45) * amplification;
-    final playerNoteSpacing:Float = ((FlxG.height / FlxG.width) * 3.05) * amplification;
+    // Use the same orientation-aware layout as viewport resize so the very
+    // first countdown notes are created with the final receptor scale.
+    final width:Float = FlxG.width;
+    final height:Float = FlxG.height;
+    final mobileScale:Float = Math.min(
+      width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING),
+      height / 420
+    );
+    final mobileSpacing:Float = Math.max(1.0,
+      width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING * mobileScale));
 
-    playerStrumline.strumlineScale.set(playerStrumlineScale, playerStrumlineScale);
-    playerStrumline.setNoteSpacing(playerNoteSpacing);
-    @:nullSafety(Off) // Who thought it'd be a good idea to make the iterator nullable?
-    for (strum in playerStrumline)
+    playerStrumline.strumlineScale.set(mobileScale, mobileScale);
+    playerStrumline.setNoteSpacing(mobileSpacing);
+
+    // Center the actual rendered receptor bounds, including sprite offsets,
+    // rather than centering the larger logical strumline group.
+    var receptorLeft:Float = Math.POSITIVE_INFINITY;
+    var receptorRight:Float = Math.NEGATIVE_INFINITY;
+    for (receptor in playerStrumline.strumlineNotes.members)
     {
-      strum.width *= 2;
+      if (receptor == null) continue;
+      receptorLeft = Math.min(receptorLeft, receptor.x);
+      receptorRight = Math.max(receptorRight, receptor.x + receptor.width);
     }
-    opponentStrumline.enterMiniMode(0.4 * amplification);
+    if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
+    {
+      playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
+        - receptorLeft + Constants.STRUMLINE_X_OFFSET;
+    }
+    else
+    {
+      playerStrumline.x = (width - playerStrumline.width) * 0.5 + Constants.STRUMLINE_X_OFFSET;
+    }
 
-    playerStrumline.x = (FlxG.width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
-    // Exclude the full-screen background from the vertical measurement.
-    playerStrumline.y = FlxG.height - getPlayerStrumlineReceptorHeight() - Constants.STRUMLINE_Y_OFFSET;
+    playerStrumline.y = height - getPlayerStrumlineReceptorHeight() - Constants.STRUMLINE_Y_OFFSET;
     if (currentChart?.noteStyle != 'pixel')
     {
       #if android playerStrumline.y += 10; #end
@@ -2784,8 +2801,10 @@ class PlayState extends MusicBeatSubState
     {
       playerStrumline.y -= 10;
     }
+
+    opponentStrumline.enterMiniMode(0.4);
     opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
-    opponentStrumline.x -= 30;
+    opponentStrumline.x = Constants.STRUMLINE_X_OFFSET - 30;
   }
 
   function initPauseSprites()
