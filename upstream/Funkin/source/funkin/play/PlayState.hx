@@ -340,7 +340,16 @@ class PlayState extends MusicBeatSubState
 
   function get_stageZoom():Float
   {
-    if (currentStage != null) return currentStage.camZoom;
+    if (currentStage != null)
+    {
+      // The mobile gameplay framing is slightly wider than the desktop
+      // baseline so stage props/details are easier to see on phone screens.
+      #if mobile
+      return currentStage.camZoom * 1.10;
+      #else
+      return currentStage.camZoom;
+      #end
+    }
     else
       return FlxCamera.defaultZoom * 1.05;
   }
