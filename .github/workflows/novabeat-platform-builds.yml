@@ -728,8 +728,12 @@ jobs:
               raise SystemExit("OpenAL alstring.cpp namespace block not found; refusing an unsafe patch.")
           end += len(end_marker)
           old = source[start:end]
-          if old.count("std::lexicographical_compare_three_way") != 2:
-              raise SystemExit("Unexpected OpenAL case_compare implementation; refusing an unsafe patch.")
+          # Match the two overloads by their declarations rather than by
+          # the exact standard-library algorithm used in their bodies. The
+          # Lime-pinned OpenAL revision may change that implementation while
+          # keeping the same narrow/wide case_compare API.
+          if old.count("auto case_compare(") != 2:
+              raise SystemExit("Expected exactly two OpenAL case_compare overloads; refusing an unsafe patch.")
           replacement = """namespace al {
 
           auto case_compare(const std::string_view str0, const std::string_view str1) noexcept
