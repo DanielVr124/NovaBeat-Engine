@@ -664,7 +664,6 @@ class PolymodHandler
 
     SongRegistry.instance.loadEntries();
     LevelRegistry.instance.loadEntries();
-    PsychModRuntime.loadWeeks(ExperienceManager.getActivePsychModDirs());
     NoteStyleRegistry.instance.loadEntries();
     PlayerRegistry.instance.loadEntries();
     ConversationRegistry.instance.loadEntries();
@@ -676,6 +675,15 @@ class PolymodHandler
     FreeplayStyleRegistry.instance.loadEntries();
 
     CharacterDataParser.loadCharacterCache(); // TODO: Migrate characters to BaseRegistry.
+
+    // Psych import creates song-scoped character aliases. Keep it after the
+    // character cache reload: loadCharacterCache() clears the cache, so
+    // importing before it would erase all aliases and force base BF/GF.
+    var importedPsychSongs:Array<String> = PsychModRuntime.loadSongs(ExperienceManager.getActivePsychModDirs());
+    for (songId in importedPsychSongs)
+      trace('Loaded classic Psych chart: ' + songId);
+    PsychModRuntime.loadWeeks(ExperienceManager.getActivePsychModDirs());
+
     NoteKindManager.initialize();
     ModuleHandler.loadModuleCache();
     ModuleHandler.callOnCreate();
