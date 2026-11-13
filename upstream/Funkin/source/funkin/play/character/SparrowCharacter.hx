@@ -4,6 +4,7 @@ import funkin.modding.events.ScriptEvent;
 import funkin.util.assets.FlxAnimationUtil;
 import flixel.graphics.frames.FlxFramesCollection;
 import funkin.data.character.CharacterData.CharacterRenderType;
+import funkin.modding.PsychModRuntime;
 
 /**
  * A SparrowCharacter is a Character which is rendered by
@@ -36,14 +37,27 @@ class SparrowCharacter extends BaseCharacter
   {
     trace('Loading assets for Sparrow character "${characterId}"', flixel.util.FlxColor.fromString("#89CFF0"));
 
-    var tex:FlxFramesCollection = Paths.getSparrowAtlas(_data.assetPath);
-    if (tex == null)
+    try
     {
-      trace('Could not load Sparrow sprite: ${_data.assetPath}');
-      return;
-    }
+      var tex:FlxFramesCollection = Paths.getSparrowAtlas(_data.assetPath);
+      if (tex == null)
+      {
+        PsychModRuntime.logActiveAssetPipelineStep("character.atlas.empty",
+          "character=" + characterId + " atlas=" + _data.assetPath);
+        trace('Could not load Sparrow sprite: ${_data.assetPath}');
+        return;
+      }
 
-    this.frames = tex;
+      this.frames = tex;
+      PsychModRuntime.logActiveAssetPipelineStep("character.atlas.loaded",
+        "character=" + characterId + " atlas=" + _data.assetPath + " frameCount=" + tex.frames.length);
+    }
+    catch (error:Dynamic)
+    {
+      PsychModRuntime.logActiveAssetPipelineStep("character.atlas.failed",
+        "character=" + characterId + " atlas=" + _data.assetPath + " error=" + Std.string(error));
+      throw error;
+    }
 
     if (_data.isPixel)
     {
