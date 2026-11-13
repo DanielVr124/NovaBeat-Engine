@@ -709,7 +709,7 @@ class PsychFreeplayState extends MusicBeatSubState
     // Use one shared icon column and one shared title column for every row.
     // Reserving icon space even when an icon fails to load prevents titles
     // from jumping horizontally between songs.
-    var iconX:Float = Math.max(16, FlxG.width * 0.14);
+    var iconX:Float = Math.max(16, FlxG.width * 0.08);
     var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
     var titleX:Float = iconX + (HealthIcon.HEALTH_ICON_SIZE * iconScale) + 14;
     var availableTextWidth:Float = Math.max(1, FlxG.width - titleX - 24);
