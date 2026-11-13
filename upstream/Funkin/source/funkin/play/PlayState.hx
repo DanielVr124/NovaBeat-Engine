@@ -537,6 +537,7 @@ class PlayState extends MusicBeatSubState
   // close() performs cleanup before revealing a nested parent. Flixel later
   // calls destroy(), so guard the shared teardown against running twice.
   var cleanupComplete:Bool = false;
+  var psychRuntimeCleanupComplete:Bool = false;
 
   /**
    * False as long as the countdown has not finished yet.
@@ -2176,8 +2177,7 @@ class PlayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
-    PsychScriptRuntime.dispatch("onDestroy", []);
-    PsychScriptRuntime.clear();
+    cleanupPsychRuntime();
     performCleanup();
 
     #if mobile
@@ -4344,6 +4344,11 @@ class PlayState extends MusicBeatSubState
     performCleanup();
     super.close();
 
+    // Flixel may defer destroy() until the next state update. Clear the old
+    // Psych scripts before restoring menu input so rapid song re-entry cannot
+    // dispatch callbacks from the previous song.
+    cleanupPsychRuntime();
+
     // Restore the preserved Psych Freeplay parent only after gameplay cleanup
     // and the normal Flixel close operation have completed.
     if (restorePsychMenu)
@@ -4353,6 +4358,15 @@ class PlayState extends MusicBeatSubState
   /**
      * Perform necessary cleanup before leaving the PlayState.
      */
+  /** Tear down song-scoped Psych callbacks exactly once. */
+  function cleanupPsychRuntime():Void
+  {
+    if (psychRuntimeCleanupComplete) return;
+    psychRuntimeCleanupComplete = true;
+    PsychScriptRuntime.dispatch("onDestroy", []);
+    PsychScriptRuntime.clear();
+  }
+
   function performCleanup():Void
   {
     // close() and destroy() can both reach this routine for nested PlayStates.
