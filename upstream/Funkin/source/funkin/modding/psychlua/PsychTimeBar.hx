@@ -37,7 +37,10 @@ class PsychTimeBar extends FlxSpriteGroup
     super();
     this.owner = owner;
 
-    barWidth = Std.int(Math.max(240, FlxG.width - 160));
+    // Psych Engine uses a compact ~400px time bar rather than stretching
+    // it across nearly the whole viewport. Cap the desktop width at that
+    // proportion and shrink only when the available screen is narrower.
+    barWidth = Std.int(Math.max(1, Math.min(400, FlxG.width - 32)));
     var barX:Float = (FlxG.width - barWidth) / 2;
     var textY:Float = 18;
     var textWidth:Float = barWidth;
