@@ -345,7 +345,7 @@ class PlayState extends MusicBeatSubState
       // Give portrait phones a wider field of view so the stage and
       // characters are less likely to be cropped at the sides.
       #if mobile
-      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 0.90 : 1.0);
+      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.35 : 1.0);
       #else
       return currentStage.camZoom;
       #end
@@ -2608,9 +2608,11 @@ class PlayState extends MusicBeatSubState
     {
       // Recalculate scale from the live viewport. Android can resize the
       // game surface without recreating the PlayState.
-      final amplification:Float = (width / height) / (FlxG.initialWidth / FlxG.initialHeight);
-      final mobileScale:Float = ((height / width) * 2.45) * amplification;
-      final mobileSpacing:Float = ((height / width) * 3.05) * amplification;
+      // Size the four mobile receptors to span the viewport while keeping
+      // the same tight lane-to-lane spacing ratio as the desktop strumline.
+      // Four NOTE_SPACING intervals make the strumline group exactly viewport-wide.
+      final mobileScale:Float = width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING);
+      final mobileSpacing:Float = 1.0;
       playerStrumline.strumlineScale.set(mobileScale, mobileScale);
       playerStrumline.setNoteSpacing(mobileSpacing);
 
