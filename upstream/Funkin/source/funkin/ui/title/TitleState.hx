@@ -255,6 +255,7 @@ class TitleState extends MusicBeatState
     super.onViewportResize(width, height);
     var mobileTitleLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
     layoutTitleSprites(width, height, mobileTitleLayout);
+    if (!skippedIntro) layoutIntroText();
   }
 
   /**
