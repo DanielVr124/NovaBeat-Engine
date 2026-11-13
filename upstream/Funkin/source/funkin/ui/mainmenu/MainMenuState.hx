@@ -498,9 +498,10 @@ class MainMenuState extends MusicBeatState
   function onMenuItemChange(selected:MenuListItem)
   {
     layoutMenuItems();
-    if (FlxG.height > FlxG.width * 1.12)
+    final mobileLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
+    if (FlxG.height > FlxG.width * 1.12 || mobileLayout)
       camFollow.setPosition(FlxG.width / 2, FlxG.height / 2);
-    else if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+    else
       camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
   }
 
