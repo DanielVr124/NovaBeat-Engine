@@ -2609,21 +2609,18 @@ class PsychGameplayApi
   {
     if (object == null) return;
 
-    // Custom substates also own sprites transferred with insertToCustomSubstate().
+    // Remove every stale copy defensively. A script may have moved an object
+    // through multiple groups before calling remove(), and FlxGroup.add()
+    // does not guarantee that old parents no longer retain it.
     if (activeCustomSubstate != null && activeCustomSubstate.members.indexOf(object) >= 0)
-    {
       activeCustomSubstate.remove(object, true);
-      return;
-    }
 
     var stage = state.currentStage;
     if (stage != null && stage.members.indexOf(object) >= 0)
-    {
       stage.remove(object, true);
-      return;
-    }
 
-    state.remove(object, true);
+    if (state.members.indexOf(object) >= 0)
+      state.remove(object, true);
   }
 
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
