@@ -3104,17 +3104,39 @@ class PsychModRuntime
     var lines:Array<Dynamic> = cast Reflect.field(chartRoot, "strumlines");
     var player:String = "bf";
     var opponent:String = "dad";
-    var girlfriend:String = "gf";
+    // V2 exports preserve legacy gfVersion in the hidden additional strumline
+    // whose id is "gf". An empty first character is meaningful: it means that
+    // this song intentionally has no Girlfriend. Do not mistake some other
+    // additional strumline for GF or silently restore the base-game GF.
+    var girlfriend:String = readPsychStringPreserveEmpty(meta, "gfVersion", "gf");
     for (line in lines)
     {
       var role:Int = psychStrumLineRole(line);
+      var lineId:String = readPsychString(line, "id", "").toLowerCase();
       var chars:Dynamic = Reflect.field(line, "characters");
-      if (!Std.isOfType(chars, Array) || (cast chars:Array<Dynamic>).length == 0) continue;
-      var character:String = StringTools.trim(Std.string((cast chars:Array<Dynamic>)[0]));
-      if (character.length == 0) continue;
-      if (role == 0) player = character;
-      else if (role == 1) opponent = character;
-      else if (girlfriend == "gf") girlfriend = character;
+      var hasCharacter:Array<Dynamic> = Std.isOfType(chars, Array) ? cast chars : [];
+      if (role == 0)
+      {
+        if (hasCharacter.length > 0)
+        {
+          var character:String = StringTools.trim(Std.string(hasCharacter[0]));
+          if (character.length > 0) player = character;
+        }
+      }
+      else if (role == 1)
+      {
+        if (hasCharacter.length > 0)
+        {
+          var character:String = StringTools.trim(Std.string(hasCharacter[0]));
+          if (character.length > 0) opponent = character;
+        }
+      }
+      else if (lineId == "gf" || lineId == "girlfriend")
+      {
+        girlfriend = hasCharacter.length > 0
+          ? StringTools.trim(Std.string(hasCharacter[0]))
+          : "";
+      }
     }
 
     var metadata:SongMetadata = new SongMetadata(songName, artist, charter, Constants.DEFAULT_VARIATION);
@@ -3290,6 +3312,24 @@ class PsychModRuntime
         || !isSupportedBuiltinPsychNoteType("GF Sing")
         || !isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
       if (converted.metadata.playData.stage != "phillyTrain") return false;
+      if (converted.girlfriend != "gf") return false;
+
+      // A V2 chart exported from a legacy Psych song can carry an empty GF
+      // entry in its hidden line. It must stay empty rather than defaulting
+      // to the base-game girlfriend.
+      var noGFV2:Dynamic = Json.parse(
+        '{"metadata":{"songName":"No GF","gfVersion":""},' +
+        '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},' +
+        '{"type":1,"characters":["bf"],"keyCount":4},' +
+        '{"type":2,"id":"gf","visible":false,"characters":[""],"keyCount":4},' +
+        '{"type":2,"id":"extra","characters":["extraSinger"],"keyCount":4}],' +
+        '"notes":[]}'
+      );
+      var noGFConverted:Null<PsychV2ChartImport> = convertPsychV2Chart(noGFV2,
+        Path.join(["mods", "__novabeat_psych_v2_smoke__", "songs", "no-gf"]),
+        "normal", "no-gf");
+      if (noGFConverted == null || noGFConverted.girlfriend != "") return false;
+
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
       if (converted.metadata.timeChanges[1].bpm != 120) return false;
