@@ -1847,6 +1847,21 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
+   * Close this gameplay overlay and restore its Psych Freeplay parent, when
+   * present. Root-state transitions and V-Slice gameplay keep their existing
+   * behavior; the callback is a no-op unless a Psych Freeplay instance owns
+   * the nested song launch.
+   */
+  override public function close():Void
+  {
+    var restorePsychMenu:Bool = isSubState && currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id);
+    super.close();
+    if (restorePsychMenu)
+      funkin.ui.freeplay.PsychFreeplayState.onSongClosed();
+  }
+
+  /**
      * Function called before closing the current substate.
      * @param subState
      */
