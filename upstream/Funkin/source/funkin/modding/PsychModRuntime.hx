@@ -2817,7 +2817,7 @@ class PsychModRuntime
       // GF; missing gfVersion is already given the conventional "gf" default
       // by the chart importer before this resolver is called.
       if (role == "girlfriend") return "";
-      normalized = role == "player" ? "bf" : "gf";
+      normalized = role == "player" ? "bf" : "dad";
     }
 
     #if sys
@@ -2860,22 +2860,26 @@ class PsychModRuntime
     }
     #end
 
+    if (CharacterDataParser.fetchCharacterData(normalized) != null)
+      return normalized;
+
     if (role == "player")
     {
-      if (CharacterDataParser.fetchCharacterData(normalized) != null)
-        return normalized;
-
       trace('[Psych Compatibility] Player character "' + normalized
         + '" is not bundled or registered; using NovaBeat BF for this song.');
       return "bf";
     }
 
-    if (CharacterDataParser.fetchCharacterData(normalized) != null)
-      return normalized;
+    if (role == "girlfriend")
+    {
+      trace('[Psych Compatibility] Girlfriend character "' + normalized
+        + '" is not bundled or registered; using NovaBeat GF for this song.');
+      return "gf";
+    }
 
-    trace('[Psych Compatibility] Girlfriend character "' + normalized
-      + '" is not bundled or registered; using NovaBeat GF for this song.');
-    return "gf";
+    trace('[Psych Compatibility] Opponent character "' + normalized
+      + '" is not bundled or registered; using NovaBeat Dad for this song.');
+    return "dad";
   }
 
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
@@ -2925,7 +2929,7 @@ class PsychModRuntime
           metadata = importedV2.metadata;
           psychPlayerId = resolvePsychSongCharacter(modPath, songId, importedV2.player, "player");
           psychGirlfriendId = resolvePsychSongCharacter(modPath, songId, importedV2.girlfriend, "girlfriend");
-          psychOpponentId = importedV2.opponent;
+          psychOpponentId = resolvePsychSongCharacter(modPath, songId, importedV2.opponent, "opponent");
         }
         combinedNotes.set(difficultyName, importedV2.notes);
         combinedSpeeds.set(difficultyName, importedV2.speed);
@@ -2963,7 +2967,8 @@ class PsychModRuntime
       {
         metadata = importedMetadata;
         psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
-        psychOpponentId = readPsychString(chartSong, "player2", "dad");
+        psychOpponentId = resolvePsychSongCharacter(modPath, songId,
+          readPsychString(chartSong, "player2", "dad"), "opponent");
         psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
           readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
       }
