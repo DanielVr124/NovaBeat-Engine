@@ -724,7 +724,7 @@ class PsychFreeplayState extends MusicBeatSubState
       var preferredX:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
       // Move only the Psych song list left by a visible, viewport-relative
       // amount. The row scale, spacing, and vertical placement stay unchanged.
-      var horizontalShift:Float = FlxG.width * 0.055;
+      var horizontalShift:Float = FlxG.width * 0.10;
       var x:Float = Math.max(16, Math.min(preferredX - horizontalShift, FlxG.width - totalWidth - 16));
       var y:Float = centerY + offset * rowSpacing;
 
