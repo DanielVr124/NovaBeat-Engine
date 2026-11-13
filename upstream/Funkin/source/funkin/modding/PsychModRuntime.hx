@@ -89,6 +89,7 @@ class PsychModRuntime
   /**
    * Correct case mismatches in image assets inside the active Psych mod.
    * OpenFL asset keys are case-sensitive even on case-insensitive host systems.
+   * This is especially important for GorillaFunkin's character atlases and icon files.
    */
   public static function resolveActivePsychAssetCase(requestedFile:String):String
   {
