@@ -429,19 +429,20 @@ class PsychModRuntime
     return psychFreeplayColors.get(songId) ?? 0xFF9271FD;
   }
 
-  /** Return the week-defined icon character, falling back to the chart opponent. */
+  /** Return the week-defined icon character, falling back to the chart opponent's health-icon ID. */
   public static function getPsychFreeplayIcon(songId:String, fallback:String = 'face'):String
   {
     var iconId:Null<String> = psychFreeplayIcons.get(songId);
-    if (iconId == null || StringTools.trim(iconId).length == 0) return fallback;
+    if (iconId == null || StringTools.trim(iconId).length == 0) iconId = fallback;
 
+    if (iconId == null) return 'face';
     iconId = StringTools.trim(iconId);
-    // Psych week files name the asset (icon-gorilla), while HealthIcon expects
-    // the character ID (gorilla) and adds the icon- prefix itself.
+    // Psych week files and some character JSON files include the icon- prefix,
+    // while HealthIcon expects the character ID and adds that prefix itself.
     if (StringTools.startsWith(iconId.toLowerCase(), "icon-"))
       iconId = iconId.substr(5);
 
-    return iconId.length == 0 ? fallback : iconId;
+    return iconId.length == 0 ? 'face' : iconId;
   }
 
   /**
