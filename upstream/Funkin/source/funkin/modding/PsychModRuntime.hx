@@ -2842,7 +2842,14 @@ class PsychModRuntime
     #end
 
     if (role == "player")
-      return resolvePsychPlayerCharacter(modPath, normalized);
+    {
+      if (CharacterDataParser.fetchCharacterData(normalized) != null)
+        return normalized;
+
+      trace('[Psych Compatibility] Player character "' + normalized
+        + '" is not bundled or registered; using NovaBeat BF for this song.');
+      return "bf";
+    }
 
     if (CharacterDataParser.fetchCharacterData(normalized) != null)
       return normalized;
