@@ -186,8 +186,13 @@ class PsychFreeplayState extends MusicBeatSubState
       // Character IDs can be song-scoped Psych aliases. Freeplay needs the
       // character's real health-icon ID, not the internal alias used by PlayState.
       var iconId:String = opponentCharacterData?.healthIcon?.id ?? opponentCharacterId;
-      var iconIsPixel:Bool = opponentCharacterData?.healthIcon?.isPixel ?? opponentCharacterData?.isPixel ?? false;
       var freeplayIcon:String = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
+      var freeplayIconCharacterData = CharacterDataParser.fetchCharacterData(freeplayIcon);
+      var iconIsPixel:Bool = freeplayIconCharacterData?.healthIcon?.isPixel
+        ?? freeplayIconCharacterData?.isPixel
+        ?? opponentCharacterData?.healthIcon?.isPixel
+        ?? opponentCharacterData?.isPixel
+        ?? false;
       var color:Int = funkin.modding.PsychModRuntime.getPsychFreeplayColor(songId);
       songs.push({
         id: songId,
