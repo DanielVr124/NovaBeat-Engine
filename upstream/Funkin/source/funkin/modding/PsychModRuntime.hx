@@ -2969,10 +2969,15 @@ class PsychModRuntime
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
+      // Keep the owning package root for every imported song, even when
+      // the chart omits its stage field. applyPsychStageData uses this root
+      // to establish Psych's standard fallback character anchors; previously
+      // the root was recorded only for songs with an explicit stage name,
+      // leaving those songs at NovaBeat's unrelated V-Slice BF/GF positions.
+      psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
       if (stageName.length > 0)
       {
         psychSongStageNames.set(songId, stageName);
-        psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
       }
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
