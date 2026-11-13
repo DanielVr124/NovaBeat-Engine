@@ -328,6 +328,20 @@ class PsychModRuntime
     #end
   }
 
+  /** Log an asset-pipeline event against the current imported song, including early construction. */
+  public static function logActiveAssetPipelineStep(phase:String, details:String):Void
+  {
+    #if sys
+    var playState:Null<PlayState> = PlayState.instance;
+    var songId:Null<String> = playState != null && playState.currentSong != null
+      ? playState.currentSong.id
+      : lastLaunchSongId;
+    if (songId == null || !isImportedSong(songId)) return;
+    var difficulty:String = playState != null ? playState.currentDifficulty : lastLaunchDifficulty;
+    logSongLaunchStep(songId, difficulty, phase, details);
+    #end
+  }
+
   /** Return songs in the same week-file order used by classic Psych Freeplay. */
   public static function getPsychFreeplaySongOrder():Array<String>
   {
