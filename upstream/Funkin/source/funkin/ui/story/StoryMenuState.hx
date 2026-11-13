@@ -843,7 +843,8 @@ class StoryMenuState extends MusicBeatState
       {
         difficultySprite.scale.set(1, 1);
         difficultySprite.updateHitbox();
-        difficultySprite.setPosition((width - difficultySprite.width) * 0.5, leftDifficultyArrow.y - 15);
+        final arrowY:Float = leftDifficultyArrow == null ? 480 : leftDifficultyArrow.y;
+        difficultySprite.setPosition((width - difficultySprite.width) * 0.5, arrowY - 15);
       }
       if (levelTitles != null)
       {
