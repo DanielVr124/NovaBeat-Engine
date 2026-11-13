@@ -109,27 +109,51 @@ class PsychModRuntime
     #if sys
     if (requestedFile == null || !StringTools.startsWith(requestedFile, "images/")) return requestedFile;
     if (songId == null || songId.length == 0) return requestedFile;
+
+    // Prefer assets inside the owning mod, then probe the shared Psych mods
+    // root. Some packs store shared character/icon atlases in mods/images
+    // while their character JSON is in mods/characters or mods/data/characters.
+    var roots:Array<String> = [];
     var modRoot:Null<String> = psychSongModRoots.get(songId);
-    if (modRoot == null || !FileSystem.exists(modRoot) || !FileSystem.isDirectory(modRoot)) return requestedFile;
+    if (modRoot != null && FileSystem.exists(modRoot) && FileSystem.isDirectory(modRoot))
+      roots.push(Path.normalize(modRoot));
+    var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
+    if (roots.indexOf(sharedRoot) < 0 && FileSystem.exists(sharedRoot) && FileSystem.isDirectory(sharedRoot))
+      roots.push(sharedRoot);
+
     var parts:Array<String> = requestedFile.split("/");
     for (part in parts)
       if (part.length == 0 || part == "." || part == "..") return requestedFile;
-    var current:String = modRoot;
-    var resolved:Array<String> = [];
-    for (part in parts)
+
+    for (root in roots)
     {
-      if (!FileSystem.exists(current) || !FileSystem.isDirectory(current)) return requestedFile;
-      var entries:Array<String> = FileSystem.readDirectory(current);
-      var match:Null<String> = null;
-      for (entry in entries) if (entry == part) { match = entry; break; }
-      if (match == null)
-        for (entry in entries) if (entry.toLowerCase() == part.toLowerCase()) { match = entry; break; }
-      if (match == null) return requestedFile;
-      resolved.push(match);
-      current = Path.join([current, match]);
+      var current:String = root;
+      var resolved:Array<String> = [];
+      var matchedAll:Bool = true;
+      for (part in parts)
+      {
+        if (!FileSystem.exists(current) || !FileSystem.isDirectory(current))
+        {
+          matchedAll = false;
+          break;
+        }
+        var entries:Array<String> = FileSystem.readDirectory(current);
+        var match:Null<String> = null;
+        for (entry in entries) if (entry == part) { match = entry; break; }
+        if (match == null)
+          for (entry in entries) if (entry.toLowerCase() == part.toLowerCase()) { match = entry; break; }
+        if (match == null)
+        {
+          matchedAll = false;
+          break;
+        }
+        resolved.push(match);
+        current = Path.join([current, match]);
+      }
+      if (matchedAll && FileSystem.exists(current) && !FileSystem.isDirectory(current))
+        return resolved.join("/");
     }
-    if (!FileSystem.exists(current) || FileSystem.isDirectory(current)) return requestedFile;
-    return resolved.join("/");
+    return requestedFile;
     #else
     return requestedFile;
     #end
@@ -1657,6 +1681,8 @@ class PsychModRuntime
   #if sys
   static function psychCharacterDataRoots(modPath:String):Array<String>
   {
+    // Song-local character definitions always win. This prevents two enabled
+    // mods with the same character ID from replacing one another.
     var roots:Array<String> = [
       Path.join([modPath, "characters"]),
       Path.join([modPath, "data", "characters"])
@@ -1664,10 +1690,21 @@ class PsychModRuntime
 
     // Some full Psych Engine games ship their playable-character JSON beside
     // the mods/ directory while the corresponding atlas is inside mods/images.
-    // This keeps those game-bundled characters available when testing/importing
-    // the game's own mods/ pack as a NovaBeat mod.
     var companionRoot:String = Path.normalize(Path.join([Path.directory(modPath), "assets", "characters"]));
     if (roots.indexOf(companionRoot) < 0) roots.push(companionRoot);
+
+    // Many Psych packs use the engine-wide shared character folders rather
+    // than a per-mod characters folder. Search those only after local roots.
+    var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
+    for (sharedCharactersRoot in [
+      Path.join([sharedRoot, "characters"]),
+      Path.join([sharedRoot, "data", "characters"])
+    ])
+    {
+      sharedCharactersRoot = Path.normalize(sharedCharactersRoot);
+      if (roots.indexOf(sharedCharactersRoot) < 0) roots.push(sharedCharactersRoot);
+    }
+
     return roots;
   }
 
