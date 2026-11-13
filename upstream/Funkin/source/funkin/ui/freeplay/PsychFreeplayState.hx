@@ -1028,7 +1028,7 @@ class PsychFreeplayState extends MusicBeatSubState
       practiceMode: false,
       minimalMode: false,
       botPlayMode: false
-    }, true, true);
+    }, true, true, null, this);
   }
 
   function goBack():Void
