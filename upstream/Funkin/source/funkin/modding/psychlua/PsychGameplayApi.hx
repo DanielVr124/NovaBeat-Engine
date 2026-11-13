@@ -3313,16 +3313,29 @@ class PsychGameplayApi
     {
       var removeMethod:Dynamic = Reflect.field(collection, "remove");
       if (removeMethod == null) return false;
-      if (!dontDestroy)
-      {
-        var killMethod:Dynamic = Reflect.field(item, "kill");
-        if (killMethod != null) Reflect.callMethod(item, killMethod, []);
-      }
+
+      // First remove from the requested group, then detach from every engine
+      // owner that may still retain the same object. Psych mods can move one
+      // tagged sprite between PlayState and currentStage groups; destroying
+      // only after the requested collection removes it can otherwise leave a
+      // second stale reference that FlxAnimate attempts to draw on retry.
       Reflect.callMethod(collection, removeMethod, [item, true]);
       if (!dontDestroy)
       {
-        var destroyMethod:Dynamic = Reflect.field(item, "destroy");
-        if (destroyMethod != null) Reflect.callMethod(item, destroyMethod, []);
+        if (Std.isOfType(item, FlxBasic))
+        {
+          var basic:FlxBasic = cast item;
+          removeFromParent(state, basic);
+          basic.kill();
+          basic.destroy();
+        }
+        else
+        {
+          var killMethod:Dynamic = Reflect.field(item, "kill");
+          if (killMethod != null) Reflect.callMethod(item, killMethod, []);
+          var destroyMethod:Dynamic = Reflect.field(item, "destroy");
+          if (destroyMethod != null) Reflect.callMethod(item, destroyMethod, []);
+        }
       }
       return true;
     }
