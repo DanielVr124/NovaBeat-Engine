@@ -177,19 +177,16 @@ class FunkinHint extends FunkinButton
 
     if (followTarget != null)
     {
-      final widthMultiplier:Float = isPixel ? 1.35 : 1.35;
-      final heightMultiplier:Float = 8;
-
-      final xOffset:Float = isPixel ? 43.265 : 0;
-      final yOffset:Float = isPixel ? 57.65 : 0;
-
-      // TODO: THIS feels off when playing on regular notes but it's fine for pixel notes? Hard to explain needs more testing
+      // Keep the touch target registered directly over the rendered receptor.
+      // The previous fixed 8x height and -220px Y offset made the mobile hit
+      // areas extend far beyond the visible notes, especially after scaling
+      // the receptors for portrait or landscape layouts.
       if (followTargetSize)
       {
-        setSize(followTarget.width * widthMultiplier + (isPixel ? 93.05 : 0), followTarget.height * heightMultiplier + (isPixel ? 118 : 0));
+        setSize(followTarget.width, followTarget.height);
       }
 
-      setPosition((followTarget.x - (followTarget.width * ((widthMultiplier - 1) / 2))) - xOffset, (followTarget.y - 220) - yOffset);
+      setPosition(followTarget.x, followTarget.y);
     }
   }
 
