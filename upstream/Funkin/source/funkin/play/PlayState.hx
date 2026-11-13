@@ -891,8 +891,9 @@ class PlayState extends MusicBeatSubState
     // Prevent the confirm key used to launch a Psych Freeplay song from being
     // interpreted as a pause press on the first gameplay frame.
     @:privateAccess
-    justUnpaused = (isChartingMode || (isSubState && currentSong != null
-      && ExperienceManager.isPsychSong(currentSong.id))) && !FlxG.game._lostFocus;
+    justUnpaused = (isChartingMode || (currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id)
+      && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance())) && !FlxG.game._lostFocus;
 
     // Stop any pre-existing music.
     if (!overrideMusic)
@@ -2022,7 +2023,8 @@ class PlayState extends MusicBeatSubState
   {
     // Loading a Psych song as a nested Freeplay substate can briefly report a
     // focus-loss transition. Do not open the pause menu during the intro/countdown.
-    if (isSubState && startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id))
+    if (startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id)
+      && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance())
     {
       super.onFocusLost();
       return;
@@ -4349,8 +4351,9 @@ class PlayState extends MusicBeatSubState
 
   override public function close():Void
   {
-    var restorePsychMenu:Bool = isSubState && currentSong != null
-      && ExperienceManager.isPsychSong(currentSong.id);
+    var restorePsychMenu:Bool = currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id)
+      && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance();
 
     criticalFailure = true; // Stop game updates.
     performCleanup();
