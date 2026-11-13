@@ -2827,7 +2827,7 @@ class PsychModRuntime
    * character JSON. Register only the known, complete GorillaFunkin BF
    * variants; do not guess for arbitrary missing player character IDs.
    */
-  static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String):Bool
+  static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String, songId:String):Bool
   {
     var atlasName:String;
     switch (characterId.toLowerCase())
@@ -2837,14 +2837,34 @@ class PsychModRuntime
       default: return false;
     }
 
-    var charactersDirectory:String = Path.join([modPath, "images", "characters"]);
-    var atlasPng:String = Path.join([charactersDirectory, atlasName + ".png"]);
-    var atlasXml:String = Path.join([charactersDirectory, atlasName + ".xml"]);
-    if (!FileSystem.exists(atlasPng) || !FileSystem.exists(atlasXml)) return false;
-
+    // These atlases/icons may live in the song's mod folder or in the
+    // shared mods/ asset root. Resolve exact casing with the song's owner first.
+    var atlasPngKey:String = resolvePsychAssetCaseForSong(songId, "images/characters/" + atlasName + ".png");
+    var atlasXmlKey:String = resolvePsychAssetCaseForSong(songId, "images/characters/" + atlasName + ".xml");
     var iconId:String = "bfcapuchin";
-    var iconPath:String = Path.join([modPath, "images", "icons", "icon-" + iconId + ".png"]);
-    if (!FileSystem.exists(iconPath)) iconId = "bf";
+    var iconKey:String = resolvePsychAssetCaseForSong(songId, "images/icons/icon-" + iconId + ".png");
+
+    var roots:Array<String> = [modPath, Path.normalize(PolymodHandler.getModRoot())];
+    var atlasPng:Null<String> = null;
+    var atlasXml:Null<String> = null;
+    var iconPath:Null<String> = null;
+    for (root in roots)
+    {
+      var pngCandidate:String = Path.join([root, atlasPngKey]);
+      var xmlCandidate:String = Path.join([root, atlasXmlKey]);
+      if (atlasPng == null && FileSystem.exists(pngCandidate) && !FileSystem.isDirectory(pngCandidate))
+        atlasPng = pngCandidate;
+      if (atlasXml == null && FileSystem.exists(xmlCandidate) && !FileSystem.isDirectory(xmlCandidate))
+        atlasXml = xmlCandidate;
+      if (iconPath == null)
+      {
+        var iconCandidate:String = Path.join([root, iconKey]);
+        if (FileSystem.exists(iconCandidate) && !FileSystem.isDirectory(iconCandidate))
+          iconPath = iconCandidate;
+      }
+    }
+    if (atlasPng == null || atlasXml == null) return false;
+    if (iconPath == null) iconId = "bf";
 
     // The atlas contains the regular BF idle/sing/miss prefixes. Use the
     // canonical Psych BF offsets as a safe baseline; precise per-animation
@@ -2951,6 +2971,13 @@ class PsychModRuntime
     }
     #end
 
+    if (role == "player" && CharacterDataParser.fetchCharacterData(normalized) == null
+      && registerKnownPsychPlayerAtlasAlias(modPath, normalized, songId))
+    {
+      trace('[Psych Compatibility] Using bundled atlas-only player character "' + normalized + '" for ' + songId + '.');
+      return normalized;
+    }
+
     if (CharacterDataParser.fetchCharacterData(normalized) != null)
       return normalized;
 
@@ -3052,6 +3079,9 @@ class PsychModRuntime
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
+      // Make the owning mod root available to song-scoped atlas resolution
+      // before resolving any character aliases for this chart.
+      psychSongModRoots.set(songId, Path.normalize(modPath));
       if (metadata == null)
       {
         metadata = importedMetadata;
@@ -3065,7 +3095,6 @@ class PsychModRuntime
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
       if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder);
       psychSongStageNames.set(songId, stageName);
-      psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
