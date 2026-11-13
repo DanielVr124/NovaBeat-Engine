@@ -694,14 +694,18 @@ class PsychFreeplayState extends MusicBeatSubState
   {
     lerpSelected = FlxMath.lerp(selected, lerpSelected, Math.exp(-elapsed * 9.6));
 
-    // Preserve the original Psych Freeplay layout that was visible in-game.
-    // The newer adaptive viewport-centering calculation moved rows away from
-    // the established menu coordinates and made the list disappear on some
-    // window sizes. Keep the original scrolling window and row spacing here.
+    // Preserve the original Psych Freeplay scrolling window and row spacing.
     var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - DRAW_DISTANCE)));
     var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + DRAW_DISTANCE)));
     var rowSpacing:Float = Math.min(156, Math.max(88, FlxG.height * 0.19));
     var centerY:Float = FlxG.height * 0.48;
+
+    // Use one shared icon column and one shared title column for every row.
+    // Reserving icon space even when an icon fails to load prevents titles
+    // from jumping horizontally between songs.
+    var iconX:Float = Math.max(16, FlxG.width * 0.14);
+    var titleX:Float = iconX + 82;
+    var availableTextWidth:Float = Math.max(1, FlxG.width - titleX - 24);
 
     for (i in 0...songTexts.length)
     {
@@ -714,22 +718,11 @@ class PsychFreeplayState extends MusicBeatSubState
       icon.visible = icon.active = visible;
       if (!visible) continue;
 
-      // Fit long song names to the actual window, not a fixed 980px
-      // allowance. On narrower desktop windows the fixed cap pushed the
-      // centered row's left edge offscreen.
-      var availableTextWidth:Float = Math.max(1, FlxG.width - icon.width - 12 - 48);
       item.setMenuMaxWidth(availableTextWidth);
-
-      var totalWidth:Float = icon.width + 12 + item.textWidth;
-      var preferredX:Float = (FlxG.width - totalWidth) * 0.5 + offset * 20 + FlxG.width * 0.025;
-      // Move only the Psych song list left by a visible, viewport-relative
-      // amount. The row scale, spacing, and vertical placement stay unchanged.
-      var horizontalShift:Float = FlxG.width * 0.10;
-      var x:Float = Math.max(16, Math.min(preferredX - horizontalShift, FlxG.width - totalWidth - 16));
       var y:Float = centerY + offset * rowSpacing;
 
-      icon.setPosition(x, y - 30);
-      item.setMenuPosition(x + icon.width + 12, y);
+      icon.setPosition(iconX, y - 30);
+      item.setMenuPosition(titleX, y);
     }
   }
 
