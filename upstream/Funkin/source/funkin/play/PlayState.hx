@@ -2401,7 +2401,12 @@ class PlayState extends MusicBeatSubState
     //
     // GIRLFRIEND
     //
-    var requestedGirlfriendId:String = currentCharacterData.girlfriend;
+    // Psych stage files can hide GF, and Psych also suppresses the
+    // separate GF sprite when the selected opponent is itself a GF character.
+    // Resolve that rule before constructing any role so a hidden GF never
+    // enters the stage or remains visible behind the opponent.
+    var hidePsychGirlfriend:Bool = PsychModRuntime.shouldHidePsychGirlfriend(currentSong.id);
+    var requestedGirlfriendId:String = hidePsychGirlfriend ? "" : currentCharacterData.girlfriend;
     var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedGirlfriendId);
 
     if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
