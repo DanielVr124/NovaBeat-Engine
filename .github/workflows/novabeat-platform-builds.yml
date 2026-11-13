@@ -677,7 +677,23 @@ jobs:
         working-directory: upstream/Funkin
         run: |
           set -euo pipefail
-          lime_project=".haxelib/lime/git/project"
+          lime_root=".haxelib/lime/git"
+          lime_project="$lime_root/project"
+
+          # Haxelib caches Lime itself, but its OpenAL source is a Git
+          # submodule. Refresh the submodule to the exact gitlink pinned by
+          # the selected Lime commit; otherwise a warm cache can leave a
+          # mismatched OpenAL revision under an otherwise-correct Lime tree.
+          git -C "$lime_root" submodule sync -- project/lib/openal
+          git -C "$lime_root" submodule update --init --force --depth 1 -- project/lib/openal
+          expected_openal="$(git -C "$lime_root" ls-tree HEAD project/lib/openal | awk '{print $3}')"
+          actual_openal="$(git -C "$lime_project/lib/openal" rev-parse HEAD)"
+          if [[ -z "$expected_openal" || "$actual_openal" != "$expected_openal" ]]; then
+            echo "::error title=OpenAL submodule revision mismatch::Expected $expected_openal but found $actual_openal"
+            exit 1
+          fi
+          echo "Using Lime-pinned OpenAL submodule: $actual_openal"
+
           header="$lime_project/lib/openal/common/alformat.hpp"
           test -s "$header"
 
