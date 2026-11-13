@@ -1124,3 +1124,5 @@ jobs:
 # [full-build-windows] User-requested Windows build including current GorillaFunkin asset diagnostics.
 # [full-build-windows] Trigger Windows diagnostics build for current GorillaFunkin image-resolution investigation.
 # [full-build-windows] Build Windows with expanded GorillaFunkin image and atlas pipeline diagnostics.
+
+# [full-build-android] Verify cached native-library reuse and corrected Haxe mobile callbacks.
