@@ -1696,12 +1696,12 @@ class PsychModRuntime
     // Many Psych packs use the engine-wide shared character folders rather
     // than a per-mod characters folder. Search those only after local roots.
     var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
-    for (sharedCharactersRoot in [
+    for (candidateRoot in [
       Path.join([sharedRoot, "characters"]),
       Path.join([sharedRoot, "data", "characters"])
     ])
     {
-      sharedCharactersRoot = Path.normalize(sharedCharactersRoot);
+      var sharedCharactersRoot:String = Path.normalize(candidateRoot);
       if (roots.indexOf(sharedCharactersRoot) < 0) roots.push(sharedCharactersRoot);
     }
 
