@@ -2616,12 +2616,12 @@ class PsychGameplayApi
       activeCustomSubstate.remove(object, true);
 
     var stage = state.currentStage;
-    // Stage members are FlxSprite-typed; Lua APIs can still hand this
-    // cleanup routine a broader FlxBasic, so narrow before querying/removing.
+    // Stage is a FlxSpriteGroup wrapper: its drawable sprites live in the
+    // inner group, not Stage.members. Check that actual owner before removing.
     if (stage != null && Std.isOfType(object, FlxSprite))
     {
       var stageSprite:FlxSprite = cast object;
-      if (stage.members.indexOf(stageSprite) >= 0)
+      if (stage.containsStageSprite(stageSprite))
         stage.remove(stageSprite, true);
     }
 
