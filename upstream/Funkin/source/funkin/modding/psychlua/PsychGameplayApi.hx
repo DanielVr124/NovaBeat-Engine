@@ -2616,8 +2616,14 @@ class PsychGameplayApi
       activeCustomSubstate.remove(object, true);
 
     var stage = state.currentStage;
-    if (stage != null && stage.members.indexOf(object) >= 0)
-      stage.remove(object, true);
+    // Stage members are FlxSprite-typed; Lua APIs can still hand this
+    // cleanup routine a broader FlxBasic, so narrow before querying/removing.
+    if (stage != null && Std.isOfType(object, FlxSprite))
+    {
+      var stageSprite:FlxSprite = cast object;
+      if (stage.members.indexOf(stageSprite) >= 0)
+        stage.remove(stageSprite, true);
+    }
 
     if (state.members.indexOf(object) >= 0)
       state.remove(object, true);
