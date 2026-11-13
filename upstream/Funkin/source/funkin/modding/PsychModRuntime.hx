@@ -3446,6 +3446,10 @@ class PsychModRuntime
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
       if (resolvePsychStage("a-custom-psych-stage", "smoke-test") != Constants.DEFAULT_STAGE) return false;
+      if (inferPsychStageName("spookeez") != "spooky"
+        || inferPsychStageName("pico") != "philly"
+        || inferPsychStageName("winter-horrorland") != "mallEvil"
+        || inferPsychStageName("unknown-song") != "stage") return false;
       if (!runNestedPackageRootSmokeTest()) return false;
       return true;
     }
