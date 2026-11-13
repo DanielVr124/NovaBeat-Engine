@@ -985,13 +985,22 @@ class PsychGameplayApi
       try
       {
         if (image != null && image.length > 0)
-          sprite.loadGraphic(Paths.image(image));
+        {
+          var resolvedImage:String = Paths.image(image);
+          sprite.loadGraphic(resolvedImage);
+          if (state.currentSong != null)
+            PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
+              "api=makeLuaSprite tag=" + tag + " request=" + image + " resolved=" + resolvedImage);
+        }
         scriptVariables.set(tag, sprite);
         return true;
       }
       catch (error:Dynamic)
       {
         sprite.destroy();
+        if (state.currentSong != null)
+          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.failed",
+            "api=makeLuaSprite tag=" + tag + " request=" + image + " error=" + Std.string(error));
         trace('[Psych API] makeLuaSprite(' + tag + ') failed: ' + Std.string(error));
         return false;
       }
@@ -1134,12 +1143,18 @@ class PsychGameplayApi
       try
       {
         sprite.frames = Paths.getSparrowAtlas(image);
+        if (state.currentSong != null)
+          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
+            "api=makeAnimatedLuaSprite tag=" + tag + " request=" + image);
         scriptVariables.set(tag, sprite);
         return true;
       }
       catch (error:Dynamic)
       {
         sprite.destroy();
+        if (state.currentSong != null)
+          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.failed",
+            "api=makeAnimatedLuaSprite tag=" + tag + " request=" + image + " error=" + Std.string(error));
         trace('[Psych API] makeAnimatedLuaSprite(' + tag + ') failed: ' + Std.string(error));
         return false;
       }
@@ -1211,7 +1226,11 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null || image == null || image.length == 0) return false;
-      sprite.loadGraphic(Paths.image(image), gridX > 0 && gridY > 0, gridX, gridY);
+      var resolvedImage:String = Paths.image(image);
+      sprite.loadGraphic(resolvedImage, gridX > 0 && gridY > 0, gridX, gridY);
+      if (state.currentSong != null)
+        PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
+          "api=loadGraphic tag=" + tag + " request=" + image + " resolved=" + resolvedImage);
       return true;
     });
     vars.set("loadFrames", function(tag:String, image:String, ?spriteType:String = "sparrow"):Bool
@@ -1223,10 +1242,16 @@ class PsychGameplayApi
         sprite.frames = StringTools.trim(spriteType).toLowerCase() == "packer"
           ? Paths.getPackerAtlas(image)
           : Paths.getSparrowAtlas(image);
+        if (state.currentSong != null)
+          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
+            "api=loadFrames tag=" + tag + " request=" + image + " type=" + spriteType);
         return true;
       }
       catch (error:Dynamic)
       {
+        if (state.currentSong != null)
+          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.failed",
+            "api=loadFrames tag=" + tag + " request=" + image + " type=" + spriteType + " error=" + Std.string(error));
         trace('[Psych API] loadFrames(' + tag + ') failed: ' + Std.string(error));
         return false;
       }
