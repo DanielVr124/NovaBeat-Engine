@@ -1061,6 +1061,12 @@ class PsychFreeplayState extends MusicBeatSubState
     }, true, true, null, this);
   }
 
+  /** Whether the Psych Freeplay parent is still alive behind gameplay. */
+  public static function hasActiveInstance():Bool
+  {
+    return activeInstance != null;
+  }
+
   public static function onSongClosed():Void
   {
     var menu:Null<PsychFreeplayState> = activeInstance;
