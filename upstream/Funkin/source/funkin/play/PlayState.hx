@@ -2609,7 +2609,6 @@ class PlayState extends MusicBeatSubState
       // Recalculate from the live viewport. Keep receptor artwork at a
       // consistent readable size in both orientations, while letting lane
       // spacing respond independently to the available width.
-      final portrait:Bool = height > width * 1.12;
       final mobileScale:Float = Math.min(
         width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING),
         height / 420
