@@ -4355,9 +4355,6 @@ class PlayState extends MusicBeatSubState
       funkin.ui.freeplay.PsychFreeplayState.onSongClosed();
   }
 
-  /**
-     * Perform necessary cleanup before leaving the PlayState.
-     */
   /** Tear down song-scoped Psych callbacks exactly once. */
   function cleanupPsychRuntime():Void
   {
@@ -4367,6 +4364,9 @@ class PlayState extends MusicBeatSubState
     PsychScriptRuntime.clear();
   }
 
+  /**
+   * Perform necessary cleanup before leaving the PlayState.
+   */
   function performCleanup():Void
   {
     // close() and destroy() can both reach this routine for nested PlayStates.
