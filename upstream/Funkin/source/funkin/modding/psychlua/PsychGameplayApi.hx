@@ -1393,11 +1393,7 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
-      var stage = state.currentStage;
-      if (stage != null && stage.members.indexOf(sprite) >= 0)
-        stage.remove(sprite, true);
-      else
-        state.remove(sprite, true);
+      removeFromParent(state, sprite);
       scriptVariables.remove(tag);
       if (destroy) sprite.destroy();
       return true;
@@ -1617,8 +1613,9 @@ class PsychGameplayApi
     {
       if (object != null && Std.isOfType(object, FlxBasic))
       {
-        state.remove(cast object, true);
-        if (destroy) (cast object:FlxBasic).destroy();
+        var basic:FlxBasic = cast object;
+        removeFromParent(state, basic);
+        if (destroy) basic.destroy();
       }
       return object;
     });
@@ -2605,6 +2602,26 @@ class PsychGameplayApi
     if (tag == null || !scriptVariables.exists(tag)) return null;
     var value:Dynamic = scriptVariables.get(tag);
     return Std.isOfType(value, FlxSprite) ? cast value : null;
+  }
+
+  /**
+   * Remove an object from the group that actually owns it. Psych Lua sprites
+   * added with addLuaSprite() are children of currentStage, not PlayState.
+   * Destroying one through PlayState.remove() alone leaves a dead member in
+   * the stage draw list and can crash FlxAnimate during retry.
+   */
+  static function removeFromParent(state:PlayState, object:FlxBasic):Void
+  {
+    if (object == null) return;
+
+    var stage = state.currentStage;
+    if (stage != null && stage.members.indexOf(object) >= 0)
+    {
+      stage.remove(object, true);
+      return;
+    }
+
+    state.remove(object, true);
   }
 
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
