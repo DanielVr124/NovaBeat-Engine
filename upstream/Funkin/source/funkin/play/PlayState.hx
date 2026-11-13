@@ -4387,8 +4387,16 @@ class PlayState extends MusicBeatSubState
 
     if (VideoCutscene.isPlaying()) VideoCutscene.destroyVideo();
 
-    FlxTween.globalManager.clear();
-    FlxTimer.globalManager.clear();
+    // A nested PlayState shares the global tween/timer managers with its
+    // still-open parent menu. Clearing those managers here also kills the
+    // parent's menu animations and delayed callbacks, which leaves Psych
+    // Freeplay partially transitioned when the song closes. Root PlayStates
+    // are replacing the whole screen, so their original global cleanup remains.
+    if (!isSubState)
+    {
+      FlxTween.globalManager.clear();
+      FlxTimer.globalManager.clear();
+    }
 
     // Remove reference to stage and remove sprites from it to save memory.
     if (currentStage != null)
