@@ -2804,7 +2804,7 @@ class PlayState extends MusicBeatSubState
 
     opponentStrumline.enterMiniMode(0.4);
     opponentStrumline.y = Constants.STRUMLINE_Y_OFFSET * 0.3;
-    opponentStrumline.x = Constants.STRUMLINE_X_OFFSET - 30;
+    opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + (FullScreenScaleMode.gameCutoutSize.x / 2.5) - 30;
   }
 
   function initPauseSprites()
