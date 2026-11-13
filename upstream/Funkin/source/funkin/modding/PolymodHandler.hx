@@ -2,6 +2,9 @@ package funkin.modding;
 
 import polymod.fs.ZipFileSystem;
 #if sys
+import funkin.modding.PsychAwareZipFileSystem;
+#end
+#if sys
 import sys.FileSystem;
 #end
 import funkin.data.dialogue.ConversationRegistry;
@@ -281,10 +284,20 @@ class PolymodHandler
   static function buildFileSystem():polymod.fs.ZipFileSystem
   {
     polymod.Polymod.onError = PolymodErrorHandler.onPolymodError;
+    #if sys
+    // Classic Psych packs do not ship Polymod's _polymod_meta.json. Supply a
+    // virtual manifest for detected Psych roots so OpenFL can mount their
+    // images/audio/fonts while the original pack folder remains untouched.
+    return new PsychAwareZipFileSystem({
+      modRoot: MOD_FOLDER,
+      autoScan: true
+    });
+    #else
     return new ZipFileSystem({
       modRoot: MOD_FOLDER,
       autoScan: true
     });
+    #end
   }
 
   static function buildImports():Void
