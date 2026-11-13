@@ -5,6 +5,7 @@ import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.play.cutscene.VideoCutscene;
 import funkin.data.song.SongRegistry;
+import funkin.data.song.SongData.SongNoteData;
 import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
@@ -2749,6 +2750,8 @@ class PsychGameplayApi
         return state;
       case "notes":
         return getActiveNotes(state);
+      case "unspawnNotes":
+        return getUnspawnNotes(state);
       case "strumLineNotes":
         return getAllStrumNotes(state);
       case "playerStrums":
@@ -2960,6 +2963,28 @@ class PsychGameplayApi
     result.sort(function(a:NoteSprite, b:NoteSprite):Int
     {
       return Reflect.compare(a.strumTime, b.strumTime);
+    });
+    return result;
+  }
+
+  /**
+   * Psych's unspawnNotes group contains all upcoming notes from both sides,
+   * ordered by strum time. Return the original chart objects so texture and
+   * note-type writes are retained when Strumline later builds each sprite.
+   */
+  static function getUnspawnNotes(state:PlayState):Array<SongNoteData>
+  {
+    var result:Array<SongNoteData> = [];
+    if (state.playerStrumline != null)
+      for (note in state.playerStrumline.noteData)
+        if (note != null) result.push(note);
+    if (state.opponentStrumline != null)
+      for (note in state.opponentStrumline.noteData)
+        if (note != null) result.push(note);
+
+    result.sort(function(a:SongNoteData, b:SongNoteData):Int
+    {
+      return Reflect.compare(a.time, b.time);
     });
     return result;
   }

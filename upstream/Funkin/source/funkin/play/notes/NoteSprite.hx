@@ -3,6 +3,7 @@ package funkin.play.notes;
 import funkin.data.song.SongData.SongNoteData;
 import funkin.data.song.SongData.NoteParamData;
 import funkin.play.notes.notestyle.NoteStyle;
+import funkin.modding.PsychModRuntime;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.HSVShader;
 
@@ -104,6 +105,56 @@ class NoteSprite extends FunkinSprite
    */
   public var noteData:SongNoteData;
 
+  var activeNoteStyle:Null<NoteStyle> = null;
+  var psychTexture:Null<String> = null;
+
+  /** Psych's per-note Sparrow atlas override (e.g. HURTNOTE_assets). */
+  public var texture(get, set):Null<String>;
+
+  function get_texture():Null<String>
+  {
+    return psychTexture;
+  }
+
+  function set_texture(value:Null<String>):Null<String>
+  {
+    var normalized:Null<String> = normalizePsychTexture(value);
+    if (psychTexture == normalized) return psychTexture;
+
+    psychTexture = normalized;
+    if (noteData != null) noteData.texture = normalized;
+    rebuildNoteGraphic(true);
+    return psychTexture;
+  }
+
+  /** Psych-compatible aliases exposed to get/setPropertyFromGroup. */
+  public var noteType(get, set):Null<String>;
+
+  function get_noteType():Null<String>
+  {
+    return this.kind;
+  }
+
+  function set_noteType(value:Null<String>):Null<String>
+  {
+    if (noteData != null) noteData.kind = value;
+    return value;
+  }
+
+  public var mustPress(get, never):Bool;
+
+  function get_mustPress():Bool
+  {
+    return noteData != null && noteData.getStrumlineIndex() == 0;
+  }
+
+  public var isSustainNote(get, never):Bool;
+
+  function get_isSustainNote():Bool
+  {
+    return isHoldNote;
+  }
+
   /**
    * Set this to `false` to disable scoring for this note.
    * The note will no longer count towards ratings, points, or accuracy.
@@ -181,12 +232,42 @@ class NoteSprite extends FunkinSprite
    * Creates frames and animations
    * @param noteStyle The `NoteStyle` instance
    */
-  public function setupNoteGraphic(noteStyle:NoteStyle):Void
+  public function setupNoteGraphic(noteStyle:NoteStyle, ?textureOverride:String):Void
   {
-    noteStyle.buildNoteSprite(this);
+    activeNoteStyle = noteStyle;
+    psychTexture = normalizePsychTexture(textureOverride);
+    rebuildNoteGraphic(false);
+  }
 
-    // `false` disables the update() function for performance.
-    this.active = noteStyle.isNoteAnimated();
+  static function normalizePsychTexture(value:Null<String>):Null<String>
+  {
+    if (value == null || StringTools.trim(value).length == 0) return null;
+
+    var normalized:String = PsychModRuntime.normalizePsychImageKey(value);
+    return normalized.length == 0 ? null : normalized;
+  }
+
+  function rebuildNoteGraphic(replayAnimation:Bool):Void
+  {
+    var style:Null<NoteStyle> = activeNoteStyle;
+    if (style == null) return;
+
+    try
+    {
+      style.buildNoteSprite(this, psychTexture);
+    }
+    catch (error:Dynamic)
+    {
+      // A missing optional mod texture must not crash the song. Restore the
+      // chart's normal note style and keep the note's gameplay behavior.
+      if (psychTexture == null) throw error;
+      trace('[Psych Compatibility] Could not load note texture "' + psychTexture + '": ' + Std.string(error));
+      psychTexture = null;
+      style.buildNoteSprite(this);
+    }
+
+    this.active = style.isNoteAnimated();
+    if (replayAnimation && frames != null) playNoteAnimation(this.direction);
   }
 
   /**
