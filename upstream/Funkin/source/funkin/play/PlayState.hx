@@ -534,6 +534,9 @@ class PlayState extends MusicBeatSubState
    */
   var criticalFailure:Bool = false;
 
+  /** Ensures close() and destroy() cannot clean the same PlayState twice. */
+  var cleanupPerformed:Bool = false;
+
   /**
    * False as long as the countdown has not finished yet.
    */
@@ -2047,6 +2050,9 @@ class PlayState extends MusicBeatSubState
   override function reloadAssets():Void
   {
     performCleanup();
+    // Asset reload rebuilds this same PlayState instance, so it must be
+    // eligible for one new cleanup cycle when the rebuilt song later exits.
+    cleanupPerformed = false;
 
     // `performCleanup()` clears the static reference to this state
     // scripts might still need it, so we set it back to `this`
@@ -2164,8 +2170,6 @@ class PlayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
-    PsychScriptRuntime.dispatch("onDestroy", []);
-    PsychScriptRuntime.clear();
     performCleanup();
 
     #if mobile
@@ -4324,6 +4328,14 @@ class PlayState extends MusicBeatSubState
      */
   function performCleanup():Void
   {
+    if (cleanupPerformed) return;
+    cleanupPerformed = true;
+
+    // Script instances belong to this song and must be torn down whether the
+    // PlayState is destroyed as a root state or merely closed as a substate.
+    PsychScriptRuntime.dispatch("onDestroy", []);
+    PsychScriptRuntime.clear();
+
     // If the camera is being tweened, stop it.
     cancelAllCameraTweens();
 
@@ -4374,8 +4386,13 @@ class PlayState extends MusicBeatSubState
     }
     else
     {
-      // Stop and destroy the music.
-      if (FlxG.sound.music != null) FlxG.sound.music.pause();
+      // Stop the song and clear its completion callback before another
+      // menu/song takes ownership of FlxG.sound.music.
+      if (FlxG.sound.music != null)
+      {
+        FlxG.sound.music.onComplete = null;
+        FlxG.sound.music.pause();
+      }
       if (vocals != null)
       {
         vocals.destroy();
@@ -4387,8 +4404,14 @@ class PlayState extends MusicBeatSubState
 
     if (VideoCutscene.isPlaying()) VideoCutscene.destroyVideo();
 
-    FlxTween.globalManager.clear();
-    FlxTimer.globalManager.clear();
+    // A Psych PlayState is usually opened on top of a Mods/Freeplay menu.
+    // Clearing Flixel's global managers here would also cancel parent-menu
+    // tweens and timers, leaving that menu visually or logically broken.
+    if (!isSubState)
+    {
+      FlxTween.globalManager.clear();
+      FlxTimer.globalManager.clear();
+    }
 
     // Remove reference to stage and remove sprites from it to save memory.
     if (currentStage != null)
