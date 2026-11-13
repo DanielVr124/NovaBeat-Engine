@@ -212,14 +212,14 @@ class PsychFreeplayState extends MusicBeatSubState
       // including pixel metadata when the icon belongs to a pixel character.
       var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
       var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
-      icon.configure({
+      icon.configureForPsychSong({
         id: songs[i].icon,
         shouldBop: false,
         scale: 1.0,
         flipX: false,
         isPixel: iconCharacterData?.isPixel ?? false,
         offsets: [0.0, 0.0]
-      });
+      }, songs[i].id);
       icon.size.set(iconScale, iconScale);
       icon.autoUpdate = false;
       icon.alpha = 0.6;
@@ -414,8 +414,15 @@ class PsychFreeplayState extends MusicBeatSubState
     resetSongTitle.visible = true;
     add(resetSongTitle);
 
-    resetIcon.characterId = entry.icon;
-    resetIcon.size.set(scale, scale);
+    var resetIconCharacterData = CharacterDataParser.fetchCharacterData(entry.icon);
+    resetIcon.configureForPsychSong({
+      id: entry.icon,
+      shouldBop: false,
+      scale: scale,
+      flipX: false,
+      isPixel: resetIconCharacterData?.isPixel ?? false,
+      offsets: [0.0, 0.0]
+    }, entry.id);
     resetIcon.visible = true;
     resetIcon.alpha = 0;
     resetIcon.setPosition(resetSongTitle.x - resetIcon.width + (10 * scale), resetSongTitle.y - 30);
