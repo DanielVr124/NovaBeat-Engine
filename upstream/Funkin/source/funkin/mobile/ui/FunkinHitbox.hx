@@ -151,6 +151,14 @@ class FunkinHint extends FunkinButton
   {
     this.followTargetSize = followTargetSize;
     followTarget = sprite;
+
+    // Synchronize immediately as well as during update(), so the first touch
+    // frame after PlayState creation or orientation change uses the new bounds.
+    if (followTarget != null)
+    {
+      if (this.followTargetSize) setSize(followTarget.width, followTarget.height);
+      setPosition(followTarget.x, followTarget.y);
+    }
   }
 
   /**
