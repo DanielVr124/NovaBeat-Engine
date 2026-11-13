@@ -2609,12 +2609,11 @@ class PlayState extends MusicBeatSubState
       // Recalculate from the live viewport. Keep receptor artwork at a
       // consistent readable size in both orientations, while letting lane
       // spacing respond independently to the available width.
-      final mobileScale:Float = Math.min(
-        width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING),
-        height / 420
-      );
-      final mobileSpacing:Float = Math.max(1.0,
-        width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING * mobileScale));
+      final portrait:Bool = height > width * 1.12;
+      final mobileScale:Float = portrait
+        ? Math.min(width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING), height / 420)
+        : 1.0;
+      final mobileSpacing:Float = 1.0;
       playerStrumline.strumlineScale.set(mobileScale, mobileScale);
       playerStrumline.setNoteSpacing(mobileSpacing);
 
@@ -2761,12 +2760,11 @@ class PlayState extends MusicBeatSubState
     // first countdown notes are created with the final receptor scale.
     final width:Float = FlxG.width;
     final height:Float = FlxG.height;
-    final mobileScale:Float = Math.min(
-      width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING),
-      height / 420
-    );
-    final mobileSpacing:Float = Math.max(1.0,
-      width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING * mobileScale));
+    final portrait:Bool = height > width * 1.12;
+    final mobileScale:Float = portrait
+      ? Math.min(width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING), height / 420)
+      : 1.0;
+    final mobileSpacing:Float = 1.0;
 
     playerStrumline.strumlineScale.set(mobileScale, mobileScale);
     playerStrumline.setNoteSpacing(mobileSpacing);
