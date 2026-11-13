@@ -342,10 +342,10 @@ class PlayState extends MusicBeatSubState
   {
     if (currentStage != null)
     {
-      // Give portrait phones a wider field of view so the stage and
-      // characters are less likely to be cropped at the sides.
+      // Portrait gameplay needs a tighter stage framing so the stage fills
+      // the available play area instead of leaving large empty borders.
       #if mobile
-      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.35 : 1.0);
+      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.55 : 1.0);
       #else
       return currentStage.camZoom;
       #end
@@ -2606,20 +2606,39 @@ class PlayState extends MusicBeatSubState
     #if (mobile || FEATURE_TOUCH_CONTROLS)
     if (shouldUseMobileHitbox() && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
     {
-      // Recalculate scale from the live viewport. Android can resize the
-      // game surface without recreating the PlayState.
-      // Size the four mobile receptors to span the viewport while keeping
-      // the same tight lane-to-lane spacing ratio as the desktop strumline.
-      // Four NOTE_SPACING intervals make the strumline group exactly viewport-wide.
-      final mobileScale:Float = width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING);
-      final mobileSpacing:Float = 1.0;
+      // Recalculate from the live viewport. Keep receptor artwork at a
+      // consistent readable size in both orientations, while letting lane
+      // spacing respond independently to the available width.
+      final portrait:Bool = height > width * 1.12;
+      final mobileScale:Float = Math.min(
+        width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING),
+        height / 420
+      );
+      final mobileSpacing:Float = Math.max(1.0,
+        width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING * mobileScale));
       playerStrumline.strumlineScale.set(mobileScale, mobileScale);
       playerStrumline.setNoteSpacing(mobileSpacing);
 
-      // Keep the player's four-lane touch target centered at the bottom of
-      // portrait and narrow Quest windows. The opponent remains a compact
-      // reference lane near the top.
-      playerStrumline.x = (width - playerStrumline.width) / 2 + Constants.STRUMLINE_X_OFFSET;
+      // Center using the actual rendered receptor bounds, not the logical
+      // group width. The first receptor has a negative art offset, which
+      // previously pushed its graphic and touch target off the left edge.
+      var receptorLeft:Float = Math.POSITIVE_INFINITY;
+      var receptorRight:Float = Math.NEGATIVE_INFINITY;
+      for (receptor in playerStrumline.strumlineNotes.members)
+      {
+        if (receptor == null) continue;
+        receptorLeft = Math.min(receptorLeft, receptor.x);
+        receptorRight = Math.max(receptorRight, receptor.x + receptor.width);
+      }
+      if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
+      {
+        playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
+          - receptorLeft + Constants.STRUMLINE_X_OFFSET;
+      }
+      else
+      {
+        playerStrumline.x = (width - playerStrumline.width) * 0.5 + Constants.STRUMLINE_X_OFFSET;
+      }
       // The Strumline group also contains a full-screen background sprite, so
       // playerStrumline.height is the viewport height, not the receptor height.
       // Use the four actual receptor sprites to keep the player lane at the
