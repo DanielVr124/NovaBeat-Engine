@@ -812,7 +812,52 @@ class StoryMenuState extends MusicBeatState
   function layoutStoryMenu(width:Int, height:Int):Void
   {
     if (width <= 0 || height <= 0) return;
-    if (height <= width * 1.12) return;
+    final portrait:Bool = height > width * 1.12;
+
+    if (!portrait)
+    {
+      if (scoreText != null)
+      {
+        scoreText.setFormat('VCR OSD Mono', 32);
+        scoreText.setPosition(Math.max(FullScreenScaleMode.gameNotchSize.x, 10), 10);
+      }
+      if (levelTitleText != null) levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
+      if (tracklistText != null)
+      {
+        tracklistText.setFormat('VCR OSD Mono', 32);
+        tracklistText.fieldWidth = 0;
+        tracklistText.alignment = CENTER;
+        updateText();
+      }
+      if (leftDifficultyArrow != null && rightDifficultyArrow != null)
+      {
+        final useNotch:Bool = Math.max(35, FullScreenScaleMode.gameNotchSize.x) != 35;
+        leftDifficultyArrow.scale.set(1, 1);
+        rightDifficultyArrow.scale.set(1, 1);
+        leftDifficultyArrow.updateHitbox();
+        rightDifficultyArrow.updateHitbox();
+        leftDifficultyArrow.setPosition(width - (useNotch ? FullScreenScaleMode.gameNotchSize.x + 410 : 410), 480);
+        rightDifficultyArrow.setPosition(width - (useNotch ? FullScreenScaleMode.gameNotchSize.x * 1.5 : 35), 480);
+      }
+      if (difficultySprite != null)
+      {
+        difficultySprite.scale.set(1, 1);
+        difficultySprite.updateHitbox();
+        difficultySprite.setPosition((width - difficultySprite.width) * 0.5, leftDifficultyArrow.y - 15);
+      }
+      if (levelTitles != null)
+      {
+        for (item in levelTitles.members)
+        {
+          if (item == null) continue;
+          item.scale.set(1, 1);
+          item.updateHitbox();
+          item.screenCenter(X);
+        }
+        repositionTitles();
+      }
+      return;
+    }
 
     if (scoreText != null)
     {
