@@ -1305,6 +1305,20 @@ class PauseSubState extends MusicBeatSubState
   {
     state.allowInput = false;
 
+    var activePlayState:Null<PlayState> = PlayState.instance;
+    if (activePlayState != null && activePlayState.isSubState
+      && activePlayState.currentSong != null
+      && funkin.modding.ExperienceManager.isPsychSong(activePlayState.currentSong.id))
+    {
+      // Psych Freeplay is the parent of this nested PlayState. Closing both
+      // overlays reveals that menu directly; switching FlxG's root state
+      // would destroy the menu and may fall back to the title/Mods screen.
+      state.close();
+      activePlayState.deathCounter = 0;
+      activePlayState.close();
+      return;
+    }
+
     PlayState.instance.deathCounter = 0;
 
     FlxTransitionableState.skipNextTransIn = true;
