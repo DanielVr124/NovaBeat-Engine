@@ -1116,7 +1116,8 @@ jobs:
           name: novabeat-android
           path: upstream/Funkin/export/NovaBeat-Android.apk
           if-no-files-found: error
-          retention-days: 3
+          # Keep successful APKs available for testing between release cycles.
+          retention-days: 30
 
 
 # Android validation trigger: [full-build-android] (NDK r25c compiler comparison)
