@@ -163,3 +163,6 @@ The FNF Preferences responsive layout uses a runtime type test for checkbox rows
 ## Psych compatibility Windows validation
 
 The `[full-build-windows]` commit-message marker requests a native Windows build for validating the current Psych compatibility changes. Test the artifact from the workflow run whose source SHA matches the validation branch head; older artifacts do not contain later commits.
+
+
+This validation branch targets the existing Psych compatibility fixes only; the separate custom-note-texture work is intentionally not part of this build.
