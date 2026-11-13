@@ -358,6 +358,7 @@ class MainMenuState extends MusicBeatState
 
     var portrait:Bool = FlxG.height > FlxG.width * 1.12;
     var mobileBrowser:Bool = DeviceUtil.isMobileBrowser;
+    var mobileLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
     var spacing:Float = portrait
       ? (FlxG.height * 0.76) / Math.max(1, menuItems.length - 1)
       : Math.min(160, (FlxG.height - (mobileBrowser ? 110 : 140)) / Math.max(1, menuItems.length - 1));
@@ -371,7 +372,7 @@ class MainMenuState extends MusicBeatState
       // the current animation chosen by MenuTypedList, then recenter its frame
       // after applying responsive scale.
       var atlasItem:AtlasMenuItem = cast menuItem;
-      var targetScale:Float = portrait ? Math.min(1.0, (FlxG.width - 64) / Math.max(1, atlasItem.frameWidth)) : 1.0;
+      var targetScale:Float = portrait ? Math.min(1.3, (FlxG.width - 48) / Math.max(1, atlasItem.frameWidth)) : 1.0;
       atlasItem.scale.set(targetScale, targetScale);
       atlasItem.updateHitbox();
       atlasItem.centerOrigin();
@@ -379,19 +380,19 @@ class MainMenuState extends MusicBeatState
 
       atlasItem.x = FlxG.width / 2;
       atlasItem.y = top + spacing * index;
-      if (portrait)
+      if (mobileLayout)
         atlasItem.scrollFactor.set(0, 0);
       else
       {
-        atlasItem.scrollFactor.x = #if !mobile 0.0 #else 0.4 #end;
+        atlasItem.scrollFactor.x = 0.0;
         atlasItem.scrollFactor.y = 0.4;
       }
     }
 
     var selectedItem:MenuListItem = menuItems.members[menuItems.selectedIndex];
-    if (portrait)
+    if (portrait || mobileLayout)
       camFollow.setPosition(FlxG.width / 2, FlxG.height / 2);
-    else if (#if (mobile || FEATURE_TOUCH_CONTROLS) (!DeviceUtil.isMobileBrowser || ControlsHandler.usingExternalInputDevice) #else true #end)
+    else
       camFollow.setPosition(selectedItem.getGraphicMidpoint().x, selectedItem.getGraphicMidpoint().y);
   }
 
