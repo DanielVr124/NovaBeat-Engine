@@ -181,14 +181,20 @@ class PsychFreeplayState extends MusicBeatSubState
       if (difficulties.length == 0) continue;
 
       var firstDifficulty = song.getDifficulty(difficulties[0], VARIATION);
-      var iconId:String = firstDifficulty?.characters?.opponent ?? 'face';
-      var freeplayIcon:Null<String> = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
+      var opponentCharacterId:String = firstDifficulty?.characters?.opponent ?? 'face';
+      var opponentCharacterData = CharacterDataParser.fetchCharacterData(opponentCharacterId);
+      // Character IDs can be song-scoped Psych aliases. Freeplay needs the
+      // character's real health-icon ID, not the internal alias used by PlayState.
+      var iconId:String = opponentCharacterData?.healthIcon?.id ?? opponentCharacterId;
+      var iconIsPixel:Bool = opponentCharacterData?.healthIcon?.isPixel ?? opponentCharacterData?.isPixel ?? false;
+      var freeplayIcon:String = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
       var color:Int = funkin.modding.PsychModRuntime.getPsychFreeplayColor(songId);
       songs.push({
         id: songId,
         song: song,
         name: song.songName,
-        icon: freeplayIcon ?? iconId,
+        icon: freeplayIcon,
+        isPixel: iconIsPixel,
         color: color
       });
     }
@@ -216,14 +222,13 @@ class PsychFreeplayState extends MusicBeatSubState
       // A freshly constructed HealthIcon does not load its graphic until
       // configure() is called. Supply the Psych song's icon ID explicitly,
       // including pixel metadata when the icon belongs to a pixel character.
-      var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
       var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
       icon.configureForPsychSong({
         id: songs[i].icon,
         shouldBop: false,
         scale: 1.0,
         flipX: false,
-        isPixel: iconCharacterData?.isPixel ?? false,
+        isPixel: songs[i].isPixel,
         offsets: [0.0, 0.0]
       }, songs[i].id);
       // Imported Psych icons load their animation definitions but do not
@@ -1147,5 +1152,6 @@ private typedef PsychFreeplaySong =
   var song:Song;
   var name:String;
   var icon:String;
+  var isPixel:Bool;
   var color:Int;
 }
