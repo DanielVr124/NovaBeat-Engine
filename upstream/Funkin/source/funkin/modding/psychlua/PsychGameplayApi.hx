@@ -857,7 +857,7 @@ class PsychGameplayApi
         FlxTransitionableState.skipNextTransOut = true;
       }
       FlxG.sound.playMusic(Paths.music("freakyMenu"), 1, true);
-      FlxG.switchState(() -> new FreeplayState());
+      FlxG.switchState(() -> funkin.ui.freeplay.FreeplayState.buildForActiveExperience(null));
       return true;
     });
     vars.set("startVideo", function(videoFile:String):Bool
