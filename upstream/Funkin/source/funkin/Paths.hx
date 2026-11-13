@@ -52,6 +52,9 @@ class Paths implements ConsoleClass
       return explicitPath;
     }
 
+    // Correct case mismatches against the active Psych mod before probing OpenFL keys.
+    file = PsychModRuntime.resolveActivePsychAssetCase(file);
+
     if (currentLevel != null)
     {
       var levelPath:String = getLibraryPathForce(file, currentLevel);
