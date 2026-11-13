@@ -2106,10 +2106,12 @@ class PlayState extends MusicBeatSubState
       && cameraZoomRate > 0
       && (Conductor.instance.currentStep + cameraZoomRateOffset * Constants.STEPS_PER_BEAT) % (cameraZoomRate * Constants.STEPS_PER_BEAT) == 0)
     {
-      // Set zoom multiplier for camera bop.
-      cameraBopMultiplier = cameraBopIntensity;
-      // HUD camera zoom still uses old system. To change. (+3%)
-      camHUD.zoom += hudCameraZoomIntensity * defaultHUDCameraZoom;
+      // Psych's imported beat zoom is intentionally softer than the native
+      // V-Slice default. Keep the beat response, but halve its amplitude so
+      // older Psych charts do not overwhelm the camera.
+      var psychBeatZoomScale:Float = ExperienceManager.isPsychSong(currentSong.id) ? 0.5 : 1.0;
+      cameraBopMultiplier = 1.0 + ((cameraBopIntensity - 1.0) * psychBeatZoomScale);
+      camHUD.zoom += hudCameraZoomIntensity * defaultHUDCameraZoom * psychBeatZoomScale;
     }
     // trace('Not bopping camera: ${FlxG.camera.zoom} < ${(1.35 * defaultCameraZoom)} && ${cameraZoomRate} > 0 && ${Conductor.instance.currentBeat} % ${cameraZoomRate} == ${Conductor.instance.currentBeat % cameraZoomRate}}');
 
