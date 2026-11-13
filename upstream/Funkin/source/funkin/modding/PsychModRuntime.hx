@@ -2799,7 +2799,14 @@ class PsychModRuntime
   {
     var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
     if (normalized.length == 0)
+    {
+      // In Psych charts, an explicitly empty gfVersion means the song has
+      // no girlfriend character. Do not silently replace that with the base
+      // GF; missing gfVersion is already given the conventional "gf" default
+      // by the chart importer before this resolver is called.
+      if (role == "girlfriend") return "";
       normalized = role == "player" ? "bf" : "gf";
+    }
 
     #if sys
     var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
