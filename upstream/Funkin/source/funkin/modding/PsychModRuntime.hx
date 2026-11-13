@@ -87,11 +87,6 @@ class PsychModRuntime
   }
 
   /**
-   * Correct case mismatches in image assets inside the active Psych mod.
-   * OpenFL asset keys are case-sensitive even on case-insensitive host systems.
-   * This is especially important for GorillaFunkin's character atlases and icon files.
-   */
-  /**
    * Run a short asset-loading operation with the owning Psych song selected.
    * Freeplay constructs icons before any song has been launched, so the normal
    * last-launch context is not available for case-correcting those asset paths.
@@ -120,6 +115,11 @@ class PsychModRuntime
     lastLaunchDifficulty = previousDifficulty;
   }
 
+  /**
+   * Correct case mismatches in image assets inside the active Psych mod.
+   * OpenFL asset keys are case-sensitive even on case-insensitive host systems.
+   * This is especially important for GorillaFunkin's character atlases and icon files.
+   */
   public static function resolveActivePsychAssetCase(requestedFile:String):String
   {
     #if sys
