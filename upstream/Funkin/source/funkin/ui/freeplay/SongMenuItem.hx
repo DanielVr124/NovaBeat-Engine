@@ -776,7 +776,10 @@ class SongMenuItem extends FlxSpriteGroup
     {
       var displayedHeight:Float = capsule.frameHeight * realScaled * scale.y;
       var gap:Float = Math.max(12, Math.min(28, FlxG.height * 0.025));
-      return FlxG.height * 0.30 - displayedHeight * 0.5 + index * (displayedHeight + gap);
+      // The selected capsule is passed index 1 by FreeplayState. Anchor that
+      // item at the visual center of the portrait list; place neighboring
+      // songs above and below it instead of shifting the selection downward.
+      return FlxG.height * 0.40 - displayedHeight * 0.5 + (index - 1) * (displayedHeight + gap);
     }
     return (index * ((capsule.height * realScaled) + 10)) + 120;
   }
