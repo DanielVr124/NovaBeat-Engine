@@ -869,7 +869,12 @@ class PsychModRuntime
     // fallback the native stage position leaves every BF variant too low.
     // Preserve the opponent's native position unless the mod supplies one.
     var positions:Map<String, Array<Float>> = [];
+    // Psych Engine's fallback stage anchors all three character roles.
+    // A mod stage JSON can override any of these independently below.
+    // Without a GF fallback, NovaBeat was leaving GF at the unrelated
+    // built-in V-Slice stage coordinate even while BF used Psych coordinates.
     positions.set("boyfriend", [770.0, 100.0]);
+    positions.set("girlfriend", [400.0, 130.0]);
     psychSongStagePositions.set(songId, positions);
 
     if (stageName == null || stageName.length == 0) return;
@@ -912,7 +917,9 @@ class PsychModRuntime
         Reflect.setField(entry, "alpha", 1.0);
         Reflect.setField(entry, "angle", 0.0);
       }
-      trace('[Psych Compatibility] Applied Psych stage JSON for ' + stageName + ' (' + songId + ').');
+      trace('[Psych Compatibility] Applied Psych stage JSON for ' + stageName + ' (' + songId
+        + '): BF=' + positions.get("boyfriend") + ', GF=' + positions.get("girlfriend")
+        + ', opponent=' + positions.get("opponent") + '.');
     }
     catch (error:Dynamic)
     {
