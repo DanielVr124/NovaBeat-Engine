@@ -1072,10 +1072,14 @@ class PsychFreeplayState extends MusicBeatSubState
     var menu:Null<PsychFreeplayState> = activeInstance;
     if (menu == null) return;
 
-    // PlayState replaces FlxG's camera stack with gameplay cameras. The
-    // preserved Freeplay substate would otherwise render through that stale
-    // gameplay viewport (black edges and a cropped menu), so restore a normal
-    // full-screen menu camera before revealing the parent.
+    // Re-measure the current desktop viewport after gameplay's fullscreen
+    // resolution handoff. Resetting only the camera can leave FlxG.width/height
+    // and the menu's layout at the gameplay viewport size.
+    if (FlxG.stage != null && funkin.ui.FullScreenScaleMode.instance != null)
+      funkin.ui.FullScreenScaleMode.instance.onMeasureInstant(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+
+    // PlayState replaces FlxG's camera stack with gameplay cameras. Restore a
+    // clean full-screen menu camera after the viewport has been recalculated.
     FlxG.cameras.reset(new FunkinCamera('default'));
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
