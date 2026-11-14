@@ -2683,10 +2683,17 @@ class PlayState extends MusicBeatSubState
     else
     #end
     {
-      // Preserve the classic split layout while recalculating both halves
-      // against the resized viewport.
+      #if !(mobile || FEATURE_TOUCH_CONTROLS)
+      // Re-center both lanes using the live PC viewport. Do not use the
+      // fullscreen cutout offset here: it can be larger than the window's
+      // available margin and place playable notes offscreen.
+      playerStrumline.x = width * 0.75 - playerStrumline.width * 0.5;
+      opponentStrumline.x = width * 0.25 - opponentStrumline.width * 0.5;
+      #else
+      // Preserve the existing touch/web layout.
       playerStrumline.x = (width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0);
       opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
+      #end
 
       final strumlineY:Float = Preferences.downscroll
         ? height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1]
@@ -2718,18 +2725,23 @@ class PlayState extends MusicBeatSubState
     add(playerStrumline);
     add(opponentStrumline);
 
+    // Desktop uses two evenly centered four-lane groups. The old cutout-based
+    // offsets were derived from the fullscreen layout and could push the
+    // player receptors beyond the right edge in ordinary windowed PC play.
+    #if !(mobile || FEATURE_TOUCH_CONTROLS)
+    playerStrumline.x = FlxG.width * 0.75 - playerStrumline.width * 0.5;
+    opponentStrumline.x = FlxG.width * 0.25 - opponentStrumline.width * 0.5;
+    #else
     final cutoutSize = FullScreenScaleMode.gameCutoutSize.x / 2.5;
-    // Position the player strumline on the right half of the screen
-    playerStrumline.x = (FlxG.width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0); // Classic style
-    // playerStrumline.x = FlxG.width - playerStrumline.width - Constants.STRUMLINE_X_OFFSET; // Centered style
+    playerStrumline.x = (FlxG.width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0);
+    opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
+    #end
 
     playerStrumline.y = Preferences.downscroll ? FlxG.height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
 
     playerStrumline.zIndex = 1001;
     playerStrumline.cameras = [camHUD];
 
-    // Position the opponent strumline on the left half of the screen
-    opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
     opponentStrumline.y = Preferences.downscroll ? FlxG.height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
 
     opponentStrumline.zIndex = 1000;
