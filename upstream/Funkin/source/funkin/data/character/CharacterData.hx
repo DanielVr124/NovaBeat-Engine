@@ -426,13 +426,57 @@ class CharacterDataParser
 
   static function migrateCharacterData(rawJson:String, charId:String):Null<CharacterData>
   {
-    // If you update the character data format in a breaking way,
-    // handle migration here by checking the `version` value.
-
     try
     {
-      var charData:CharacterData = cast Json.parse(rawJson);
-      return charData;
+      var parsed:Dynamic = Json.parse(rawJson);
+
+      // Psych Engine character files use image/position/camera_position and
+      // animation fields named anim/name/fps/loop/indices. Convert them before
+      // normal V-Slice validation so legacy mods keep their original values.
+      if (Reflect.hasField(parsed, 'image') && Reflect.hasField(parsed, 'animations'))
+      {
+        var convertedAnimations:Array<Dynamic> = [];
+        var sourceAnimations:Array<Dynamic> = cast Reflect.field(parsed, 'animations');
+        for (animation in sourceAnimations)
+        {
+          convertedAnimations.push({
+            name: Reflect.field(animation, 'anim'),
+            prefix: Reflect.field(animation, 'name'),
+            frameRate: Reflect.hasField(animation, 'fps') ? Reflect.field(animation, 'fps') : 24,
+            looped: Reflect.hasField(animation, 'loop') ? Reflect.field(animation, 'loop') : false,
+            offsets: Reflect.hasField(animation, 'offsets') ? Reflect.field(animation, 'offsets') : [0, 0],
+            frameIndices: Reflect.hasField(animation, 'indices') ? Reflect.field(animation, 'indices') : []
+          });
+        }
+
+        var position:Dynamic = Reflect.hasField(parsed, 'position') ? Reflect.field(parsed, 'position') : [0, 0];
+        var cameraPosition:Dynamic = Reflect.hasField(parsed, 'camera_position') ? Reflect.field(parsed, 'camera_position') : [0, 0];
+        var converted:Dynamic = {
+          version: CHARACTER_DATA_VERSION,
+          name: charId,
+          renderType: 'sparrow',
+          assetPath: Reflect.field(parsed, 'image'),
+          scale: Reflect.hasField(parsed, 'scale') ? Reflect.field(parsed, 'scale') : 1.0,
+          offsets: position,
+          cameraOffsets: cameraPosition,
+          isPixel: Reflect.hasField(parsed, 'no_antialiasing') ? Reflect.field(parsed, 'no_antialiasing') : false,
+          singTime: Reflect.hasField(parsed, 'sing_duration') ? Reflect.field(parsed, 'sing_duration') : DEFAULT_SINGTIME,
+          flipX: Reflect.hasField(parsed, 'flip_x') ? Reflect.field(parsed, 'flip_x') : false,
+          startingAnimation: 'idle',
+          healthIcon: {
+            id: Reflect.hasField(parsed, 'healthicon') ? Reflect.field(parsed, 'healthicon') : charId,
+            shouldBop: true,
+            scale: 1.0,
+            flipX: false,
+            isPixel: false,
+            offsets: [0, 25]
+          },
+          animations: convertedAnimations
+        };
+        return cast converted;
+      }
+
+      return cast parsed;
     }
     catch (e)
     {
