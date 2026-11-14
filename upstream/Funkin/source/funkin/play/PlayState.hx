@@ -1435,6 +1435,13 @@ class PlayState extends MusicBeatSubState
   function pause(mode:PauseMode = Standard, lostFocus:Bool = false):Void
   {
     if (!mayPauseGame || justUnpaused || isGamePaused || isPlayerDying || isSongEnd) return;
+
+    // A Psych Freeplay confirm can remain latched while LoadingState creates
+    // the nested PlayState and its countdown. Do not allow that launch input
+    // (or a transient focus-loss callback) to open Pause before the song starts.
+    if (startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id)
+      && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance()) return;
+
     if (PsychScriptRuntime.dispatchStop("onPause", [])) return;
 
     switch (mode)
