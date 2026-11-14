@@ -1177,7 +1177,7 @@ class Strumline extends FlxSpriteGroup
       // also respects note-style offsets and avoids assumptions about the
       // default 104px receptor size.
       final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      noteSprite.x = this.x + strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
+      noteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
@@ -1220,7 +1220,7 @@ class Strumline extends FlxSpriteGroup
 
       // Center sustain trails on the same live receptor bounds as tap notes.
       final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      holdNoteSprite.x = this.x + strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2;
+      holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2;
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
