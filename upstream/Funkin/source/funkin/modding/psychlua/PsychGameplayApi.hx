@@ -3535,7 +3535,7 @@ class PsychGameplayApi
         var hudZoom:Float = parseFloatOr(value2, 0);
         // Psych's beat/event zoom is softened consistently with the native
         // beat bop so Add Camera Zoom events do not reintroduce the old punch.
-        var psychZoomScale:Float = ExperienceManager.isPsychSong(state.currentSong.id) ? 0.5 : 1.0;
+        var psychZoomScale:Float = ExperienceManager.isPsychSong(state.currentSong.id) ? 0.35 : 1.0;
         if (gameZoom != 0) state.camGame.zoom += gameZoom * psychZoomScale;
         if (hudZoom != 0) state.camHUD.zoom += hudZoom * psychZoomScale;
       case "screen shake":
