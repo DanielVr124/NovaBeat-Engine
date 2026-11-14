@@ -12,10 +12,12 @@ import funkin.audio.FunkinSound;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.data.song.SongRegistry;
 import funkin.modding.ExperienceManager;
+import funkin.play.PlayState;
 import funkin.play.PlayStatePlaylist;
 import funkin.play.scoring.Scoring;
 import funkin.play.song.Song;
 import funkin.play.components.HealthIcon;
+import funkin.graphics.FunkinCamera;
 import funkin.save.Save;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.MusicBeatSubState;
@@ -37,6 +39,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   static var rememberedSelection:Int = 0;
   static var rememberedDifficulty:Map<String, String> = [];
+  public static var activeInstance:Null<PsychFreeplayState> = null;
   static var lastDifficultyName:String = Constants.DEFAULT_DIFFICULTY;
 
   var songs:Array<PsychFreeplaySong> = [];
@@ -45,6 +48,7 @@ class PsychFreeplayState extends MusicBeatSubState
   var selected:Int = 0;
   var lerpSelected:Float = 0;
   var holdTime:Float = 0;
+  var launchingSong:Bool = false;
   var currentDifficulties:Array<String> = [];
   var difficultyIndex:Int = 0;
   var currentDifficulty:String = Constants.DEFAULT_DIFFICULTY;
@@ -111,6 +115,8 @@ class PsychFreeplayState extends MusicBeatSubState
       return;
     }
 
+    activeInstance = this;
+
     if (stickerSubState != null)
     {
       persistentUpdate = true;
@@ -175,14 +181,25 @@ class PsychFreeplayState extends MusicBeatSubState
       if (difficulties.length == 0) continue;
 
       var firstDifficulty = song.getDifficulty(difficulties[0], VARIATION);
-      var iconId:String = firstDifficulty?.characters?.opponent ?? 'face';
-      var freeplayIcon:Null<String> = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
+      var opponentCharacterId:String = firstDifficulty?.characters?.opponent ?? 'face';
+      var opponentCharacterData = CharacterDataParser.fetchCharacterData(opponentCharacterId);
+      // Character IDs can be song-scoped Psych aliases. Freeplay needs the
+      // character's real health-icon ID, not the internal alias used by PlayState.
+      var iconId:String = opponentCharacterData?.healthIcon?.id ?? opponentCharacterId;
+      var freeplayIcon:String = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
+      var freeplayIconCharacterData = CharacterDataParser.fetchCharacterData(freeplayIcon);
+      var iconIsPixel:Bool = freeplayIconCharacterData?.healthIcon?.isPixel
+        ?? freeplayIconCharacterData?.isPixel
+        ?? opponentCharacterData?.healthIcon?.isPixel
+        ?? opponentCharacterData?.isPixel
+        ?? false;
       var color:Int = funkin.modding.PsychModRuntime.getPsychFreeplayColor(songId);
       songs.push({
         id: songId,
         song: song,
         name: song.songName,
-        icon: freeplayIcon ?? iconId,
+        icon: freeplayIcon,
+        isPixel: iconIsPixel,
         color: color
       });
     }
@@ -210,16 +227,18 @@ class PsychFreeplayState extends MusicBeatSubState
       // A freshly constructed HealthIcon does not load its graphic until
       // configure() is called. Supply the Psych song's icon ID explicitly,
       // including pixel metadata when the icon belongs to a pixel character.
-      var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
       var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
-      icon.configure({
+      icon.configureForPsychSong({
         id: songs[i].icon,
         shouldBop: false,
         scale: 1.0,
         flipX: false,
-        isPixel: iconCharacterData?.isPixel ?? false,
+        isPixel: songs[i].isPixel,
         offsets: [0.0, 0.0]
-      });
+      }, songs[i].id);
+      // Imported Psych icons load their animation definitions but do not
+      // automatically enter the idle state when autoUpdate is disabled.
+      icon.playAnimation("idle", "idle", true);
       icon.size.set(iconScale, iconScale);
       icon.autoUpdate = false;
       icon.alpha = 0.6;
@@ -414,8 +433,15 @@ class PsychFreeplayState extends MusicBeatSubState
     resetSongTitle.visible = true;
     add(resetSongTitle);
 
-    resetIcon.characterId = entry.icon;
-    resetIcon.size.set(scale, scale);
+    var resetIconCharacterData = CharacterDataParser.fetchCharacterData(entry.icon);
+    resetIcon.configureForPsychSong({
+      id: entry.icon,
+      shouldBop: false,
+      scale: scale,
+      flipX: false,
+      isPixel: resetIconCharacterData?.isPixel ?? false,
+      offsets: [0.0, 0.0]
+    }, entry.id);
     resetIcon.visible = true;
     resetIcon.alpha = 0;
     resetIcon.setPosition(resetSongTitle.x - resetIcon.width + (10 * scale), resetSongTitle.y - 30);
@@ -460,6 +486,11 @@ class PsychFreeplayState extends MusicBeatSubState
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    // Psych Freeplay remains alive beneath its gameplay substate. It must not
+    // keep consuming menu input while a song is launching, playing, paused,
+    // or in Game Over; that can launch another song over the active countdown.
+    if (launchingSong || (PlayState.instance != null && PlayState.instance.isSubState)) return;
 
     if (stickerSubState?.isSwitchingState() ?? false) return;
 
@@ -1003,12 +1034,23 @@ class PsychFreeplayState extends MusicBeatSubState
 
     rememberedSelection = selected;
     rememberedDifficulty.set(entry.id, currentDifficulty);
+    launchingSong = true;
     PlayStatePlaylist.isStoryMode = false;
     PlayStatePlaylist.campaignId = null;
 
     FunkinSound.playOnce(Paths.sound('confirmMenu', 'shared'));
     stopPreviewAudioOnly();
     previewPlaying = false;
+
+    // Do not draw or update the Freeplay parent underneath the loading/gameplay
+    // substates. This prevents its background flashing over the new song during
+    // the camera transition and prevents stale menu input during re-entry.
+    persistentDraw = false;
+    persistentUpdate = false;
+
+    // LoadingState will finish cleanup of the previous menu track, but stop it
+    // immediately so it cannot leak into the next song's countdown.
+    if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
     var instrumental:String = entry.song.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? VARIATION) ?? '';
     funkin.modding.PsychModRuntime.logSongLaunchStep(entry.id, currentDifficulty, 'freeplay.selection.confirmed',
@@ -1021,7 +1063,57 @@ class PsychFreeplayState extends MusicBeatSubState
       practiceMode: false,
       minimalMode: false,
       botPlayMode: false
-    }, true, true);
+    }, true, true, null, this);
+  }
+
+  /** Whether the Psych Freeplay parent is still alive behind gameplay. */
+  public static function hasActiveInstance():Bool
+  {
+    return activeInstance != null;
+  }
+
+  public static function onSongClosed():Void
+  {
+    var menu:Null<PsychFreeplayState> = activeInstance;
+    if (menu == null) return;
+
+    // Re-measure the current desktop viewport after gameplay's fullscreen
+    // resolution handoff. Resetting only the camera can leave FlxG.width/height
+    // and the menu's layout at the gameplay viewport size.
+    if (FlxG.stage != null && funkin.ui.FullScreenScaleMode.instance != null)
+      funkin.ui.FullScreenScaleMode.instance.onMeasureInstant(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+
+    // PlayState replaces FlxG's camera stack with gameplay cameras. Restore a
+    // clean full-screen menu camera after the viewport has been recalculated.
+    FlxG.cameras.reset(new FunkinCamera('default'));
+
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    // Gameplay camera setup also removes the menu's touch camera. Recreate the
+    // controls against the restored default camera.
+    menu.camControls = null;
+    menu.addHitbox(true);
+    menu.addBackButton(FlxG.width - 92, FlxG.height - 92, FlxColor.WHITE, menu.goBack, 0.65);
+    #end
+
+    // Restore the hidden parent only after the PlayState has closed.
+    menu.persistentDraw = true;
+    menu.persistentUpdate = true;
+    menu.active = true;
+    menu.visible = true;
+    menu.launchingSong = false;
+    menu.updateScore();
+    menu.updateScoreText();
+    menu.updateSongRows(0);
+    menu.onViewportResize(FlxG.width, FlxG.height);
+
+    // LoadingState stops the menu track when entering gameplay. Restore the
+    // Psych Freeplay music after the nested PlayState has actually closed.
+    FunkinSound.playMusic('freakyMenu', {
+      overrideExisting: true,
+      restartTrack: false,
+      loop: true,
+      mapTimeChanges: false
+    });
   }
 
   function goBack():Void
@@ -1059,6 +1151,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
+    if (activeInstance == this) activeInstance = null;
     colorTween?.cancel();
     if (previewPlaying) stopPreviewAudioOnly(false);
     super.destroy();
@@ -1074,5 +1167,6 @@ private typedef PsychFreeplaySong =
   var song:Song;
   var name:String;
   var icon:String;
+  var isPixel:Bool;
   var color:Int;
 }

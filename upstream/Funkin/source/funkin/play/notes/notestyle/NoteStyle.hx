@@ -72,10 +72,10 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
     return _data.fallback;
   }
 
-  public function buildNoteSprite(target:NoteSprite):Void
+  public function buildNoteSprite(target:NoteSprite, ?assetPathOverride:String):Void
   {
-    // Apply the note sprite frames.
-    var atlas:Null<FlxAtlasFrames> = buildNoteFrames(false);
+    // Apply the note sprite frames. Psych Lua may override the atlas per note.
+    var atlas:Null<FlxAtlasFrames> = buildNoteFrames(false, assetPathOverride);
 
     if (atlas == null)
     {
@@ -108,9 +108,38 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
   }
 
   var noteFrames:Null<FlxAtlasFrames> = null;
+  var noteFramesByAssetPath:Map<String, FlxAtlasFrames> = [];
 
-  function buildNoteFrames(force:Bool = false):Null<FlxAtlasFrames>
+  function buildNoteFrames(force:Bool = false, ?assetPathOverride:String):Null<FlxAtlasFrames>
   {
+    if (assetPathOverride != null && StringTools.trim(assetPathOverride).length > 0)
+    {
+      var overridePath:String = StringTools.trim(assetPathOverride);
+      var cachedOverride:Null<FlxAtlasFrames> = noteFramesByAssetPath.get(overridePath);
+
+      // Mod assets can be unloaded when the active experience changes.
+      @:nullSafety(Off)
+      {
+        if (cachedOverride?.parent?.isDestroyed ?? true)
+        {
+          noteFramesByAssetPath.remove(overridePath);
+          cachedOverride = null;
+        }
+      }
+
+      if (cachedOverride != null && !force) return cachedOverride;
+
+      if (!FunkinMemory.isTextureCached(Paths.image(overridePath)))
+        FlxG.log.warn('Psych note texture is not cached: ${overridePath}');
+
+      var overrideFrames:Null<FlxAtlasFrames> = Paths.getSparrowAtlas(overridePath, getAssetLibrary(overridePath));
+      if (overrideFrames == null)
+        throw 'Could not load Psych note texture: ${overridePath}';
+
+      noteFramesByAssetPath.set(overridePath, overrideFrames);
+      return overrideFrames;
+    }
+
     var noteAssetPath = getNoteAssetPath();
     if (noteAssetPath == null)
     {

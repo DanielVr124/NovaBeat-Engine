@@ -387,6 +387,13 @@ class BaseCharacter extends Bopper
     // Modders may want to use characters outside of PlayState and this still gets called, so we ignore it.
     if (PlayState.instance == null) return;
 
+    var psychSongId:Null<String> = null;
+    if (PlayState.instance.currentSong != null
+      && funkin.modding.ExperienceManager.isPsychSong(PlayState.instance.currentSong.id))
+    {
+      psychSongId = PlayState.instance.currentSong.id;
+    }
+
     if (!isOpponent)
     {
       if (PlayState.instance.iconP1 == null)
@@ -394,7 +401,10 @@ class BaseCharacter extends Bopper
         log(' WARNING '.warning() + ' Player 1 ($characterId) health icon not found!');
         return;
       }
-      PlayState.instance.iconP1.configure(_data?.healthIcon);
+      if (psychSongId != null)
+        PlayState.instance.iconP1.configureForPsychSong(_data?.healthIcon, psychSongId);
+      else
+        PlayState.instance.iconP1.configure(_data?.healthIcon);
       PlayState.instance.iconP1.flipX = !PlayState.instance.iconP1.flipX; // BF is looking the other way.
     }
     else
@@ -404,7 +414,10 @@ class BaseCharacter extends Bopper
         log(' WARNING '.warning() + ' Player 2 ($characterId) health icon not found!');
         return;
       }
-      PlayState.instance.iconP2.configure(_data?.healthIcon);
+      if (psychSongId != null)
+        PlayState.instance.iconP2.configureForPsychSong(_data?.healthIcon, psychSongId);
+      else
+        PlayState.instance.iconP2.configure(_data?.healthIcon);
     }
   }
 
