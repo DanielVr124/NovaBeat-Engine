@@ -1185,6 +1185,12 @@ class Strumline extends FlxSpriteGroup
       noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2; // Center it
       noteSprite.x -= NUDGE;
+      #if !(mobile || FEATURE_TOUCH_CONTROLS)
+      // Flixel draws the frame shifted by its graphic offset. Compensate on
+      // desktop so custom Psych atlases with non-zero offsets stay centered
+      // over the receptors instead of drifting away from the hit lanes.
+      noteSprite.x += noteSprite.offset.x;
+      #end
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
