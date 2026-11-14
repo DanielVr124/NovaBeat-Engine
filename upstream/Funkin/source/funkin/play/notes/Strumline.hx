@@ -1164,26 +1164,20 @@ class Strumline extends FlxSpriteGroup
       // shader cannot leak onto a regular note.
       noteSprite.shader = noteKind != null && noteKind.hurt ? PsychHurtNoteShader.shared() : null;
 
-      var trueScale = new FlxPoint(strumlineScale.x, strumlineScale.y);
-      #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (inArrowControlSchemeMode)
-      {
-        final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-        trueScale.set(strumlineScale.x - ((FlxG.height / FlxG.width) * 0.2) * amplification,
-          strumlineScale.y - ((FlxG.height / FlxG.width) * 0.2) * amplification);
-      }
-      #end
-
-      noteSprite.scale.scale(trueScale.x, trueScale.y);
+      // Falling notes must use the exact same scale as their receptors.
+      // A separate aspect-ratio reduction made the notes narrower and shifted
+      // their centers away from the lanes they are supposed to be hit on.
+      noteSprite.scale.scale(strumlineScale.x, strumlineScale.y);
       noteSprite.updateHitbox();
 
       noteSprite.direction = note.getDirection();
       noteSprite.noteData = note;
 
-      noteSprite.x = this.x;
-      noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2; // Center it
-      noteSprite.x -= NUDGE;
+      // Align the center of the note with the actual receptor sprite. This
+      // also respects note-style offsets and avoids assumptions about the
+      // default 104px receptor size.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      noteSprite.x = this.x + strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
@@ -1224,10 +1218,9 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.visible = true;
       holdNoteSprite.alpha = 1.0;
 
-      holdNoteSprite.x = this.x;
-      holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      holdNoteSprite.x += STRUMLINE_SIZE / 2;
-      holdNoteSprite.x -= holdNoteSprite.width / 2;
+      // Center sustain trails on the same live receptor bounds as tap notes.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      holdNoteSprite.x = this.x + strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2;
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
