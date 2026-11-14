@@ -1037,6 +1037,20 @@ class PlayState extends MusicBeatSubState
     if (PsychScriptRuntime.getScriptPaths().length > 0)
       PsychScriptRuntime.dispatch("onCreatePost", []);
 
+    // Capture the final character layout after Psych onCreatePost scripts.
+    // This lets us distinguish a bad stage/character anchor from a script
+    // that intentionally or accidentally moves BF/GF after initial placement.
+    if (currentSong != null)
+    {
+      var finalBF:Null<BaseCharacter> = currentStage?.getBoyfriend();
+      var finalGF:Null<BaseCharacter> = currentStage?.getGirlfriend();
+      var finalOpponent:Null<BaseCharacter> = currentStage?.getDad();
+      var layout:String = "BF=" + (finalBF == null ? "none" : finalBF.characterId + "@" + finalBF.x + "," + finalBF.y)
+        + "; GF=" + (finalGF == null ? "none" : finalGF.characterId + "@" + finalGF.x + "," + finalGF.y)
+        + "; opponent=" + (finalOpponent == null ? "none" : finalOpponent.characterId + "@" + finalOpponent.x + "," + finalOpponent.y);
+      PsychModRuntime.logSongLaunchStep(currentSong.id, currentDifficulty, "characters.final", layout);
+    }
+
     // Start the countdown after onCreatePost so mods can cancel or defer it.
     startCountdown();
   }
