@@ -2110,15 +2110,18 @@ class PlayState extends MusicBeatSubState
     // This is an arbitrary number chosen so that the camera doesn't move insanely far in when the bop speed is fast.
     final MAX_RELATIVE_CAM_ZOOM:Float = 1.35;
 
+    var isPsychZoomSong:Bool = currentSong != null && ExperienceManager.isPsychSong(currentSong.id);
+    // Psych charts often assume the stronger camera bop from the original
+    // engine. Keep the rhythm response, but make it gentler and less frequent
+    // in NovaBeat so rapid sections do not overwhelm the playfield.
+    var effectiveCameraZoomRate:Float = cameraZoomRate * (isPsychZoomSong ? 2.0 : 1.0);
     if (Preferences.zoomCamera
       && camHUD.zoom < (MAX_RELATIVE_CAM_ZOOM * defaultHUDCameraZoom)
-      && cameraZoomRate > 0
-      && (Conductor.instance.currentStep + cameraZoomRateOffset * Constants.STEPS_PER_BEAT) % (cameraZoomRate * Constants.STEPS_PER_BEAT) == 0)
+      && effectiveCameraZoomRate > 0
+      && (Conductor.instance.currentStep + cameraZoomRateOffset * Constants.STEPS_PER_BEAT)
+        % (effectiveCameraZoomRate * Constants.STEPS_PER_BEAT) == 0)
     {
-      // Psych's imported beat zoom is intentionally softer than the native
-      // V-Slice default. Keep the beat response, but halve its amplitude so
-      // older Psych charts do not overwhelm the camera.
-      var psychBeatZoomScale:Float = ExperienceManager.isPsychSong(currentSong.id) ? 0.5 : 1.0;
+      var psychBeatZoomScale:Float = isPsychZoomSong ? 0.35 : 1.0;
       cameraBopMultiplier = 1.0 + ((cameraBopIntensity - 1.0) * psychBeatZoomScale);
       camHUD.zoom += hudCameraZoomIntensity * defaultHUDCameraZoom * psychBeatZoomScale;
     }
