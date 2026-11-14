@@ -217,6 +217,7 @@ class PsychScriptRuntime
     {
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.begin');
       clear();
+      VideoCutscene.clearPreload();
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.complete');
       activeDiagnosticSongId = songId == null ? "" : songId;
       activeDiagnosticDifficulty = difficulty == null ? "" : difficulty;
@@ -252,7 +253,8 @@ class PsychScriptRuntime
       // decoder while the rest of the song is initializing, rather than
       // waiting until the callback requests playback.
       var preloadedVideoPaths:Array<String> = [];
-      var videoCallPattern:EReg = ~/startVideo\\s*\\(\\s*["']([^"']+)["']\\s*\\)/;
+      var hasPreloadedVideo:Bool = false;
+      var videoCallPattern:EReg = ~/startVideo\s*\(\s*["']([^"']+)["']\s*\)/;
       for (source in sources)
       {
         var scanPosition:Int = 0;
@@ -262,10 +264,11 @@ class PsychScriptRuntime
           var matchPosition = videoCallPattern.matchedPos();
           scanPosition = matchPosition.pos + matchPosition.len;
           var resolvedVideo:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedVideo);
-          if (resolvedVideo != null && preloadedVideoPaths.indexOf(resolvedVideo) < 0)
+          if (!hasPreloadedVideo && resolvedVideo != null && preloadedVideoPaths.indexOf(resolvedVideo) < 0)
           {
             preloadedVideoPaths.push(resolvedVideo);
-            if (VideoCutscene.preload(resolvedVideo))
+            hasPreloadedVideo = VideoCutscene.preload(resolvedVideo);
+            if (hasPreloadedVideo)
               PsychModRuntime.logSongLaunchStep(songId, difficulty, 'video.preload.complete', resolvedVideo);
             else
               PsychModRuntime.logSongLaunchStep(songId, difficulty, 'video.preload.unavailable', resolvedVideo);
