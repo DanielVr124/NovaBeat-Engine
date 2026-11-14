@@ -510,6 +510,13 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
 
     ScriptEventDispatcher.callEvent(character, new ScriptEvent(ADDED, false));
 
+    // Native ADDED listeners may adjust character coordinates. For imported
+    // Psych songs, stage.json and character JSON own the final spawn position;
+    // reapply after those listeners so the compatibility placement cannot be
+    // silently overwritten during construction or a Change Character event.
+    if (psychRole.length > 0)
+      PsychModRuntime.applyPsychStageCharacterPosition(character, psychRole);
+
     #if FEATURE_DEBUG_FUNCTIONS
     debugIconGroup.add(debugIcon);
     debugIconGroup.add(debugIcon2);
