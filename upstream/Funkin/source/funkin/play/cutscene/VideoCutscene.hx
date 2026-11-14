@@ -76,6 +76,8 @@ class VideoCutscene
     clearPreloadedVideo();
     var candidate:FunkinVideoSprite = createNativeVideo();
     candidate.active = false;
+    preloadedVid = candidate;
+    preloadedPath = filePath;
     candidate.bitmap.onEncounteredError.add(function(message:String):Void
     {
       if (preloadedVid == candidate)
@@ -87,16 +89,19 @@ class VideoCutscene
       }
     });
 
-    if (candidate.load(filePath, getNativeVideoOptions()))
+    if (candidate.load(filePath, getNativeVideoOptions()) && preloadedVid == candidate)
     {
-      preloadedVid = candidate;
-      preloadedPath = filePath;
       trace('[Video Cutscene] Preloaded video: ' + filePath);
       return true;
     }
 
+    if (preloadedVid == candidate)
+    {
+      preloadedVid = null;
+      preloadedPath = "";
+      candidate.destroy();
+    }
     trace('[Video Cutscene] Could not preload video: ' + filePath);
-    candidate.destroy();
     return false;
     #else
     return false;
