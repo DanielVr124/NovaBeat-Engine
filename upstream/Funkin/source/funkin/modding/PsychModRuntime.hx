@@ -1839,7 +1839,7 @@ class PsychModRuntime
       scale: scale,
       healthIcon: {
         id: Std.string(healthIconId), shouldBop: true, scale: 1, flipX: false,
-        isPixel: isPixel, offsets: [0, 25]
+        isPixel: isPixel, offsets: [0, 0]
       },
       offsets: position,
       cameraOffsets: cameraOffsets,
