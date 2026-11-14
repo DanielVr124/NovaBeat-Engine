@@ -66,9 +66,6 @@ class TitleState extends MusicBeatState
   var gfDance:FunkinSprite;
   var danceLeft:Bool = false;
   var titleText:FunkinSprite;
-  #if FEATURE_VIDEO_PLAYBACK
-  var attractTimer:FlxTimer;
-  #end
 
   function startIntro():Void
   {
@@ -198,10 +195,6 @@ class TitleState extends MusicBeatState
     else
       initialized = true;
 
-    #if FEATURE_VIDEO_PLAYBACK
-    trace('Opening Attract state in ${Constants.TITLE_ATTRACT_DELAY} seconds...');
-    attractTimer = new FlxTimer().start(Constants.TITLE_ATTRACT_DELAY, (_:FlxTimer) -> moveToAttract());
-    #end
   }
 
   function layoutTitleSprites(width:Int, height:Int, mobileTitleLayout:Bool):Void
@@ -256,18 +249,6 @@ class TitleState extends MusicBeatState
     var mobileTitleLayout:Bool = #if mobile true #else DeviceUtil.isMobileBrowser #end;
     layoutTitleSprites(width, height, mobileTitleLayout);
     if (!skippedIntro) layoutIntroText();
-  }
-
-  /**
-   * After sitting on the title screen for a while, transition to the attract screen.
-   */
-  function moveToAttract():Void
-  {
-    FlxG.sound.music.fadeOut(2.0, 0);
-    FlxG.camera.fade(FlxColor.BLACK, 2.0, false, function()
-    {
-      FlxG.switchState(() -> new AttractState());
-    });
   }
 
   function playMenuMusic(restartTrack:Bool = false):Void
@@ -397,14 +378,6 @@ class TitleState extends MusicBeatState
 
   function moveToMainMenu():Void
   {
-    #if FEATURE_VIDEO_PLAYBACK
-    if (attractTimer != null)
-    {
-      attractTimer.cancel();
-      attractTimer = null;
-    }
-    #end
-
     funkin.FunkinMemory.purgeCache();
     FlxG.switchState(() -> new MainMenuState());
   }
@@ -461,10 +434,6 @@ class TitleState extends MusicBeatState
     FlxG.camera.flash(FlxColor.WHITE, 1);
     FunkinSound.playOnce(Paths.sound('confirmMenu'), 0.7);
 
-    #if FEATURE_VIDEO_PLAYBACK
-    // Stop the attract timer so you can listen to the whole song!
-    attractTimer.cancel();
-    #end
   }
 
   function createCoolText(textArray:Array<String>):Void
