@@ -1173,6 +1173,7 @@ class Strumline extends FlxSpriteGroup
       noteSprite.direction = note.getDirection();
       noteSprite.noteData = note;
 
+      // [full-build-android] Validate receptor-local coordinates for mobile falling and hold notes.
       // Align the center of the note with the actual receptor sprite. This
       // also respects note-style offsets and avoids assumptions about the
       // default 104px receptor size.
