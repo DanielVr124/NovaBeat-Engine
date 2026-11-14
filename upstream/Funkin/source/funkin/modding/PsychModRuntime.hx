@@ -1815,7 +1815,14 @@ class PsychModRuntime
     var positionValue:Dynamic = Reflect.field(raw, "position");
     var position:Array<Float> = Std.isOfType(positionValue, Array) ? cast positionValue : [0, 0];
     var healthIconId:Dynamic = Reflect.field(raw, "healthicon");
-    if (healthIconId == null || Std.string(healthIconId).length == 0) healthIconId = characterId;
+    if (healthIconId == null || StringTools.trim(Std.string(healthIconId)).length == 0)
+      healthIconId = characterId;
+    // HealthIcon constructs images/icons/icon-<id> itself. Some Psych character
+    // JSON files store the complete filename stem ("icon-breach"), so strip
+    // that optional prefix here as well as in the Freeplay week-icon path.
+    healthIconId = StringTools.trim(Std.string(healthIconId));
+    if (StringTools.startsWith(Std.string(healthIconId).toLowerCase(), "icon-"))
+      healthIconId = Std.string(healthIconId).substr(5);
     var scaleValue:Dynamic = Reflect.field(raw, "scale");
     var scale:Float = scaleValue == null ? 1 : Std.parseFloat(Std.string(scaleValue));
     if (Math.isNaN(scale) || scale <= 0) scale = 1;
