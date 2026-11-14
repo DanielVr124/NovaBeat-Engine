@@ -1000,8 +1000,22 @@ class PsychModRuntime
   public static function applyPsychStageCharacterPosition(character:Dynamic, role:String):Void
   {
     if (character == null || PlayState.instance == null || PlayState.instance.currentSong == null) return;
-    var positions:Null<Map<String, Array<Float>>> = psychSongStagePositions.get(PlayState.instance.currentSong.id);
-    if (positions == null) return;
+    var songId:String = PlayState.instance.currentSong.id;
+    var positions:Null<Map<String, Array<Float>>> = psychSongStagePositions.get(songId);
+    if (positions == null)
+    {
+      // Never fall back to native V-Slice feet anchors for an imported Psych
+      // song. If stage JSON could not be read, retain Psych's standard role
+      // anchors so BF/GF/opponent still spawn in the expected layout.
+      if (!audioPaths.exists(songId)) return;
+      positions = [];
+      positions.set("boyfriend", [770.0, 100.0]);
+      positions.set("girlfriend", [400.0, 130.0]);
+      positions.set("opponent", [100.0, 100.0]);
+      psychSongStagePositions.set(songId, positions);
+      trace('[Psych Compatibility] Stage anchors were unavailable for ' + songId
+        + '; using Psych default BF/GF/opponent positions.');
+    }
     var positionRole:String = role;
     if (role == "opponent" && psychSongOpponentUsesGFPosition.get(PlayState.instance.currentSong.id) == true)
       positionRole = "girlfriend";
