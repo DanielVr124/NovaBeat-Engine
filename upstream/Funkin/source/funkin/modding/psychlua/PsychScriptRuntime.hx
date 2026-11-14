@@ -5,6 +5,7 @@ import funkin.Conductor;
 import funkin.modding.PsychModRuntime;
 import funkin.modding.PsychModRuntime.PsychScriptSource;
 import funkin.play.PlayState;
+import funkin.play.cutscene.VideoCutscene;
 
 /**
  * Owns interpreter instances used by the Psych compatibility layer.
@@ -245,6 +246,32 @@ class PsychScriptRuntime
       var sources:Array<PsychScriptSource> = PsychModRuntime.getScriptSources(modDirs, songId);
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.sources.discover.complete',
         'count=' + sources.length);
+
+      // Psych stage/song scripts commonly call startVideo() from onCreate or
+      // onStartCountdown. Resolve literal filenames now and warm the native
+      // decoder while the rest of the song is initializing, rather than
+      // waiting until the callback requests playback.
+      var preloadedVideoPaths:Array<String> = [];
+      var videoCallPattern:EReg = ~/startVideo\\s*\\(\\s*["']([^"']+)["']\\s*\\)/;
+      for (source in sources)
+      {
+        var scanPosition:Int = 0;
+        while (videoCallPattern.matchSub(source.source, scanPosition))
+        {
+          var requestedVideo:String = videoCallPattern.matched(1);
+          var matchPosition = videoCallPattern.matchedPos();
+          scanPosition = matchPosition.pos + matchPosition.len;
+          var resolvedVideo:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedVideo);
+          if (resolvedVideo != null && preloadedVideoPaths.indexOf(resolvedVideo) < 0)
+          {
+            preloadedVideoPaths.push(resolvedVideo);
+            if (VideoCutscene.preload(resolvedVideo))
+              PsychModRuntime.logSongLaunchStep(songId, difficulty, 'video.preload.complete', resolvedVideo);
+            else
+              PsychModRuntime.logSongLaunchStep(songId, difficulty, 'video.preload.unavailable', resolvedVideo);
+          }
+        }
+      }
 
       var hasCustomStageScript:Bool = false;
       for (source in sources)
