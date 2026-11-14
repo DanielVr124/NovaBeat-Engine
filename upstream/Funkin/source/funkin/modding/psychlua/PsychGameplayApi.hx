@@ -5,6 +5,7 @@ import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.play.cutscene.VideoCutscene;
 import funkin.data.song.SongRegistry;
+import funkin.data.song.SongData.SongNoteData;
 import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
@@ -2777,6 +2778,8 @@ class PsychGameplayApi
         return state;
       case "notes":
         return getActiveNotes(state);
+      case "unspawnNotes":
+        return getUnspawnNotes(state);
       case "strumLineNotes":
         return getAllStrumNotes(state);
       case "playerStrums":
@@ -2928,6 +2931,40 @@ class PsychGameplayApi
       if (current == null) return null;
     }
     return setSegment(current, parts[parts.length - 1], value, allowMaps);
+  }
+
+  /**
+   * Psych's unspawnNotes group contains all upcoming notes from both sides,
+   * ordered by strum time. Return the original chart objects so texture and
+   * note-type writes are retained when Strumline later builds each sprite.
+   */
+  static function getUnspawnNotes(state:PlayState):Array<SongNoteData>
+  {
+    var result:Array<SongNoteData> = [];
+    if (state.playerStrumline != null)
+    {
+      var playerStart:Int = Std.int(Math.max(0, state.playerStrumline.nextNoteIndex));
+      for (i in playerStart...state.playerStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.playerStrumline.noteData[i];
+        if (note != null) result.push(note);
+      }
+    }
+    if (state.opponentStrumline != null)
+    {
+      var opponentStart:Int = Std.int(Math.max(0, state.opponentStrumline.nextNoteIndex));
+      for (i in opponentStart...state.opponentStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.opponentStrumline.noteData[i];
+        if (note != null) result.push(note);
+      }
+    }
+
+    result.sort(function(a:SongNoteData, b:SongNoteData):Int
+    {
+      return Reflect.compare(a.time, b.time);
+    });
+    return result;
   }
 
   static function getAllStrumNotes(state:PlayState):Array<StrumlineNote>
