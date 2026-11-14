@@ -56,6 +56,7 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
           name: fileName == null ? 'Psych Stage' : haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(fileName)),
           directory: Reflect.hasField(raw, 'directory') ? raw.directory : 'shared',
           cameraZoom: raw.defaultZoom,
+          legacyPsychCoordinates: true,
           props: [],
           characters: {
             bf: psychCharacterPosition(raw, 'boyfriend', [-100, -100]),
