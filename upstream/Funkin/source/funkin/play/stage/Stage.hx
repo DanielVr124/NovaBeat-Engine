@@ -452,8 +452,13 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
       // Subtracting the origin ensures characters are positioned relative to their feet.
       // Subtracting the global offset allows positioning on a per-character basis.
       // We previously applied the global offset here but that is now done elsewhere.
-      character.x = stageCharData.position[0] - character.characterOrigin.x;
-      character.y = stageCharData.position[1] - character.characterOrigin.y;
+      // Psych stage coordinates are the sprite's top-left; V-Slice stage
+      // coordinates are the character's feet-center. Convert at runtime because
+      // the character's origin depends on its loaded animation frame and scale.
+      var psychOriginX:Float = _data.legacyPsychCoordinates ? character.characterOrigin.x : 0;
+      var psychOriginY:Float = _data.legacyPsychCoordinates ? character.characterOrigin.y : 0;
+      character.x = stageCharData.position[0] + psychOriginX - character.characterOrigin.x;
+      character.y = stageCharData.position[1] + psychOriginY - character.characterOrigin.y;
 
       var finalScale = character.getBaseScale() * stageCharData.scale;
       character.setScale(finalScale); // Don't use scale.set for characters!
