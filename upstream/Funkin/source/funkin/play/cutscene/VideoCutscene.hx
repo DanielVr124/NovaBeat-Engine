@@ -269,7 +269,7 @@ class VideoCutscene
     final usingPreloaded:Bool = preloadedVid != null && preloadedPath == filePath;
     if (usingPreloaded)
     {
-      vid = preloadedVid;
+      vid = cast preloadedVid;
       preloadedVid = null;
       preloadedPath = "";
     }
