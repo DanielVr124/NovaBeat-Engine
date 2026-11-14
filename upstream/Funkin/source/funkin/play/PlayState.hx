@@ -2532,11 +2532,6 @@ class PlayState extends MusicBeatSubState
       if (girlfriend != null)
       {
         currentStage.addCharacter(girlfriend, GF);
-        // applyPsychStageData stores Psych's absolute anchors before character
-        // construction. Apply them after Stage.addCharacter, which otherwise
-        // overwrites the character's x/y with the native V-Slice stage anchor.
-        PsychModRuntime.applyPsychStageCharacterPosition(girlfriend, "girlfriend");
-
         #if FEATURE_DEBUG_FUNCTIONS
         FlxG.console.registerObject('gf', girlfriend);
         #end
@@ -2545,8 +2540,6 @@ class PlayState extends MusicBeatSubState
       if (boyfriend != null)
       {
         currentStage.addCharacter(boyfriend, BF);
-        PsychModRuntime.applyPsychStageCharacterPosition(boyfriend, "boyfriend");
-
         #if FEATURE_DEBUG_FUNCTIONS
         FlxG.console.registerObject('bf', boyfriend);
         #end
@@ -2555,7 +2548,6 @@ class PlayState extends MusicBeatSubState
       if (dad != null)
       {
         currentStage.addCharacter(dad, DAD);
-        PsychModRuntime.applyPsychStageCharacterPosition(dad, "opponent");
         // Camera starts at dad.
         cameraFollowPoint.setPosition(dad.cameraFocusPoint.x, dad.cameraFocusPoint.y);
 
