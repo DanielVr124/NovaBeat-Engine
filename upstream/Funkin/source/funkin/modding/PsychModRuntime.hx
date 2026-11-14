@@ -2856,10 +2856,15 @@ class PsychModRuntime
   static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String, songId:String):Bool
   {
     var atlasName:String;
-    switch (characterId.toLowerCase())
+    // The same character is named with spaces, hyphens, or underscores in
+    // different legacy charts. Normalize separators before matching the
+    // known atlas-only GorillaFunkin variants.
+    var normalizedCharacterId:String = StringTools.replace(
+      StringTools.replace(StringTools.replace(characterId.toLowerCase(), " ", ""), "-", ""), "_", "");
+    switch (normalizedCharacterId)
     {
-      case "bf capuchin": atlasName = "BoyCapuchin";
-      case "bf capuchin run": atlasName = "BoyrunCapuchin";
+      case "bfcapuchin": atlasName = "BoyCapuchin";
+      case "bfcapuchinrun": atlasName = "BoyrunCapuchin";
       default: return false;
     }
 
