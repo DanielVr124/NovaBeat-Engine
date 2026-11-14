@@ -2532,6 +2532,10 @@ class PlayState extends MusicBeatSubState
       if (girlfriend != null)
       {
         currentStage.addCharacter(girlfriend, GF);
+        // Psych stage files use their own absolute character anchors. Native
+        // Stage.addCharacter positions are only a V-Slice default, so apply
+        // the imported Psych coordinates after the character is attached.
+        PsychModRuntime.applyPsychStageCharacterPosition(girlfriend, "girlfriend");
 
         #if FEATURE_DEBUG_FUNCTIONS
         FlxG.console.registerObject('gf', girlfriend);
@@ -2541,6 +2545,7 @@ class PlayState extends MusicBeatSubState
       if (boyfriend != null)
       {
         currentStage.addCharacter(boyfriend, BF);
+        PsychModRuntime.applyPsychStageCharacterPosition(boyfriend, "boyfriend");
 
         #if FEATURE_DEBUG_FUNCTIONS
         FlxG.console.registerObject('bf', boyfriend);
@@ -2550,6 +2555,7 @@ class PlayState extends MusicBeatSubState
       if (dad != null)
       {
         currentStage.addCharacter(dad, DAD);
+        PsychModRuntime.applyPsychStageCharacterPosition(dad, "opponent");
         // Camera starts at dad.
         cameraFollowPoint.setPosition(dad.cameraFocusPoint.x, dad.cameraFocusPoint.y);
 
