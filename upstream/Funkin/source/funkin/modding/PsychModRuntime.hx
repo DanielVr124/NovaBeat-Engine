@@ -1033,6 +1033,9 @@ class PsychModRuntime
     var originalPosition:Dynamic = Reflect.field(character, "originalPosition");
     if (originalPosition != null)
       Reflect.callMethod(originalPosition, Reflect.field(originalPosition, "set"), [x, y]);
+    trace('[Psych Compatibility] Positioned ' + role + ' for ' + songId
+      + ' (stage=' + psychSongStageNames.get(songId) + ', anchor=' + position[0] + ',' + position[1]
+      + ', characterOffset=' + offsetX + ',' + offsetY + ', final=' + x + ',' + y + ').');
     var resetCamera:Dynamic = Reflect.field(character, "resetCameraFocusPoint");
     if (resetCamera != null) Reflect.callMethod(character, resetCamera, []);
   }
