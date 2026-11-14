@@ -292,11 +292,6 @@ class NoteSprite extends FunkinSprite
     try
     {
       style.buildNoteSprite(this, psychTexture);
-      if (replayAnimation)
-      {
-        scale.set(previousScaleX, previousScaleY);
-        updateHitbox();
-      }
     }
     catch (error:Dynamic)
     {
@@ -309,6 +304,11 @@ class NoteSprite extends FunkinSprite
       style.buildNoteSprite(this);
     }
 
+    if (replayAnimation)
+    {
+      scale.set(previousScaleX, previousScaleY);
+      updateHitbox();
+    }
     this.active = style.isNoteAnimated();
     if (replayAnimation && frames != null) playNoteAnimation(this.direction);
   }
