@@ -23,6 +23,14 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
    * Psych uses top-level boyfriend/girlfriend/opponent positions and defaultZoom;
    * V-Slice expects characters.bf/gf/dad and cameraZoom.
    */
+  override public function parseEntryDataWithMigration(id:String, version:Null<thx.semver.Version>):Null<StageData>
+  {
+    // Psych stage JSON has no V-Slice semantic version. Let the compatibility
+    // parser inspect it instead of rejecting it before parseEntryData runs.
+    if (version == null) return parseEntryData(id);
+    return super.parseEntryDataWithMigration(id, version);
+  }
+
   override public function parseEntryData(id:String):Null<StageData>
   {
     var path:String = Paths.json('stages/${id}');
