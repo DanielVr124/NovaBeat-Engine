@@ -1,6 +1,7 @@
 name: NovaBeat platform build checks
 
 # User-requested full native verification run (2026-11-03).
+# Keep the [full-build] push marker available for complete Windows + Android validation.
 
 on:
   workflow_dispatch:
