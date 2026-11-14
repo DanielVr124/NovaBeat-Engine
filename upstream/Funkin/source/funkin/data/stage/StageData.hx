@@ -15,6 +15,10 @@ class StageData
   public var name:String = 'Unknown';
   public var props:Array<StageDataProp> = [];
   public var characters:StageDataCharacters;
+
+  /** True when character coordinates originate from Psych Engine's top-left positioning model. */
+  @:optional @:default(false)
+  public var legacyPsychCoordinates:Bool;
   @:default(1.0) @:optional
   public var cameraZoom:Null<Float>;
   @:default('shared') @:optional
