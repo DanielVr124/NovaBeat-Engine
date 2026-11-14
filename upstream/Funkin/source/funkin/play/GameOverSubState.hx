@@ -590,7 +590,20 @@ class GameOverSubState extends MusicBeatSubState
       parentPlayState = null;
       return;
     }
-    else
+
+    if (parentPlayState != null
+      && parentPlayState.currentSong != null
+      && funkin.modding.ExperienceManager.isPsychSong(parentPlayState.currentSong.id)
+      && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance())
+    {
+      // Return to the Psych Freeplay substate that owns gameplay instead of
+      // replacing the root application state with a new Freeplay instance.
+      this.close();
+      parentPlayState.close();
+      parentPlayState = null;
+      return;
+    }
+
     {
       var targetState:funkin.ui.transition.stickers.StickerSubState->FlxState = (PlayStatePlaylist.isStoryMode) ? (sticker) ->
         new StoryMenuState(sticker) : (sticker) -> FreeplayState.buildForActiveExperience(null, sticker);

@@ -1158,11 +1158,13 @@ class Strumline extends FlxSpriteGroup
       if (noteKindStyle == null) noteKindStyle = NoteKindManager.getNoteStyle(note.kind, null);
       if (noteKindStyle == null) noteKindStyle = this.noteStyle;
 
-      noteSprite.setupNoteGraphic(noteKindStyle);
-      // Psych 0.7.3 Hurt Notes use a red/black RGB palette rather than a
-      // separate HURTNOTE_assets sheet. Set this on every pooled note so the
-      // shader cannot leak onto a regular note.
-      noteSprite.shader = noteKind != null && noteKind.hurt ? PsychHurtNoteShader.shared() : null;
+      noteSprite.noteData = note;
+      noteSprite.setupNoteGraphic(noteKindStyle, note.texture);
+      // Keep Psych's optimized Hurt Note palette for the built-in appearance,
+      // but do not tint a mod-supplied texture such as HURTNOTE_assets.
+      noteSprite.shader = noteKind != null && noteKind.hurt && noteSprite.texture == null
+        ? PsychHurtNoteShader.shared()
+        : null;
 
       // Falling notes must use the exact same scale as their receptors.
       // A separate aspect-ratio reduction made the notes narrower and shifted
@@ -1171,7 +1173,6 @@ class Strumline extends FlxSpriteGroup
       noteSprite.updateHitbox();
 
       noteSprite.direction = note.getDirection();
-      noteSprite.noteData = note;
 
       // Align the center of the note with the actual receptor sprite. This
       // also respects note-style offsets and avoids assumptions about the

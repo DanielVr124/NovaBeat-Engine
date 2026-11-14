@@ -5,6 +5,7 @@ import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.play.cutscene.VideoCutscene;
 import funkin.data.song.SongRegistry;
+import funkin.data.song.SongData.SongNoteData;
 import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
@@ -2605,28 +2606,56 @@ class PsychGameplayApi
    * Destroying one through PlayState.remove() alone leaves a dead member in
    * the stage draw list and can crash FlxAnimate during retry.
    */
+  /**
+   * Remove an object from an owner or any nested FlxGroup it contains.
+   * Psych scripts can nest sprite groups inside stages/custom substates; a
+   * direct-parent-only cleanup leaves destroyed FlxAnimate instances in the
+   * nested group's draw list.
+   */
+  static function removeFromGroupTree(owner:Dynamic, object:FlxBasic,
+      visited:Array<Dynamic>, depth:Int = 0):Bool
+  {
+    if (owner == null || object == null || owner == object || depth > 32
+      || visited.indexOf(owner) >= 0) return false;
+    visited.push(owner);
+
+    var membersValue:Dynamic = Reflect.field(owner, "members");
+    if (!Std.isOfType(membersValue, Array)) return false;
+
+    var members:Array<Dynamic> = cast membersValue;
+    var snapshot:Array<Dynamic> = members.copy();
+    var removed:Bool = false;
+    for (member in snapshot)
+    {
+      if (member == object)
+      {
+        var removeMethod:Dynamic = Reflect.field(owner, "remove");
+        if (removeMethod != null)
+        {
+          Reflect.callMethod(owner, removeMethod, [object, true]);
+          removed = true;
+        }
+      }
+      else if (Std.isOfType(member, FlxBasic))
+      {
+        if (removeFromGroupTree(member, object, visited, depth + 1))
+          removed = true;
+      }
+    }
+    return removed;
+  }
+
   static function removeFromParent(state:PlayState, object:FlxBasic):Void
   {
-    if (object == null) return;
+    if (state == null || object == null) return;
 
-    // Remove every stale copy defensively. A script may have moved an object
-    // through multiple groups before calling remove(), and FlxGroup.add()
-    // does not guarantee that old parents no longer retain it.
-    if (activeCustomSubstate != null && activeCustomSubstate.members.indexOf(object) >= 0)
-      activeCustomSubstate.remove(object, true);
-
-    var stage = state.currentStage;
-    // Stage members are FlxSprite-typed; Lua APIs can still hand this
-    // cleanup routine a broader FlxBasic, so narrow before querying/removing.
-    if (stage != null && Std.isOfType(object, FlxSprite))
-    {
-      var stageSprite:FlxSprite = cast object;
-      if (stage.members.indexOf(stageSprite) >= 0)
-        stage.remove(stageSprite, true);
-    }
-
-    if (state.members.indexOf(object) >= 0)
-      state.remove(object, true);
+    // Remove every stale copy defensively from the active custom substate,
+    // the current stage, and PlayState, recursively including nested groups.
+    var visited:Array<Dynamic> = [];
+    if (activeCustomSubstate != null)
+      removeFromGroupTree(activeCustomSubstate, object, visited);
+    removeFromGroupTree(state.currentStage, object, visited);
+    removeFromGroupTree(state, object, visited);
   }
 
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
@@ -2749,6 +2778,8 @@ class PsychGameplayApi
         return state;
       case "notes":
         return getActiveNotes(state);
+      case "unspawnNotes":
+        return getUnspawnNotes(state);
       case "strumLineNotes":
         return getAllStrumNotes(state);
       case "playerStrums":
@@ -2900,6 +2931,40 @@ class PsychGameplayApi
       if (current == null) return null;
     }
     return setSegment(current, parts[parts.length - 1], value, allowMaps);
+  }
+
+  /**
+   * Psych's unspawnNotes group contains all upcoming notes from both sides,
+   * ordered by strum time. Return the original chart objects so texture and
+   * note-type writes are retained when Strumline later builds each sprite.
+   */
+  static function getUnspawnNotes(state:PlayState):Array<SongNoteData>
+  {
+    var result:Array<SongNoteData> = [];
+    if (state.playerStrumline != null)
+    {
+      var playerStart:Int = Std.int(Math.max(0, state.playerStrumline.nextNoteIndex));
+      for (i in playerStart...state.playerStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.playerStrumline.noteData[i];
+        if (note != null) result.push(note);
+      }
+    }
+    if (state.opponentStrumline != null)
+    {
+      var opponentStart:Int = Std.int(Math.max(0, state.opponentStrumline.nextNoteIndex));
+      for (i in opponentStart...state.opponentStrumline.noteData.length)
+      {
+        var note:SongNoteData = state.opponentStrumline.noteData[i];
+        if (note != null) result.push(note);
+      }
+    }
+
+    result.sort(function(a:SongNoteData, b:SongNoteData):Int
+    {
+      return Reflect.compare(a.time, b.time);
+    });
+    return result;
   }
 
   static function getAllStrumNotes(state:PlayState):Array<StrumlineNote>
@@ -3313,16 +3378,29 @@ class PsychGameplayApi
     {
       var removeMethod:Dynamic = Reflect.field(collection, "remove");
       if (removeMethod == null) return false;
-      if (!dontDestroy)
-      {
-        var killMethod:Dynamic = Reflect.field(item, "kill");
-        if (killMethod != null) Reflect.callMethod(item, killMethod, []);
-      }
+
+      // First remove from the requested group, then detach from every engine
+      // owner that may still retain the same object. Psych mods can move one
+      // tagged sprite between PlayState and currentStage groups; destroying
+      // only after the requested collection removes it can otherwise leave a
+      // second stale reference that FlxAnimate attempts to draw on retry.
       Reflect.callMethod(collection, removeMethod, [item, true]);
       if (!dontDestroy)
       {
-        var destroyMethod:Dynamic = Reflect.field(item, "destroy");
-        if (destroyMethod != null) Reflect.callMethod(item, destroyMethod, []);
+        if (Std.isOfType(item, FlxBasic))
+        {
+          var basic:FlxBasic = cast item;
+          removeFromParent(state, basic);
+          basic.kill();
+          basic.destroy();
+        }
+        else
+        {
+          var killMethod:Dynamic = Reflect.field(item, "kill");
+          if (killMethod != null) Reflect.callMethod(item, killMethod, []);
+          var destroyMethod:Dynamic = Reflect.field(item, "destroy");
+          if (destroyMethod != null) Reflect.callMethod(item, destroyMethod, []);
+        }
       }
       return true;
     }
@@ -3455,8 +3533,11 @@ class PsychGameplayApi
       case "add camera zoom":
         var gameZoom:Float = parseFloatOr(value1, 0);
         var hudZoom:Float = parseFloatOr(value2, 0);
-        if (gameZoom != 0) state.camGame.zoom += gameZoom;
-        if (hudZoom != 0) state.camHUD.zoom += hudZoom;
+        // Psych's beat/event zoom is softened consistently with the native
+        // beat bop so Add Camera Zoom events do not reintroduce the old punch.
+        var psychZoomScale:Float = ExperienceManager.isPsychSong(state.currentSong.id) ? 0.35 : 1.0;
+        if (gameZoom != 0) state.camGame.zoom += gameZoom * psychZoomScale;
+        if (hudZoom != 0) state.camHUD.zoom += hudZoom * psychZoomScale;
       case "screen shake":
         var gameParts:Array<String> = value1.split(",");
         var hudParts:Array<String> = value2.split(",");

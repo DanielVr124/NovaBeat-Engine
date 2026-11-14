@@ -5,6 +5,8 @@ import funkin.data.song.SongData.NoteParamData;
 import funkin.play.notes.notestyle.NoteStyle;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.HSVShader;
+import funkin.graphics.shaders.PsychHurtNoteShader;
+import funkin.play.notes.notekind.NoteKindManager;
 
 class NoteSprite extends FunkinSprite
 {
@@ -104,6 +106,68 @@ class NoteSprite extends FunkinSprite
    */
   public var noteData:SongNoteData;
 
+  var activeNoteStyle:Null<NoteStyle> = null;
+  var psychTexture:Null<String> = null;
+
+  /** Psych's per-note Sparrow atlas override (e.g. HURTNOTE_assets). */
+  public var texture(get, set):Null<String>;
+
+  function get_texture():Null<String>
+  {
+    return psychTexture;
+  }
+
+  function set_texture(value:Null<String>):Null<String>
+  {
+    var normalized:Null<String> = normalizePsychTexture(value);
+    if (psychTexture == normalized) return psychTexture;
+
+    psychTexture = normalized;
+    if (noteData != null) noteData.texture = normalized;
+    rebuildNoteGraphic(true);
+
+    // Active-note texture changes must also switch the built-in Hurt Note
+    // palette shader on/off, matching the initial spawn path.
+    shader = noteData != null && noteData.kind == "psychhurt" && psychTexture == null
+      ? PsychHurtNoteShader.shared()
+      : null;
+    return psychTexture;
+  }
+
+  /** Psych-compatible aliases exposed to get/setPropertyFromGroup. */
+  public var noteType(get, set):Null<String>;
+
+  function get_noteType():Null<String>
+  {
+    return noteData == null ? null : noteData.noteType;
+  }
+
+  function set_noteType(value:Null<String>):Null<String>
+  {
+    if (noteData != null)
+    {
+      noteData.noteType = value;
+      var kind = NoteKindManager.getNoteKind(noteData.kind);
+      scoreable = kind == null ? true : kind.scoreable;
+      shader = kind != null && kind.hurt && psychTexture == null ? PsychHurtNoteShader.shared() : null;
+    }
+    return value;
+  }
+
+  public var mustPress(get, never):Bool;
+
+  function get_mustPress():Bool
+  {
+    return noteData != null && noteData.getStrumlineIndex() == 0;
+  }
+
+  public var isSustainNote(get, never):Bool;
+
+  function get_isSustainNote():Bool
+  {
+    return isHoldNote;
+  }
+
   /**
    * Set this to `false` to disable scoring for this note.
    * The note will no longer count towards ratings, points, or accuracy.
@@ -181,12 +245,72 @@ class NoteSprite extends FunkinSprite
    * Creates frames and animations
    * @param noteStyle The `NoteStyle` instance
    */
-  public function setupNoteGraphic(noteStyle:NoteStyle):Void
+  public function setupNoteGraphic(noteStyle:NoteStyle, ?textureOverride:String):Void
   {
-    noteStyle.buildNoteSprite(this);
+    activeNoteStyle = noteStyle;
+    psychTexture = normalizePsychTexture(textureOverride);
+    rebuildNoteGraphic(false);
+  }
 
-    // `false` disables the update() function for performance.
-    this.active = noteStyle.isNoteAnimated();
+  static function normalizePsychTexture(value:Null<String>):Null<String>
+  {
+    if (value == null || StringTools.trim(value).length == 0) return null;
+
+    var normalized:String = StringTools.trim(StringTools.replace(value, "\\", "/"));
+    if (normalized.length == 0 || StringTools.startsWith(normalized, "/")
+      || (normalized.length > 1 && normalized.charAt(1) == ":")) return null;
+
+    while (StringTools.startsWith(normalized.toLowerCase(), "assets/"))
+      normalized = normalized.substr("assets/".length);
+    while (StringTools.startsWith(normalized.toLowerCase(), "images/"))
+      normalized = normalized.substr("images/".length);
+
+    for (part in normalized.split("/"))
+      if (part == "." || part == ".." || part.length == 0) return null;
+
+    var slash:Int = normalized.lastIndexOf("/");
+    var dot:Int = normalized.lastIndexOf(".");
+    if (dot > slash)
+    {
+      var extension:String = normalized.substr(dot + 1).toLowerCase();
+      if (["png", "jpg", "jpeg", "webp", "bmp"].indexOf(extension) >= 0)
+        normalized = normalized.substr(0, dot);
+    }
+
+    return normalized.length == 0 ? null : normalized;
+  }
+
+  function rebuildNoteGraphic(replayAnimation:Bool):Void
+  {
+    var style:Null<NoteStyle> = activeNoteStyle;
+    if (style == null) return;
+
+    // Dynamic texture swaps happen after Strumline applies its gameplay
+    // scale. Preserve that scale while NoteStyle rebuilds the atlas/animations.
+    var previousScaleX:Float = scale.x;
+    var previousScaleY:Float = scale.y;
+    try
+    {
+      style.buildNoteSprite(this, psychTexture);
+    }
+    catch (error:Dynamic)
+    {
+      // A missing optional mod texture must not crash the song. Restore the
+      // chart's normal note style and keep the note's gameplay behavior.
+      if (psychTexture == null) throw error;
+      trace('[Psych Compatibility] Could not load note texture "' + psychTexture + '": ' + Std.string(error));
+      psychTexture = null;
+      if (noteData != null) noteData.texture = null;
+      style.buildNoteSprite(this);
+    }
+
+    if (replayAnimation)
+    {
+      scale.set(previousScaleX, previousScaleY);
+      updateHitbox();
+    }
+    this.active = style.isNoteAnimated();
+    if (replayAnimation && frames != null) playNoteAnimation(this.direction);
   }
 
   /**

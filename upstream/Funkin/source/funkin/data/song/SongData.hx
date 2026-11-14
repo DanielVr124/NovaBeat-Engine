@@ -1108,6 +1108,65 @@ class SongNoteDataRaw implements ICloneable<SongNoteDataRaw>
   @:alias("p") @:default([]) @:optional
   public var params:Array<NoteParamData>;
 
+  /**
+   * Runtime-only Psych Engine note graphic override, set by Lua through
+   * setPropertyFromGroup('unspawnNotes', index, 'texture', assetName).
+   * This is intentionally excluded from native chart serialization.
+   */
+  @:jignored
+  public var texture:Null<String>;
+
+  /** Psych-compatible aliases used by Psych Lua note scripts. */
+  @:jignored
+  public var noteType(get, set):Null<String>;
+
+  function get_noteType():Null<String>
+  {
+    return switch (StringTools.trim(this.kind ?? "").toLowerCase())
+    {
+      case "alt": "Alt Animation";
+      case "noanim": "No Animation";
+      case "psychhey": "Hey!";
+      case "psychgfsing": "GF Sing";
+      case "psychhurt": "Hurt Note";
+      case "psychgfsection": "";
+      case "psychgfsectionalt": "Alt Animation";
+      default: this.kind;
+    };
+  }
+
+  function set_noteType(value:Null<String>):Null<String>
+  {
+    if (value == null) return this.kind = null;
+
+    var normalized:String = switch (StringTools.trim(value).toLowerCase())
+    {
+      case "alt animation": "alt";
+      case "no animation": "noanim";
+      case "hey!": "psychhey";
+      case "gf sing": "psychgfsing";
+      case "hurt note": "psychhurt";
+      default: value;
+    };
+    return this.kind = normalized;
+  }
+
+  @:jignored
+  public var mustPress(get, never):Bool;
+
+  function get_mustPress():Bool
+  {
+    return Math.floor(this.data / 4) == 0;
+  }
+
+  @:jignored
+  public var isSustainNote(get, never):Bool;
+
+  function get_isSustainNote():Bool
+  {
+    return this.length > 0;
+  }
+
   public function new(time:Float, data:Int, length:Float = 0, kind:String = '', ?params:Array<NoteParamData>)
   {
     this.time = time;
@@ -1251,7 +1310,9 @@ class SongNoteDataRaw implements ICloneable<SongNoteDataRaw>
    */
   public function clone():SongNoteDataRaw
   {
-    return new SongNoteDataRaw(this.time, this.data, this.length, this.kind, cloneParams());
+    var result:SongNoteDataRaw = new SongNoteDataRaw(this.time, this.data, this.length, this.kind, cloneParams());
+    result.texture = this.texture;
+    return result;
   }
 
   public function toString():String
@@ -1403,7 +1464,9 @@ abstract SongNoteData(SongNoteDataRaw) from SongNoteDataRaw to SongNoteDataRaw
 
   public function clone():SongNoteData
   {
-    return new SongNoteData(this.time, this.data, this.length, this.kind, this.params);
+    var result:SongNoteData = new SongNoteData(this.time, this.data, this.length, this.kind, this.params);
+    result.texture = this.texture;
+    return result;
   }
 
   /**
