@@ -63,12 +63,6 @@ class VideoCutscene
   public static final onVideoEnded:FlxSignal = new FlxSignal();
 
   /**
-   * Play a video cutscene.
-   * TODO: Currently this is hardcoded to start the countdown after the video is done.
-   * @param path The path to the video file. Use Paths.file(path) to get the correct path.
-   * @param cutseneType The type of cutscene to play, determines what the game does after. Defaults to `CutsceneType.STARTING`.
-   */
-  /**
    * Prepare a native video decoder before a Psych script requests playback.
    * The decoder remains paused; playVideoNative() reuses it when the matching
    * startVideo() call arrives.
@@ -151,6 +145,20 @@ class VideoCutscene
   }
   #end
 
+  /** Release any prepared decoder when a song is abandoned or replaced. */
+  public static function clearPreload():Void
+  {
+    #if hxvlc
+    clearPreloadedVideo();
+    #end
+  }
+
+  /**
+   * Play a video cutscene.
+   * TODO: Currently this is hardcoded to start the countdown after the video is done.
+   * @param path The path to the video file. Use Paths.file(path) to get the correct path.
+   * @param cutseneType The type of cutscene to play, determines what the game does after. Defaults to `CutsceneType.STARTING`.
+   */
   public static function play(filePath:String, ?cutsceneType:CutsceneType = STARTING):Void
   {
     if (PlayState.instance == null) return;
@@ -477,6 +485,7 @@ class VideoCutscene
    */
   public static function destroyVideo()
   {
+    clearPreload();
     #if html5
     if (vid != null) PlayState.instance.remove(vid);
     #end
