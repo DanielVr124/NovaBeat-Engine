@@ -3114,7 +3114,7 @@ class PsychModRuntime
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
-      if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder);
+      if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder, modPath);
       psychSongStageNames.set(songId, stageName);
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
