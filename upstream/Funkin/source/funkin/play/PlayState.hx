@@ -345,7 +345,7 @@ class PlayState extends MusicBeatSubState
       // Portrait gameplay needs a tighter stage framing so the stage fills
       // the available play area instead of leaving large empty borders.
       #if mobile
-      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.7 : 1.0);
+      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.768 : 1.0);
       #else
       return currentStage.camZoom;
       #end
@@ -2631,7 +2631,7 @@ class PlayState extends MusicBeatSubState
       if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
       {
         playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
-          - receptorLeft;
+          - receptorLeft + Constants.STRUMLINE_X_OFFSET;
       }
       else
       {
@@ -2782,7 +2782,7 @@ class PlayState extends MusicBeatSubState
     if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
     {
       playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
-        - receptorLeft;
+        - receptorLeft + Constants.STRUMLINE_X_OFFSET;
     }
     else
     {
