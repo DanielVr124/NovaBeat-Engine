@@ -6,6 +6,7 @@ import funkin.play.notes.notestyle.NoteStyle;
 import funkin.graphics.FunkinSprite;
 import funkin.graphics.shaders.HSVShader;
 import funkin.graphics.shaders.PsychHurtNoteShader;
+import funkin.play.notes.notekind.NoteKindManager;
 
 class NoteSprite extends FunkinSprite
 {
@@ -143,7 +144,13 @@ class NoteSprite extends FunkinSprite
 
   function set_noteType(value:Null<String>):Null<String>
   {
-    if (noteData != null) noteData.noteType = value;
+    if (noteData != null)
+    {
+      noteData.noteType = value;
+      var kind = NoteKindManager.getNoteKind(noteData.kind);
+      scoreable = kind == null ? true : kind.scoreable;
+      shader = kind != null && kind.hurt && psychTexture == null ? PsychHurtNoteShader.shared() : null;
+    }
     return value;
   }
 
@@ -278,9 +285,18 @@ class NoteSprite extends FunkinSprite
     var style:Null<NoteStyle> = activeNoteStyle;
     if (style == null) return;
 
+    // Dynamic texture swaps happen after Strumline applies its gameplay
+    // scale. Preserve that scale while NoteStyle rebuilds the atlas/animations.
+    var previousScaleX:Float = scale.x;
+    var previousScaleY:Float = scale.y;
     try
     {
       style.buildNoteSprite(this, psychTexture);
+      if (replayAnimation)
+      {
+        scale.set(previousScaleX, previousScaleY);
+        updateHitbox();
+      }
     }
     catch (error:Dynamic)
     {
