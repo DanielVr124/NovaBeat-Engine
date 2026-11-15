@@ -110,13 +110,35 @@ class PsychModRuntime
     if (requestedFile == null || !StringTools.startsWith(requestedFile, "images/")) return requestedFile;
     if (songId == null || songId.length == 0) return requestedFile;
 
-    // Prefer assets inside the owning mod, then probe the shared Psych mods
-    // root. Some packs store shared character/icon atlases in mods/images
-    // while their character JSON is in mods/characters or mods/data/characters.
+    // Psych mods commonly keep images/ directly under the package root. Full
+    // source-game distributions instead use assets/shared/images and
+    // assets/preload/images, sometimes beside the mods/ directory.
     var roots:Array<String> = [];
     var modRoot:Null<String> = psychSongModRoots.get(songId);
-    if (modRoot != null && FileSystem.exists(modRoot) && FileSystem.isDirectory(modRoot))
-      roots.push(Path.normalize(modRoot));
+    if (modRoot != null)
+    {
+      var modParent:String = Path.directory(modRoot);
+      var gameRoot:String = Path.directory(modParent);
+      for (candidate in [
+        modRoot,
+        Path.join([modRoot, "assets"]),
+        Path.join([modRoot, "assets", "shared"]),
+        Path.join([modRoot, "assets", "preload"]),
+        Path.join([modParent, "assets"]),
+        Path.join([modParent, "assets", "shared"]),
+        Path.join([modParent, "assets", "preload"]),
+        Path.join([gameRoot, "assets"]),
+        Path.join([gameRoot, "assets", "shared"]),
+        Path.join([gameRoot, "assets", "preload"])
+      ])
+      {
+        var normalizedRoot:String = Path.normalize(candidate);
+        if (roots.indexOf(normalizedRoot) < 0 && FileSystem.exists(normalizedRoot)
+          && FileSystem.isDirectory(normalizedRoot))
+          roots.push(normalizedRoot);
+      }
+    }
+
     var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
     if (roots.indexOf(sharedRoot) < 0 && FileSystem.exists(sharedRoot) && FileSystem.isDirectory(sharedRoot))
       roots.push(sharedRoot);
@@ -878,37 +900,63 @@ class PsychModRuntime
   }
 
   /**
-   * Locate a Psych stage JSON file without depending on the filesystem's case
-   * sensitivity. Psych packs commonly move between Windows and Linux, and
-   * stage ids in charts do not always match the on-disk casing.
+   * Return every supported Psych stage-script/data directory. Besides the
+   * common stages/ folder, full source-game layouts put stages under
+   * assets/preload/stages (or assets/shared/stages).
+   */
+  static function psychStageDirectories(modRoot:String):Array<String>
+  {
+    #if sys
+    var modParent:String = Path.directory(modRoot);
+    var gameRoot:String = Path.directory(modParent);
+    var parents:Array<String> = [
+      modRoot,
+      Path.join([modRoot, "data"]),
+      Path.join([modRoot, "assets"]),
+      Path.join([modRoot, "assets", "preload"]),
+      Path.join([modRoot, "assets", "shared"]),
+      Path.join([modParent, "assets"]),
+      Path.join([modParent, "assets", "preload"]),
+      Path.join([modParent, "assets", "shared"]),
+      Path.join([gameRoot, "assets"]),
+      Path.join([gameRoot, "assets", "preload"]),
+      Path.join([gameRoot, "assets", "shared"])
+    ];
+    var result:Array<String> = [];
+    for (parent in parents)
+    {
+      if (!FileSystem.exists(parent) || !FileSystem.isDirectory(parent)) continue;
+      for (directoryName in FileSystem.readDirectory(parent))
+      {
+        if (directoryName.toLowerCase() != "stages") continue;
+        var stageDirectory:String = Path.normalize(Path.join([parent, directoryName]));
+        if (FileSystem.exists(stageDirectory) && FileSystem.isDirectory(stageDirectory)
+          && !result.contains(stageDirectory))
+          result.push(stageDirectory);
+      }
+    }
+    return result;
+    #else
+    return [];
+    #end
+  }
+
+  /**
+   * Locate a Psych stage JSON file without depending on filesystem case.
    */
   static function findPsychStageDataFile(modRoot:String, stageName:String):Null<String>
   {
     #if sys
-    var parents:Array<String> = [
-      modRoot,
-      Path.join([modRoot, "data"])
-    ];
-
-    for (parent in parents)
+    for (stageDirectory in psychStageDirectories(modRoot))
     {
-      if (!FileSystem.exists(parent) || !FileSystem.isDirectory(parent)) continue;
-
-      for (directoryName in FileSystem.readDirectory(parent))
+      for (fileName in FileSystem.readDirectory(stageDirectory))
       {
-        if (directoryName.toLowerCase() != "stages") continue;
-        var stageDirectory:String = Path.join([parent, directoryName]);
-        if (!FileSystem.exists(stageDirectory) || !FileSystem.isDirectory(stageDirectory)) continue;
+        if (Path.extension(fileName).toLowerCase() != "json") continue;
+        if (Path.withoutExtension(fileName).toLowerCase() != stageName.toLowerCase()) continue;
 
-        for (fileName in FileSystem.readDirectory(stageDirectory))
-        {
-          if (Path.extension(fileName).toLowerCase() != "json") continue;
-          if (Path.withoutExtension(fileName).toLowerCase() != stageName.toLowerCase()) continue;
-
-          var candidate:String = Path.normalize(Path.join([stageDirectory, fileName]));
-          if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate))
-            return candidate;
-        }
+        var candidate:String = Path.normalize(Path.join([stageDirectory, fileName]));
+        if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate))
+          return candidate;
       }
     }
     #end
@@ -1564,10 +1612,11 @@ class PsychModRuntime
           }
         }
 
-        stageSources = stageSources.concat(readNamedScriptSources(Path.join([modPath, "stages"]), stageNames));
-        // Some Psych packs keep the named stage script beside images/,
-        // characters/, and songs/ instead of inside stages/. Only exact
-        // stage-name matches are loaded from the package root.
+        // Search both ordinary Psych folders and full source-game layouts
+        // such as assets/preload/stages/Forest.lua.
+        for (stageDirectory in psychStageDirectories(modPath))
+          stageSources = stageSources.concat(readNamedScriptSources(stageDirectory, stageNames));
+        // Some Psych packs keep the named stage script at the package root.
         stageSources = stageSources.concat(readNamedScriptSources(modPath, stageNames));
         characterSources = characterSources.concat(readNamedScriptSources(Path.join([modPath, "characters"]), characterNames));
         customEventSources = customEventSources.concat(readNamedScriptSources(Path.join([modPath, "custom_events"]), eventNames));
@@ -1746,20 +1795,26 @@ class PsychModRuntime
   #if sys
   static function psychCharacterDataRoots(modPath:String):Array<String>
   {
-    // Song-local character definitions always win. This prevents two enabled
-    // mods with the same character ID from replacing one another.
+    // Song-local character definitions always win. Full source-game folders
+    // commonly keep these JSONs under assets/preload/characters.
+    var modParent:String = Path.directory(modPath);
+    var gameRoot:String = Path.directory(modParent);
     var roots:Array<String> = [
       Path.join([modPath, "characters"]),
-      Path.join([modPath, "data", "characters"])
+      Path.join([modPath, "data", "characters"]),
+      Path.join([modPath, "assets", "characters"]),
+      Path.join([modPath, "assets", "preload", "characters"]),
+      Path.join([modPath, "assets", "shared", "characters"]),
+      Path.join([modParent, "assets", "characters"]),
+      Path.join([modParent, "assets", "preload", "characters"]),
+      Path.join([modParent, "assets", "shared", "characters"]),
+      Path.join([gameRoot, "assets", "characters"]),
+      Path.join([gameRoot, "assets", "preload", "characters"]),
+      Path.join([gameRoot, "assets", "shared", "characters"])
     ];
 
-    // Some full Psych Engine games ship their playable-character JSON beside
-    // the mods/ directory while the corresponding atlas is inside mods/images.
-    var companionRoot:String = Path.normalize(Path.join([Path.directory(modPath), "assets", "characters"]));
-    if (roots.indexOf(companionRoot) < 0) roots.push(companionRoot);
-
-    // Many Psych packs use the engine-wide shared character folders rather
-    // than a per-mod characters folder. Search those only after local roots.
+    // Many Psych packs use engine-wide shared character folders rather than
+    // a per-mod characters folder. Search those only after package companions.
     var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
     for (candidateRoot in [
       Path.join([sharedRoot, "characters"]),
@@ -2067,11 +2122,14 @@ class PsychModRuntime
     if (modPath != null && songKey.length > 0)
     {
       var stageBaseName:String = StringTools.trim(songFolder);
-      for (extension in [".json", ".lua", ".hx"])
+      for (stageDirectory in psychStageDirectories(modPath))
       {
-        var stageFile:String = Path.join([modPath, "stages", stageBaseName + extension]);
-        if (FileSystem.exists(stageFile) && !FileSystem.isDirectory(stageFile))
-          return stageBaseName;
+        for (extension in [".json", ".lua", ".hx"])
+        {
+          var stageFile:String = Path.join([stageDirectory, stageBaseName + extension]);
+          if (FileSystem.exists(stageFile) && !FileSystem.isDirectory(stageFile))
+            return stageBaseName;
+        }
       }
     }
     #end
@@ -2354,7 +2412,7 @@ class PsychModRuntime
       if (stageValue == null) stageValue = Reflect.field(metadata, "stage");
       var stageName:String = stageValue == null ? "" : StringTools.trim(Std.string(stageValue));
       if (stageName.length > 0 && !isBuiltinPsychStage(stageName)
-        && !hasNamedPsychScript(Path.join([modPath, "stages"]), stageName)
+        && !hasNamedPsychStageScript(modPath, stageName)
         && !hasNamedPsychScript(modPath, stageName))
         return "custom stage '" + stageName + "' needs a matching stages/" + stageName
           + ".lua/.hx script or a root-level " + stageName + ".lua/.hx script";
@@ -2539,6 +2597,13 @@ class PsychModRuntime
       if ((extension == "lua" || extension == "hx" || extension == "hscript")
         && Path.withoutExtension(entry).toLowerCase() == normalized) return true;
     }
+    return false;
+  }
+
+  static function hasNamedPsychStageScript(modPath:String, stageName:String):Bool
+  {
+    for (stageDirectory in psychStageDirectories(modPath))
+      if (hasNamedPsychScript(stageDirectory, stageName)) return true;
     return false;
   }
 
@@ -3023,6 +3088,18 @@ class PsychModRuntime
 
     #if sys
     var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
+    var usedPlayerBaseDefinition:Bool = false;
+
+    // Some source-game charts use a one-off player id (Gorilla Funkin uses
+    // KFIC) while the actual playable definition is characters/bf.json.
+    // Use that package's BF data under a song-scoped alias; never replace the
+    // globally cached base BF or borrow another mod's character.
+    if (jsonPath == null && role == "player" && normalized.toLowerCase() != "bf")
+    {
+      jsonPath = findPsychCharacterDataFile(modPath, "bf");
+      usedPlayerBaseDefinition = jsonPath != null;
+    }
+
     if (jsonPath != null)
     {
       var aliasId:String = "psych-" + StringTools.replace(StringTools.replace(songId, "/", "-"), "\\", "-")
@@ -3035,8 +3112,8 @@ class PsychModRuntime
           var converted:Null<CharacterData> = convertPsychCharacterData(aliasId, raw);
           if (converted != null)
           {
-            // When Psych omits healthicon, its conventional fallback is the
-            // source character ID, not the internal song-scoped alias.
+            // Keep the icon associated with the source definition. If the
+            // Psych JSON omits it, use the requested chart ID, not the alias.
             var sourceIcon:Dynamic = Reflect.field(raw, "healthicon");
             if ((sourceIcon == null || StringTools.trim(Std.string(sourceIcon)).length == 0)
               && converted.healthIcon != null)
@@ -3054,8 +3131,12 @@ class PsychModRuntime
 
       if (CharacterDataParser.fetchCharacterData(aliasId) != null)
       {
-        trace('[Psych Compatibility] Using mod-provided ' + role + ' character "' + normalized
-          + '" for ' + songId + ' (JSON: ' + jsonPath + ').');
+        if (usedPlayerBaseDefinition)
+          trace('[Psych Compatibility] Chart player "' + normalized
+            + '" has no character JSON; using this package’s bf.json for ' + songId + '.');
+        else
+          trace('[Psych Compatibility] Using mod-provided ' + role + ' character "' + normalized
+            + '" for ' + songId + ' (JSON: ' + jsonPath + ').');
         return aliasId;
       }
     }
@@ -3703,18 +3784,39 @@ class PsychModRuntime
     if (tempParent == null || tempParent.length == 0) tempParent = Sys.getCwd();
 
     var tempRoot:String = Path.join([tempParent, "novabeat-psych-stage-smoke-" + Std.string(Std.random(0x7FFFFFFF))]);
-    var expectedPath:String = Path.join([tempRoot, "Stages", "fOrEsT.JsOn"]);
+    var directStagePath:String = Path.join([tempRoot, "Stages", "fOrEsT.JsOn"]);
+    var sourceStagePath:String = Path.join([tempRoot, "assets", "preload", "Stages", "cAsUaL.JsOn"]);
+    var characterPath:String = Path.join([tempRoot, "assets", "preload", "characters", "bF.JsOn"]);
+    var assetPath:String = Path.join([tempRoot, "assets", "shared", "images", "characters", "GoRiLlA.PnG"]);
+    var testSongId:String = "__psych_stage_asset_smoke__";
     var passed:Bool = false;
     try
     {
-      createSmokeDirectoryTree(Path.directory(expectedPath));
-      File.saveContent(expectedPath, '{"boyfriend":[660,100]}');
-      var resolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
-      passed = resolved != null && Path.normalize(resolved) == Path.normalize(expectedPath);
+      createSmokeDirectoryTree(Path.directory(directStagePath));
+      createSmokeDirectoryTree(Path.directory(sourceStagePath));
+      createSmokeDirectoryTree(Path.directory(characterPath));
+      createSmokeDirectoryTree(Path.directory(assetPath));
+      File.saveContent(directStagePath, '{"boyfriend":[770,100]}');
+      File.saveContent(sourceStagePath, '{"boyfriend":[660,100]}');
+      File.saveContent(characterPath, '{}');
+      File.saveContent(assetPath, '');
+
+      var directResolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
+      var sourceResolved:Null<String> = findPsychStageDataFile(tempRoot, "Casual");
+      var characterResolved:Null<String> = findPsychCharacterDataFile(tempRoot, "BF");
+      psychSongModRoots.set(testSongId, tempRoot);
+      var assetResolved:String = resolvePsychAssetCaseForSong(testSongId, "images/characters/gorilla.png");
+      psychSongModRoots.remove(testSongId);
+
+      passed = directResolved != null && Path.normalize(directResolved) == Path.normalize(directStagePath)
+        && sourceResolved != null && Path.normalize(sourceResolved) == Path.normalize(sourceStagePath)
+        && characterResolved != null && Path.normalize(characterResolved) == Path.normalize(characterPath)
+        && assetResolved == "images/characters/GoRiLlA.PnG";
     }
     catch (error:Dynamic)
     {
-      trace('[Psych Compatibility] Stage lookup smoke test failed: ' + Std.string(error));
+      psychSongModRoots.remove(testSongId);
+      trace('[Psych Compatibility] Source-game asset layout smoke test failed: ' + Std.string(error));
       passed = false;
     }
 
