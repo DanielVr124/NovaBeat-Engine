@@ -459,9 +459,15 @@ class HealthIcon extends FunkinSprite
 
   function resolveIconImagePath(charId:String):String
   {
-    return psychAssetSongId == null
-      ? Paths.image('icons/icon-$charId')
-      : Paths.imageForPsychSong('icons/icon-$charId', psychAssetSongId);
+    if (psychAssetSongId == null) return Paths.image('icons/icon-$charId');
+
+    // A Psych song's package is searched first, but plenty of songs reuse the
+    // base-game icons (bf, dad, gf). Paths hands back a path even when nothing
+    // exists at it, so probe the result before trusting it and fall back to
+    // the shared assets instead of failing.
+    var scopedPath:String = Paths.imageForPsychSong('icons/icon-$charId', psychAssetSongId);
+    if (Assets.exists(scopedPath, openfl.utils.AssetType.IMAGE)) return scopedPath;
+    return Paths.image('icons/icon-$charId');
   }
 
   function resolveIconXmlPath(charId:String):String
@@ -474,7 +480,7 @@ class HealthIcon extends FunkinSprite
 
   function iconExists(charId:String):Bool
   {
-    return Assets.exists(resolveIconImagePath(charId));
+    return Assets.exists(resolveIconImagePath(charId), openfl.utils.AssetType.IMAGE);
   }
 
   function isNewSpritesheet(charId:String):Bool
@@ -487,8 +493,22 @@ class HealthIcon extends FunkinSprite
   {
     if (charId == null || !iconExists(charId))
     {
+      var fallbackId:String = Constants.DEFAULT_HEALTH_ICON;
+
+      if (!iconExists(fallbackId))
+      {
+        // Nothing to draw anywhere. Handing a missing path to loadGraphic makes
+        // Flixel render its built-in fallback image (the Flixel logo) in place
+        // of a face, so draw a transparent icon of the right size and hide it.
+        FlxG.log.warn('No health icon found for "$charId" or "$fallbackId"; drawing an empty icon.');
+        makeGraphic(isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE,
+          0x00000000);
+        this.visible = false;
+        return;
+      }
+
       FlxG.log.warn('No icon for character: $charId : using default placeholder face instead!');
-      characterId = Constants.DEFAULT_HEALTH_ICON;
+      characterId = fallbackId;
       charId = characterId;
     }
 
