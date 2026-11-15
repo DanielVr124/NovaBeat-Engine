@@ -1190,9 +1190,13 @@ class Strumline extends FlxSpriteGroup
       {
         final noteCenter:Float = noteSprite.x + noteSprite.width * 0.5;
         final receptorCenter:Float = receptor.x + receptor.width * 0.5;
-        final alignmentError:Float = Math.abs(noteCenter - receptorCenter);
+        // The original note art has a deliberate 2px NUDGE; verify the
+        // sprite center against that expected visual center, not the raw
+        // receptor center.
+        final expectedNoteCenter:Float = receptorCenter - NUDGE;
+        final alignmentError:Float = Math.abs(noteCenter - expectedNoteCenter);
         trace("NOVABEAT_LAYOUT_TEST: NOTE lane=" + note.getDirection()
-          + " noteCenter=" + noteCenter + " receptorCenter=" + receptorCenter
+          + " noteCenter=" + noteCenter + " expectedCenter=" + expectedNoteCenter
           + " delta=" + alignmentError);
         if (alignmentError > 1) trace("NOVABEAT_LAYOUT_TEST: NOTE_FAIL delta=" + alignmentError);
         androidLayoutNoteDiagnostics++;
