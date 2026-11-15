@@ -3029,40 +3029,6 @@ class PsychGameplayApi
     return result;
   }
 
-  /**
-   * Psych's unspawnNotes group contains all upcoming notes from both sides,
-   * ordered by strum time. Return the original chart objects so texture and
-   * note-type writes are retained when Strumline later builds each sprite.
-   */
-  static function getUnspawnNotes(state:PlayState):Array<SongNoteData>
-  {
-    var result:Array<SongNoteData> = [];
-    if (state.playerStrumline != null)
-    {
-      var playerStart:Int = Std.int(Math.max(0, state.playerStrumline.nextNoteIndex));
-      for (i in playerStart...state.playerStrumline.noteData.length)
-      {
-        var note:SongNoteData = state.playerStrumline.noteData[i];
-        if (note != null) result.push(note);
-      }
-    }
-    if (state.opponentStrumline != null)
-    {
-      var opponentStart:Int = Std.int(Math.max(0, state.opponentStrumline.nextNoteIndex));
-      for (i in opponentStart...state.opponentStrumline.noteData.length)
-      {
-        var note:SongNoteData = state.opponentStrumline.noteData[i];
-        if (note != null) result.push(note);
-      }
-    }
-
-    result.sort(function(a:SongNoteData, b:SongNoteData):Int
-    {
-      return Reflect.compare(a.time, b.time);
-    });
-    return result;
-  }
-
   static function resolveSafePsychClass(className:String):Class<Dynamic>
   {
     if (className == null || className.length == 0) return null;
