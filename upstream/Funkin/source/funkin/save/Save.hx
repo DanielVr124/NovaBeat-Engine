@@ -1122,11 +1122,9 @@ typedef SaveScoreTallyData =
 typedef SaveDataOptions =
 {
   /**
-   * FPS
-   * @default `60`
+   * Main-menu presentation selected by the player.
+   * @default "Original FNF"
    */
-  var framerate:Int;
-
   var menuStyle:String;
   var menuAccent:String;
   var menuBackgroundIntensity:Int;
@@ -1150,17 +1148,12 @@ typedef SaveDataOptions =
   var performanceStageShaders:Bool;
   var performanceCameraBops:Bool;
 
+
   /**
    * FPS
    * @default `60`
    */
   var framerate:Int;
-
-  /**
-   * Whether some particularly foul language is displayed.
-   * @default `true`
-   */
-
   /**
    * Whether some particularly foul language is displayed.
    * @default `true`
