@@ -1226,9 +1226,14 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.visible = true;
       holdNoteSprite.alpha = 1.0;
 
-      // Center sustain trails on the same live receptor bounds as tap notes.
+      // Center sustain trails with the same receptor-local alignment used by tap notes.
+      // Keeping the small graphic nudge and desktop frame-offset compensation in
+      // sync prevents hold notes from visibly drifting into an adjacent lane.
       final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2;
+      holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2 - NUDGE;
+      #if !(mobile || FEATURE_TOUCH_CONTROLS)
+      holdNoteSprite.x += holdNoteSprite.offset.x;
+      #end
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
