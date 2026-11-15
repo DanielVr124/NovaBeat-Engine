@@ -19,6 +19,26 @@ import funkin.api.discord.DiscordClient;
 class Preferences
 {
   /**
+   * Which main-menu presentation to use. Original FNF remains the default.
+   */
+  public static var menuStyle(get, set):String;
+
+  static function get_menuStyle():String
+  {
+    return Save?.instance?.options?.menuStyle ?? "Original FNF";
+  }
+
+  static function set_menuStyle(value:String):String
+  {
+    var normalized:String = value == "NovaBeat" ? "NovaBeat" : "Original FNF";
+    var save:Save = Save.instance;
+    save.options.menuStyle = normalized;
+    Save.system.flush();
+    return normalized;
+  }
+
+
+  /**
    * FPS
    * Always the refresh rate of the display on mobile, or 60 on web.
    * @default `60`
