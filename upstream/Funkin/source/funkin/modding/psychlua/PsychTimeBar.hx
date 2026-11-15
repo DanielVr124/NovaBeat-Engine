@@ -37,7 +37,7 @@ class PsychTimeBar extends FlxSpriteGroup
     super();
     this.owner = owner;
 
-    barWidth = Std.int(Math.max(240, FlxG.width - 160));
+    barWidth = Std.int(Math.min(400, Math.max(1, FlxG.width - 32)));
     var barX:Float = (FlxG.width - barWidth) / 2;
     var textY:Float = 18;
     var textWidth:Float = barWidth;

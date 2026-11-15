@@ -87,6 +87,35 @@ class PsychModRuntime
   }
 
   /**
+   * Run a short asset-loading operation with the owning Psych song selected.
+   * Freeplay constructs icons before any song has been launched, so the normal
+   * last-launch context is not available for case-correcting those asset paths.
+   */
+  public static function withPsychSongAssetContext(songId:String, callback:Void->Void):Void
+  {
+    if (callback == null) return;
+
+    var previousSongId:Null<String> = lastLaunchSongId;
+    var previousDifficulty:String = lastLaunchDifficulty;
+    if (songId != null && psychSongModRoots.exists(songId))
+      lastLaunchSongId = songId;
+
+    try
+    {
+      callback();
+    }
+    catch (error:Dynamic)
+    {
+      lastLaunchSongId = previousSongId;
+      lastLaunchDifficulty = previousDifficulty;
+      throw error;
+    }
+
+    lastLaunchSongId = previousSongId;
+    lastLaunchDifficulty = previousDifficulty;
+  }
+
+  /**
    * Correct case mismatches in image assets inside the active Psych mod.
    * OpenFL asset keys are case-sensitive even on case-insensitive host systems.
    * This is especially important for GorillaFunkin's character atlases and icon files.
@@ -1636,7 +1665,8 @@ class PsychModRuntime
   {
     var roots:Array<String> = [
       Path.join([modPath, "characters"]),
-      Path.join([modPath, "data", "characters"])
+      Path.join([modPath, "data", "characters"]),
+      Path.join([modPath, "assets", "characters"])
     ];
 
     // Some full Psych Engine games ship their playable-character JSON beside
@@ -2799,7 +2829,12 @@ class PsychModRuntime
   {
     var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
     if (normalized.length == 0)
+    {
+      // In classic Psych charts, an explicitly empty GF version means the
+      // song has no Girlfriend. Do not silently replace that with the base GF.
+      if (role == "girlfriend") return "";
       normalized = role == "player" ? "bf" : "gf";
+    }
 
     #if sys
     var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
@@ -2945,8 +2980,13 @@ class PsychModRuntime
         metadata = importedMetadata;
         psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
         psychOpponentId = readPsychString(chartSong, "player2", "dad");
-        psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
-          readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
+        // Preserve an explicitly empty gfVersion/player3 value. readPsychString
+        // treats empty strings as missing, but Psych uses an empty GF ID to hide GF.
+        var rawGFVersion:Dynamic = Reflect.field(chartSong, "gfVersion");
+        var rawPlayer3:Dynamic = Reflect.field(chartSong, "player3");
+        var girlfriendRequest:String = rawGFVersion != null ? StringTools.trim(Std.string(rawGFVersion))
+          : (rawPlayer3 != null ? StringTools.trim(Std.string(rawPlayer3)) : "gf");
+        psychGirlfriendId = resolvePsychSongCharacter(modPath, songId, girlfriendRequest, "girlfriend");
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
@@ -3081,6 +3121,12 @@ class PsychModRuntime
       else if (role == 1) opponent = character;
       else if (girlfriend == "gf") girlfriend = character;
     }
+
+    // Metadata is authoritative when present; an empty GF value intentionally
+    // suppresses the stage character even when the chart has an additional lane.
+    var rawGFVersion:Dynamic = Reflect.field(meta, "gfVersion");
+    if (rawGFVersion == null) rawGFVersion = Reflect.field(meta, "player3");
+    if (rawGFVersion != null) girlfriend = StringTools.trim(Std.string(rawGFVersion));
 
     var metadata:SongMetadata = new SongMetadata(songName, artist, charter, Constants.DEFAULT_VARIATION);
     metadata.timeChanges = [new funkin.data.song.SongData.SongTimeChange(0, bpm)];

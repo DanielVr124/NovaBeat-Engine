@@ -175,7 +175,9 @@ class PsychFreeplayState extends MusicBeatSubState
       if (difficulties.length == 0) continue;
 
       var firstDifficulty = song.getDifficulty(difficulties[0], VARIATION);
-      var iconId:String = firstDifficulty?.characters?.opponent ?? 'face';
+      var opponentId:String = firstDifficulty?.characters?.opponent ?? 'face';
+      var opponentData = CharacterDataParser.fetchCharacterData(opponentId);
+      var iconId:String = opponentData?.healthIcon?.id ?? opponentId;
       var freeplayIcon:Null<String> = funkin.modding.PsychModRuntime.getPsychFreeplayIcon(songId, iconId);
       var color:Int = funkin.modding.PsychModRuntime.getPsychFreeplayColor(songId);
       songs.push({
@@ -212,13 +214,16 @@ class PsychFreeplayState extends MusicBeatSubState
       // including pixel metadata when the icon belongs to a pixel character.
       var iconCharacterData = CharacterDataParser.fetchCharacterData(songs[i].icon);
       var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
-      icon.configure({
-        id: songs[i].icon,
-        shouldBop: false,
-        scale: 1.0,
-        flipX: false,
-        isPixel: iconCharacterData?.isPixel ?? false,
-        offsets: [0.0, 0.0]
+      funkin.modding.PsychModRuntime.withPsychSongAssetContext(songs[i].id, function():Void
+      {
+        icon.configure({
+          id: songs[i].icon,
+          shouldBop: false,
+          scale: 1.0,
+          flipX: false,
+          isPixel: iconCharacterData?.isPixel ?? false,
+          offsets: [0.0, 0.0]
+        });
       });
       icon.size.set(iconScale, iconScale);
       icon.autoUpdate = false;
@@ -414,8 +419,18 @@ class PsychFreeplayState extends MusicBeatSubState
     resetSongTitle.visible = true;
     add(resetSongTitle);
 
-    resetIcon.characterId = entry.icon;
-    resetIcon.size.set(scale, scale);
+    var resetIconData = CharacterDataParser.fetchCharacterData(entry.icon);
+    funkin.modding.PsychModRuntime.withPsychSongAssetContext(entry.id, function():Void
+    {
+      resetIcon.configure({
+        id: entry.icon,
+        shouldBop: false,
+        scale: scale,
+        flipX: false,
+        isPixel: resetIconData?.isPixel ?? false,
+        offsets: [0.0, 0.0]
+      });
+    });
     resetIcon.visible = true;
     resetIcon.alpha = 0;
     resetIcon.setPosition(resetSongTitle.x - resetIcon.width + (10 * scale), resetSongTitle.y - 30);

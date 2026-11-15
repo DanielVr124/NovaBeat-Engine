@@ -838,6 +838,12 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
     if (group != null) group.kill();
   }
 
+  /** Returns whether a sprite is owned by the stage's internal draw group. */
+  public function containsStageSprite(sprite:FlxSprite):Bool
+  {
+    return sprite != null && group != null && group.members.indexOf(sprite) >= 0;
+  }
+
   override public function remove(sprite:FlxSprite, splice:Bool = false):FlxSprite
   {
     if (sprite == null || !(sprite is FlxSprite)) return sprite;
