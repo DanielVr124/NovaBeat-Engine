@@ -877,6 +877,45 @@ class PsychModRuntime
       || psychSongOpponentUsesGFPosition.get(songId) == true;
   }
 
+  /**
+   * Locate a Psych stage JSON file without depending on the filesystem's case
+   * sensitivity. Psych packs commonly move between Windows and Linux, and
+   * stage ids in charts do not always match the on-disk casing.
+   */
+  static function findPsychStageDataFile(modRoot:String, stageName:String):Null<String>
+  {
+    #if sys
+    var parents:Array<String> = [
+      modRoot,
+      Path.join([modRoot, "data"])
+    ];
+
+    for (parent in parents)
+    {
+      if (!FileSystem.exists(parent) || !FileSystem.isDirectory(parent)) continue;
+
+      for (directoryName in FileSystem.readDirectory(parent))
+      {
+        if (directoryName.toLowerCase() != "stages") continue;
+        var stageDirectory:String = Path.join([parent, directoryName]);
+        if (!FileSystem.exists(stageDirectory) || !FileSystem.isDirectory(stageDirectory)) continue;
+
+        for (fileName in FileSystem.readDirectory(stageDirectory))
+        {
+          if (Path.extension(fileName).toLowerCase() != "json") continue;
+          if (Path.withoutExtension(fileName).toLowerCase() != stageName.toLowerCase()) continue;
+
+          var candidate:String = Path.normalize(Path.join([stageDirectory, fileName]));
+          if (FileSystem.exists(candidate) && !FileSystem.isDirectory(candidate))
+            return candidate;
+        }
+      }
+    }
+    #end
+
+    return null;
+  }
+
   public static function applyPsychStageData(stage:Dynamic, songId:String):Void
   {
     psychSongHideGirlfriend.remove(songId);
@@ -926,10 +965,13 @@ class PsychModRuntime
     if (stageName.indexOf("/") >= 0 || stageName.indexOf("\\") >= 0
       || stageName == "." || stageName == "..") return;
 
-    var stagePath:String = Path.normalize(Path.join([modRoot, "stages", stageName + ".json"]));
-    var stageDirectory:String = Path.normalize(Path.join([modRoot, "stages"]));
-    var prefix:String = StringTools.endsWith(stageDirectory, "/") ? stageDirectory : stageDirectory + "/";
-    if (!StringTools.startsWith(stagePath, prefix) || !FileSystem.exists(stagePath) || FileSystem.isDirectory(stagePath)) return;
+    var stagePath:Null<String> = findPsychStageDataFile(modRoot, stageName);
+    if (stagePath == null)
+    {
+      trace('[Psych Compatibility] Could not find stages/' + stageName + '.json for ' + songId
+        + ' under ' + modRoot + '. Using Psych default character anchors.');
+      return;
+    }
 
     try
     {
@@ -3050,6 +3092,29 @@ class PsychModRuntime
     return "dad";
   }
 
+  /**
+   * Strumlines consume note arrays in timestamp order. Psych charts can retain
+   * editor insertion order instead, including notes inserted earlier in time
+   * after later notes in the same section. Keep ties stable so simultaneous
+   * chords and same-lane sustain/tap ordering are not changed.
+   */
+  static function sortPsychNoteData(notes:Array<funkin.data.song.SongData.SongNoteData>):Void
+  {
+    var ordered:Array<{note:funkin.data.song.SongData.SongNoteData, sourceIndex:Int}> = [];
+    for (index in 0...notes.length)
+      ordered.push({note: notes[index], sourceIndex: index});
+
+    ordered.sort(function(a, b):Int
+    {
+      if (a.note.time < b.note.time) return -1;
+      if (a.note.time > b.note.time) return 1;
+      return a.sourceIndex - b.sourceIndex;
+    });
+
+    for (index in 0...ordered.length)
+      notes[index] = ordered[index].note;
+  }
+
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
   {
     var modPath:String = Path.normalize(Path.directory(Path.directory(source.dataPath)));
@@ -3224,6 +3289,15 @@ class PsychModRuntime
     }
 
     if (metadata == null || !combinedNotes.keys().hasNext()) return null;
+
+    // Sort only after GF-section ownership has been applied to the flattened
+    // legacy notes. Sorting earlier would break the one-to-one section mapping.
+    for (difficulty in combinedNotes.keys())
+    {
+      var difficultyNotes:Null<Array<funkin.data.song.SongData.SongNoteData>> = combinedNotes.get(difficulty);
+      if (difficultyNotes != null) sortPsychNoteData(difficultyNotes);
+    }
+
     metadata.variation = Constants.DEFAULT_VARIATION;
     metadata.generatedBy = "NovaBeat Psych compatibility";
     metadata.playData.songVariations = [];
@@ -3458,6 +3532,20 @@ class PsychModRuntime
       if (normalizePsychImageKey("assets/images/stages/forestback.png") != "stages/forestback") return false;
       if (normalizePsychImageKey("../outside.png") != "") return false;
 
+      // Legacy Psych note arrays may contain out-of-order timestamps. Sorting
+      // must be chronological while preserving source order for equal times.
+      var unorderedNotes:Array<funkin.data.song.SongData.SongNoteData> = [
+        new funkin.data.song.SongData.SongNoteData(1200, 3, 0, "first-at-time"),
+        new funkin.data.song.SongData.SongNoteData(500, 1, 0, "earliest"),
+        new funkin.data.song.SongData.SongNoteData(1200, 2, 0, "second-at-time")
+      ];
+      sortPsychNoteData(unorderedNotes);
+      if (unorderedNotes.length != 3 || unorderedNotes[0].time != 500
+        || unorderedNotes[1].kind != "first-at-time"
+        || unorderedNotes[2].kind != "second-at-time") return false;
+
+      if (!runPsychStageDataLookupSmokeTest()) return false;
+
       var fixture:Dynamic = Json.parse(
         '{"metadata":{"songName":"NovaBeat Psych v2 Smoke Test","artist":"Test","charter":"Test","bpm":100,"speed":1,"stage":"philly"},' +
         '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},{"type":1,"characters":["bf"],"keyCount":4}],' +
@@ -3614,6 +3702,36 @@ class PsychModRuntime
    * EngineBridge's Psych detector and verifies the runtime resolves the same
    * inner package root before scanning charts.
    */
+  /**
+   * Verify that Psych stage lookup is case-insensitive for both the stages
+   * directory and the stage JSON filename.
+   */
+  static function runPsychStageDataLookupSmokeTest():Bool
+  {
+    var tempParent:Null<String> = Sys.getEnv("TEMP");
+    if (tempParent == null || tempParent.length == 0) tempParent = Sys.getEnv("TMPDIR");
+    if (tempParent == null || tempParent.length == 0) tempParent = Sys.getCwd();
+
+    var tempRoot:String = Path.join([tempParent, "novabeat-psych-stage-smoke-" + Std.string(Std.random(0x7FFFFFFF))]);
+    var expectedPath:String = Path.join([tempRoot, "Stages", "fOrEsT.JsOn"]);
+    var passed:Bool = false;
+    try
+    {
+      createSmokeDirectoryTree(Path.directory(expectedPath));
+      File.saveContent(expectedPath, '{"boyfriend":[660,100]}');
+      var resolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
+      passed = resolved != null && Path.normalize(resolved) == Path.normalize(expectedPath);
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Stage lookup smoke test failed: ' + Std.string(error));
+      passed = false;
+    }
+
+    deleteSmokeDirectoryTree(tempRoot);
+    return passed;
+  }
+
   static function runNestedPackageRootSmokeTest():Bool
   {
     var tempParent:Null<String> = Sys.getEnv("TEMP");
