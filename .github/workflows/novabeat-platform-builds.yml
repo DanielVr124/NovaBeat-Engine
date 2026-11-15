@@ -66,6 +66,19 @@ jobs:
           test -f upstream/Funkin/assets/LICENSE.md
           test -f upstream/Funkin/art/LICENSE.md
 
+      - name: Install NovaBeat menu assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upstream/Funkin/assets/images/novabeat upstream/Funkin/assets/images/mainmenu upstream/Funkin/assets/sounds/novabeat upstream/Funkin/assets/music
+          cp -R novabeat-assets/images/novabeat/. upstream/Funkin/assets/images/novabeat/
+          cp -R novabeat-assets/images/mainmenu/. upstream/Funkin/assets/images/mainmenu/
+          cp -R novabeat-assets/sounds/novabeat/. upstream/Funkin/assets/sounds/novabeat/
+          cp novabeat-assets/music/novabeat-menu/novabeat-menu.ogg upstream/Funkin/assets/music/novabeat-menu.ogg
+          test -s upstream/Funkin/assets/images/novabeat/menu-background.png
+          test -s upstream/Funkin/assets/images/novabeat/title-logo.png
+          test -s upstream/Funkin/assets/music/novabeat-menu.ogg
+
       - name: Configure patched Haxe libraries and install pinned dependencies
         shell: bash
         working-directory: upstream/Funkin
@@ -189,6 +202,19 @@ jobs:
           test -f upstream/Funkin/LICENSE.md
           test -f upstream/Funkin/assets/LICENSE.md
           test -f upstream/Funkin/art/LICENSE.md
+
+      - name: Install NovaBeat menu assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upstream/Funkin/assets/images/novabeat upstream/Funkin/assets/images/mainmenu upstream/Funkin/assets/sounds/novabeat upstream/Funkin/assets/music
+          cp -R novabeat-assets/images/novabeat/. upstream/Funkin/assets/images/novabeat/
+          cp -R novabeat-assets/images/mainmenu/. upstream/Funkin/assets/images/mainmenu/
+          cp -R novabeat-assets/sounds/novabeat/. upstream/Funkin/assets/sounds/novabeat/
+          cp novabeat-assets/music/novabeat-menu/novabeat-menu.ogg upstream/Funkin/assets/music/novabeat-menu.ogg
+          test -s upstream/Funkin/assets/images/novabeat/menu-background.png
+          test -s upstream/Funkin/assets/images/novabeat/title-logo.png
+          test -s upstream/Funkin/assets/music/novabeat-menu.ogg
 
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v2
