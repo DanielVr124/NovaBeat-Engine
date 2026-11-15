@@ -14,7 +14,9 @@ adb shell wm size 480x1040
 adb shell wm density 160
 
 adb install -r "$APK_PATH"
-adb shell run-as "$PACKAGE_ID" sh -c 'mkdir -p files && : > files/novabeat-portrait-test'
+
+# First launch logs Lime's exact app-private storage path. Discover it rather
+# than assuming that the platform path is directly under /files.
 adb logcat -c
 adb shell monkey -p "$PACKAGE_ID" -c android.intent.category.LAUNCHER 1
 
@@ -34,6 +36,22 @@ capture_screen() {
   adb exec-out screencap -p > "$OUTPUT_DIR/$name"
   test -s "$OUTPUT_DIR/$name"
 }
+
+wait_for_log_marker "NOVABEAT_LAYOUT_TEST: STORAGE_DIR="
+storage_dir="$(adb logcat -d | sed -n 's/.*NOVABEAT_LAYOUT_TEST: STORAGE_DIR=//p' | tail -n 1 | tr -d '\r')"
+if [[ -z "$storage_dir" ]]; then
+  echo "Lime did not report the Android application storage directory." >&2
+  adb logcat -d > "$OUTPUT_DIR/logcat-storage-path.txt"
+  exit 1
+fi
+printf 'Discovered Android application storage: %s\n' "$storage_dir"
+
+# Escape single quotes for the emulator's /system/bin/sh.
+storage_dir_escaped="${storage_dir//\\'/\\'\\\\\\'}"
+adb shell run-as "$PACKAGE_ID" sh -c "mkdir -p '$storage_dir_escaped' && : > '$storage_dir_escaped/novabeat-portrait-test'"
+adb shell am force-stop "$PACKAGE_ID"
+adb logcat -c
+adb shell monkey -p "$PACKAGE_ID" -c android.intent.category.LAUNCHER 1
 
 wait_for_log_marker "NOVABEAT_LAYOUT_TEST: START_TUTORIAL"
 wait_for_log_marker "NOVABEAT_LAYOUT_TEST: PLAYSTATE_CREATED"

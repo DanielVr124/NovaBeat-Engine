@@ -379,6 +379,7 @@ class InitState extends FlxState
       lime.system.System.applicationStorageDirectory,
       "novabeat-portrait-test"
     ]);
+    trace("NOVABEAT_LAYOUT_TEST: STORAGE_DIR=" + lime.system.System.applicationStorageDirectory);
     if (sys.FileSystem.exists(portraitTestMarker))
     {
       trace("NOVABEAT_LAYOUT_TEST: START_TUTORIAL");
