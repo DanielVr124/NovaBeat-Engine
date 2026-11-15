@@ -112,13 +112,6 @@ class SongRegistry extends BaseRegistry<Song, SongMetadata, SongEntryParams> imp
       }
     }
 
-    // Import the limited, chart-only Psych compatibility tier after Polymod
-    // has mounted the active packages and the native song registry is ready.
-    var importedPsychSongs:Array<String> = PsychModRuntime.loadSongs(ExperienceManager.getActivePsychModDirs());
-    for (songId in importedPsychSongs)
-    {
-      log('Loaded classic Psych chart: ' + songId);
-    }
   }
 
   /**

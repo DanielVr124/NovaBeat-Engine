@@ -41,6 +41,8 @@ class PsychModRuntime
   static final psychSongStageNames:Map<String, String> = [];
   static final psychSongModRoots:Map<String, String> = [];
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
+  static final psychSongHideGirlfriend:Map<String, Bool> = [];
+  static final psychSongOpponentUsesGFPosition:Map<String, Bool> = [];
   static final psychStageBaselines:Map<String, Dynamic> = [];
   static var psychWeekIds:Array<String> = [];
   static var psychFreeplayColors:Map<String, Int> = [];
@@ -93,30 +95,65 @@ class PsychModRuntime
    */
   public static function resolveActivePsychAssetCase(requestedFile:String):String
   {
+    return resolvePsychAssetCaseForSong(lastLaunchSongId, requestedFile);
+  }
+
+  /**
+   * Resolve an image path against the specific imported Psych package that
+   * owns a Freeplay row. Freeplay can show songs from multiple enabled mods
+   * before any song has launched, so lastLaunchSongId is not a reliable
+   * asset owner while constructing that menu.
+   */
+  public static function resolvePsychAssetCaseForSong(songId:Null<String>, requestedFile:String):String
+  {
     #if sys
     if (requestedFile == null || !StringTools.startsWith(requestedFile, "images/")) return requestedFile;
-    if (lastLaunchSongId == null) return requestedFile;
-    var modRoot:Null<String> = psychSongModRoots.get(lastLaunchSongId);
-    if (modRoot == null || !FileSystem.exists(modRoot) || !FileSystem.isDirectory(modRoot)) return requestedFile;
+    if (songId == null || songId.length == 0) return requestedFile;
+
+    // Prefer assets inside the owning mod, then probe the shared Psych mods
+    // root. Some packs store shared character/icon atlases in mods/images
+    // while their character JSON is in mods/characters or mods/data/characters.
+    var roots:Array<String> = [];
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (modRoot != null && FileSystem.exists(modRoot) && FileSystem.isDirectory(modRoot))
+      roots.push(Path.normalize(modRoot));
+    var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
+    if (roots.indexOf(sharedRoot) < 0 && FileSystem.exists(sharedRoot) && FileSystem.isDirectory(sharedRoot))
+      roots.push(sharedRoot);
+
     var parts:Array<String> = requestedFile.split("/");
     for (part in parts)
       if (part.length == 0 || part == "." || part == "..") return requestedFile;
-    var current:String = modRoot;
-    var resolved:Array<String> = [];
-    for (part in parts)
+
+    for (root in roots)
     {
-      if (!FileSystem.exists(current) || !FileSystem.isDirectory(current)) return requestedFile;
-      var entries:Array<String> = FileSystem.readDirectory(current);
-      var match:Null<String> = null;
-      for (entry in entries) if (entry == part) { match = entry; break; }
-      if (match == null)
-        for (entry in entries) if (entry.toLowerCase() == part.toLowerCase()) { match = entry; break; }
-      if (match == null) return requestedFile;
-      resolved.push(match);
-      current = Path.join([current, match]);
+      var current:String = root;
+      var resolved:Array<String> = [];
+      var matchedAll:Bool = true;
+      for (part in parts)
+      {
+        if (!FileSystem.exists(current) || !FileSystem.isDirectory(current))
+        {
+          matchedAll = false;
+          break;
+        }
+        var entries:Array<String> = FileSystem.readDirectory(current);
+        var match:Null<String> = null;
+        for (entry in entries) if (entry == part) { match = entry; break; }
+        if (match == null)
+          for (entry in entries) if (entry.toLowerCase() == part.toLowerCase()) { match = entry; break; }
+        if (match == null)
+        {
+          matchedAll = false;
+          break;
+        }
+        resolved.push(match);
+        current = Path.join([current, match]);
+      }
+      if (matchedAll && FileSystem.exists(current) && !FileSystem.isDirectory(current))
+        return resolved.join("/");
     }
-    if (!FileSystem.exists(current) || FileSystem.isDirectory(current)) return requestedFile;
-    return resolved.join("/");
+    return requestedFile;
     #else
     return requestedFile;
     #end
@@ -274,6 +311,8 @@ class PsychModRuntime
     psychSongStageNames.clear();
     psychSongModRoots.clear();
     psychSongStagePositions.clear();
+    psychSongHideGirlfriend.clear();
+    psychSongOpponentUsesGFPosition.clear();
 
     var root:String = PolymodHandler.getModRoot();
     for (directory in modDirs)
@@ -390,19 +429,20 @@ class PsychModRuntime
     return psychFreeplayColors.get(songId) ?? 0xFF9271FD;
   }
 
-  /** Return the week-defined icon character, falling back to the chart opponent. */
+  /** Return the week-defined icon character, falling back to the chart opponent's health-icon ID. */
   public static function getPsychFreeplayIcon(songId:String, fallback:String = 'face'):String
   {
     var iconId:Null<String> = psychFreeplayIcons.get(songId);
-    if (iconId == null || StringTools.trim(iconId).length == 0) return fallback;
+    if (iconId == null || StringTools.trim(iconId).length == 0) iconId = fallback;
 
+    if (iconId == null) return 'face';
     iconId = StringTools.trim(iconId);
-    // Psych week files name the asset (icon-gorilla), while HealthIcon expects
-    // the character ID (gorilla) and adds the icon- prefix itself.
+    // Psych week files and some character JSON files include the icon- prefix,
+    // while HealthIcon expects the character ID and adds that prefix itself.
     if (StringTools.startsWith(iconId.toLowerCase(), "icon-"))
       iconId = iconId.substr(5);
 
-    return iconId.length == 0 ? fallback : iconId;
+    return iconId.length == 0 ? 'face' : iconId;
   }
 
   /**
@@ -830,8 +870,16 @@ class PsychModRuntime
    * every stage load so Psych overrides cannot leak into ordinary V-Slice
    * songs that reuse the same native Stage instance.
    */
+  /** Whether the current Psych song explicitly hides GF or uses GF as opponent. */
+  public static function shouldHidePsychGirlfriend(songId:String):Bool
+  {
+    return psychSongHideGirlfriend.get(songId) == true
+      || psychSongOpponentUsesGFPosition.get(songId) == true;
+  }
+
   public static function applyPsychStageData(stage:Dynamic, songId:String):Void
   {
+    psychSongHideGirlfriend.remove(songId);
     if (stage == null) return;
     var stageId:String = Std.string(Reflect.field(stage, "id"));
     if (stageId.length == 0) return;
@@ -864,17 +912,12 @@ class PsychModRuntime
     var modRoot:Null<String> = psychSongModRoots.get(songId);
     if (modRoot == null) return;
 
-    // Classic Psych's built-in fallback stage places BF at (770, 100). NovaBeat
-    // stage data uses feet-based coordinates, so without this Psych-only
-    // fallback the native stage position leaves every BF variant too low.
-    // Preserve the opponent's native position unless the mod supplies one.
+    // Psych's fallback stage anchors all three character roles. A package's
+    // stages/<name>.json can override each one independently.
     var positions:Map<String, Array<Float>> = [];
-    // Psych Engine's fallback stage anchors all three character roles.
-    // A mod stage JSON can override any of these independently below.
-    // Without a GF fallback, NovaBeat was leaving GF at the unrelated
-    // built-in V-Slice stage coordinate even while BF used Psych coordinates.
     positions.set("boyfriend", [770.0, 100.0]);
     positions.set("girlfriend", [400.0, 130.0]);
+    positions.set("opponent", [100.0, 100.0]);
     psychSongStagePositions.set(songId, positions);
 
     if (stageName == null || stageName.length == 0) return;
@@ -895,8 +938,15 @@ class PsychModRuntime
       if (zoom > 0 && !Math.isNaN(zoom)) Reflect.setField(stageData, "cameraZoom", zoom);
 
       var boyfriend:Array<Float> = readPsychStagePosition(raw, "boyfriend");
+      if (boyfriend == null) boyfriend = readPsychStagePosition(raw, "bf");
       var girlfriend:Array<Float> = readPsychStagePosition(raw, "girlfriend");
+      if (girlfriend == null) girlfriend = readPsychStagePosition(raw, "gf");
       var opponent:Array<Float> = readPsychStagePosition(raw, "opponent");
+      if (opponent == null) opponent = readPsychStagePosition(raw, "dad");
+      if (Reflect.field(raw, "hide_girlfriend") == true
+        || Reflect.field(raw, "hide_gf") == true
+        || Reflect.field(raw, "hideGirlfriend") == true)
+        psychSongHideGirlfriend.set(songId, true);
       if (boyfriend != null) positions.set("boyfriend", boyfriend);
       if (girlfriend != null) positions.set("girlfriend", girlfriend);
       if (opponent != null) positions.set("opponent", opponent);
@@ -952,7 +1002,10 @@ class PsychModRuntime
     if (character == null || PlayState.instance == null || PlayState.instance.currentSong == null) return;
     var positions:Null<Map<String, Array<Float>>> = psychSongStagePositions.get(PlayState.instance.currentSong.id);
     if (positions == null) return;
-    var position:Null<Array<Float>> = positions.get(role);
+    var positionRole:String = role;
+    if (role == "opponent" && psychSongOpponentUsesGFPosition.get(PlayState.instance.currentSong.id) == true)
+      positionRole = "girlfriend";
+    var position:Null<Array<Float>> = positions.get(positionRole);
     if (position == null || position.length < 2) return;
 
     var offsets:Dynamic = Reflect.field(character, "globalOffsets");
@@ -1634,6 +1687,8 @@ class PsychModRuntime
   #if sys
   static function psychCharacterDataRoots(modPath:String):Array<String>
   {
+    // Song-local character definitions always win. This prevents two enabled
+    // mods with the same character ID from replacing one another.
     var roots:Array<String> = [
       Path.join([modPath, "characters"]),
       Path.join([modPath, "data", "characters"])
@@ -1641,10 +1696,21 @@ class PsychModRuntime
 
     // Some full Psych Engine games ship their playable-character JSON beside
     // the mods/ directory while the corresponding atlas is inside mods/images.
-    // This keeps those game-bundled characters available when testing/importing
-    // the game's own mods/ pack as a NovaBeat mod.
     var companionRoot:String = Path.normalize(Path.join([Path.directory(modPath), "assets", "characters"]));
     if (roots.indexOf(companionRoot) < 0) roots.push(companionRoot);
+
+    // Many Psych packs use the engine-wide shared character folders rather
+    // than a per-mod characters folder. Search those only after local roots.
+    var sharedRoot:String = Path.normalize(PolymodHandler.getModRoot());
+    for (candidateRoot in [
+      Path.join([sharedRoot, "characters"]),
+      Path.join([sharedRoot, "data", "characters"])
+    ])
+    {
+      var sharedCharactersRoot:String = Path.normalize(candidateRoot);
+      if (roots.indexOf(sharedCharactersRoot) < 0) roots.push(sharedCharactersRoot);
+    }
+
     return roots;
   }
 
@@ -1916,6 +1982,47 @@ class PsychModRuntime
         "school", "schoolevil", "tank", "tankmanbattlefield", "phillystreets", "phillyblazin",
         "mainstage", "spookymansion", "phillytrain", "limoride", "mallxmas": true;
       default: false;
+    };
+  }
+
+  /**
+   * Return the classic Psych stage filename when a chart omits its stage
+   * field. Keep this separate from resolvePsychStage(), whose result is a
+   * NovaBeat StageRegistry ID rather than a Psych stages/<name>.json basename.
+   */
+  static function inferPsychStageName(songFolder:String, ?modPath:String):String
+  {
+    var songKey:String = songFolder == null ? "" : StringTools.trim(songFolder).toLowerCase();
+
+    // Some older Psych charts omit their stage field but still ship a
+    // song-named stage JSON/script. Prefer that real stage over the generic
+    // "stage" fallback so its GF/BF coordinates and stage behavior are used.
+    #if sys
+    if (modPath != null && songKey.length > 0)
+    {
+      var stageBaseName:String = StringTools.trim(songFolder);
+      for (extension in [".json", ".lua", ".hx"])
+      {
+        var stageFile:String = Path.join([modPath, "stages", stageBaseName + extension]);
+        if (FileSystem.exists(stageFile) && !FileSystem.isDirectory(stageFile))
+          return stageBaseName;
+      }
+    }
+    #end
+
+    return switch (songKey)
+    {
+      case "spookeez", "south", "monster": "spooky";
+      case "pico", "philly", "philly-nice", "blammed": "philly";
+      case "milf", "satin-panties", "high": "limo";
+      case "cocoa", "eggnog": "mall";
+      case "winter-horrorland": "mallEvil";
+      case "senpai", "roses": "school";
+      case "thorns": "schoolEvil";
+      case "ugh", "guns", "stress": "tank";
+      case "darnell", "lit-up", "2hot": "phillyStreets";
+      case "blazin": "phillyBlazin";
+      default: "stage";
     };
   }
 
@@ -2721,13 +2828,25 @@ class PsychModRuntime
     return result.length == 0 ? fallback : result;
   }
 
+  /**
+   * Read a Psych string field while preserving an explicitly empty value.
+   * This matters for gfVersion: an empty value means the song has no GF,
+   * whereas a missing field should use the caller-provided legacy fallback.
+   */
+  static function readPsychStringPreserveEmpty(source:Dynamic, field:String, fallback:String):String
+  {
+    var value:Dynamic = source == null ? null : Reflect.field(source, field);
+    if (value == null) return fallback;
+    return StringTools.trim(Std.string(value));
+  }
+
   #if sys
   /**
    * A small number of Psych packs ship a playable BF atlas but omit its
    * character JSON. Register only the known, complete GorillaFunkin BF
    * variants; do not guess for arbitrary missing player character IDs.
    */
-  static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String):Bool
+  static function registerKnownPsychPlayerAtlasAlias(modPath:String, characterId:String, songId:String):Bool
   {
     var atlasName:String;
     switch (characterId.toLowerCase())
@@ -2737,14 +2856,34 @@ class PsychModRuntime
       default: return false;
     }
 
-    var charactersDirectory:String = Path.join([modPath, "images", "characters"]);
-    var atlasPng:String = Path.join([charactersDirectory, atlasName + ".png"]);
-    var atlasXml:String = Path.join([charactersDirectory, atlasName + ".xml"]);
-    if (!FileSystem.exists(atlasPng) || !FileSystem.exists(atlasXml)) return false;
-
+    // These atlases/icons may live in the song's mod folder or in the
+    // shared mods/ asset root. Resolve exact casing with the song's owner first.
+    var atlasPngKey:String = resolvePsychAssetCaseForSong(songId, "images/characters/" + atlasName + ".png");
+    var atlasXmlKey:String = resolvePsychAssetCaseForSong(songId, "images/characters/" + atlasName + ".xml");
     var iconId:String = "bfcapuchin";
-    var iconPath:String = Path.join([modPath, "images", "icons", "icon-" + iconId + ".png"]);
-    if (!FileSystem.exists(iconPath)) iconId = "bf";
+    var iconKey:String = resolvePsychAssetCaseForSong(songId, "images/icons/icon-" + iconId + ".png");
+
+    var roots:Array<String> = [modPath, Path.normalize(PolymodHandler.getModRoot())];
+    var atlasPng:Null<String> = null;
+    var atlasXml:Null<String> = null;
+    var iconPath:Null<String> = null;
+    for (root in roots)
+    {
+      var pngCandidate:String = Path.join([root, atlasPngKey]);
+      var xmlCandidate:String = Path.join([root, atlasXmlKey]);
+      if (atlasPng == null && FileSystem.exists(pngCandidate) && !FileSystem.isDirectory(pngCandidate))
+        atlasPng = pngCandidate;
+      if (atlasXml == null && FileSystem.exists(xmlCandidate) && !FileSystem.isDirectory(xmlCandidate))
+        atlasXml = xmlCandidate;
+      if (iconPath == null)
+      {
+        var iconCandidate:String = Path.join([root, iconKey]);
+        if (FileSystem.exists(iconCandidate) && !FileSystem.isDirectory(iconCandidate))
+          iconPath = iconCandidate;
+      }
+    }
+    if (atlasPng == null || atlasXml == null) return false;
+    if (iconPath == null) iconId = "bf";
 
     // The atlas contains the regular BF idle/sing/miss prefixes. Use the
     // canonical Psych BF offsets as a safe baseline; precise per-animation
@@ -2799,7 +2938,17 @@ class PsychModRuntime
   {
     var normalized:String = requestedId == null ? "" : StringTools.trim(requestedId);
     if (normalized.length == 0)
-      normalized = role == "player" ? "bf" : "gf";
+    {
+      // In Psych charts, an explicitly empty gfVersion means the song has
+      // no girlfriend character. Do not silently replace that with the base
+      // GF; missing gfVersion is already given the conventional "gf" default
+      // by the chart importer before this resolver is called.
+      if (role == "girlfriend") return "";
+      normalized = role == "player" ? "bf" : "dad";
+    }
+
+    if (role == "opponent")
+      psychSongOpponentUsesGFPosition.set(songId, StringTools.startsWith(normalized.toLowerCase(), "gf"));
 
     #if sys
     var jsonPath:Null<String> = findPsychCharacterDataFile(modPath, normalized);
@@ -2841,22 +2990,35 @@ class PsychModRuntime
     }
     #end
 
+    #if sys
+    if (role == "player" && CharacterDataParser.fetchCharacterData(normalized) == null
+      && registerKnownPsychPlayerAtlasAlias(modPath, normalized, songId))
+    {
+      trace('[Psych Compatibility] Using bundled atlas-only player character "' + normalized + '" for ' + songId + '.');
+      return normalized;
+    }
+    #end
+
+    if (CharacterDataParser.fetchCharacterData(normalized) != null)
+      return normalized;
+
     if (role == "player")
     {
-      if (CharacterDataParser.fetchCharacterData(normalized) != null)
-        return normalized;
-
       trace('[Psych Compatibility] Player character "' + normalized
         + '" is not bundled or registered; using NovaBeat BF for this song.');
       return "bf";
     }
 
-    if (CharacterDataParser.fetchCharacterData(normalized) != null)
-      return normalized;
+    if (role == "girlfriend")
+    {
+      trace('[Psych Compatibility] Girlfriend character "' + normalized
+        + '" is not bundled or registered; using NovaBeat GF for this song.');
+      return "gf";
+    }
 
-    trace('[Psych Compatibility] Girlfriend character "' + normalized
-      + '" is not bundled or registered; using NovaBeat GF for this song.');
-    return "gf";
+    trace('[Psych Compatibility] Opponent character "' + normalized
+      + '" is not bundled or registered; using NovaBeat Dad for this song.');
+    return "dad";
   }
 
   static function buildNativeSong(songId:String, source:PsychSongSource):Null<Song>
@@ -2894,11 +3056,9 @@ class PsychModRuntime
         if (importedV2 == null) continue;
         var v2StageName:String = readPsychString(getPsychChartMetadata(chartRoot), "stage",
           readPsychString(chartRoot, "stage", ""));
-        if (v2StageName.length > 0)
-        {
-          psychSongStageNames.set(songId, v2StageName);
-          psychSongModRoots.set(songId, Path.normalize(modPath));
-        }
+        if (v2StageName.length == 0) v2StageName = inferPsychStageName(source.songFolder, modPath);
+        psychSongStageNames.set(songId, v2StageName);
+        psychSongModRoots.set(songId, Path.normalize(modPath));
         hasPsychSectionStates = true;
         if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
@@ -2906,7 +3066,7 @@ class PsychModRuntime
           metadata = importedV2.metadata;
           psychPlayerId = resolvePsychSongCharacter(modPath, songId, importedV2.player, "player");
           psychGirlfriendId = resolvePsychSongCharacter(modPath, songId, importedV2.girlfriend, "girlfriend");
-          psychOpponentId = importedV2.opponent;
+          psychOpponentId = resolvePsychSongCharacter(modPath, songId, importedV2.opponent, "opponent");
         }
         combinedNotes.set(difficultyName, importedV2.notes);
         combinedSpeeds.set(difficultyName, importedV2.speed);
@@ -2940,21 +3100,22 @@ class PsychModRuntime
       var importedMetadata:SongMetadata = FNFLegacyImporter.migrateMetadata(legacy, difficultyName);
       var importedChart:SongChartData = FNFLegacyImporter.migrateChartData(legacy, difficultyName);
 
+      // Make the owning mod root available to song-scoped atlas resolution
+      // before resolving any character aliases for this chart.
+      psychSongModRoots.set(songId, Path.normalize(modPath));
       if (metadata == null)
       {
         metadata = importedMetadata;
         psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
-        psychOpponentId = readPsychString(chartSong, "player2", "dad");
+        psychOpponentId = resolvePsychSongCharacter(modPath, songId,
+          readPsychString(chartSong, "player2", "dad"), "opponent");
         psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
-          readPsychString(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
+          readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
-      if (stageName.length > 0)
-      {
-        psychSongStageNames.set(songId, stageName);
-        psychSongModRoots.set(songId, Path.normalize(Path.directory(Path.directory(source.dataPath))));
-      }
+      if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder);
+      psychSongStageNames.set(songId, stageName);
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
@@ -3069,17 +3230,39 @@ class PsychModRuntime
     var lines:Array<Dynamic> = cast Reflect.field(chartRoot, "strumlines");
     var player:String = "bf";
     var opponent:String = "dad";
-    var girlfriend:String = "gf";
+    // V2 exports preserve legacy gfVersion in the hidden additional strumline
+    // whose id is "gf". An empty first character is meaningful: it means that
+    // this song intentionally has no Girlfriend. Do not mistake some other
+    // additional strumline for GF or silently restore the base-game GF.
+    var girlfriend:String = readPsychStringPreserveEmpty(meta, "gfVersion", "gf");
     for (line in lines)
     {
       var role:Int = psychStrumLineRole(line);
+      var lineId:String = readPsychString(line, "id", "").toLowerCase();
       var chars:Dynamic = Reflect.field(line, "characters");
-      if (!Std.isOfType(chars, Array) || (cast chars:Array<Dynamic>).length == 0) continue;
-      var character:String = StringTools.trim(Std.string((cast chars:Array<Dynamic>)[0]));
-      if (character.length == 0) continue;
-      if (role == 0) player = character;
-      else if (role == 1) opponent = character;
-      else if (girlfriend == "gf") girlfriend = character;
+      var hasCharacter:Array<Dynamic> = Std.isOfType(chars, Array) ? cast chars : [];
+      if (role == 0)
+      {
+        if (hasCharacter.length > 0)
+        {
+          var character:String = StringTools.trim(Std.string(hasCharacter[0]));
+          if (character.length > 0) player = character;
+        }
+      }
+      else if (role == 1)
+      {
+        if (hasCharacter.length > 0)
+        {
+          var character:String = StringTools.trim(Std.string(hasCharacter[0]));
+          if (character.length > 0) opponent = character;
+        }
+      }
+      else if (lineId == "gf" || lineId == "girlfriend")
+      {
+        girlfriend = hasCharacter.length > 0
+          ? StringTools.trim(Std.string(hasCharacter[0]))
+          : "";
+      }
     }
 
     var metadata:SongMetadata = new SongMetadata(songName, artist, charter, Constants.DEFAULT_VARIATION);
@@ -3208,6 +3391,13 @@ class PsychModRuntime
     #if sys
     try
     {
+      // An explicitly empty legacy gfVersion hides Girlfriend; a missing
+      // field must still receive the caller's normal fallback.
+      var emptyGFMetadata:Dynamic = Json.parse('{"gfVersion":""}');
+      var missingGFMetadata:Dynamic = Json.parse('{}');
+      if (readPsychStringPreserveEmpty(emptyGFMetadata, "gfVersion", "gf") != "") return false;
+      if (readPsychStringPreserveEmpty(missingGFMetadata, "gfVersion", "gf") != "gf") return false;
+
       // Psych image fields may include the physical images/ prefix and file
       // extension even though NovaBeat's Paths helpers add both themselves.
       if (normalizePsychImageKey("images/characters/Gorilla.png") != "characters/Gorilla") return false;
@@ -3248,6 +3438,34 @@ class PsychModRuntime
         || !isSupportedBuiltinPsychNoteType("GF Sing")
         || !isSupportedBuiltinPsychNoteType("Hurt Note")) return false;
       if (converted.metadata.playData.stage != "phillyTrain") return false;
+      if (converted.girlfriend != "gf") return false;
+
+      // A V2 chart exported from a legacy Psych song can carry an empty GF
+      // entry in its hidden line. It must stay empty rather than defaulting
+      // to the base-game girlfriend.
+      var noGFV2:Dynamic = Json.parse(
+        '{"metadata":{"songName":"No GF"},' +
+        '"strumlines":[{"type":0,"characters":["dad"],"keyCount":4},' +
+        '{"type":1,"characters":["bf"],"keyCount":4},' +
+        '{"type":2,"id":"gf","visible":false,"characters":[""],"keyCount":4},' +
+        '{"type":2,"id":"extra","characters":["extraSinger"],"keyCount":4}],' +
+        '"notes":[]}'
+      );
+      var noGFConverted:Null<PsychV2ChartImport> = convertPsychV2Chart(noGFV2,
+        Path.join(["mods", "__novabeat_psych_v2_smoke__", "songs", "no-gf"]),
+        "normal", "no-gf");
+      if (noGFConverted == null || noGFConverted.girlfriend != "") return false;
+
+      // Stage hide_girlfriend and GF-prefixed opponents are both independent
+      // Psych reasons to omit the separate GF sprite.
+      var hideGFTestSong:String = "__psych_smoke_hide_gf";
+      psychSongHideGirlfriend.set(hideGFTestSong, true);
+      if (!shouldHidePsychGirlfriend(hideGFTestSong)) return false;
+      psychSongHideGirlfriend.remove(hideGFTestSong);
+      psychSongOpponentUsesGFPosition.set(hideGFTestSong, true);
+      if (!shouldHidePsychGirlfriend(hideGFTestSong)) return false;
+      psychSongOpponentUsesGFPosition.remove(hideGFTestSong);
+
       if (converted.metadata.timeChanges.length != 2) return false;
       if (Math.abs(converted.metadata.timeChanges[1].timeStamp - 1800) > 0.01) return false;
       if (converted.metadata.timeChanges[1].bpm != 120) return false;
@@ -3319,6 +3537,10 @@ class PsychModRuntime
       // The additional/GF strumline must never be misread as an opponent lane.
       if (psychStrumLineRole({type: 2, isPlayer: false}) != -1) return false;
       if (resolvePsychStage("a-custom-psych-stage", "smoke-test") != Constants.DEFAULT_STAGE) return false;
+      if (inferPsychStageName("spookeez") != "spooky"
+        || inferPsychStageName("pico") != "philly"
+        || inferPsychStageName("winter-horrorland") != "mallEvil"
+        || inferPsychStageName("unknown-song") != "stage") return false;
       if (!runNestedPackageRootSmokeTest()) return false;
       return true;
     }
