@@ -1132,6 +1132,7 @@ jobs:
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+# [full-build-android] Validate the runtime-discovered and shell-escaped marker path in app-private storage.
       - name: Run Android portrait gameplay and viewport-resize smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
