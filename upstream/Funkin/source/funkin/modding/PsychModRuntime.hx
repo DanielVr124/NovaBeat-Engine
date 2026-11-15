@@ -40,6 +40,12 @@ class PsychModRuntime
   static final songDataFolders:Map<String, String> = [];
   static final psychSongStageNames:Map<String, String> = [];
   static final psychSongModRoots:Map<String, String> = [];
+  // loadSongs() clears the maps above before rebuilding them. A rebuild that
+  // skips or fails a package leaves already-registered Psych songs with no
+  // stage name, so their characters fell back to Psych's default anchors and
+  // spawned in the wrong place. Remember the resolved stage forever instead.
+  static final psychStageNamesPersistent:Map<String, String> = [];
+  static final psychModRootsPersistent:Map<String, String> = [];
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
   static final psychSongHideGirlfriend:Map<String, Bool> = [];
   static final psychSongOpponentUsesGFPosition:Map<String, Bool> = [];
@@ -959,6 +965,28 @@ class PsychModRuntime
           return candidate;
       }
     }
+
+    // Last resort: any other installed Psych package. Full source-game packs
+    // often keep their stages outside the folder the chart was discovered in.
+    var siblingRoot:String = Path.directory(modRoot);
+    if (siblingRoot != null && FileSystem.exists(siblingRoot) && FileSystem.isDirectory(siblingRoot))
+    {
+      for (entry in FileSystem.readDirectory(siblingRoot))
+      {
+        var stagesDirectory:String = Path.join([siblingRoot, entry, "stages"]);
+        if (!FileSystem.exists(stagesDirectory) || !FileSystem.isDirectory(stagesDirectory)) continue;
+
+        for (fileName in FileSystem.readDirectory(stagesDirectory))
+        {
+          if (Path.extension(fileName).toLowerCase() != "json") continue;
+          if (Path.withoutExtension(fileName).toLowerCase() != stageName.toLowerCase()) continue;
+
+          var siblingCandidate:String = Path.normalize(Path.join([stagesDirectory, fileName]));
+          if (FileSystem.exists(siblingCandidate) && !FileSystem.isDirectory(siblingCandidate))
+            return siblingCandidate;
+        }
+      }
+    }
     #end
 
     return null;
@@ -995,8 +1023,10 @@ class PsychModRuntime
     psychSongStagePositions.remove(songId);
 
     #if sys
-    var stageName:Null<String> = psychSongStageNames.get(songId);
-    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    var stageName:Null<String> = psychStageNamesPersistent.get(songId);
+    if (stageName == null) stageName = psychSongStageNames.get(songId);
+    var modRoot:Null<String> = psychModRootsPersistent.get(songId);
+    if (modRoot == null) modRoot = psychSongModRoots.get(songId);
     if (modRoot == null) return;
 
     // Psych's fallback stage anchors all three character roles. A package's
@@ -3228,6 +3258,7 @@ class PsychModRuntime
     var modPath:String = Path.normalize(Path.directory(Path.directory(source.dataPath)));
     // Keep the owning package available for image/XML path case correction.
     psychSongModRoots.set(songId, modPath);
+    psychModRootsPersistent.set(songId, modPath);
     var metadata:Null<SongMetadata> = null;
     var psychPlayerId:String = "bf";
     var psychGirlfriendId:String = "gf";
@@ -3264,7 +3295,9 @@ class PsychModRuntime
           readPsychString(chartRoot, "stage", ""));
         if (v2StageName.length == 0) v2StageName = inferPsychStageName(source.songFolder, modPath);
         psychSongStageNames.set(songId, v2StageName);
+        psychStageNamesPersistent.set(songId, v2StageName);
         psychSongModRoots.set(songId, Path.normalize(modPath));
+        psychModRootsPersistent.set(songId, Path.normalize(modPath));
         hasPsychSectionStates = true;
         if (extractPsychEvents(Reflect.field(chartRoot, "events")).length > 0) hasEmbeddedEvents = true;
         if (metadata == null)
@@ -3314,6 +3347,7 @@ class PsychModRuntime
       // Make the owning mod root available to song-scoped atlas resolution
       // before resolving any character aliases for this chart.
       psychSongModRoots.set(songId, Path.normalize(modPath));
+      psychModRootsPersistent.set(songId, Path.normalize(modPath));
       var difficultyPlayerId:String = resolvePsychSongCharacter(modPath, songId,
         readPsychString(chartSong, "player1", "bf"), "player");
       var difficultyOpponentId:String = resolvePsychSongCharacter(modPath, songId,
@@ -3335,6 +3369,7 @@ class PsychModRuntime
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
       if (stageName.length == 0) stageName = inferPsychStageName(source.songFolder, modPath);
       psychSongStageNames.set(songId, stageName);
+      psychStageNamesPersistent.set(songId, stageName);
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       importedMetadata.playData.characters = difficultyCharacters.get(difficultyName);
