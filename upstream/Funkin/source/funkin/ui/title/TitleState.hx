@@ -208,7 +208,7 @@ class TitleState extends MusicBeatState
   {
     if (logoBl != null)
     {
-      logoBl.scale.set(1, 1);
+      logoBl.scale.set(1.04, 1.04);
       logoBl.updateHitbox();
       logoBl.setPosition(-150 + (FullScreenScaleMode.gameCutoutSize.x / 2.5), -100);
     }
@@ -227,7 +227,7 @@ class TitleState extends MusicBeatState
       {
         var logoScale:Float = Math.min(1.25, Math.min((width * 0.98) / Math.max(1, logoBl.frameWidth),
           (height * 0.27) / Math.max(1, logoBl.frameHeight)));
-        logoBl.scale.set(logoScale, logoScale);
+        logoBl.scale.set(logoScale * 1.04, logoScale * 1.04);
         logoBl.updateHitbox();
         logoBl.setPosition((width - logoBl.width) * 0.5, height * 0.14);
       }
