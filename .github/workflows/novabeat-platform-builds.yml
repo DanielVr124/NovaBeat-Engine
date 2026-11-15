@@ -1,5 +1,7 @@
 name: NovaBeat platform build checks
 
+# [full-build-android] Dedicated isolated branch for portrait gameplay emulator acceptance.
+
 # [full-build-android] Gate APK publication on the Android portrait gameplay emulator smoke test.
 
 # [full-build-windows] User-requested Windows build for BF/GF fallback validation.
