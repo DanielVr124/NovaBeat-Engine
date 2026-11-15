@@ -372,7 +372,7 @@ class MainMenuState extends MusicBeatState
       // the current animation chosen by MenuTypedList, then recenter its frame
       // after applying responsive scale.
       var atlasItem:AtlasMenuItem = cast menuItem;
-      var targetScale:Float = portrait ? Math.min(1.3, (FlxG.width - 48) / Math.max(1, atlasItem.frameWidth)) : 1.0;
+      var targetScale:Float = (portrait ? Math.min(1.3, (FlxG.width - 48) / Math.max(1, atlasItem.frameWidth)) : 1.0) * 1.05;
       atlasItem.scale.set(targetScale, targetScale);
       atlasItem.updateHitbox();
       atlasItem.centerOrigin();
