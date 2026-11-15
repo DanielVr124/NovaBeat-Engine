@@ -3073,23 +3073,13 @@ class PsychModRuntime
     if (CharacterDataParser.fetchCharacterData(normalized) != null)
       return normalized;
 
-    if (role == "player")
-    {
-      trace('[Psych Compatibility] Player character "' + normalized
-        + '" is not bundled or registered; using NovaBeat BF for this song.');
-      return "bf";
-    }
-
-    if (role == "girlfriend")
-    {
-      trace('[Psych Compatibility] Girlfriend character "' + normalized
-        + '" is not bundled or registered; using NovaBeat GF for this song.');
-      return "gf";
-    }
-
-    trace('[Psych Compatibility] Opponent character "' + normalized
-      + '" is not bundled or registered; using NovaBeat Dad for this song.');
-    return "dad";
+    // Do not replace an unresolved chart ID during import. Character JSON may
+    // live in a companion/shared Psych directory that is registered later by
+    // prepareSongCharacters() immediately before PlayState constructs the roles.
+    // If it still cannot be loaded after registration, initCharacters() owns
+    // the final safe fallback to the base-game character.
+    trace('[Psych Compatibility] Character "' + normalized + '" is not registered yet; deferring resolution for role ' + role + '.');
+    return normalized;
   }
 
   /**
