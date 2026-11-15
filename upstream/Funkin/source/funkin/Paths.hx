@@ -42,7 +42,7 @@ class Paths implements ConsoleClass
     return parts[0];
   }
 
-  static function getPath(file:String, type:AssetType, library:Null<String>):String
+  static function getPath(file:String, type:AssetType, library:Null<String>, ?psychSongId:String):String
   {
     if (library != null)
     {
@@ -52,8 +52,11 @@ class Paths implements ConsoleClass
       return explicitPath;
     }
 
-    // Correct case mismatches against the active Psych mod before probing OpenFL keys.
-    file = PsychModRuntime.resolveActivePsychAssetCase(file);
+    // Use an explicit song owner for per-row assets in multi-mod Freeplay.
+    // All other callers retain the active-song behavior used during gameplay.
+    file = psychSongId == null
+      ? PsychModRuntime.resolveActivePsychAssetCase(file)
+      : PsychModRuntime.resolvePsychAssetCaseForSong(psychSongId, file);
 
     if (currentLevel != null)
     {
@@ -226,6 +229,26 @@ class Paths implements ConsoleClass
   public static function image(key:String, ?library:String):String
   {
     return getPath('images/$key.png', IMAGE, library);
+  }
+
+  /** Resolve an image against the exact Psych song package that owns it. */
+  public static function imageForPsychSong(key:String, songId:String):String
+  {
+    return getPath('images/$key.png', IMAGE, null, songId);
+  }
+
+  /** Resolve a companion XML/TXT file against the exact Psych song package. */
+  public static function fileForPsychSong(file:String, type:AssetType, songId:String):String
+  {
+    return getPath(file, type, null, songId);
+  }
+
+  public static function getSparrowAtlasForPsychSong(key:String, songId:String):FlxAtlasFrames
+  {
+    return FlxAtlasFrames.fromSparrow(
+      imageForPsychSong(key, songId),
+      fileForPsychSong('images/$key.xml', TEXT, songId)
+    );
   }
 
   public static function font(key:String):String

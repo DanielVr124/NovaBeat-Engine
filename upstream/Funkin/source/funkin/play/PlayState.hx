@@ -534,6 +534,11 @@ class PlayState extends MusicBeatSubState
    */
   var criticalFailure:Bool = false;
 
+  // close() performs cleanup before revealing a nested parent. Flixel later
+  // calls destroy(), so guard the shared teardown against running twice.
+  var cleanupComplete:Bool = false;
+  var psychRuntimeCleanupComplete:Bool = false;
+
   /**
    * False as long as the countdown has not finished yet.
    */
@@ -1113,6 +1118,12 @@ class PlayState extends MusicBeatSubState
       previousDifficulty = currentDifficulty;
 
       currentStage?.resetStage();
+      // Stage.resetStage restores native stage anchors. Reapply the imported Psych
+      // coordinates immediately so a retry keeps the same character layout as
+      // the first launch instead of snapping BF/GF/opponent back to V-Slice spots.
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getBoyfriend(), "boyfriend");
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getGirlfriend(), "girlfriend");
+      PsychModRuntime.applyPsychStageCharacterPosition(currentStage?.getDad(), "opponent");
 
       dispatchEvent(retryEvent);
 
@@ -1189,7 +1200,9 @@ class PlayState extends MusicBeatSubState
         if (opponentStrumline.notes.length == 0) opponentStrumline.updateNotes();
         playerStrumline.vwooshInNotes();
         opponentStrumline.vwooshInNotes();
-        Countdown.performCountdown();
+        // Re-enter through PlayState's normal countdown path so Psych's
+        // onStartCountdown/onCountdownStarted lifecycle and HUD setup run on retry.
+        startCountdown();
       });
 
       // Stops any existing countdown.
@@ -2164,8 +2177,7 @@ class PlayState extends MusicBeatSubState
 
   override public function destroy():Void
   {
-    PsychScriptRuntime.dispatch("onDestroy", []);
-    PsychScriptRuntime.clear();
+    cleanupPsychRuntime();
     performCleanup();
 
     #if mobile
@@ -2401,8 +2413,19 @@ class PlayState extends MusicBeatSubState
     //
     // GIRLFRIEND
     //
-    var requestedGirlfriendId:String = currentCharacterData.girlfriend;
-    var girlfriend:Null<BaseCharacter> = CharacterDataParser.fetchCharacter(requestedGirlfriendId);
+    // Psych stage files can hide GF, and Psych also suppresses the
+    // separate GF sprite when the selected opponent is itself a GF character.
+    // Resolve that rule before constructing any role so a hidden GF never
+    // enters the stage or remains visible behind the opponent.
+    var hidePsychGirlfriend:Bool = PsychModRuntime.shouldHidePsychGirlfriend(currentSong.id);
+    var requestedGirlfriendId:String = hidePsychGirlfriend ? "" : currentCharacterData.girlfriend;
+    // Do not pass an empty ID to fetchCharacter: its normal fallback behavior
+    // can resolve that to the default GF. A hidden/absent Psych GF must remain
+    // null so no base-game girlfriend is constructed or added to the stage.
+    var girlfriend:Null<BaseCharacter> = hidePsychGirlfriend || requestedGirlfriendId == null
+      || requestedGirlfriendId.length == 0
+      ? null
+      : CharacterDataParser.fetchCharacter(requestedGirlfriendId);
 
     if (girlfriend == null && requestedGirlfriendId != null && requestedGirlfriendId.length > 0)
     {
@@ -4351,16 +4374,44 @@ class PlayState extends MusicBeatSubState
 
   override public function close():Void
   {
+    var restorePsychMenu:Bool = isSubState && currentSong != null
+      && ExperienceManager.isPsychSong(currentSong.id);
+
     criticalFailure = true; // Stop game updates.
     performCleanup();
     super.close();
+
+    // Flixel may defer destroy() until the next state update. Clear the old
+    // Psych scripts before restoring menu input so rapid song re-entry cannot
+    // dispatch callbacks from the previous song.
+    cleanupPsychRuntime();
+
+    // Restore the preserved Psych Freeplay parent only after gameplay cleanup
+    // and the normal Flixel close operation have completed.
+    if (restorePsychMenu)
+      funkin.ui.freeplay.PsychFreeplayState.onSongClosed();
+  }
+
+  /** Tear down song-scoped Psych callbacks exactly once. */
+  function cleanupPsychRuntime():Void
+  {
+    if (psychRuntimeCleanupComplete) return;
+    psychRuntimeCleanupComplete = true;
+    PsychScriptRuntime.dispatch("onDestroy", []);
+    PsychScriptRuntime.clear();
   }
 
   /**
-     * Perform necessary cleanup before leaving the PlayState.
-     */
+   * Perform necessary cleanup before leaving the PlayState.
+   */
   function performCleanup():Void
   {
+    // close() and destroy() can both reach this routine for nested PlayStates.
+    // Running teardown twice re-dispatches DESTROY and can destroy the same
+    // audio/stage objects a second time, corrupting subsequent Psych launches.
+    if (cleanupComplete) return;
+    cleanupComplete = true;
+
     // If the camera is being tweened, stop it.
     cancelAllCameraTweens();
 
@@ -4424,8 +4475,16 @@ class PlayState extends MusicBeatSubState
 
     if (VideoCutscene.isPlaying()) VideoCutscene.destroyVideo();
 
-    FlxTween.globalManager.clear();
-    FlxTimer.globalManager.clear();
+    // A nested PlayState shares the global tween/timer managers with its
+    // still-open parent menu. Clearing those managers here also kills the
+    // parent's menu animations and delayed callbacks, which leaves Psych
+    // Freeplay partially transitioned when the song closes. Root PlayStates
+    // are replacing the whole screen, so their original global cleanup remains.
+    if (!isSubState)
+    {
+      FlxTween.globalManager.clear();
+      FlxTimer.globalManager.clear();
+    }
 
     // Remove reference to stage and remove sprites from it to save memory.
     if (currentStage != null)
