@@ -528,9 +528,23 @@ class HealthIcon extends FunkinSprite
       }
       else
       {
-        loadGraphic(resolveIconImagePath(charId), true,
-          isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE,
-          isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE);
+        // Psych icons are usually 150x150 cells (32x32 when pixel), but mods
+        // ship plenty of single wide or tall icons. Forcing the standard cell
+        // size sliced those at the wrong boundaries and cropped the face, so
+        // measure the image and split it into equal square-ish cells instead.
+        var iconPath:String = resolveIconImagePath(charId);
+        var frameWidth:Int = isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE;
+        var frameHeight:Int = frameWidth;
+
+        var bitmap:Null<openfl.display.BitmapData> = openfl.Assets.getBitmapData(iconPath);
+        if (bitmap != null && bitmap.width > 0 && bitmap.height > 0)
+        {
+          var cells:Int = Math.max(1, Math.round(bitmap.width / bitmap.height));
+          frameHeight = bitmap.height;
+          frameWidth = Std.int(bitmap.width / cells);
+        }
+
+        loadGraphic(iconPath, true, frameWidth, frameHeight);
         loadAnimationOld();
       }
 
