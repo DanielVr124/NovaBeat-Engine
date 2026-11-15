@@ -161,3 +161,6 @@ The FNF Preferences responsive layout uses a runtime type test for checkbox rows
 
 
 <!-- [full-build-android] Android-only APK build for the latest gameplay alignment fix. -->
+
+
+<!-- [full-build-android] Rebuild Android after portrait lane and stage framing corrections. -->
