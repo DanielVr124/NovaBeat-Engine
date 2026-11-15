@@ -15,30 +15,30 @@ jobs:
     if: contains(github.event.head_commit.message, '[republish-windows]')
     runs-on: windows-2022
     steps:
-      - name: Restore already-built Windows distribution
-        id: restore
-        uses: actions/cache/restore@v4
+      - name: Download the already-built Windows artifact
+        uses: dawidd6/action-download-artifact@v6
         with:
-          path: novabeat-windows-bin/
-          key: novabeat-windows-dist-d6b2d59885b236c435871d8d46d07f86c2d58caf
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo: DanielVr124/NovaBeat-Engine
+          run_id: 43676487946
+          name: novabeat-windows
+          path: extracted-windows
 
-      - name: Verify cached executable
+      - name: Verify existing executable
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          if ("${{ steps.restore.outputs.cache-hit }}" -ne "true") {
-            throw "The existing Windows build cache was not found; refusing to rebuild."
+          if (!(Test-Path "extracted-windows/bin/Funkin.exe") -and !(Test-Path "extracted-windows/Funkin.exe")) {
+            Get-ChildItem extracted-windows -Recurse | Select-Object -First 40 FullName
+            throw "The downloaded artifact does not contain Funkin.exe; refusing to publish."
           }
-          if (!(Test-Path "novabeat-windows-bin/Funkin.exe")) {
-            throw "Cached Funkin.exe is missing; refusing to publish an incomplete artifact."
-          }
-          "Republishing the existing Windows build; no compilation will run." >> $env:GITHUB_STEP_SUMMARY
+          "Repackaging the original successful build. No compilation or game build steps are run." >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload compressed Windows distribution
         uses: actions/upload-artifact@v4
         with:
           name: novabeat-windows
-          path: novabeat-windows-bin/
+          path: extracted-windows/
           if-no-files-found: error
           compression-level: 6
           retention-days: 30
