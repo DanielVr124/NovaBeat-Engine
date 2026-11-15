@@ -79,6 +79,12 @@ class Paths implements ConsoleClass
     var defaultPaths:Array<String> = [
       getLibraryPathForce(file, 'default'),
       'default:$file',
+      // Full Psych game packages often keep their source assets under
+      // assets/preload/ and assets/shared/ inside the mod folder. The default
+      // Polymod library is rooted at that folder, so probe those exact paths
+      // before allowing a same-named base-game asset to satisfy the request.
+      'default:assets/preload/$file',
+      'default:assets/shared/$file',
       'default:assets/$file',
       getPreloadPath(file)
     ];
