@@ -208,7 +208,7 @@ class TitleState extends MusicBeatState
   {
     if (logoBl != null)
     {
-      logoBl.scale.set(1.04, 1.04);
+      logoBl.scale.set(1, 1);
       logoBl.updateHitbox();
       logoBl.setPosition(-150 + (FullScreenScaleMode.gameCutoutSize.x / 2.5), -100);
     }
