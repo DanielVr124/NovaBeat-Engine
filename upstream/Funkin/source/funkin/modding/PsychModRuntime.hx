@@ -312,7 +312,8 @@ class PsychModRuntime
       var modPath:String = Path.join([root, directory]);
       if (!isPsychDirectory(modPath)) continue;
       modPath = resolvePsychContentRoot(modPath);
-      if (!inspectPackage(modPath).launchable) continue;
+      // Unsupported packages still list their songs; refusing here would hide
+      // them from Freeplay even though they can usually be played.
 
       for (source in scanSongSources(modPath))
       {
@@ -349,8 +350,13 @@ class PsychModRuntime
       if (!isPsychDirectory(modPath)) continue;
       modPath = resolvePsychContentRoot(modPath);
 
+      // Every installed package is attempted now. A package the inspector still
+      // considers unsupported is imported anyway instead of being skipped, so
+      // its songs can be played even when the analyzer cannot fully verify it.
+      // Only songs that genuinely cannot be built are dropped further below.
       var assessment:PsychPackageAssessment = inspectPackage(modPath);
-      if (!assessment.launchable) continue;
+      if (!assessment.launchable)
+        trace('[Psych Compat] Loading package despite unsupported features: ' + directory + ' (' + assessment.explanation + ')');
 
       for (source in scanSongSources(modPath))
       {

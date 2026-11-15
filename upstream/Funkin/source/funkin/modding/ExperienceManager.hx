@@ -80,7 +80,10 @@ class ExperienceManager
       var psychAssessment:Null<PsychPackageAssessment> = engine.id == EngineBridge.ENGINE_PSYCH
         ? PsychModRuntime.inspectPackage(modPath)
         : null;
-      var packageLaunchable:Bool = engine.launchable || (psychAssessment != null && psychAssessment.launchable);
+      // Every installed package is launchable now. The assessment is kept as
+      // advice (shown in the explanation) rather than a veto, so a mod is never
+      // silently refused just because NovaBeat cannot fully verify it.
+      var packageLaunchable:Bool = true;
       var packageExplanation:String = psychAssessment == null ? engine.explanation : psychAssessment.explanation;
       var displayEngineLabel:String = psychAssessment != null && psychAssessment.launchable
         ? engine.label + " • LEGACY CHARTS"
@@ -246,9 +249,12 @@ class ExperienceManager
     var psychDirs:Array<String> = ownerId == OFFICIAL_EXPERIENCE_ID ? [] : getLaunchablePsychModDirs(modDirs);
     var psychSongIds:Array<String> = PsychModRuntime.collectSongIds(psychDirs);
 
-    if (ownerId != OFFICIAL_EXPERIENCE_ID && songIds.length == 0)
+    // Launch anyway when no songs were detected: the package still mounts its
+    // assets, characters, stages and scripts, and refusing it left players with
+    // no way to see why an otherwise installed mod did nothing.
+    if (ownerId != OFFICIAL_EXPERIENCE_ID && songIds.length == 0 && psychSongIds.length == 0)
     {
-      return "No playable songs were found. Psych support currently requires classic chart files and an instrumental; script-dependent mods are not supported yet.";
+      trace('[Experiences] Launching ' + info.title + ' with no detected songs; NovaBeat may not recognize its chart layout yet.');
     }
 
     // Make the selected ownership context visible before registries and scripts
@@ -356,7 +362,9 @@ class ExperienceManager
     for (directory in modDirs)
     {
       var modPath:String = Path.join([root, directory]);
-      if (PsychModRuntime.isPsychDirectory(modPath) && PsychModRuntime.inspectPackage(modPath).launchable)
+      // Include every Psych package, supported or not: unsupported features are
+      // reported to the player, but the songs are still loaded and playable.
+      if (PsychModRuntime.isPsychDirectory(modPath))
         result.push(directory);
     }
     #end
@@ -381,7 +389,9 @@ class ExperienceManager
     // package that passes the limited chart-only runtime gate becomes its own
     // standalone experience so it can be selected directly from the library.
     if (engine.id == EngineBridge.ENGINE_PSYCH && launchable) return PACKAGE_STANDALONE;
-    return engine.id == EngineBridge.ENGINE_VSLICE ? PACKAGE_EXTENSION : PACKAGE_UNCLASSIFIED;
+    // Unknown engines are treated as their own experience so any installed mod
+    // can be opened directly, instead of waiting to be classified by hand.
+    return engine.id == EngineBridge.ENGINE_VSLICE ? PACKAGE_EXTENSION : PACKAGE_STANDALONE;
   }
 
   static function normalizePackageType(value:String):String
