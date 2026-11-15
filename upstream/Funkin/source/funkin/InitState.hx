@@ -371,6 +371,22 @@ class InitState extends FlxState
    */
   function startGame():Void
   {
+    // The Android emulator CI test opts into a real Tutorial chart by placing
+    // a marker in this app's private storage. Normal installs never create the
+    // marker, so the usual title-screen startup remains unchanged.
+    #if (android && GITHUB_BUILD)
+    final portraitTestMarker:String = haxe.io.Path.join([
+      lime.system.System.applicationStorageDirectory,
+      "novabeat-portrait-test"
+    ]);
+    if (sys.FileSystem.exists(portraitTestMarker))
+    {
+      trace("NOVABEAT_LAYOUT_TEST: START_TUTORIAL");
+      startSong("tutorial", "normal");
+      return;
+    }
+    #end
+
     // Don't play transition in when entering the title state.
     FlxTransitionableState.skipNextTransIn = true;
 

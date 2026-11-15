@@ -49,6 +49,10 @@ class Strumline extends FlxSpriteGroup
   public static final KEY_COUNT:Int = 4;
   static final NOTE_SPLASH_CAP:Int = 6;
 
+  #if (android && GITHUB_BUILD)
+  static var androidLayoutNoteDiagnostics:Int = 0;
+  #end
+
   var renderDistanceMs(get, never):Float;
 
   /**
@@ -1180,6 +1184,20 @@ class Strumline extends FlxSpriteGroup
       final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       noteSprite.x = receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
       noteSprite.y = -9999;
+
+      #if (android && GITHUB_BUILD)
+      if (isPlayer && androidLayoutNoteDiagnostics < 16)
+      {
+        final noteCenter:Float = noteSprite.x + noteSprite.width * 0.5;
+        final receptorCenter:Float = receptor.x + receptor.width * 0.5;
+        final alignmentError:Float = Math.abs(noteCenter - receptorCenter);
+        trace("NOVABEAT_LAYOUT_TEST: NOTE lane=" + note.getDirection()
+          + " noteCenter=" + noteCenter + " receptorCenter=" + receptorCenter
+          + " delta=" + alignmentError);
+        if (alignmentError > 1) trace("NOVABEAT_LAYOUT_TEST: NOTE_FAIL delta=" + alignmentError);
+        androidLayoutNoteDiagnostics++;
+      }
+      #end
 
       noteSprite.graphic.destroyOnNoUse = false;
 

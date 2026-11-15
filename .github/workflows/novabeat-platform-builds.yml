@@ -1130,6 +1130,26 @@ jobs:
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Run Android portrait gameplay and viewport-resize smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: bash scripts/android-portrait-gameplay-smoke.sh upstream/Funkin/export/NovaBeat-Android.apk
+
+      - name: Upload Android portrait test screenshots and logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-android-portrait-diagnostics
+          path: artifacts/android-portrait-layout/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload Android package for automatic release publishing
         uses: actions/upload-artifact@v4
         with:

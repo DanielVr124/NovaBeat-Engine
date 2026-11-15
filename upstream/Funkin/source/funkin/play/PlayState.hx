@@ -975,6 +975,12 @@ class PlayState extends MusicBeatSubState
 
     FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
 
+    // Apply the initial mobile layout after receptors and touch targets exist.
+    // The same layout method is used for real orientation/viewport changes.
+    #if (mobile || FEATURE_TOUCH_CONTROLS)
+    onViewportResize(FlxG.width, FlxG.height);
+    #end
+
     // The song is loaded and in the process of starting.
     // This gets set back to false when the chart actually starts.
     startingSong = true;
@@ -994,6 +1000,11 @@ class PlayState extends MusicBeatSubState
 
     // Reset the camera's zoom and force it to focus on the camera follow point.
     resetCamera();
+
+    #if (android && GITHUB_BUILD)
+    trace("NOVABEAT_LAYOUT_TEST: PLAYSTATE_CREATED song=" + currentSong.id
+      + " stageZoom=" + stageZoom + " gameZoom=" + camGame.zoom);
+    #end
 
     // The Psych post-create callback is dispatched after all scene children
     // are initialized, immediately before the countdown begins.
@@ -2585,6 +2596,78 @@ class PlayState extends MusicBeatSubState
     return receptorHeight;
   }
 
+  #if (android && GITHUB_BUILD)
+  /**
+   * Log live Android render geometry so CI can assert that portrait receptors
+   * are visible and their touch targets occupy the same screen-space centers.
+   */
+  function reportAndroidPortraitLayout(width:Int, height:Int):Void
+  {
+    if (width <= 0 || height <= width * 1.12) return;
+
+    var boundsOk:Bool = true;
+    var touchTargetsOk:Bool = true;
+    var laneOrderOk:Bool = true;
+    var minX:Float = Math.POSITIVE_INFINITY;
+    var maxX:Float = Math.NEGATIVE_INFINITY;
+    var previousCenter:Float = Math.NEGATIVE_INFINITY;
+
+    for (i in 0...Strumline.KEY_COUNT)
+    {
+      final receptor = playerStrumline.getByIndex(i);
+      final receptorPoint:FlxPoint = receptor.getScreenPosition(FlxPoint.get(), camHUD);
+      final left:Float = receptorPoint.x;
+      final top:Float = receptorPoint.y;
+      final right:Float = left + receptor.width;
+      final bottom:Float = top + receptor.height;
+      final centerX:Float = left + receptor.width * 0.5;
+      final centerY:Float = top + receptor.height * 0.5;
+
+      minX = Math.min(minX, left);
+      maxX = Math.max(maxX, right);
+      if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) boundsOk = false;
+      if (centerX <= previousCenter) laneOrderOk = false;
+      previousCenter = centerX;
+
+      final hint = hitbox == null ? null : hitbox.getFirstHintByDirection(Strumline.DIRECTIONS[i]);
+      if (hint == null)
+      {
+        touchTargetsOk = false;
+        trace("NOVABEAT_LAYOUT_TEST: TOUCH_MISSING lane=" + i);
+      }
+      else
+      {
+        final hintPoint:FlxPoint = hint.getScreenPosition(FlxPoint.get(), camHUD);
+        final touchDx:Float = Math.abs((hintPoint.x + hint.width * 0.5) - centerX);
+        final touchDy:Float = Math.abs((hintPoint.y + hint.height * 0.5) - centerY);
+        if (touchDx > 2 || touchDy > 2) touchTargetsOk = false;
+        trace("NOVABEAT_LAYOUT_TEST: TOUCH lane=" + i + " dx=" + touchDx + " dy=" + touchDy);
+        hintPoint.put();
+      }
+
+      trace("NOVABEAT_LAYOUT_TEST: RECEPTOR lane=" + i + " x=" + left + " y=" + top
+        + " width=" + receptor.width + " height=" + receptor.height + " centerX=" + centerX);
+      receptorPoint.put();
+    }
+
+    final actualCenter:Float = (minX + maxX) * 0.5;
+    final centerError:Float = Math.abs(actualCenter - width * 0.5);
+    final centered:Bool = centerError <= 3;
+    final passed:Bool = boundsOk && touchTargetsOk && laneOrderOk && centered;
+    trace("NOVABEAT_LAYOUT_TEST: STAGE cameraZoom=" + camGame.zoom + " stageZoom=" + stageZoom);
+
+    if (passed)
+    {
+      trace("NOVABEAT_LAYOUT_TEST: LAYOUT_PASS viewport=" + width + "x" + height + " centerError=" + centerError);
+    }
+    else
+    {
+      trace("NOVABEAT_LAYOUT_TEST: LAYOUT_FAIL bounds=" + boundsOk + " touch=" + touchTargetsOk
+        + " order=" + laneOrderOk + " centered=" + centered + " centerError=" + centerError);
+    }
+  }
+  #end
+
   /**
    * Reflow gameplay controls when the available viewport changes.
    *
@@ -2617,21 +2700,22 @@ class PlayState extends MusicBeatSubState
       playerStrumline.strumlineScale.set(mobileScale, mobileScale);
       playerStrumline.setNoteSpacing(mobileSpacing);
 
-      // Center using the actual rendered receptor bounds, not the logical
-      // group width. The first receptor has a negative art offset, which
-      // previously pushed its graphic and touch target off the left edge.
+      // Receptor positions are world coordinates because FlxSpriteGroup
+      // moves its children when its own x changes. Convert to group-local
+      // coordinates before calculating the next position; otherwise a second
+      // viewport resize feeds the previous group offset back into the result.
       var receptorLeft:Float = Math.POSITIVE_INFINITY;
       var receptorRight:Float = Math.NEGATIVE_INFINITY;
       for (receptor in playerStrumline.strumlineNotes.members)
       {
         if (receptor == null) continue;
-        receptorLeft = Math.min(receptorLeft, receptor.x);
-        receptorRight = Math.max(receptorRight, receptor.x + receptor.width);
+        final localLeft:Float = receptor.x - playerStrumline.x;
+        receptorLeft = Math.min(receptorLeft, localLeft);
+        receptorRight = Math.max(receptorRight, localLeft + receptor.width);
       }
       if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
       {
-        playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
-          - receptorLeft - (width * 0.001);
+        playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5 - receptorLeft;
       }
       else
       {
@@ -2670,6 +2754,16 @@ class PlayState extends MusicBeatSubState
     }
 
     #if (mobile || FEATURE_TOUCH_CONTROLS)
+    // Reposition arrow touch targets immediately when the receptor group moves.
+    if (hitbox != null && Preferences.controlsScheme == FunkinHitboxControlSchemes.Arrows)
+    {
+      for (direction in Strumline.DIRECTIONS)
+      {
+        final hint = hitbox.getFirstHintByDirection(direction);
+        if (hint != null) hint.follow(playerStrumline.getByDirection(direction));
+      }
+    }
+
     if (pauseButton != null)
     {
       pauseButton.setPosition(width - pauseButton.width - 35, 35);
@@ -2679,6 +2773,10 @@ class PlayState extends MusicBeatSubState
         pauseCircle.y = pauseButton.y + (pauseButton.height - pauseCircle.height) / 2;
       }
     }
+    #end
+
+    #if (android && GITHUB_BUILD)
+    reportAndroidPortraitLayout(width, height);
     #end
   }
 
