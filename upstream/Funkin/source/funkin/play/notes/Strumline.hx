@@ -1158,11 +1158,13 @@ class Strumline extends FlxSpriteGroup
       if (noteKindStyle == null) noteKindStyle = NoteKindManager.getNoteStyle(note.kind, null);
       if (noteKindStyle == null) noteKindStyle = this.noteStyle;
 
-      noteSprite.setupNoteGraphic(noteKindStyle);
-      // Psych 0.7.3 Hurt Notes use a red/black RGB palette rather than a
-      // separate HURTNOTE_assets sheet. Set this on every pooled note so the
-      // shader cannot leak onto a regular note.
-      noteSprite.shader = noteKind != null && noteKind.hurt ? PsychHurtNoteShader.shared() : null;
+      noteSprite.noteData = note;
+      noteSprite.setupNoteGraphic(noteKindStyle, note.texture);
+      // Keep Psych's optimized Hurt Note palette for the built-in appearance,
+      // but do not tint a mod-supplied texture such as HURTNOTE_assets.
+      noteSprite.shader = noteKind != null && noteKind.hurt && noteSprite.texture == null
+        ? PsychHurtNoteShader.shared()
+        : null;
 
       // Falling notes must use the exact same scale as their receptors.
       // A separate aspect-ratio reduction made the notes narrower and shifted
@@ -1171,7 +1173,6 @@ class Strumline extends FlxSpriteGroup
       noteSprite.updateHitbox();
 
       noteSprite.direction = note.getDirection();
-      noteSprite.noteData = note;
 
       // [full-build-android] Validate receptor-local coordinates for mobile falling and hold notes.
       // Align the center of the note with the actual receptor sprite. This
@@ -1179,6 +1180,12 @@ class Strumline extends FlxSpriteGroup
       // default 104px receptor size.
       final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       noteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
+      #if !(mobile || FEATURE_TOUCH_CONTROLS)
+      // Flixel draws the frame shifted by its graphic offset. Compensate on
+      // desktop so custom Psych atlases with non-zero offsets stay centered
+      // over the receptors instead of drifting away from the hit lanes.
+      noteSprite.x += noteSprite.offset.x;
+      #end
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;

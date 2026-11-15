@@ -25,6 +25,8 @@ import funkin.data.stage.StageRegistry;
 import funkin.data.story.level.LevelRegistry;
 import funkin.modding.module.ModuleHandler;
 import funkin.data.character.CharacterData.CharacterDataParser;
+import funkin.modding.ExperienceManager;
+import funkin.modding.PsychModRuntime;
 import funkin.play.notes.notekind.NoteKindManager;
 import funkin.play.PlayStatePlaylist;
 import funkin.ui.debug.charting.ChartEditorState;
@@ -314,6 +316,14 @@ class InitState extends FlxState
     // TODO: CharacterDataParser doesn't use json2object, so it's way slower than the other parsers and more prone to syntax errors.
     // Move it to use a BaseRegistry.
     CharacterDataParser.loadCharacterCache();
+
+    // Psych charts register song-scoped character aliases during import.
+    // Import them only after CharacterDataParser has finished clearing and
+    // rebuilding its cache, otherwise those aliases are immediately erased.
+    var importedPsychSongs:Array<String> = PsychModRuntime.loadSongs(ExperienceManager.getActivePsychModDirs());
+    for (songId in importedPsychSongs)
+      trace('Loaded classic Psych chart: ' + songId);
+    PsychModRuntime.loadWeeks(ExperienceManager.getActivePsychModDirs());
 
     NoteKindManager.initialize();
 

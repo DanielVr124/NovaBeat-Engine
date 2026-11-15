@@ -87,6 +87,12 @@ class HealthIcon extends FunkinSprite
   var shouldBop:Bool = true;
 
   /**
+   * When set, resolve this icon's image/XML against the owning imported
+   * Psych song rather than whichever Psych song happened to launch last.
+   */
+  var psychAssetSongId:Null<String> = null;
+
+  /**
    * At this amount of health, play the Winning animation instead of the idle.
    */
   static final WINNING_THRESHOLD:Float = 0.8 * 2;
@@ -222,6 +228,17 @@ class HealthIcon extends FunkinSprite
       this.flipX = data.flipX ?? false; // Face the OTHER way by default, since that is more common.
       this.updatePosition();
     }
+  }
+
+  /**
+   * Configure a Freeplay icon using the package that owns its song. This
+   * avoids cross-mod icon collisions and case-sensitive asset misses when
+   * several Psych experiences contribute songs to one Freeplay list.
+   */
+  public function configureForPsychSong(data:Null<HealthIconData>, songId:String):Void
+  {
+    psychAssetSongId = songId;
+    configure(data);
   }
 
   /**
@@ -395,6 +412,15 @@ class HealthIcon extends FunkinSprite
     this.animation.addByPrefix(ToLosing, ToLosing, 24, false);
     this.animation.addByPrefix(FromWinning, FromWinning, 24, false);
     this.animation.addByPrefix(FromLosing, FromLosing, 24, false);
+
+    // Some Psych mods ship a valid Sparrow atlas but use a different case or
+    // naming convention for the idle prefix. Keep the icon visible rather than
+    // rendering a blank sprite when the atlas contains frames but no "idle".
+    if (!hasAnimation(Idle) && animation.numFrames > 0)
+    {
+      trace('Health icon atlas has no idle prefix; using its first frame as a static idle icon.');
+      this.animation.add(Idle, [0], 0, false, false);
+    }
   }
 
   /**
@@ -413,15 +439,30 @@ class HealthIcon extends FunkinSprite
     }
   }
 
+  function resolveIconImagePath(charId:String):String
+  {
+    return psychAssetSongId == null
+      ? Paths.image('icons/icon-$charId')
+      : Paths.imageForPsychSong('icons/icon-$charId', psychAssetSongId);
+  }
+
+  function resolveIconXmlPath(charId:String):String
+  {
+    var requestedPath:String = 'images/icons/icon-$charId.xml';
+    return psychAssetSongId == null
+      ? Paths.file(requestedPath)
+      : Paths.fileForPsychSong(requestedPath, openfl.utils.AssetType.TEXT, psychAssetSongId);
+  }
+
   function iconExists(charId:String):Bool
   {
-    return Assets.exists(Paths.image('icons/icon-$charId'));
+    return Assets.exists(resolveIconImagePath(charId));
   }
 
   function isNewSpritesheet(charId:String):Bool
   {
     // Use the ID being loaded, not the icon object's previous character ID.
-    return Assets.exists(Paths.file('images/icons/icon-$charId.xml'));
+    return Assets.exists(resolveIconXmlPath(charId));
   }
 
   function loadCharacter(charId:Null<String>):Void
@@ -441,12 +482,17 @@ class HealthIcon extends FunkinSprite
     {
       if (!isLegacyStyle)
       {
-        loadSparrow('icons/icon-$charId');
+        if (psychAssetSongId == null)
+          loadSparrow('icons/icon-$charId');
+        else
+          this.frames = Paths.getSparrowAtlasForPsychSong('icons/icon-$charId', psychAssetSongId);
         loadAnimationNew();
       }
       else
       {
-        loadGraphic(Paths.image('icons/icon-$charId'), true, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE, isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE);
+        loadGraphic(resolveIconImagePath(charId), true,
+          isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE,
+          isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE);
         loadAnimationOld();
       }
 
