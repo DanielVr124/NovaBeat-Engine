@@ -2631,7 +2631,7 @@ class PlayState extends MusicBeatSubState
       if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
       {
         playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
-          - receptorLeft + Constants.STRUMLINE_X_OFFSET - (width * 0.001);
+          - receptorLeft - (width * 0.001);
       }
       else
       {
@@ -2782,7 +2782,7 @@ class PlayState extends MusicBeatSubState
     if (receptorLeft != Math.POSITIVE_INFINITY && receptorRight > receptorLeft)
     {
       playerStrumline.x = (width - (receptorRight - receptorLeft)) * 0.5
-        - receptorLeft + Constants.STRUMLINE_X_OFFSET - (width * 0.001);
+        - receptorLeft - (width * 0.001);
     }
     else
     {
