@@ -450,7 +450,9 @@ class HealthIcon extends FunkinSprite
   {
     // Don't flip BF's icon here! That's done later.
     this.animation.add(Idle, [0], 0, false, false);
-    this.animation.add(Losing, [1], 0, false, false);
+    // Single-image icons have no losing frame, so reuse the idle one instead
+    // of pointing the animation at a frame that does not exist.
+    this.animation.add(Losing, [animation.numFrames >= 2 ? 1 : 0], 0, false, false);
     if (animation.numFrames >= 3)
     {
       this.animation.add(Winning, [2], 0, false, false);
@@ -528,20 +530,29 @@ class HealthIcon extends FunkinSprite
       }
       else
       {
-        // Psych icons are usually 150x150 cells (32x32 when pixel), but mods
-        // ship plenty of single wide or tall icons. Forcing the standard cell
-        // size sliced those at the wrong boundaries and cropped the face, so
-        // measure the image and split it into equal square-ish cells instead.
+        // Psych ships icons as whole cells of 150x150 (32x32 when pixel), but
+        // mods commonly ship one arbitrary-sized image per icon instead.
+        // Slicing those into standard cells left a single corner or nothing
+        // at all, which is why some icons appeared cropped and others blank.
+        // Only use standard cells when the image is actually built from them.
         var iconPath:String = resolveIconImagePath(charId);
-        var frameWidth:Int = isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE;
-        var frameHeight:Int = frameWidth;
+        var cellSize:Int = isPixel ? PIXEL_ICON_SIZE : HEALTH_ICON_SIZE;
+        var frameWidth:Int = cellSize;
+        var frameHeight:Int = cellSize;
 
         var bitmap:Null<openfl.display.BitmapData> = openfl.Assets.getBitmapData(iconPath);
         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0)
         {
-          var cells:Int = Math.max(1, Math.round(bitmap.width / bitmap.height));
-          frameHeight = bitmap.height;
-          frameWidth = Std.int(bitmap.width / cells);
+          if (bitmap.width % cellSize == 0 && bitmap.height % cellSize == 0)
+          {
+            frameWidth = cellSize;
+            frameHeight = cellSize;
+          }
+          else
+          {
+            frameWidth = bitmap.width;
+            frameHeight = bitmap.height;
+          }
         }
 
         loadGraphic(iconPath, true, frameWidth, frameHeight);
