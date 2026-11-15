@@ -616,7 +616,7 @@ class PsychFreeplayState extends MusicBeatSubState
 
           var icon:HealthIcon = icons[i];
           var left:Float = Math.min(item.x - 20, icon.x - 10);
-          var right:Float = item.x + item.textWidth + 20;
+          var right:Float = Math.max(item.x + item.textWidth + 20, icon.x + icon.width + 10);
           var top:Float = Math.min(item.y - 18, icon.y - 10);
           var bottom:Float = Math.max(item.y + 82, icon.y + icon.height + 10);
           if (FlxG.mouse.x < left || FlxG.mouse.x > right || FlxG.mouse.y < top || FlxG.mouse.y > bottom) continue;
@@ -740,10 +740,14 @@ class PsychFreeplayState extends MusicBeatSubState
     // Use one shared icon column and one shared title column for every row.
     // Reserving icon space even when an icon fails to load prevents titles
     // from jumping horizontally between songs.
-    var iconX:Float = Math.max(16, FlxG.width * 0.08);
+    var edgeMargin:Float = Math.max(16, FlxG.width * 0.08);
     var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
-    var titleX:Float = iconX + (HealthIcon.HEALTH_ICON_SIZE * iconScale) + 14;
-    var availableTextWidth:Float = Math.max(1, FlxG.width - titleX - 24);
+    var iconWidth:Float = HealthIcon.HEALTH_ICON_SIZE * iconScale;
+    // Psych lays each row out as song title first with the character icon on
+    // its right, so the icon sits in a column against the right edge.
+    var iconX:Float = FlxG.width - iconWidth - edgeMargin;
+    var titleX:Float = edgeMargin;
+    var availableTextWidth:Float = Math.max(1, iconX - titleX - 24);
 
     for (i in 0...songTexts.length)
     {
