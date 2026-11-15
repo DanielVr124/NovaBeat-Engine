@@ -3061,6 +3061,10 @@ class PsychModRuntime
     var psychOpponentId:String = "dad";
     var combinedNotes:Map<String, Array<funkin.data.song.SongData.SongNoteData>> = [];
     var combinedSpeeds:Map<String, Float> = [];
+    // Psych allows character assignments to differ by difficulty file. Keep
+    // those assignments alongside the merged chart data instead of collapsing
+    // every difficulty onto the first file's player1/player2/gfVersion.
+    var difficultyCharacters:Map<String, SongCharacterData> = [];
     var combinedEvents:Array<funkin.data.song.SongData.SongEventData> = [];
     var hasEmbeddedEvents:Bool = false;
     var hasPsychSectionStates:Bool = false;
@@ -3097,6 +3101,11 @@ class PsychModRuntime
           psychGirlfriendId = resolvePsychSongCharacter(modPath, songId, importedV2.girlfriend, "girlfriend");
           psychOpponentId = resolvePsychSongCharacter(modPath, songId, importedV2.opponent, "opponent");
         }
+        difficultyCharacters.set(difficultyName, new SongCharacterData(
+          resolvePsychSongCharacter(modPath, songId, importedV2.player, "player"),
+          resolvePsychSongCharacter(modPath, songId, importedV2.girlfriend, "girlfriend"),
+          resolvePsychSongCharacter(modPath, songId, importedV2.opponent, "opponent")
+        ));
         combinedNotes.set(difficultyName, importedV2.notes);
         combinedSpeeds.set(difficultyName, importedV2.speed);
         if (combinedEvents.length == 0)
@@ -3132,14 +3141,20 @@ class PsychModRuntime
       // Make the owning mod root available to song-scoped atlas resolution
       // before resolving any character aliases for this chart.
       psychSongModRoots.set(songId, Path.normalize(modPath));
+      var difficultyPlayerId:String = resolvePsychSongCharacter(modPath, songId,
+        readPsychString(chartSong, "player1", "bf"), "player");
+      var difficultyOpponentId:String = resolvePsychSongCharacter(modPath, songId,
+        readPsychString(chartSong, "player2", "dad"), "opponent");
+      var difficultyGirlfriendId:String = resolvePsychSongCharacter(modPath, songId,
+        readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
+      difficultyCharacters.set(difficultyName,
+        new SongCharacterData(difficultyPlayerId, difficultyGirlfriendId, difficultyOpponentId));
       if (metadata == null)
       {
         metadata = importedMetadata;
-        psychPlayerId = resolvePsychSongCharacter(modPath, songId, readPsychString(chartSong, "player1", "bf"), "player");
-        psychOpponentId = resolvePsychSongCharacter(modPath, songId,
-          readPsychString(chartSong, "player2", "dad"), "opponent");
-        psychGirlfriendId = resolvePsychSongCharacter(modPath, songId,
-          readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
+        psychPlayerId = difficultyPlayerId;
+        psychOpponentId = difficultyOpponentId;
+        psychGirlfriendId = difficultyGirlfriendId;
       }
 
       var stageName:String = readPsychString(chartSong, "stage", readPsychString(chartSong, "stageDefault", ""));
@@ -3147,7 +3162,7 @@ class PsychModRuntime
       psychSongStageNames.set(songId, stageName);
       importedMetadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
       if (metadata == importedMetadata) metadata.playData.stage = resolvePsychStage(stageName, source.songFolder);
-      importedMetadata.playData.characters = new SongCharacterData(psychPlayerId, psychGirlfriendId, psychOpponentId);
+      importedMetadata.playData.characters = difficultyCharacters.get(difficultyName);
 
       for (difficulty in importedChart.notes.keys())
       {
@@ -3221,7 +3236,15 @@ class PsychModRuntime
     var chart:SongChartData = new SongChartData(combinedSpeeds, combinedEvents, combinedNotes);
     var charts:Map<String, SongChartData> = [];
     charts.set(Constants.DEFAULT_VARIATION, chart);
-    return Song.buildRaw(songId, [metadata], Constants.DEFAULT_VARIATION, charts, false, false);
+    var builtSong:Song = Song.buildRaw(songId, [metadata], Constants.DEFAULT_VARIATION, charts, false, false);
+    // Song metadata is shared by all difficulties in the native format. Restore
+    // Psych's per-file character selection on each generated SongDifficulty.
+    for (difficultyName in difficultyCharacters.keys())
+    {
+      var difficultyData = builtSong.getDifficulty(difficultyName, Constants.DEFAULT_VARIATION);
+      if (difficultyData != null) difficultyData.characters = difficultyCharacters.get(difficultyName);
+    }
+    return builtSong;
   }
 
   static function convertPsychV2Chart(chartRoot:Dynamic, dataPath:String, difficultyName:String,
