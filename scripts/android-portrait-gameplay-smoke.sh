@@ -47,8 +47,8 @@ fi
 printf 'Discovered Android application storage: %s\n' "$storage_dir"
 
 # Escape single quotes for the emulator's /system/bin/sh.
-storage_dir_escaped="${storage_dir//\\'/\\'\\\\\\'}"
-adb shell run-as "$PACKAGE_ID" sh -c "mkdir -p '$storage_dir_escaped' && : > '$storage_dir_escaped/novabeat-portrait-test'"
+storage_dir_quoted="$(python3 -c 'import shlex,sys; print(shlex.quote(sys.argv[1]))' "$storage_dir")"
+adb shell run-as "$PACKAGE_ID" sh -c "mkdir -p $storage_dir_quoted && : > $storage_dir_quoted/novabeat-portrait-test"
 adb shell am force-stop "$PACKAGE_ID"
 adb logcat -c
 adb shell monkey -p "$PACKAGE_ID" -c android.intent.category.LAUNCHER 1
