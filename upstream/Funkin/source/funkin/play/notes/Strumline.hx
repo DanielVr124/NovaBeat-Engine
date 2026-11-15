@@ -1174,13 +1174,19 @@ class Strumline extends FlxSpriteGroup
 
       noteSprite.direction = note.getDirection();
 
-      // Match the original FNF receptor coordinate calculation. Receptor.x
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      // Keep the receptor-local layout used by the mobile touch interface.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      noteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
+      #else
+      // Match the original FNF desktop coordinate calculation. Receptor.x
       // already includes strumlineNotes.x, so adding that group offset again
-      // double-counts the lane displacement on desktop layouts.
+      // double-counts the lane displacement.
       noteSprite.x = this.x;
       noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2;
       noteSprite.x -= NUDGE;
+      #end
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
@@ -1221,13 +1227,17 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.visible = true;
       holdNoteSprite.alpha = 1.0;
 
-      // Match the original FNF sustain-trail positioning. Do not add
-      // strumlineNotes.x a second time: the receptor coordinates are already
-      // relative to the strumline group.
+      #if (mobile || FEATURE_TOUCH_CONTROLS)
+      // Keep the receptor-local sustain alignment used by the mobile layout.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2 - NUDGE;
+      #else
+      // Match the original FNF desktop sustain-trail positioning.
       holdNoteSprite.x = this.x;
       holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       holdNoteSprite.x += STRUMLINE_SIZE / 2;
       holdNoteSprite.x -= holdNoteSprite.width / 2;
+      #end
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
