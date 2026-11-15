@@ -1150,3 +1150,5 @@ jobs:
 # [full-build-android] Validate native-only Android run with warm toolchain caches.
 
 # [full-build-android] Rebuild APK for portrait camera and mobile receptor layout fix.
+
+# Android build trigger commit; no workflow behavior changed.
