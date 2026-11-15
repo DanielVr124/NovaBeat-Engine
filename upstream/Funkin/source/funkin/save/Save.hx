@@ -98,6 +98,24 @@ class Save implements ConsoleClass
       options: {
         // Reasonable defaults.
         framerate: #if mobile refreshRate #else 60 #end,
+        menuStyle: "Original FNF",
+        menuAccent: "cyan",
+        menuBackgroundIntensity: 100,
+        menuPanelGlow: 100,
+        menuShowEqualizer: true,
+        menuInterfaceScale: 100,
+        menuDensity: "comfortable",
+        menuReduceMotion: false,
+        menuAnimatedBackground: true,
+        menuEntryAnimations: true,
+        menuAudioVisualizer: true,
+        menuReduceFlashing: false,
+        menuLargeText: false,
+        performancePreset: "High",
+        performanceNoteSplashes: true,
+        performanceStageAnimations: true,
+        performanceStageShaders: true,
+        performanceCameraBops: true,
         naughtyness: true,
         downscroll: false,
         flashingLights: true,
@@ -1104,11 +1122,38 @@ typedef SaveScoreTallyData =
 typedef SaveDataOptions =
 {
   /**
+   * Main-menu presentation selected by the player.
+   * @default "Original FNF"
+   */
+  var menuStyle:String;
+  var menuAccent:String;
+  var menuBackgroundIntensity:Int;
+  var menuPanelGlow:Int;
+  var menuShowEqualizer:Bool;
+  var menuInterfaceScale:Int;
+  var menuDensity:String;
+  var menuReduceMotion:Bool;
+  var menuAnimatedBackground:Bool;
+  var menuEntryAnimations:Bool;
+  var menuAudioVisualizer:Bool;
+  var menuReduceFlashing:Bool;
+  var menuLargeText:Bool;
+
+  /**
+   * Overall graphics preset and individual performance options.
+   */
+  var performancePreset:String;
+  var performanceNoteSplashes:Bool;
+  var performanceStageAnimations:Bool;
+  var performanceStageShaders:Bool;
+  var performanceCameraBops:Bool;
+
+
+  /**
    * FPS
    * @default `60`
    */
   var framerate:Int;
-
   /**
    * Whether some particularly foul language is displayed.
    * @default `true`
