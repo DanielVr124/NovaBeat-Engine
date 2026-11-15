@@ -3786,6 +3786,7 @@ class PsychModRuntime
     var tempRoot:String = Path.join([tempParent, "novabeat-psych-stage-smoke-" + Std.string(Std.random(0x7FFFFFFF))]);
     var directRoot:String = Path.join([tempRoot, "direct-package"]);
     var directStagePath:String = Path.join([directRoot, "Stages", "fOrEsT.JsOn"]);
+    var secondStagePath:String = Path.join([directRoot, "stages", "NeW-StAgE.JsOn"]);
     var sourceStagePath:String = Path.join([tempRoot, "assets", "preload", "Stages", "fOrEsT.JsOn"]);
     var characterPath:String = Path.join([tempRoot, "assets", "preload", "characters", "bF.JsOn"]);
     var assetPath:String = Path.join([tempRoot, "assets", "shared", "images", "characters", "GoRiLlA.PnG"]);
@@ -3794,28 +3795,63 @@ class PsychModRuntime
     try
     {
       createSmokeDirectoryTree(Path.directory(directStagePath));
+      createSmokeDirectoryTree(Path.directory(secondStagePath));
       createSmokeDirectoryTree(Path.directory(sourceStagePath));
       createSmokeDirectoryTree(Path.directory(characterPath));
       createSmokeDirectoryTree(Path.directory(assetPath));
-      File.saveContent(directStagePath, '{"bf":[770,100]}');
+
+      // Two unrelated stage files deliberately use different coordinates.
+      // The loader must resolve each by its own stage name rather than reusing
+      // one fixture's coordinates for every imported song.
+      File.saveContent(directStagePath, '{"bf":[321,45],"gf":[87,210],"dad":[-40,65]}');
+      File.saveContent(secondStagePath, '{"boyfriend":[915,275],"girlfriend":[510,390],"opponent":[125,205]}');
       File.saveContent(sourceStagePath,
         '{"boyfriend":[660,100],"girlfriend":[50,130],"opponent":[-100,110],"defaultZoom":0.76}');
       File.saveContent(characterPath, '{}');
       File.saveContent(assetPath, '');
 
       var directResolved:Null<String> = findPsychStageDataFile(directRoot, "Forest");
+      var secondResolved:Null<String> = findPsychStageDataFile(directRoot, "new-stage");
       var sourceResolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
       var characterResolved:Null<String> = findPsychCharacterDataFile(tempRoot, "BF");
-      var anchorsValid:Bool = false;
+
+      var directAnchorsValid:Bool = false;
+      if (directResolved != null)
+      {
+        var stageFixture:Dynamic = Json.parse(File.getContent(directResolved));
+        var playerAnchor:Array<Float> = readPsychStagePosition(stageFixture, "boyfriend");
+        if (playerAnchor == null) playerAnchor = readPsychStagePosition(stageFixture, "bf");
+        var girlfriendAnchor:Array<Float> = readPsychStagePosition(stageFixture, "girlfriend");
+        if (girlfriendAnchor == null) girlfriendAnchor = readPsychStagePosition(stageFixture, "gf");
+        var opponentAnchor:Array<Float> = readPsychStagePosition(stageFixture, "opponent");
+        if (opponentAnchor == null) opponentAnchor = readPsychStagePosition(stageFixture, "dad");
+        directAnchorsValid = playerAnchor != null && playerAnchor[0] == 321 && playerAnchor[1] == 45
+          && girlfriendAnchor != null && girlfriendAnchor[0] == 87 && girlfriendAnchor[1] == 210
+          && opponentAnchor != null && opponentAnchor[0] == -40 && opponentAnchor[1] == 65;
+      }
+
+      var secondAnchorsValid:Bool = false;
+      if (secondResolved != null)
+      {
+        var stageFixture:Dynamic = Json.parse(File.getContent(secondResolved));
+        var playerAnchor:Array<Float> = readPsychStagePosition(stageFixture, "boyfriend");
+        var girlfriendAnchor:Array<Float> = readPsychStagePosition(stageFixture, "girlfriend");
+        var opponentAnchor:Array<Float> = readPsychStagePosition(stageFixture, "opponent");
+        secondAnchorsValid = playerAnchor != null && playerAnchor[0] == 915 && playerAnchor[1] == 275
+          && girlfriendAnchor != null && girlfriendAnchor[0] == 510 && girlfriendAnchor[1] == 390
+          && opponentAnchor != null && opponentAnchor[0] == 125 && opponentAnchor[1] == 205;
+      }
+
+      var sourceAnchorsValid:Bool = false;
       if (sourceResolved != null)
       {
         var stageFixture:Dynamic = Json.parse(File.getContent(sourceResolved));
         var playerAnchor:Array<Float> = readPsychStagePosition(stageFixture, "boyfriend");
         var girlfriendAnchor:Array<Float> = readPsychStagePosition(stageFixture, "girlfriend");
         var opponentAnchor:Array<Float> = readPsychStagePosition(stageFixture, "opponent");
-        anchorsValid = playerAnchor != null && playerAnchor.length >= 2 && playerAnchor[0] == 660 && playerAnchor[1] == 100
-          && girlfriendAnchor != null && girlfriendAnchor.length >= 2 && girlfriendAnchor[0] == 50 && girlfriendAnchor[1] == 130
-          && opponentAnchor != null && opponentAnchor.length >= 2 && opponentAnchor[0] == -100 && opponentAnchor[1] == 110;
+        sourceAnchorsValid = playerAnchor != null && playerAnchor[0] == 660 && playerAnchor[1] == 100
+          && girlfriendAnchor != null && girlfriendAnchor[0] == 50 && girlfriendAnchor[1] == 130
+          && opponentAnchor != null && opponentAnchor[0] == -100 && opponentAnchor[1] == 110;
       }
 
       psychSongModRoots.set(testSongId, tempRoot);
@@ -3823,14 +3859,16 @@ class PsychModRuntime
       psychSongModRoots.remove(testSongId);
 
       passed = directResolved != null && Path.normalize(directResolved) == Path.normalize(directStagePath)
+        && secondResolved != null && Path.normalize(secondResolved) == Path.normalize(secondStagePath)
         && sourceResolved != null && Path.normalize(sourceResolved) == Path.normalize(sourceStagePath)
         && characterResolved != null && Path.normalize(characterResolved) == Path.normalize(characterPath)
-        && anchorsValid && assetResolved == "images/characters/GoRiLlA.PnG";
+        && directAnchorsValid && secondAnchorsValid && sourceAnchorsValid
+        && assetResolved == "images/characters/GoRiLlA.PnG";
     }
     catch (error:Dynamic)
     {
       psychSongModRoots.remove(testSongId);
-      trace('[Psych Compatibility] Source-game asset layout smoke test failed: ' + Std.string(error));
+      trace('[Psych Compatibility] Multi-stage data lookup smoke test failed: ' + Std.string(error));
       passed = false;
     }
 
