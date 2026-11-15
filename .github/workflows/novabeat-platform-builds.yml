@@ -1134,6 +1134,19 @@ jobs:
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Enable KVM and start ADB for the Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::GitHub runner does not expose /dev/kvm; the Android emulator cannot use hardware acceleration."
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm
+          adb start-server
+          adb devices
+
 # [full-build-android] Validate the runtime-discovered and shell-escaped marker path in app-private storage.
       - name: Run Android portrait gameplay and viewport-resize smoke test
         uses: reactivecircus/android-emulator-runner@v2
@@ -1143,7 +1156,10 @@ jobs:
           arch: x86_64
           profile: pixel_5
           emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-linux-hw-accel: false
           disable-animations: true
+          emulator-boot-timeout: 900
+          pre-emulator-launch-script: adb start-server
           script: bash scripts/android-portrait-gameplay-smoke.sh upstream/Funkin/export/NovaBeat-Android.apk
 
       - name: Upload Android portrait test screenshots and logcat
