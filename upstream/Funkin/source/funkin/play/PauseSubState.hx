@@ -1305,6 +1305,19 @@ class PauseSubState extends MusicBeatSubState
   {
     state.allowInput = false;
 
+    var activePlayState:Null<PlayState> = PlayState.instance;
+    if (activePlayState != null && activePlayState.currentSong != null
+      && funkin.modding.ExperienceManager.isPsychSong(activePlayState.currentSong.id))
+    {
+      // Psych gameplay is nested inside its existing Freeplay state. Closing
+      // gameplay restores that exact parent, preserving the selected song and
+      // avoiding a broken/reconstructed Main Menu transition.
+      activePlayState.deathCounter = 0;
+      state.close();
+      activePlayState.close();
+      return;
+    }
+
     PlayState.instance.deathCounter = 0;
 
     FlxTransitionableState.skipNextTransIn = true;

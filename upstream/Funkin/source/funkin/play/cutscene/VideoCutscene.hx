@@ -33,6 +33,8 @@ class VideoCutscene
   #end
   #if hxvlc
   static var vid:FunkinVideoSprite;
+  static var preloadedVid:Null<FunkinVideoSprite> = null;
+  static var preloadedPath:String = "";
   #end
 
   /**
@@ -59,6 +61,102 @@ class VideoCutscene
    * Called when the video is ended or skipped.
    */
   public static final onVideoEnded:FlxSignal = new FlxSignal();
+
+  /**
+   * Prepare a native video decoder before a Psych script requests playback.
+   * The decoder remains paused; playVideoNative() reuses it when the matching
+   * startVideo() call arrives.
+   */
+  public static function preload(filePath:String):Bool
+  {
+    #if hxvlc
+    if (filePath == null || StringTools.trim(filePath).length == 0) return false;
+    if (preloadedVid != null && preloadedPath == filePath) return true;
+
+    clearPreloadedVideo();
+    var candidate:FunkinVideoSprite = createNativeVideo();
+    candidate.active = false;
+    preloadedVid = candidate;
+    preloadedPath = filePath;
+    candidate.bitmap.onEncounteredError.add(function(message:String):Void
+    {
+      if (preloadedVid == candidate)
+      {
+        trace('[Video Cutscene] Preloaded video failed: ' + message);
+        preloadedVid = null;
+        preloadedPath = "";
+        candidate.destroy();
+      }
+    });
+
+    if (candidate.load(filePath, getNativeVideoOptions()) && preloadedVid == candidate)
+    {
+      trace('[Video Cutscene] Preloaded video: ' + filePath);
+      return true;
+    }
+
+    if (preloadedVid == candidate)
+    {
+      preloadedVid = null;
+      preloadedPath = "";
+      candidate.destroy();
+    }
+    trace('[Video Cutscene] Could not preload video: ' + filePath);
+    return false;
+    #else
+    return false;
+    #end
+  }
+
+  #if hxvlc
+  static function createNativeVideo():FunkinVideoSprite
+  {
+    var video:FunkinVideoSprite = new FunkinVideoSprite(0, 0);
+    video.bitmap.onFormatSetup.add(function():Void
+    {
+      if (video.bitmap != null && video.bitmap.bitmapData != null)
+      {
+        final scale:Float = Math.min(FlxG.width / video.bitmap.bitmapData.width, FlxG.height / video.bitmap.bitmapData.height);
+        video.setGraphicSize(video.bitmap.bitmapData.width * scale, video.bitmap.bitmapData.height * scale);
+        video.updateHitbox();
+        video.screenCenter();
+      }
+    });
+    return video;
+  }
+
+  static function getNativeVideoOptions():Array<String>
+  {
+    final fileOptions:Array<String> = [];
+    #if FEATURE_VIDEO_SUBTITLES
+    if (Preferences.subtitles)
+      fileOptions.push(':sub-language=$DEFAULT_LANGUAGE');
+    else
+      fileOptions.push(':sub-language=none');
+    fileOptions.push(':audio-language=$DEFAULT_LANGUAGE');
+    #end
+    return fileOptions;
+  }
+
+  static function clearPreloadedVideo():Void
+  {
+    if (preloadedVid != null)
+    {
+      preloadedVid.stop();
+      preloadedVid.destroy();
+      preloadedVid = null;
+      preloadedPath = "";
+    }
+  }
+  #end
+
+  /** Release any prepared decoder when a song is abandoned or replaced. */
+  public static function clearPreload():Void
+  {
+    #if hxvlc
+    clearPreloadedVideo();
+    #end
+  }
 
   /**
    * Play a video cutscene.
@@ -166,63 +264,46 @@ class VideoCutscene
   #if hxvlc
   static function playVideoNative(filePath:String):Void
   {
-    // Video displays OVER the FlxState.
-    vid = new FunkinVideoSprite(0, 0);
+    // Reuse the decoder prepared during song loading whenever the script asks
+    // for this exact file. Otherwise retain the normal on-demand fallback.
+    final usingPreloaded:Bool = preloadedVid != null && preloadedPath == filePath;
+    if (usingPreloaded)
+    {
+      vid = cast preloadedVid;
+      preloadedVid = null;
+      preloadedPath = "";
+    }
+    else
+    {
+      clearPreloadedVideo();
+      vid = createNativeVideo();
+    }
 
     if (vid != null)
     {
-      vid.zIndex = 0;
-
-      vid.active = false;
-
-      vid.bitmap.onFormatSetup.add(function():Void
+      final activeVideo:FunkinVideoSprite = vid;
+      activeVideo.zIndex = 0;
+      activeVideo.active = false;
+      activeVideo.bitmap.onEncounteredError.add(function(message:String):Void
       {
-        if (vid.bitmap != null && vid.bitmap.bitmapData != null)
-        {
-          final scale:Float = Math.min(FlxG.width / vid.bitmap.bitmapData.width, FlxG.height / vid.bitmap.bitmapData.height);
-
-          vid.setGraphicSize(vid.bitmap.bitmapData.width * scale, vid.bitmap.bitmapData.height * scale);
-          vid.updateHitbox();
-          vid.screenCenter();
-        }
+        trace('[Video Cutscene] Playback error: ' + message);
+        if (vid == activeVideo) finishVideo(0.5);
+      });
+      activeVideo.bitmap.onEndReached.add(function():Void
+      {
+        if (vid == activeVideo) finishVideo(0.5);
       });
 
-      vid.bitmap.onEncounteredError.add(function(msg:String):Void
-      {
-        finishVideo(0.5);
-      });
-
-      vid.bitmap.onEndReached.add(finishVideo.bind(0.5));
-
-      vid.cameras = [PlayState.instance.camCutscene];
-
-      PlayState.instance.add(vid);
-
+      activeVideo.cameras = [PlayState.instance.camCutscene];
+      PlayState.instance.add(activeVideo);
       PlayState.instance.refresh();
 
-      final fileOptions:Array<String> = [];
-
-      #if FEATURE_VIDEO_SUBTITLES
-      if (Preferences.subtitles)
-      {
-        fileOptions.push(':sub-language=$DEFAULT_LANGUAGE');
-      }
-      else
-      {
-        fileOptions.push(':sub-language=none');
-      }
-
-      fileOptions.push(':audio-language=$DEFAULT_LANGUAGE');
-      #end
-
-      if (vid.load(filePath, fileOptions) && vid.play())
+      if ((usingPreloaded || activeVideo.load(filePath, getNativeVideoOptions())) && activeVideo.play())
       {
         onVideoStarted.dispatch();
       }
       else if (vid != null)
       {
-        // A failed load/play can return false without dispatching
-        // onEncounteredError. Always release the cutscene state in that case.
         trace('ALERT: Could not load or play video cutscene: ' + filePath);
         finishVideo(0.5);
       }
@@ -230,6 +311,7 @@ class VideoCutscene
     else
     {
       trace('ALERT: Video is null! Could not play cutscene!');
+      finishVideo(0.5);
     }
   }
   #end
@@ -408,6 +490,7 @@ class VideoCutscene
    */
   public static function destroyVideo()
   {
+    clearPreload();
     #if html5
     if (vid != null) PlayState.instance.remove(vid);
     #end
