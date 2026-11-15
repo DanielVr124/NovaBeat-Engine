@@ -119,7 +119,7 @@ jobs:
             echo "- SHA-256: `$digest`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Package Windows distribution
+      - name: Verify Windows distribution files
         shell: pwsh
         working-directory: upstream/Funkin
         run: |
@@ -127,17 +127,16 @@ jobs:
           $binaryDir = "export/release/windows/bin"
           $exe = Join-Path $binaryDir "Funkin.exe"
           if (!(Test-Path $exe)) { throw "Windows executable missing: $exe" }
-          $package = "export/release/windows/NovaBeat-Windows.zip"
-          if (Test-Path $package) { Remove-Item $package -Force }
-          Compress-Archive -Path "$binaryDir/*" -DestinationPath $package -CompressionLevel Optimal
-          if ((Get-Item $package).Length -le 0) { throw "Windows package is empty" }
-          "Windows package SHA-256: $( (Get-FileHash $package -Algorithm SHA256).Hash )" >> $env:GITHUB_STEP_SUMMARY
+          $digest = (Get-FileHash $exe -Algorithm SHA256).Hash
+          "Windows executable SHA-256: $digest" >> $env:GITHUB_STEP_SUMMARY
 
-      - name: Upload Windows package for automatic release publishing
+      # Upload the unpacked distribution. The publisher creates the one and only
+      # NovaBeat-Windows.zip; never put a ZIP inside GitHub's artifact ZIP.
+      - name: Upload unpacked Windows files for automatic release publishing
         uses: actions/upload-artifact@v4
         with:
           name: novabeat-windows
-          path: upstream/Funkin/export/release/windows/NovaBeat-Windows.zip
+          path: upstream/Funkin/export/release/windows/
           if-no-files-found: error
           retention-days: 14
 
