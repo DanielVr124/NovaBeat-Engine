@@ -24,21 +24,24 @@ jobs:
           name: novabeat-windows
           path: extracted-windows
 
-      - name: Verify existing executable
+      - name: Flatten and verify existing executable
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          if (!(Test-Path "extracted-windows/bin/Funkin.exe") -and !(Test-Path "extracted-windows/Funkin.exe")) {
+          $source = if (Test-Path "extracted-windows/bin/Funkin.exe") { "extracted-windows/bin" } else { "extracted-windows" }
+          if (!(Test-Path (Join-Path $source "Funkin.exe"))) {
             Get-ChildItem extracted-windows -Recurse | Select-Object -First 40 FullName
             throw "The downloaded artifact does not contain Funkin.exe; refusing to publish."
           }
-          "Repackaging the original successful build. No compilation or game build steps are run." >> $env:GITHUB_STEP_SUMMARY
+          New-Item -ItemType Directory -Force -Path "publish-root" | Out-Null
+          Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination "publish-root" -Recurse -Force
+          "Repackaging the original successful build. No compilation or game build steps are run; game files are placed at the ZIP root." >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload compressed Windows distribution
         uses: actions/upload-artifact@v4
         with:
           name: novabeat-windows
-          path: extracted-windows/
+          path: publish-root/
           if-no-files-found: error
           compression-level: 6
           retention-days: 30
