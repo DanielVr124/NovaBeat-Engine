@@ -76,7 +76,9 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
 
     var parser = new json2object.JsonParser<StageData>();
     parser.ignoreUnknownVariables = false;
-    parser.fromJson(funkin.util.SerializerUtil.sanitizeJSON(normalized), fileName);
+    // `normalized` is strict JSON: Psych input was parsed and re-serialized above,
+    // while native input was successfully parsed by Json.parse(contents).
+    parser.fromJson(normalized, fileName);
     if (parser.errors.length > 0)
     {
       for (error in parser.errors) funkin.data.DataError.printError(error);
