@@ -3784,8 +3784,9 @@ class PsychModRuntime
     if (tempParent == null || tempParent.length == 0) tempParent = Sys.getCwd();
 
     var tempRoot:String = Path.join([tempParent, "novabeat-psych-stage-smoke-" + Std.string(Std.random(0x7FFFFFFF))]);
-    var directStagePath:String = Path.join([tempRoot, "Stages", "fOrEsT.JsOn"]);
-    var sourceStagePath:String = Path.join([tempRoot, "assets", "preload", "Stages", "cAsUaL.JsOn"]);
+    var directRoot:String = Path.join([tempRoot, "direct-package"]);
+    var directStagePath:String = Path.join([directRoot, "Stages", "fOrEsT.JsOn"]);
+    var sourceStagePath:String = Path.join([tempRoot, "assets", "preload", "Stages", "fOrEsT.JsOn"]);
     var characterPath:String = Path.join([tempRoot, "assets", "preload", "characters", "bF.JsOn"]);
     var assetPath:String = Path.join([tempRoot, "assets", "shared", "images", "characters", "GoRiLlA.PnG"]);
     var testSongId:String = "__psych_stage_asset_smoke__";
@@ -3796,14 +3797,27 @@ class PsychModRuntime
       createSmokeDirectoryTree(Path.directory(sourceStagePath));
       createSmokeDirectoryTree(Path.directory(characterPath));
       createSmokeDirectoryTree(Path.directory(assetPath));
-      File.saveContent(directStagePath, '{"boyfriend":[770,100]}');
-      File.saveContent(sourceStagePath, '{"boyfriend":[660,100]}');
+      File.saveContent(directStagePath, '{"bf":[770,100]}');
+      File.saveContent(sourceStagePath,
+        '{"boyfriend":[660,100],"girlfriend":[50,130],"opponent":[-100,110],"defaultZoom":0.76}');
       File.saveContent(characterPath, '{}');
       File.saveContent(assetPath, '');
 
-      var directResolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
-      var sourceResolved:Null<String> = findPsychStageDataFile(tempRoot, "Casual");
+      var directResolved:Null<String> = findPsychStageDataFile(directRoot, "Forest");
+      var sourceResolved:Null<String> = findPsychStageDataFile(tempRoot, "Forest");
       var characterResolved:Null<String> = findPsychCharacterDataFile(tempRoot, "BF");
+      var anchorsValid:Bool = false;
+      if (sourceResolved != null)
+      {
+        var stageFixture:Dynamic = Json.parse(File.getContent(sourceResolved));
+        var playerAnchor:Array<Float> = readPsychStagePosition(stageFixture, "boyfriend");
+        var girlfriendAnchor:Array<Float> = readPsychStagePosition(stageFixture, "girlfriend");
+        var opponentAnchor:Array<Float> = readPsychStagePosition(stageFixture, "opponent");
+        anchorsValid = playerAnchor != null && playerAnchor.length >= 2 && playerAnchor[0] == 660 && playerAnchor[1] == 100
+          && girlfriendAnchor != null && girlfriendAnchor.length >= 2 && girlfriendAnchor[0] == 50 && girlfriendAnchor[1] == 130
+          && opponentAnchor != null && opponentAnchor.length >= 2 && opponentAnchor[0] == -100 && opponentAnchor[1] == 110;
+      }
+
       psychSongModRoots.set(testSongId, tempRoot);
       var assetResolved:String = resolvePsychAssetCaseForSong(testSongId, "images/characters/gorilla.png");
       psychSongModRoots.remove(testSongId);
@@ -3811,7 +3825,7 @@ class PsychModRuntime
       passed = directResolved != null && Path.normalize(directResolved) == Path.normalize(directStagePath)
         && sourceResolved != null && Path.normalize(sourceResolved) == Path.normalize(sourceStagePath)
         && characterResolved != null && Path.normalize(characterResolved) == Path.normalize(characterPath)
-        && assetResolved == "images/characters/GoRiLlA.PnG";
+        && anchorsValid && assetResolved == "images/characters/GoRiLlA.PnG";
     }
     catch (error:Dynamic)
     {
