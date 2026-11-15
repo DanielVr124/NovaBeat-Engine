@@ -31,7 +31,7 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
     return super.parseEntryDataWithMigration(id, version);
   }
 
-  override public function parseEntryData(id:String):Null<StageData>
+  public function parseEntryData(id:String):Null<StageData>
   {
     var path:String = Paths.json('stages/${id}');
     if (!Assets.exists(path))
@@ -42,7 +42,7 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
     return parseEntryDataRaw(Assets.getText(path), path);
   }
 
-  override public function parseEntryDataRaw(contents:String, ?fileName:String):Null<StageData>
+  public function parseEntryDataRaw(contents:String, ?fileName:String):Null<StageData>
   {
     var normalized:String = contents;
     try
