@@ -1180,7 +1180,7 @@ class Strumline extends FlxSpriteGroup
       noteSprite.x = this.x;
       noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2;
-      noteSprite.x -= NUDGE
+      noteSprite.x -= NUDGE;
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
@@ -1227,7 +1227,7 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.x = this.x;
       holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       holdNoteSprite.x += STRUMLINE_SIZE / 2;
-      holdNoteSprite.x -= holdNoteSprite.width / 2
+      holdNoteSprite.x -= holdNoteSprite.width / 2;
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
