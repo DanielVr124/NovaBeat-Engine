@@ -82,6 +82,17 @@ jobs:
           github-token: ${{ github.token }}
           merge-multiple: true
 
+      - name: Create the single Windows release ZIP
+        if: steps.artifacts.outputs.windows == 'true'
+        run: |
+          set -euo pipefail
+          test -s release-assets/bin/Funkin.exe
+          cd release-assets/bin
+          zip -r ../NovaBeat-Windows.zip .
+          test -s ../NovaBeat-Windows.zip
+          cd ../..
+          echo "Created one Windows ZIP from unpacked build files." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish every available package to NovaBeat-Builds Releases
         env:
           GH_TOKEN: ${{ secrets.NOVABEAT_BUILDS_TOKEN }}
