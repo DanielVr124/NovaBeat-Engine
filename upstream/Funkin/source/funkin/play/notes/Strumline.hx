@@ -1174,18 +1174,13 @@ class Strumline extends FlxSpriteGroup
 
       noteSprite.direction = note.getDirection();
 
-      // [full-build-android] Validate receptor-local coordinates for mobile falling and hold notes.
-      // Align the center of the note with the actual receptor sprite. This
-      // also respects note-style offsets and avoids assumptions about the
-      // default 104px receptor size.
-      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      noteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - noteSprite.width) / 2 - NUDGE;
-      #if !(mobile || FEATURE_TOUCH_CONTROLS)
-      // Flixel draws the frame shifted by its graphic offset. Compensate on
-      // desktop so custom Psych atlases with non-zero offsets stay centered
-      // over the receptors instead of drifting away from the hit lanes.
-      noteSprite.x += noteSprite.offset.x;
-      #end
+      // Match the original FNF receptor coordinate calculation. Receptor.x
+      // already includes strumlineNotes.x, so adding that group offset again
+      // double-counts the lane displacement on desktop layouts.
+      noteSprite.x = this.x;
+      noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2;
+      noteSprite.x -= NUDGE
       noteSprite.y = -9999;
 
       noteSprite.graphic.destroyOnNoUse = false;
@@ -1226,14 +1221,13 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.visible = true;
       holdNoteSprite.alpha = 1.0;
 
-      // Center sustain trails with the same receptor-local alignment used by tap notes.
-      // Keeping the small graphic nudge and desktop frame-offset compensation in
-      // sync prevents hold notes from visibly drifting into an adjacent lane.
-      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
-      holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2 - NUDGE;
-      #if !(mobile || FEATURE_TOUCH_CONTROLS)
-      holdNoteSprite.x += holdNoteSprite.offset.x;
-      #end
+      // Match the original FNF sustain-trail positioning. Do not add
+      // strumlineNotes.x a second time: the receptor coordinates are already
+      // relative to the strumline group.
+      holdNoteSprite.x = this.x;
+      holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      holdNoteSprite.x += STRUMLINE_SIZE / 2;
+      holdNoteSprite.x -= holdNoteSprite.width / 2
       holdNoteSprite.y = -9999;
 
       holdNoteSprite.graphic.destroyOnNoUse = false;
