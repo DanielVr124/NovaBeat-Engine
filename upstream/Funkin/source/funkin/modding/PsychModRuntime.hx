@@ -3169,6 +3169,43 @@ class PsychModRuntime
    * after later notes in the same section. Keep ties stable so simultaneous
    * chords and same-lane sustain/tap ordering are not changed.
    */
+  /**
+   * Collapse notes that sit on the same lane at the same moment. A player can
+   * only press a lane once per frame, so the extra copies were guaranteed
+   * misses; several exported Psych charts contain duplicated chart rows.
+   * The longest sustain wins so held notes are not shortened.
+   */
+  static function removeDuplicatePsychNotes(notes:Array<funkin.data.song.SongData.SongNoteData>):Int
+  {
+    if (notes == null || notes.length < 2) return 0;
+
+    var byLaneAndTime:Map<String, funkin.data.song.SongData.SongNoteData> = [];
+    var kept:Array<funkin.data.song.SongData.SongNoteData> = [];
+
+    for (note in notes)
+    {
+      if (note == null) continue;
+      // Compare in hundredths of a millisecond so near-identical rows merge.
+      var key:String = Std.string(Math.round(note.time * 100)) + "|" + Std.string(note.data);
+      var existing:Null<funkin.data.song.SongData.SongNoteData> = byLaneAndTime.get(key);
+      if (existing != null)
+      {
+        if (note.length > existing.length) existing.length = note.length;
+        continue;
+      }
+      byLaneAndTime.set(key, note);
+      kept.push(note);
+    }
+
+    var removed:Int = notes.length - kept.length;
+    if (removed <= 0) return 0;
+
+    notes.resize(0);
+    for (note in kept)
+      notes.push(note);
+    return removed;
+  }
+
   static function sortPsychNoteData(notes:Array<funkin.data.song.SongData.SongNoteData>):Void
   {
     var ordered:Array<{note:funkin.data.song.SongData.SongNoteData, sourceIndex:Int}> = [];
@@ -3366,7 +3403,14 @@ class PsychModRuntime
     for (difficulty in combinedNotes.keys())
     {
       var difficultyNotes:Null<Array<funkin.data.song.SongData.SongNoteData>> = combinedNotes.get(difficulty);
-      if (difficultyNotes != null) sortPsychNoteData(difficultyNotes);
+      if (difficultyNotes != null)
+      {
+        var collapsed:Int = removeDuplicatePsychNotes(difficultyNotes);
+        if (collapsed > 0)
+          trace('[Psych Compatibility] Collapsed ' + collapsed + ' duplicate notes in ' + songId + ' (' + difficulty
+            + '); they shared a lane and timestamp and could never all be hit.');
+        sortPsychNoteData(difficultyNotes);
+      }
     }
 
     metadata.variation = Constants.DEFAULT_VARIATION;
