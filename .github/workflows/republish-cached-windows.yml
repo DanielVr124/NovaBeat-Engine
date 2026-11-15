@@ -1,0 +1,44 @@
+name: NovaBeat cached Windows republish
+
+on:
+  push:
+    branches: ["integration/**"]
+    paths:
+      - ".github/workflows/republish-cached-windows.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  republish:
+    if: contains(github.event.head_commit.message, '[republish-windows]')
+    runs-on: windows-2022
+    steps:
+      - name: Restore already-built Windows distribution
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: novabeat-windows-bin/
+          key: novabeat-windows-dist-d6b2d59885b236c435871d8d46d07f86c2d58caf
+
+      - name: Verify cached executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ("${{ steps.restore.outputs.cache-hit }}" -ne "true") {
+            throw "The existing Windows build cache was not found; refusing to rebuild."
+          }
+          if (!(Test-Path "novabeat-windows-bin/Funkin.exe")) {
+            throw "Cached Funkin.exe is missing; refusing to publish an incomplete artifact."
+          }
+          "Republishing the existing Windows build; no compilation will run." >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload compressed Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: novabeat-windows
+          path: novabeat-windows-bin/
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 30
