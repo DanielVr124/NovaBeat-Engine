@@ -3149,6 +3149,8 @@ class PsychModRuntime
         readPsychStringPreserveEmpty(chartSong, "gfVersion", readPsychString(chartSong, "player3", "gf")), "girlfriend");
       difficultyCharacters.set(difficultyName,
         new SongCharacterData(difficultyPlayerId, difficultyGirlfriendId, difficultyOpponentId));
+      trace('[Psych Compatibility] Difficulty ' + difficultyName + ' characters: BF=' + difficultyPlayerId
+        + ', GF=' + difficultyGirlfriendId + ', opponent=' + difficultyOpponentId + '.');
       if (metadata == null)
       {
         metadata = importedMetadata;
