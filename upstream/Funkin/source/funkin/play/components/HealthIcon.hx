@@ -311,6 +311,19 @@ class HealthIcon extends FunkinSprite
   }
 
   /**
+   * FlxTween tweens live in a global manager that outlives the state, so a bop
+   * tween started in PlayState keeps ticking after the icon has been destroyed
+   * (and `scale` has been nulled by FlxSprite.destroy). Returning to freeplay
+   * after dying would then throw a null object reference. Always cancel here.
+   */
+  override public function destroy():Void
+  {
+    bopTween?.cancel();
+    bopTween = null;
+    super.destroy();
+  }
+
+  /**
    * Called on every step.
    * @param curStep The current step number.
    */
@@ -326,6 +339,11 @@ class HealthIcon extends FunkinSprite
           onComplete: _ -> bopTween = null
         }, value ->
       {
+        // The icon may have been destroyed while this tween was still running
+        // (e.g. dying and returning to freeplay). Touching a destroyed sprite
+        // would crash on its nulled `scale`.
+        if (bopTween == null || !this.exists) return;
+
         setGraphicSize(Std.int(value), 0);
         // Ensure the icon is positioned correctly after updating the hitbox, while its changing size.
         this.updateHitbox();
