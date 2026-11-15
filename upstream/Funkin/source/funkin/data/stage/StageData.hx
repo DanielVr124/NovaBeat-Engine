@@ -18,7 +18,7 @@ class StageData
 
   /** True when character coordinates originate from Psych Engine's top-left positioning model. */
   @:optional @:default(false)
-  public var legacyPsychCoordinates:Bool;
+  public var legacyPsychCoordinates:Bool = false;
   @:default(1.0) @:optional
   public var cameraZoom:Null<Float>;
   @:default('shared') @:optional
@@ -27,12 +27,7 @@ class StageData
   public function new()
   {
     this.version = StageRegistry.STAGE_DATA_VERSION;
-    this.characters = makeDefaultCharacters();
-  }
-
-  function makeDefaultCharacters():StageDataCharacters
-  {
-    return {
+    this.characters = {
       bf: {
         zIndex: 0,
         scale: 1,
@@ -53,6 +48,7 @@ class StageData
       }
     };
   }
+
 
   /**
    * Convert this StageData into a JSON string.
