@@ -345,7 +345,7 @@ class PlayState extends MusicBeatSubState
       // Portrait gameplay needs a tighter stage framing so the stage fills
       // the available play area instead of leaving large empty borders.
       #if mobile
-      return currentStage.camZoom * (FlxG.height > FlxG.width * 1.12 ? 1.768 : 1.0);
+      return currentStage.camZoom;
       #else
       return currentStage.camZoom;
       #end
@@ -2611,7 +2611,7 @@ class PlayState extends MusicBeatSubState
       // spacing respond independently to the available width.
       final portrait:Bool = height > width * 1.12;
       final mobileScale:Float = portrait
-        ? Math.min(width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING), height / 420)
+        ? Math.min((width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING)) * 0.78, height / 560)
         : 1.0;
       final mobileSpacing:Float = 1.0;
       playerStrumline.strumlineScale.set(mobileScale, mobileScale);
@@ -2762,7 +2762,7 @@ class PlayState extends MusicBeatSubState
     final height:Float = FlxG.height;
     final portrait:Bool = height > width * 1.12;
     final mobileScale:Float = portrait
-      ? Math.min(width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING), height / 420)
+      ? Math.min((width / (Strumline.KEY_COUNT * Strumline.NOTE_SPACING)) * 0.78, height / 560)
       : 1.0;
     final mobileSpacing:Float = 1.0;
 
