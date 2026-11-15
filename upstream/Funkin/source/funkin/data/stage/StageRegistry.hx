@@ -78,6 +78,7 @@ class StageRegistry extends BaseRegistry<Stage, StageData, StageEntryParams> imp
     parser.ignoreUnknownVariables = false;
     // `normalized` is strict JSON: Psych input was parsed and re-serialized above,
     // while native input was successfully parsed by Json.parse(contents).
+    // Keep the parser input normalized without calling SerializerUtil's private sanitizer.
     parser.fromJson(normalized, fileName);
     if (parser.errors.length > 0)
     {
