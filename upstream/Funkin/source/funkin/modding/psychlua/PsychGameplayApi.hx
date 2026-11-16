@@ -1579,6 +1579,21 @@ class PsychGameplayApi
     vars.set("screenHeight", FlxG.height);
     vars.set("songName", state.currentSong == null ? "" : state.currentSong.songName);
     vars.set("difficulty", state.currentDifficulty);
+    // Psych's localised string lookup. NovaBeat has no translation table for
+    // mod keys, so the caller's fallback is used and {1}..{n} are substituted.
+    vars.set("getTranslationPhrase", function(key:String, ?defaultValue:String, ?args:Array<Dynamic>):String
+      return resolveTranslationPhrase(key, defaultValue, args));
+
+    // Psych 1.0 helper for scaling a script-created sprite in one call.
+    vars.set("setObjectScale", function(tag:String, x:Float, ?y:Null<Float>):Bool
+    {
+      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      if (sprite == null) return false;
+      sprite.scale.set(x, y == null ? x : y);
+      sprite.updateHitbox();
+      return true;
+    });
+
     vars.set("game", state);
     vars.set("stage", state.currentStage);
     vars.set("camGame", state.camGame);
@@ -2666,6 +2681,22 @@ class PsychGameplayApi
       removeFromGroupTree(activeCustomSubstate, object, visited);
     removeFromGroupTree(state.currentStage, object, visited);
     removeFromGroupTree(state, object, visited);
+  }
+
+  /**
+   * Resolve a Psych translation phrase. Mod keys have no translation table, so
+   * the fallback text is used and {1}..{n} placeholders are filled from args.
+   */
+  static function resolveTranslationPhrase(key:String, defaultValue:Null<String>, args:Null<Array<Dynamic>>):String
+  {
+    var text:String = defaultValue == null ? (key == null ? "" : key) : defaultValue;
+    if (args == null) return text;
+    for (i in 0...args.length)
+    {
+      var value:String = args[i] == null ? "" : Std.string(args[i]);
+      text = StringTools.replace(text, "{" + Std.string(i + 1) + "}", value);
+    }
+    return text;
   }
 
   /** Engine-provided script globals, captured when the API table is built. */
