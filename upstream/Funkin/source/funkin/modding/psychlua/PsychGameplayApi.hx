@@ -865,7 +865,13 @@ class PsychGameplayApi
       FlxG.switchState(() -> new FreeplayState());
       return true;
     });
-    vars.set("startVideo", function(videoFile:String):Bool
+    // Psych builds in the wild differ in how they pass the mid-song flag, and
+    // mods call this with up to five arguments. Treat any boolean after the
+    // first as a request for mid-song playback rather than dropping it: an
+    // ignored flag made a mid-song video run startCountdown() on finish, which
+    // restarted the whole song instead of resuming it.
+    vars.set("startVideo", function(videoFile:String, ?canSkip:Bool = true, ?flag3:Bool = false, ?flag4:Bool = false,
+        ?forMidSong:Bool = false):Bool
     {
       if (videoFile == null || StringTools.trim(videoFile).length == 0) return false;
       try
@@ -875,7 +881,10 @@ class PsychGameplayApi
           ? ""
           : PlayState.instance.currentSong.id;
         var modVideoPath:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedPath);
-        VideoCutscene.play(modVideoPath ?? Paths.videos(requestedPath));
+        var midSong:Bool = flag3 || flag4 || forMidSong;
+        VideoCutscene.play(modVideoPath ?? Paths.videos(requestedPath),
+          midSong ? funkin.play.cutscene.VideoCutscene.CutsceneType.MIDSONG
+          : funkin.play.cutscene.VideoCutscene.CutsceneType.STARTING);
         return true;
       }
       catch (error:Dynamic)

@@ -192,9 +192,15 @@ class VideoCutscene
     }
     #end
 
-    // Trigger the cutscene. Don't play the song in the background.
-    PlayState.instance.isInCutscene = true;
-    PlayState.instance.camHUD.visible = false;
+    // A starting/ending cutscene takes over the screen. A mid-song video is
+    // meant to overlay a song that keeps running, and this flag disables note
+    // processing, so enabling it there would freeze the chart while the music
+    // advanced underneath and leave the song desynced once the video ended.
+    if (cutsceneType != CutsceneType.MIDSONG)
+    {
+      PlayState.instance.isInCutscene = true;
+      PlayState.instance.camHUD.visible = false;
+    }
 
     // Display a black screen to hide the game while the video is playing.
     blackScreen = new FlxSprite(-200, -200).makeGraphic(FlxG.width * 2, FlxG.height * 2, FlxColor.BLACK);
@@ -448,6 +454,10 @@ class VideoCutscene
     #end
 
     PlayState.instance.camHUD.visible = true;
+    // Only startCountdown() used to clear this flag, so a mid-song video left
+    // the state permanently "in cutscene": note processing stayed disabled and
+    // the song never advanced again. Every cutscene type has to end the state.
+    PlayState.instance.isInCutscene = false;
 
     FlxTween.tween(blackScreen, {alpha: 0}, transitionTime, {
       ease: FlxEase.quadInOut,
