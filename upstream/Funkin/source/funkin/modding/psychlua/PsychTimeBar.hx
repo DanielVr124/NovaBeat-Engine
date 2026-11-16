@@ -47,10 +47,13 @@ class PsychTimeBar extends FlxSpriteGroup
     timeText = new FlxText(barX, textY, textWidth, "0:00", 18);
     timeText.color = FlxColor.WHITE;
     timeText.alignment = "center";
-    timeText.borderSize = 1;
-    timeText.borderColor = FlxColor.BLACK;
+    // Setting borderSize/borderColor alone draws nothing: Flixel's border style
+    // defaults to OFF. Psych outlines these numbers, so set the style explicitly.
+    timeText.setBorderStyle(flixel.text.FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 
     var barY:Float = textY + timeText.height / 4;
+    // Black frame around the bar so it stays readable over bright stage art.
+    var barOutline:FlxSprite = new FlxSprite(barX - 2, barY - 2).makeGraphic(barWidth + 4, barHeight + 4, FlxColor.BLACK);
     background = new FlxSprite(barX, barY).makeGraphic(barWidth, barHeight, 0xFF303030);
     leftFill = new FlxSprite(barX, barY).makeGraphic(barWidth, barHeight, FlxColor.WHITE);
     rightFill = new FlxSprite(barX, barY).makeGraphic(barWidth, barHeight, FlxColor.BLACK);
@@ -60,7 +63,7 @@ class PsychTimeBar extends FlxSpriteGroup
     leftFill.clipRect = leftClip;
     rightFill.clipRect = rightClip;
 
-    for (object in [background, leftFill, rightFill, timeText])
+    for (object in [barOutline, background, leftFill, rightFill, timeText])
     {
       object.scrollFactor.set();
       object.cameras = [owner.camHUD];

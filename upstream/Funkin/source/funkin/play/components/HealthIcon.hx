@@ -460,9 +460,9 @@ class HealthIcon extends FunkinSprite
   }
 
   /**
-   * Rebuild a trimmed two-face icon strip as equal cells, centred in their cell,
-   * so both the idle and losing frames remain usable. Returns null when the
-   * image is a single frame with no internal gap.
+   * Rebuild a two-face icon strip as square cells cropped to the artwork, so
+   * both frames are usable and every icon is drawn at the same apparent size.
+   * Returns null when the image is a single frame.
    */
   static function rebuildIconStrip(bitmap:openfl.display.BitmapData):Null<openfl.display.BitmapData>
   {
@@ -490,8 +490,11 @@ class HealthIcon extends FunkinSprite
       }
       else if (runStart >= 0)
       {
+        // Runs that start at column 0 are left padding. A run still open when
+        // the scan ends is right padding. Neither is a frame break, so ignore
+        // them here instead of choosing a wide edge margin as the split.
         var runLength:Int = x - runStart;
-        if (runLength > bestLength)
+        if (runStart > 0 && runLength > bestLength)
         {
           bestLength = runLength;
           bestStart = runStart;
@@ -500,23 +503,65 @@ class HealthIcon extends FunkinSprite
       }
     }
 
-    // A gap that touches an edge is just transparent padding, not a frame break.
-    if (bestStart <= 0 || bestStart + bestLength >= width) return null;
-    if (bestLength < 4) return null;
+    var firstEnd:Int = -1;
+    var secondStart:Int = -1;
 
-    var firstWidth:Int = bestStart;
-    var secondStart:Int = bestStart + bestLength;
-    var secondWidth:Int = width - secondStart;
-    var cell:Int = Std.int(Math.max(firstWidth, secondWidth));
+    if (bestStart > 0 && bestLength >= 1)
+    {
+      // A gap touching an edge is transparent padding, not a frame break.
+      firstEnd = bestStart;
+      secondStart = bestStart + bestLength;
+    }
+    else if (width >= Std.int(height * 1.5))
+    {
+      // Some faces touch with no transparent column between them (Lucy's do),
+      // so fall back to the equal half split Psych assumes for two-frame sheets.
+      firstEnd = Std.int(width / 2);
+      secondStart = firstEnd;
+    }
+    else return null;
 
-    var strip:openfl.display.BitmapData = new openfl.display.BitmapData(cell * 2, height, true, 0x00000000);
+    var first:Null<openfl.geom.Rectangle> = alphaBounds(bitmap, 0, firstEnd);
+    var second:Null<openfl.geom.Rectangle> = alphaBounds(bitmap, secondStart, width - secondStart);
+    if (first == null || second == null) return null;
+
+    // Square cells sized to the largest face: the icon is scaled by its frame
+    // height, so cropping to the artwork stops a PNG's transparent padding from
+    // deciding how big that character's face ends up.
+    var side:Int = Std.int(Math.max(Math.max(first.width, first.height), Math.max(second.width, second.height)));
+    if (side < 1) return null;
+
+    var strip:openfl.display.BitmapData = new openfl.display.BitmapData(side * 2, side, true, 0x00000000);
     // Centre each face in its cell so the icon does not jump between frames.
-    strip.copyPixels(bitmap, new openfl.geom.Rectangle(0, 0, firstWidth, height),
-      new openfl.geom.Point(Std.int((cell - firstWidth) / 2), 0));
-    strip.copyPixels(bitmap, new openfl.geom.Rectangle(secondStart, 0, secondWidth, height),
-      new openfl.geom.Point(cell + Std.int((cell - secondWidth) / 2), 0));
+    strip.copyPixels(bitmap, first, new openfl.geom.Point(Std.int((side - first.width) / 2), Std.int((side - first.height) / 2)));
+    strip.copyPixels(bitmap, second,
+      new openfl.geom.Point(side + Std.int((side - second.width) / 2), Std.int((side - second.height) / 2)));
 
     return strip;
+  }
+
+  /** Bounding box of the non-transparent pixels inside a horizontal region. */
+  static function alphaBounds(bitmap:openfl.display.BitmapData, startX:Int, regionWidth:Int):Null<openfl.geom.Rectangle>
+  {
+    var minX:Int = -1;
+    var maxX:Int = -1;
+    var minY:Int = -1;
+    var maxY:Int = -1;
+
+    for (x in startX...startX + regionWidth)
+    {
+      for (y in 0...bitmap.height)
+      {
+        if ((bitmap.getPixel32(x, y) >>> 24) == 0) continue;
+        if (minX < 0 || x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (minY < 0 || y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+
+    if (minX < 0) return null;
+    return new openfl.geom.Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);
   }
 
   function resolveIconImagePath(charId:String):String

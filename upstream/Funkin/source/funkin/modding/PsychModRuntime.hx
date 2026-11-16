@@ -2144,8 +2144,13 @@ class PsychModRuntime
 
   static function getPsychChartDataRoot(chartRoot:Dynamic):Dynamic
   {
-    var legacySong:Dynamic = chartRoot == null ? null : Reflect.field(chartRoot, "song");
-    return legacySong == null ? chartRoot : legacySong;
+    if (chartRoot == null) return null;
+    var legacySong:Dynamic = Reflect.field(chartRoot, "song");
+    // Only a nested object with notes is the chart body. Flat legacy charts put
+    // notes at the root and use "song" for the title string, so returning that
+    // string here made the whole chart unreadable.
+    if (legacySong != null && Reflect.field(legacySong, "notes") != null) return legacySong;
+    return chartRoot;
   }
 
   static function getPsychChartMetadata(chartRoot:Dynamic):Dynamic
@@ -2170,6 +2175,9 @@ class PsychModRuntime
       var root:Dynamic = Json.parse(File.getContent(path));
       var legacySong:Dynamic = Reflect.field(root, "song");
       if (legacySong != null && Reflect.field(legacySong, "notes") != null) return true;
+      // Flat legacy charts keep notes, events and bpm at the root, with "song"
+      // holding only the title. Recognise those too instead of dropping them.
+      if (Std.isOfType(Reflect.field(root, "notes"), Array)) return true;
       return isPsychV2ChartRoot(root);
     }
     catch (error:Dynamic)
@@ -2446,11 +2454,33 @@ class PsychModRuntime
   {
     try
     {
-      return FNFLegacyImporter.parseLegacyDataRaw(File.getContent(path), path);
+      return FNFLegacyImporter.parseLegacyDataRaw(normalizeLegacyChartJson(File.getContent(path)), path);
     }
     catch (error:Dynamic)
     {
       return null;
+    }
+  }
+
+  /**
+   * The legacy importer expects the classic envelope, `song: { notes, bpm, ... }`.
+   * Flat legacy charts put those fields at the root and use "song" for the
+   * title, so wrap them once here rather than special-casing consumers.
+   */
+  static function normalizeLegacyChartJson(raw:String):String
+  {
+    try
+    {
+      var root:Dynamic = Json.parse(raw);
+      if (root == null) return raw;
+      var nestedSong:Dynamic = Reflect.field(root, "song");
+      if (nestedSong != null && Reflect.field(nestedSong, "notes") != null) return raw;
+      if (!Std.isOfType(Reflect.field(root, "notes"), Array)) return raw;
+      return Json.stringify({song: root});
+    }
+    catch (error:Dynamic)
+    {
+      return raw;
     }
   }
 
