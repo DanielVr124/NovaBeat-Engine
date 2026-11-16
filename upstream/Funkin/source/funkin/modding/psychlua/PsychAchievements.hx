@@ -32,7 +32,8 @@ class PsychAchievements
 
   static function store():Map<String, AchievementEntry>
   {
-    if (entries != null) return entries;
+    var cached:Null<Map<String, AchievementEntry>> = entries;
+    if (cached != null) return cached;
 
     var loaded:Map<String, AchievementEntry> = [];
     #if sys
@@ -108,7 +109,8 @@ class PsychAchievements
     if (id == null || id.length == 0) return false;
     if (entryFor(id).unlocked) return true;
 
-    if (declaredIds == null)
+    var known:Null<Map<String, Bool>> = declaredIds;
+    if (known == null)
     {
       var scanned:Map<String, Bool> = [];
       #if sys
@@ -124,9 +126,11 @@ class PsychAchievements
       }
       #end
       declaredIds = scanned;
+      known = scanned;
     }
 
-    return declaredIds.exists(id);
+    if (known == null) return false;
+    return known.exists(id);
   }
 
   #if sys

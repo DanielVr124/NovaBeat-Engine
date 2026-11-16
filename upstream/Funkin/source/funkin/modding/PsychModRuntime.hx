@@ -1094,16 +1094,29 @@ class PsychModRuntime
       if (opponent != null) positions.set("opponent", opponent);
       psychSongStagePositions.set(songId, positions);
 
-      // Psych character JSON already carries its own camera offsets and
-      // scale, so the native stage's per-character offsets must not be added.
-      for (entry in [
+      // The stage JSON's camera_* arrays are offsets added to each character's
+      // midpoint when the camera focuses on them, which is exactly what this
+      // engine's cameraOffsets feed into. Read them per role instead of
+      // discarding them; the native stage's own offsets must not be added.
+      var cameraBoyfriend:Array<Float> = readPsychStagePosition(raw, "camera_boyfriend");
+      var cameraGirlfriend:Array<Float> = readPsychStagePosition(raw, "camera_girlfriend");
+      var cameraOpponent:Array<Float> = readPsychStagePosition(raw, "camera_opponent");
+      if (cameraOpponent == null) cameraOpponent = readPsychStagePosition(raw, "camera_dad");
+
+      // Order matches the role offsets above: bf, gf, dad.
+      var roleEntries:Array<Dynamic> = [
         Reflect.field(stageCharacters, "bf"),
         Reflect.field(stageCharacters, "gf"),
         Reflect.field(stageCharacters, "dad")
-      ])
+      ];
+      var roleOffsets:Array<Null<Array<Float>>> = [cameraBoyfriend, cameraGirlfriend, cameraOpponent];
+
+      for (index in 0...roleEntries.length)
       {
+        var entry:Dynamic = roleEntries[index];
         if (entry == null) continue;
-        Reflect.setField(entry, "cameraOffsets", [0.0, 0.0]);
+        var roleOffset:Null<Array<Float>> = roleOffsets[index];
+        Reflect.setField(entry, "cameraOffsets", roleOffset == null ? [0.0, 0.0] : roleOffset);
         Reflect.setField(entry, "scale", 1.0);
         Reflect.setField(entry, "scroll", [1.0, 1.0]);
         Reflect.setField(entry, "alpha", 1.0);
