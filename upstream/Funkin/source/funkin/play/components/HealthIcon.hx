@@ -460,10 +460,11 @@ class HealthIcon extends FunkinSprite
   }
 
   /**
-   * Width of the idle frame inside a trimmed icon strip. Returns the full width
-   * when the image is a single frame with no internal gap.
+   * Rebuild a trimmed two-face icon strip as equal cells, centred in their cell,
+   * so both the idle and losing frames remain usable. Returns null when the
+   * image is a single frame with no internal gap.
    */
-  static function idleFrameWidth(bitmap:openfl.display.BitmapData):Int
+  static function rebuildIconStrip(bitmap:openfl.display.BitmapData):Null<openfl.display.BitmapData>
   {
     var width:Int = bitmap.width;
     var height:Int = bitmap.height;
@@ -500,9 +501,22 @@ class HealthIcon extends FunkinSprite
     }
 
     // A gap that touches an edge is just transparent padding, not a frame break.
-    if (bestStart <= 0 || bestStart + bestLength >= width) return width;
-    if (bestLength < 4) return width;
-    return bestStart;
+    if (bestStart <= 0 || bestStart + bestLength >= width) return null;
+    if (bestLength < 4) return null;
+
+    var firstWidth:Int = bestStart;
+    var secondStart:Int = bestStart + bestLength;
+    var secondWidth:Int = width - secondStart;
+    var cell:Int = Std.int(Math.max(firstWidth, secondWidth));
+
+    var strip:openfl.display.BitmapData = new openfl.display.BitmapData(cell * 2, height, true, 0x00000000);
+    // Centre each face in its cell so the icon does not jump between frames.
+    strip.copyPixels(bitmap, new openfl.geom.Rectangle(0, 0, firstWidth, height),
+      new openfl.geom.Point(Std.int((cell - firstWidth) / 2), 0));
+    strip.copyPixels(bitmap, new openfl.geom.Rectangle(secondStart, 0, secondWidth, height),
+      new openfl.geom.Point(cell + Std.int((cell - secondWidth) / 2), 0));
+
+    return strip;
   }
 
   function resolveIconImagePath(charId:String):String
@@ -586,7 +600,7 @@ class HealthIcon extends FunkinSprite
         var frameWidth:Int = cellSize;
         var frameHeight:Int = cellSize;
 
-        var croppedIdle:Null<openfl.display.BitmapData> = null;
+        var rebuiltStrip:Null<openfl.display.BitmapData> = null;
 
         var bitmap:Null<openfl.display.BitmapData> = openfl.Assets.getBitmapData(iconPath);
         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0)
@@ -600,16 +614,13 @@ class HealthIcon extends FunkinSprite
           {
             // Mods trim each frame separately, so the cells are NOT equal width
             // (Capuchin's faces are 104 and 108 wide with a 31px gap). A uniform
-            // grid therefore draws two half-faces at once. Cut at the real gap
-            // and use the idle face.
-            var idleWidth:Int = idleFrameWidth(bitmap);
-            if (idleWidth < bitmap.width)
+            // grid therefore draws two half-faces at once. Rebuild the strip as
+            // equal cells so the idle and losing frames both work.
+            rebuiltStrip = rebuildIconStrip(bitmap);
+            if (rebuiltStrip != null)
             {
-              croppedIdle = new openfl.display.BitmapData(idleWidth, bitmap.height, true, 0x00000000);
-              croppedIdle.copyPixels(bitmap, new openfl.geom.Rectangle(0, 0, idleWidth, bitmap.height),
-                new openfl.geom.Point(0, 0));
-              frameWidth = idleWidth;
-              frameHeight = bitmap.height;
+              frameWidth = Std.int(rebuiltStrip.width / 2);
+              frameHeight = rebuiltStrip.height;
             }
             else
             {
@@ -619,8 +630,8 @@ class HealthIcon extends FunkinSprite
           }
         }
 
-        if (croppedIdle != null)
-          loadGraphic(croppedIdle, true, frameWidth, frameHeight);
+        if (rebuiltStrip != null)
+          loadGraphic(rebuiltStrip, true, frameWidth, frameHeight);
         else
           loadGraphic(iconPath, true, frameWidth, frameHeight);
         loadAnimationOld();
