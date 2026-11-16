@@ -82,6 +82,7 @@ class PsychFreeplayState extends MusicBeatSubState
   var previewBackground:FlxSprite;
   var previewTitle:FlxText;
   var previewTime:FlxText;
+  var previewBarOutline:FlxSprite;
   var previewBarBack:FlxSprite;
   var previewBarFill:FlxSprite;
   var resetPrompt:Bool = false;
@@ -316,6 +317,8 @@ class PsychFreeplayState extends MusicBeatSubState
 
     previewTime = new FlxText(xPos, 65, 0, '< 00:00 / 00:00 >', 32);
     previewTime.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.RIGHT);
+    // Psych outlines the preview clock so it stays readable over bright stages.
+    previewTime.setBorderStyle(flixel.text.FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
     previewTime.scrollFactor.set();
     add(previewTime);
 
@@ -334,6 +337,11 @@ class PsychFreeplayState extends MusicBeatSubState
     previewArrowDown.flipY = true;
     previewArrowDown.scrollFactor.set();
     add(previewArrowDown);
+
+    // Drawn first so it sits behind both bars and reads as a border around them.
+    previewBarOutline = new FlxSprite(xPos, 98).makeGraphic(1, 9, FlxColor.BLACK);
+    previewBarOutline.scrollFactor.set();
+    add(previewBarOutline);
 
     previewBarBack = new FlxSprite(xPos, 98).makeGraphic(1, 5, FlxColor.BLACK);
     previewBarBack.scrollFactor.set();
@@ -374,6 +382,10 @@ class PsychFreeplayState extends MusicBeatSubState
     previewBarBack.scale.x = Math.max(1, previewTitle.width);
     previewBarBack.y = previewTitle.y + previewTitle.height + 10;
     previewBarBack.x = previewTitle.x + previewTitle.width / 2 - 15;
+
+    previewBarOutline.scale.x = previewBarBack.scale.x + 4;
+    previewBarOutline.x = previewBarBack.x - 2;
+    previewBarOutline.y = previewBarBack.y - 2;
 
     previewBarFill.x = previewBarBack.x;
     previewBarFill.y = previewBarBack.y;
@@ -1015,6 +1027,7 @@ class PsychFreeplayState extends MusicBeatSubState
     previewArrowDown.visible = value;
     previewTitle.visible = value;
     previewTime.visible = value;
+    previewBarOutline.visible = value;
     previewBarBack.visible = value;
     previewBarFill.visible = value;
   }
