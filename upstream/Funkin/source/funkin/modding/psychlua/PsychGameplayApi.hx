@@ -676,7 +676,10 @@ class PsychGameplayApi
     vars.set("getHits", function():Int return Highscore.tallies.totalNotesHit);
     vars.set("getColorFromName", function(name:String):Int return parsePsychColor(name));
     vars.set("getColorFromString", function(value:String):Int return parsePsychColor(value));
-    vars.set("FlxColor", PsychScriptInstance.createFlxColorApi());
+    // Psych exposes FlxColor as a function: FlxColor('#00a200'). Ours was a
+    // table of constants, so every such call failed with "attempt to call a
+    // table value" even though the name looked supported.
+    vars.set("FlxColor", function(color:String):Int return parsePsychColor(color));
 
     // Cross-script helpers and runtime script management.
     vars.set("callScript", function(script:String, callback:String, ?args:Array<Dynamic>):Dynamic
@@ -897,8 +900,17 @@ class PsychGameplayApi
     vars.set("setRatingName", function(value:String):Void PsychScriptRuntime.setGlobal("ratingName", value));
     vars.set("setRatingFC", function(value:String):Void PsychScriptRuntime.setGlobal("ratingFC", value));
     vars.set("debugPrint", function(message:Dynamic, ?color:Dynamic):Void trace(Std.string(message)));
-    vars.set("getRandomInt", function(min:Int, max:Int):Int return FlxG.random.int(min, max));
-    vars.set("getRandomFloat", function(min:Float, max:Float):Float return FlxG.random.float(min, max));
+    // Psych takes (min, max, exclude) with max defaulting and exclude a
+    // comma-separated string. Dropping exclude made a script that avoids a
+    // value keep landing on it.
+    vars.set("getRandomInt", function(min:Int, ?max:Int = 2147483647, ?exclude:String = ""):Int
+    {
+      return FlxG.random.int(min, max, parseLuaExcludeInts(exclude));
+    });
+    vars.set("getRandomFloat", function(min:Float, ?max:Float = 1, ?exclude:String = ""):Float
+    {
+      return FlxG.random.float(min, max, parseLuaExcludeFloats(exclude));
+    });
     vars.set("getRandomBool", function(?chance:Float = 50):Bool return FlxG.random.bool(chance));
     vars.set("getRunningScripts", function():Array<String> return PsychScriptRuntime.getScriptPaths());
     vars.set("addHaxeLibrary", function(name:String, ?packageName:String = ""):Bool
@@ -987,15 +999,19 @@ class PsychGameplayApi
     });
     vars.set("getAchievementScore", function(id:String):Int
       return PsychAchievements.getScore(id));
-    vars.set("setAchievementScore", function(id:String, score:Dynamic):Bool
+    vars.set("setAchievementScore", function(name:String, ?value:Dynamic = 0, ?saveIfNotUnlocked:Bool = true):Float
     {
-      var value:Null<Int> = Std.parseInt(Std.string(score));
-      return PsychAchievements.setScore(id, value == null ? 0 : value);
+      if (!PsychAchievements.exists(name)) return -1;
+      var parsed:Null<Int> = Std.parseInt(Std.string(value));
+      PsychAchievements.setScore(name, parsed == null ? 0 : parsed);
+      return PsychAchievements.getScore(name);
     });
-    vars.set("addAchievementScore", function(id:String, add:Dynamic):Bool
+    vars.set("addAchievementScore", function(name:String, ?value:Dynamic = 1, ?saveIfNotUnlocked:Bool = true):Float
     {
-      var value:Null<Int> = Std.parseInt(Std.string(add));
-      return PsychAchievements.addScore(id, value == null ? 0 : value);
+      if (!PsychAchievements.exists(name)) return -1;
+      var parsed:Null<Int> = Std.parseInt(Std.string(value));
+      PsychAchievements.addScore(name, parsed == null ? 1 : parsed);
+      return PsychAchievements.getScore(name);
     });
 
     // Discord. The client id is baked into the build and the native library
@@ -1005,8 +1021,11 @@ class PsychGameplayApi
       trace('[Psych API] changeDiscordClientID("' + id + '") ignored: the Discord application id is fixed at build time.');
       return false;
     });
-    vars.set("changeDiscordPresence", function(details:String, state:String, ?largeImage:String, ?largeText:String, ?smallImage:String,
-        ?smallText:String):Bool
+    // Psych's order is (details, state, smallImageKey, hasStartTimestamp,
+    // endTimestamp). Ours put image text in slots three and four, so a mod's
+    // smallImageKey landed in the wrong field.
+    vars.set("changeDiscordPresence", function(details:String, ?state:String = "", ?smallImageKey:String = null,
+        ?hasStartTimestamp:Bool = false, ?endTimestamp:Float = 0):Bool
     {
       #if FEATURE_DISCORD_RPC
       try
@@ -1014,8 +1033,7 @@ class PsychGameplayApi
         DiscordClient.instance.setPresence({
           details: details,
           state: state == null ? "" : state,
-          largeImageKey: largeImage,
-          smallImageKey: smallImage
+          smallImageKey: smallImageKey
         });
         return true;
       }
@@ -1081,7 +1099,7 @@ class PsychGameplayApi
       }
     });
 
-    vars.set("makeGraphic", function(tag:String, width:Int, height:Int, ?color:Dynamic = null):Bool
+    vars.set("makeGraphic", function(tag:String, ?width:Int = 256, ?height:Int = 256, ?color:Dynamic = null):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null)
@@ -1212,12 +1230,15 @@ class PsychGameplayApi
       return true;
     });
 
-    vars.set("makeAnimatedLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
+    // Psych's fifth argument picks the atlas format; Sparrow is the default.
+    vars.set("makeAnimatedLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0,
+        ?spriteType:String = "sparrow"):Bool
     {
       var sprite = new FlxSprite(x, y);
       try
       {
-        sprite.frames = Paths.getSparrowAtlas(image);
+        var atlasType:String = spriteType == null ? "sparrow" : spriteType.toLowerCase();
+        sprite.frames = atlasType == "packer" ? Paths.getPackerAtlas(image) : Paths.getSparrowAtlas(image);
         if (state.currentSong != null)
           PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
             "api=makeAnimatedLuaSprite tag=" + tag + " request=" + image);
@@ -1409,11 +1430,13 @@ class PsychGameplayApi
       return sprite != null && Std.isOfType(sprite, FlxText);
     });
     vars.set("luaSoundExists", function(tag:String):Bool return activeSounds.exists(tag));
-    vars.set("objectPlayAnimation", function(tag:String, name:String, ?force:Bool = false, ?reversed:Bool = false, ?frame:Int = 0):Bool
+    // Psych's fourth argument is startFrame, not a reverse flag. Treating it as
+    // reversed made objectPlayAnimation(tag, name, true, 3) play backwards.
+    vars.set("objectPlayAnimation", function(tag:String, name:String, ?force:Bool = false, ?startFrame:Int = 0):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
-      sprite.animation.play(name, force, reversed, frame);
+      sprite.animation.play(name, force, false, startFrame);
       return true;
     });
     vars.set("addLuaSprite", function(tag:String, ?inFront:Bool = false):Bool
@@ -1481,20 +1504,20 @@ class PsychGameplayApi
       sprite.scrollFactor.set(x, y == null ? x : y);
       return true;
     });
-    vars.set("scaleObject", function(tag:String, x:Float, y:Float):Bool
+    vars.set("scaleObject", function(tag:String, x:Float, y:Float, ?updateHitbox:Bool = true):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
       sprite.scale.set(x, y);
-      sprite.updateHitbox();
+      if (updateHitbox) sprite.updateHitbox();
       return true;
     });
-    vars.set("setGraphicSize", function(tag:String, width:Int, ?height:Int = 0):Bool
+    vars.set("setGraphicSize", function(tag:String, width:Int, ?height:Int = 0, ?updateHitbox:Bool = true):Bool
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null) return false;
       sprite.setGraphicSize(width, height);
-      sprite.updateHitbox();
+      if (updateHitbox) sprite.updateHitbox();
       return true;
     });
     // Psych 0.7.x deprecated aliases remain in widespread mod use.
@@ -2725,6 +2748,31 @@ class PsychGameplayApi
       case "stage": state.currentStage;
       default: null;
     };
+  }
+
+  /** Psych passes excluded random values as a comma-separated string. */
+  static function parseLuaExcludeInts(exclude:String):Array<Int>
+  {
+    var blocked:Array<Int> = [];
+    if (exclude == null || exclude.length == 0) return blocked;
+    for (part in exclude.split(","))
+    {
+      var parsed:Null<Int> = Std.parseInt(StringTools.trim(part));
+      if (parsed != null) blocked.push(parsed);
+    }
+    return blocked;
+  }
+
+  static function parseLuaExcludeFloats(exclude:String):Array<Float>
+  {
+    var blocked:Array<Float> = [];
+    if (exclude == null || exclude.length == 0) return blocked;
+    for (part in exclude.split(","))
+    {
+      var parsed:Float = Std.parseFloat(StringTools.trim(part));
+      if (!Math.isNaN(parsed)) blocked.push(parsed);
+    }
+    return blocked;
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
