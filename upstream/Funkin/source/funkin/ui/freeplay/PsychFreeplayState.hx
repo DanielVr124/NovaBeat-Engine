@@ -49,6 +49,21 @@ class PsychFreeplayState extends MusicBeatSubState
   var lerpSelected:Float = 0;
   var holdTime:Float = 0;
   var launchingSong:Bool = false;
+
+  /**
+   * Set when gameplay hands control back to this menu. The exit keypress that
+   * closed the song (pause > exit, or Game Over > back) is still registered on
+   * the frame the menu reappears, and accepting it launched the song again
+   * immediately. Menu input stays ignored until this expires.
+   */
+  var resumeInputLock:Float = 0;
+
+  /**
+   * ACCEPT is a held check, not a just-pressed one, so a key still down from the
+   * Game Over or pause menu keeps firing after the menu returns. Wait for it to
+   * be released before honouring it again.
+   */
+  var waitingForConfirmRelease:Bool = false;
   var currentDifficulties:Array<String> = [];
   var difficultyIndex:Int = 0;
   var currentDifficulty:String = Constants.DEFAULT_DIFFICULTY;
@@ -503,6 +518,18 @@ class PsychFreeplayState extends MusicBeatSubState
     // keep consuming menu input while a song is launching, playing, paused,
     // or in Game Over; that can launch another song over the active countdown.
     if (launchingSong || (PlayState.instance != null && PlayState.instance.isSubState)) return;
+
+    if (resumeInputLock > 0)
+    {
+      resumeInputLock -= elapsed;
+      return;
+    }
+
+    if (waitingForConfirmRelease)
+    {
+      if (controls.ACCEPT || controls.BACK) return;
+      waitingForConfirmRelease = false;
+    }
 
     if (stickerSubState?.isSwitchingState() ?? false) return;
 
@@ -1114,6 +1141,8 @@ class PsychFreeplayState extends MusicBeatSubState
     #end
 
     // Restore the hidden parent only after the PlayState has closed.
+    menu.resumeInputLock = 0.35;
+    menu.waitingForConfirmRelease = true;
     menu.persistentDraw = true;
     menu.persistentUpdate = true;
     menu.active = true;
