@@ -3209,19 +3209,18 @@ class PlayState extends MusicBeatSubState
 
   public function startCountdown():Void
   {
-    if (psychSkipCountdown)
-    {
-      // Psych's own skip path: stop the countdown and let the conductor start
-      // the song immediately, exactly as if it had finished.
-      Countdown.skipCountdown();
-      isInCutscene = false;
-      camHUD.visible = true;
-      return;
-    }
-
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
     if (!result) return;
+
+    if (psychSkipCountdown)
+    {
+      // Countdown.skipCountdown() stops a RUNNING countdown and lets the
+      // conductor start the song. Calling it before the countdown was active
+      // left the song never starting at all: a black screen with no music.
+      Countdown.skipCountdown();
+      return;
+    }
 
     // Runs only after the countdown accepted the start request and is active.
     PsychScriptRuntime.dispatch("onCountdownStarted", []);
