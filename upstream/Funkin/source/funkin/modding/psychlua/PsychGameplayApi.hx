@@ -10,7 +10,6 @@ import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
 import funkin.modding.PsychModRuntime;
-import funkin.modding.psychlua.PsychAchievements;
 #if FEATURE_DISCORD_RPC
 import funkin.api.discord.DiscordClient;
 #end
@@ -886,8 +885,7 @@ class PsychGameplayApi
         var modVideoPath:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedPath);
         var midSong:Bool = flag3 || flag4 || forMidSong;
         VideoCutscene.play(modVideoPath ?? Paths.videos(requestedPath),
-          midSong ? funkin.play.cutscene.VideoCutscene.CutsceneType.MIDSONG
-          : funkin.play.cutscene.VideoCutscene.CutsceneType.STARTING);
+          midSong ? VideoCutscene.CutsceneType.MIDSONG : VideoCutscene.CutsceneType.STARTING);
         return true;
       }
       catch (error:Dynamic)
