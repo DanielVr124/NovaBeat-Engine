@@ -19,7 +19,7 @@ import funkin.util.FileUtil;
 class PsychApiAudit
 {
   /** Lua keywords and standard library entry points that are never API gaps. */
-  static final NON_API:Map<String, Bool> = [
+  static var NON_API:Map<String, Bool> = [
     "function" => true, "if" => true, "elseif" => true, "else" => true, "while" => true, "return" => true,
     "pairs" => true, "ipairs" => true, "tonumber" => true, "tostring" => true, "type" => true,
     "print" => true, "string" => true, "table" => true, "math" => true, "os" => true, "io" => true,
@@ -31,8 +31,8 @@ class PsychApiAudit
   /** Last audit result, for callers that want to inspect it. */
   public static var missing:Array<String> = [];
 
-  static final CALL_PATTERN:EReg = ~/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
-  static final DEFINE_PATTERN:EReg = ~/function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+  static var CALL_PATTERN:EReg = ~/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  static var DEFINE_PATTERN:EReg = ~/function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
 
   /**
    * Audit every script about to run and report the gaps once.
@@ -110,13 +110,11 @@ class PsychApiAudit
     try
     {
       var label:FlxText = new FlxText(8, 8, 900, summary, 12);
-      // This Flixel build types alignment as a String, and its border-style type
-      // is not importable here, so a translucent background keeps the list
-      // readable over stage art instead.
-      label.alignment = "left";
-      label.setFormat(null, 12, FlxColor.YELLOW);
-      label.background = true;
-      label.backgroundColor = 0xB0000000;
+      // Keep to members this Flixel build definitely has. Its text alignment and
+      // border enums do not resolve as imports here, and it has no text
+      // background, so the notice is a plain coloured label; the log file is the
+      // authoritative record.
+      label.color = FlxColor.YELLOW;
       label.scrollFactor.set(0, 0);
       state.add(label);
 
