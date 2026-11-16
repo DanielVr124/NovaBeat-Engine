@@ -46,6 +46,7 @@ import funkin.modding.events.ScriptEvent.GhostMissNoteScriptEvent;
 import funkin.api.newgrounds.Events;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.ExperienceManager;
+import funkin.util.FileUtil;
 import funkin.modding.PsychModRuntime;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.modding.psychlua.PsychGameplayApi;
@@ -1119,6 +1120,71 @@ class PlayState extends MusicBeatSubState
     return true;
   }
 
+  /** One-shot lane probe for Psych songs whose receptors never appear. */
+  var psychLaneProbeElapsed:Float = 0;
+  var psychLaneProbeDone:Bool = false;
+
+  /**
+   * Write the real lane geometry to logs/psych-stage.log once, a second into a
+   * Psych song. Song scripts move receptors every frame, so sampling at
+   * construction time reports positions the script has already replaced.
+   */
+  function probePsychStrumlines(elapsed:Float):Void
+  {
+    if (psychLaneProbeDone || currentSong == null) return;
+    if (!ExperienceManager.isPsychSong(currentSong.id)) return;
+    psychLaneProbeElapsed += elapsed;
+    if (psychLaneProbeElapsed < 1.0) return;
+    psychLaneProbeDone = true;
+
+    #if sys
+    try
+    {
+      var report:String = "lane-probe | screen=" + FlxG.width + "x" + FlxG.height
+        + " downscroll=" + Preferences.downscroll
+        + " hudZoom=" + camHUD.zoom
+        + " camZoom=" + FlxG.camera.zoom;
+      report += "\n  player " + describeStrumline(playerStrumline);
+      report += "\n  opponent " + describeStrumline(opponentStrumline);
+      report += "\n  chars BF=" + describeCharacterSize(currentStage?.getBoyfriend()) + " dad=" + describeCharacterSize(currentStage?.getDad());
+      FileUtil.appendStringToPath("logs/psych-stage.log", report + "\n");
+    }
+    catch (error:Dynamic) {}
+    #end
+  }
+
+  /** Frame size versus rendered size, to catch double-applied character scale. */
+  function describeCharacterSize(target:BaseCharacter):String
+  {
+    if (target == null) return "(null)";
+    return "frame=" + Std.int(target.frameWidth) + "x" + Std.int(target.frameHeight)
+      + " scale=" + target.scale.x
+      + " rendered=" + Std.int(target.width) + "x" + Std.int(target.height)
+      + " pos=" + Std.int(target.x) + "," + Std.int(target.y);
+  }
+
+  /** Render state of one strumline and its first receptors. */
+  function describeStrumline(lineData:Strumline):String
+  {
+    if (lineData == null) return "(null)";
+    var text:String = "x=" + Std.int(lineData.x) + " y=" + Std.int(lineData.y)
+      + " alpha=" + lineData.alpha + " visible=" + lineData.visible
+      + " notes=" + lineData.strumlineNotes.length + " strumScale=" + lineData.strumlineScale.x;
+
+    var index:Int = 0;
+    for (note in lineData.strumlineNotes.members)
+    {
+      if (note == null) continue;
+      text += "\n    [" + index + "] x=" + Std.int(note.x) + " y=" + Std.int(note.y)
+        + " a=" + note.alpha + " vis=" + note.visible
+        + " w=" + Std.int(note.width) + " h=" + Std.int(note.height)
+        + " s=" + note.scale.x;
+      index++;
+      if (index >= 8) break;
+    }
+    return text;
+  }
+
   override public function update(elapsed:Float):Void
   {
     if (criticalFailure) return;
@@ -1129,6 +1195,7 @@ class PlayState extends MusicBeatSubState
 
     updateHealthBar();
     updateScoreText();
+    probePsychStrumlines(elapsed);
 
     // Handle restarting the song when needed (player death or pressing Retry)
     if (needsReset)
