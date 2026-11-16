@@ -1154,7 +1154,7 @@ class PlayState extends MusicBeatSubState
   }
 
   /** Frame size versus rendered size, to catch double-applied character scale. */
-  function describeCharacterSize(target:BaseCharacter):String
+  function describeCharacterSize(target:Null<BaseCharacter>):String
   {
     if (target == null) return "(null)";
     return "frame=" + Std.int(target.frameWidth) + "x" + Std.int(target.frameHeight)
