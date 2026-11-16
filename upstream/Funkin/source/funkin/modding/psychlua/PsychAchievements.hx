@@ -2,7 +2,6 @@ package funkin.modding.psychlua;
 
 import funkin.util.FileUtil;
 import sys.FileSystem;
-import sys.io.FileWriteMode;
 
 /**
  * Psych's achievement API, backed by a local JSON file.
@@ -79,7 +78,7 @@ class PsychAchievements
         if (entry == null) continue;
         Reflect.setField(plain, id, {unlocked: entry.unlocked, score: entry.score});
       }
-      FileUtil.writeStringToPath(storagePath(), haxe.Json.stringify(plain), FileWriteMode.overwrite);
+      sys.io.File.saveContent(storagePath(), haxe.Json.stringify(plain));
     }
     catch (error:Dynamic)
     {
