@@ -548,6 +548,13 @@ class HealthIcon extends FunkinSprite
             frameWidth = cellSize;
             frameHeight = cellSize;
           }
+          else if (bitmap.width >= Math.round(bitmap.height * 1.4))
+          {
+            // Two trimmed frames side by side (idle + losing). Treated as one
+            // image both faces were drawn at once; split them instead.
+            frameWidth = Math.round(bitmap.width / 2);
+            frameHeight = bitmap.height;
+          }
           else
           {
             frameWidth = bitmap.width;
