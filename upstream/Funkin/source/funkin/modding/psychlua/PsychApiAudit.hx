@@ -2,7 +2,6 @@ package funkin.modding.psychlua;
 
 import flixel.FlxState;
 import flixel.text.FlxText;
-import flixel.text.FlxTextBorderStyle;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import funkin.util.FileUtil;
@@ -111,10 +110,13 @@ class PsychApiAudit
     try
     {
       var label:FlxText = new FlxText(8, 8, 900, summary, 12);
-      // This Flixel build types text alignment as a String, not an enum.
+      // This Flixel build types alignment as a String, and its border-style type
+      // is not importable here, so a translucent background keeps the list
+      // readable over stage art instead.
       label.alignment = "left";
       label.setFormat(null, 12, FlxColor.YELLOW);
-      label.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
+      label.background = true;
+      label.backgroundColor = 0xB0000000;
       label.scrollFactor.set(0, 0);
       state.add(label);
 
