@@ -154,12 +154,32 @@ class ExperienceManager
     var index:Int = enabledDirs.indexOf(info.directory);
     var enabled:Bool = index < 0;
     if (enabled)
+    {
+      // Psych and V-Slice content cannot run together, so turning one family on
+      // turns the other off. Any number of mods from the same engine can stay
+      // enabled at once.
+      var family:String = engineFamily(info.engineId);
+      for (other in scanInstalled())
+      {
+        if (other.isOfficial || other.directory == null || other.directory == info.directory) continue;
+        if (engineFamily(other.engineId) == family) continue;
+
+        var otherIndex:Int = enabledDirs.indexOf(other.directory);
+        if (otherIndex >= 0) enabledDirs.splice(otherIndex, 1);
+      }
       enabledDirs.push(info.directory);
+    }
     else
       enabledDirs.splice(index, 1);
     Save.instance.enabledModDirs.value = enabledDirs;
     Save.system.flush();
     return enabled;
+  }
+
+  /** Which side of the engine split a package belongs to. */
+  static function engineFamily(engineId:String):String
+  {
+    return engineId == EngineBridge.ENGINE_PSYCH ? "psych" : "vslice";
   }
 
   public static function cyclePackageType(info:ExperienceInfo):String

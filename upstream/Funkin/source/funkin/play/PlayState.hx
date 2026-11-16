@@ -1453,7 +1453,10 @@ class PlayState extends MusicBeatSubState
     // A Psych Freeplay confirm can remain latched while LoadingState creates
     // the nested PlayState and its countdown. Do not allow that launch input
     // (or a transient focus-loss callback) to open Pause before the song starts.
-    if (startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id)
+    // Only the standard pause is suppressed here. Cutscene pauses are explicit
+    // player intent (skip the opening), so they must still work while a song is
+    // starting.
+    if (mode == Standard && startingSong && currentSong != null && ExperienceManager.isPsychSong(currentSong.id)
       && funkin.ui.freeplay.PsychFreeplayState.hasActiveInstance()) return;
 
     if (PsychScriptRuntime.dispatchStop("onPause", [])) return;

@@ -6,6 +6,7 @@ import funkin.input.Cursor;
 import funkin.ui.mainmenu.MainMenuState;
 import flixel.FlxSubState;
 import flixel.addons.transition.FlxTransitionableState;
+import flixel.addons.transition.Transition;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.audio.FunkinSound;
@@ -207,7 +208,70 @@ class MusicBeatState extends FlxTransitionableState implements IEventHandler
     super.update(elapsed);
     syncViewportLayout();
 
+    handleTransitionInput();
+
     dispatchEvent(new UpdateScriptEvent(elapsed));
+  }
+
+  /**
+   * Keep menus usable while a screen transition plays. FlxTransitionableState
+   * runs its fade as a substate, which normally stops this state from updating
+   * until the fade finishes, so players could not scroll through a menu (or
+   * skip ahead) during it. States where that would be unsafe can opt out.
+   */
+  public var allowInputDuringTransition:Bool = true;
+
+  static inline var TRANSITION_IDLE:Int = 0;
+  static inline var TRANSITION_IN:Int = 1;
+  static inline var TRANSITION_OUT:Int = 2;
+
+  var activeTransitionDirection:Int = TRANSITION_IDLE;
+
+  override public function transitionIn():Void
+  {
+    super.transitionIn();
+    if (this.subState != null && Std.isOfType(this.subState, Transition))
+    {
+      activeTransitionDirection = TRANSITION_IN;
+      keepUpdatingDuringTransition();
+    }
+  }
+
+  override public function transitionOut(?OnExit:Void->Void):Void
+  {
+    super.transitionOut(OnExit);
+    if (this.subState != null && Std.isOfType(this.subState, Transition))
+    {
+      activeTransitionDirection = TRANSITION_OUT;
+      keepUpdatingDuringTransition();
+    }
+  }
+
+  function keepUpdatingDuringTransition():Void
+  {
+    if (!allowInputDuringTransition) return;
+    persistentUpdate = true;
+    persistentDraw = true;
+  }
+
+  /**
+   * Confirming during the fade into a screen finishes it immediately, so the
+   * player lands on the next screen instead of waiting for the transition.
+   */
+  function handleTransitionInput():Void
+  {
+    if (!allowInputDuringTransition || activeTransitionDirection == TRANSITION_IDLE) return;
+    if (!FlxG.keys.justPressed.ENTER && !controls.ACCEPT) return;
+
+    var direction:Int = activeTransitionDirection;
+    activeTransitionDirection = TRANSITION_IDLE;
+
+    // Closing the fade substate is exactly what the addon does when a fade-in
+    // completes, so the screen is fully visible straight away.
+    if (direction == TRANSITION_IN) closeSubState();
+
+    // Consume the press so the menu underneath does not also act on it.
+    FlxG.keys.reset();
   }
 
   function onGameResized(width:Int, height:Int):Void

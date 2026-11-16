@@ -189,7 +189,21 @@ class MainMenuState extends MusicBeatState
       // experience has imported Psych songs. V-Slice Freeplay remains untouched.
       if (ExperienceManager.hasActivePsychSongs())
       {
-        openSubState(new funkin.ui.freeplay.PsychFreeplayState());
+        // Psych Freeplay is a substate, so it gets no screen transition of its
+        // own. Fade through black with the same look used between screens so
+        // opening it matches every other menu change.
+        if (FlxG.camera != null)
+        {
+          FlxG.camera.fade(FlxColor.BLACK, 0.4, false, () ->
+          {
+            openSubState(new funkin.ui.freeplay.PsychFreeplayState());
+            FlxG.camera.fade(FlxColor.BLACK, 0.4, true);
+          });
+        }
+        else
+        {
+          openSubState(new funkin.ui.freeplay.PsychFreeplayState());
+        }
       }
       else
       {
