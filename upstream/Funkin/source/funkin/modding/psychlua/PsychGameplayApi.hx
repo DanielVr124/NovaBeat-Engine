@@ -3192,6 +3192,11 @@ class PsychGameplayApi
       "funkin.play.PlayState"
     ];
     if (allowed.indexOf(className) == -1) return null;
+    // Psych stores the chart's stage name in a static PlayState.curStage, and
+    // stage-swap scripts build paths from it ('stages/' .. curStage). Without it
+    // those scripts died on their first line and the stage never changed.
+    if (className == "funkin.play.PlayState" && (path == "curStage" || path == "curStageName"))
+      return PsychModRuntime.getPsychCurStageName();
     var klass:Dynamic = Type.resolveClass(className);
     return getFromObject(klass, path, allowMaps);
   }
@@ -3200,6 +3205,11 @@ class PsychGameplayApi
   {
     var allowed:Array<String> = ["flixel.FlxG", "flixel.util.FlxColor", "funkin.play.PlayState"];
     if (allowed.indexOf(className) == -1) return null;
+    if (className == "funkin.play.PlayState" && (path == "curStage" || path == "curStageName"))
+    {
+      PsychModRuntime.setPsychCurStageName(Std.string(value));
+      return value;
+    }
     var klass:Dynamic = Type.resolveClass(className);
     return setOnObject(klass, path, value, allowMaps);
   }

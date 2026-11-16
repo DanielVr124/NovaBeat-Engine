@@ -934,7 +934,76 @@ class PsychModRuntime
 
   #if sys
   static final psychHealthColorCache:Map<String, Null<Array<Int>>> = new Map();
+  static final psychHealthIconCache:Map<String, Null<String>> = new Map();
   #end
+
+  /**
+   * The icon name a Psych character names in its JSON's `healthicon`, which
+   * decides the icons/<name>.png file Psych loads for it. Psych defaults the
+   * field to 'face' on every character, so a missing entry means "use face".
+   */
+  public static function getPsychCharacterHealthIcon(songId:String, characterId:String):Null<String>
+  {
+    #if sys
+    if (songId == null || characterId == null) return null;
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (modRoot == null) return null;
+    var cacheKey:String = modRoot + "|" + characterId;
+    if (psychHealthIconCache.exists(cacheKey)) return psychHealthIconCache.get(cacheKey);
+    var iconName:Null<String> = null;
+    var characterPath:Null<String> = findPsychCharacterDataFile(modRoot, characterId);
+    if (characterPath != null)
+    {
+      try
+      {
+        var characterData:Dynamic = Json.parse(File.getContent(characterPath));
+        var raw:Dynamic = characterData == null ? null : Reflect.field(characterData, "healthicon");
+        if (raw != null && Std.string(raw).length > 0) iconName = Std.string(raw);
+      }
+      catch (error:Dynamic)
+      {
+        iconName = null;
+      }
+    }
+    psychHealthIconCache.set(cacheKey, iconName);
+    return iconName;
+    #else
+    return null;
+    #end
+  }
+
+  static var psychCurStageName:Null<String> = null;
+
+  /**
+   * Psych keeps the stage name the chart asked for in a static PlayState.curStage,
+   * and mods read it to build paths like 'stages/' .. curStage. Scripts can also
+   * assign it, so a script-written value wins until the next song starts.
+   */
+  public static function getPsychCurStageName():String
+  {
+    if (psychCurStageName != null) return psychCurStageName;
+    var state = PlayState.instance;
+    if (state == null) return "";
+    var songId:String = state.currentSong == null ? "" : state.currentSong.id;
+    if (songId.length > 0)
+    {
+      var chartStage:Null<String> = psychSongStageNames.get(songId);
+      if (chartStage == null) chartStage = psychStageNamesPersistent.get(songId);
+      if (chartStage != null && chartStage.length > 0) return chartStage;
+    }
+    return state.currentStage == null ? "" : state.currentStage.stageName;
+  }
+
+  public static function setPsychCurStageName(name:String):Void
+  {
+    psychCurStageName = name;
+  }
+
+  /** Forget script-written stage state when a new song starts. */
+  public static function resetPsychCurStageName():Void
+  {
+    psychCurStageName = null;
+  }
 
   #if sys
   static function readPsychHealthBarColor(characterData:Dynamic):Null<Array<Int>>

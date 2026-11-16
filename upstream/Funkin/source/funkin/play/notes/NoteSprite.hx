@@ -175,6 +175,28 @@ class NoteSprite extends FunkinSprite
    */
   public var scoreable:Bool = true;
 
+  // Psych note-type scripts set and read these on the note object in their
+  // onCreate/hit callbacks. They exist here so the writes land on real fields
+  // instead of raising "Invalid field" and aborting the rest of the callback.
+  /** Skips the receptor's hit animation for this note. */
+  public var noAnimation:Bool = false;
+  /** Skips the receptor's miss animation when this note is dropped. */
+  public var noMissAnimation:Bool = false;
+  /** Hitting this note costs health instead of gaining it. */
+  public var hitCausesMiss:Bool = false;
+  /** Health gained on a hit (Psych's default). */
+  public var hitHealth:Float = 0.023;
+  /** Health lost when missed (Psych's default). */
+  public var missHealth:Float = 0.0475;
+  /** Multiplier applied to the note's alpha. */
+  public var multAlpha:Float = 1.0;
+  /** The note cannot be hit and does not count. */
+  public var ignoreNote:Bool = false;
+  /** The note blocks hits from notes behind it. */
+  public var blockHit:Bool = false;
+  /** Suffix appended to the character's sing animation name. */
+  public var animSuffix:String = "";
+
   /**
    * Whether this note is a hold note.
    * This is true if the length is greater than 0.

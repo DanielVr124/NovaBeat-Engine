@@ -579,25 +579,65 @@ class HealthIcon extends FunkinSprite
     return new openfl.geom.Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);
   }
 
+  /**
+   * The icon name Psych uses for a character: the character JSON's `healthicon`
+   * when it sets one, otherwise the character id itself.
+   */
+  function psychIconName(charId:String):String
+  {
+    if (psychAssetSongId != null)
+    {
+      var named:Null<String> = PsychModRuntime.getPsychCharacterHealthIcon(psychAssetSongId, charId);
+      if (named != null && named.length > 0) return named;
+    }
+    return charId;
+  }
+
+  /** Psych's icon file order: icons/<name> first, then icons/icon-<name>. */
+  static function psychIconRequests(name:String):Array<String>
+  {
+    return ['icons/$name', 'icons/icon-$name'];
+  }
+
+  /**
+   * First existing icon image, checking the song's own package before the base
+   * assets, following Psych's naming order and its icons/icon-face last resort.
+   */
+  function resolveIconRequest(charId:String):String
+  {
+    if (psychAssetSongId == null) return 'icons/icon-$charId';
+    var requests:Array<String> = psychIconRequests(psychIconName(charId));
+    requests.push('icons/icon-face');
+    for (request in requests)
+    {
+      var scopedPath:String = Paths.imageForPsychSong(request, psychAssetSongId);
+      if (Assets.exists(scopedPath, openfl.utils.AssetType.IMAGE)) return request;
+      var plainPath:String = Paths.image(request);
+      if (Assets.exists(plainPath, openfl.utils.AssetType.IMAGE)) return request;
+    }
+    return 'icons/icon-face';
+  }
+
   function resolveIconImagePath(charId:String):String
   {
-    if (psychAssetSongId == null) return Paths.image('icons/icon-$charId');
-
-    // A Psych song's package is searched first, but plenty of songs reuse the
-    // base-game icons (bf, dad, gf). Paths hands back a path even when nothing
-    // exists at it, so probe the result before trusting it and fall back to
-    // the shared assets instead of failing.
-    var scopedPath:String = Paths.imageForPsychSong('icons/icon-$charId', psychAssetSongId);
+    var request:String = resolveIconRequest(charId);
+    if (psychAssetSongId == null) return Paths.image(request);
+    var scopedPath:String = Paths.imageForPsychSong(request, psychAssetSongId);
     if (Assets.exists(scopedPath, openfl.utils.AssetType.IMAGE)) return scopedPath;
-    return Paths.image('icons/icon-$charId');
+    return Paths.image(request);
   }
 
   function resolveIconXmlPath(charId:String):String
   {
-    var requestedPath:String = 'images/icons/icon-$charId.xml';
-    return psychAssetSongId == null
-      ? Paths.file(requestedPath)
-      : Paths.fileForPsychSong(requestedPath, openfl.utils.AssetType.TEXT, psychAssetSongId);
+    if (psychAssetSongId == null) return Paths.file('images/icons/icon-$charId.xml');
+    for (request in psychIconRequests(psychIconName(charId)))
+    {
+      var scopedPath:String = Paths.fileForPsychSong('images/$request.xml', openfl.utils.AssetType.TEXT, psychAssetSongId);
+      if (Assets.exists(scopedPath, openfl.utils.AssetType.TEXT)) return scopedPath;
+      var plainPath:String = Paths.file('images/$request.xml');
+      if (Assets.exists(plainPath, openfl.utils.AssetType.TEXT)) return plainPath;
+    }
+    return Paths.file('images/icons/icon-face.xml');
   }
 
   function iconExists(charId:String):Bool
@@ -645,7 +685,7 @@ class HealthIcon extends FunkinSprite
         if (psychAssetSongId == null)
           loadSparrow('icons/icon-$charId');
         else
-          this.frames = Paths.getSparrowAtlasForPsychSong('icons/icon-$charId', psychAssetSongId);
+          this.frames = Paths.getSparrowAtlasForPsychSong(resolveIconRequest(charId), psychAssetSongId);
         loadAnimationNew();
       }
       else

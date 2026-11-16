@@ -244,6 +244,7 @@ class PsychScriptRuntime
       activeDiagnosticSongId = songId == null ? "" : songId;
       activeDiagnosticDifficulty = difficulty == null ? "" : difficulty;
       callbackFailureCounts.clear();
+      PsychModRuntime.resetPsychCurStageName();
       activeModDirs = modDirs == null ? [] : modDirs.copy();
 
       phase = 'globals.create';
