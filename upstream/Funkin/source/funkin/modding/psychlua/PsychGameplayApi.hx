@@ -2912,6 +2912,22 @@ class PsychGameplayApi
         return (cast character:BaseCharacter).getPsychFrameName();
     }
 
+    // Every Psych character exposes its healthbar colours as healthColorArray.
+    // Returning null made DEVICE_CONTENTS' trail helper throw on every frame.
+    var healthColorSuffix:String = ".healthcolorarray";
+    if (StringTools.endsWith(lowerPath, healthColorSuffix))
+    {
+      var characterPath:String = path.substr(0, path.length - healthColorSuffix.length);
+      var character:Dynamic = getProperty(state, characterPath, allowMaps);
+      if (Std.isOfType(character, BaseCharacter))
+      {
+        var colors:Null<Array<Int>> = PsychModRuntime.getPsychCharacterHealthColors(
+          state.currentSong == null ? "" : state.currentSong.id,
+          (cast character:BaseCharacter).characterId);
+        return colors == null ? [255, 0, 0] : colors;
+      }
+    }
+
     try
     {
       var parts:Array<String> = path.split(".");

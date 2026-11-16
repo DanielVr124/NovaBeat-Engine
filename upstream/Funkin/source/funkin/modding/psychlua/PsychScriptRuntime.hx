@@ -133,10 +133,27 @@ class PsychScriptRuntime
     return executingScript != null && executingScript.close();
   }
 
-  /** Persist script callback failures even when an interpreter handles the exception internally. */
+  /** Repeat counts for callback failures, keyed by script + callback + message. */
+  static final callbackFailureCounts:Map<String, Int> = [];
+
+  /**
+   * Persist script callback failures even when an interpreter handles the
+   * exception internally.
+   *
+   * A failing onUpdate fires on every frame, and each report appends to the
+   * launch log, so an unthrottled report turns one bad script into a disk
+   * write per frame (measured: unplayable). Report the first failure, then
+   * one line per 600 repeats.
+   */
   static function logScriptCallbackFailure(script:PsychScriptInstance, callback:String, message:String):Void
   {
-    var detail:String = script.sourcePath + " | callback=" + callback + " | " + message;
+    var key:String = script.sourcePath + "|" + callback + "|" + message;
+    var count:Int = callbackFailureCounts.exists(key) ? callbackFailureCounts.get(key) + 1 : 1;
+    callbackFailureCounts.set(key, count);
+    if (count != 1 && count % 600 != 0) return;
+
+    var detail:String = script.sourcePath + " | callback=" + callback
+      + (count > 1 ? " | repeats=" + count : "") + " | " + message;
     trace('[Psych Script Runtime] Callback failed: ' + detail);
     if (activeDiagnosticSongId != null && activeDiagnosticSongId.length > 0)
       PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty,
@@ -226,6 +243,7 @@ class PsychScriptRuntime
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.clear.complete');
       activeDiagnosticSongId = songId == null ? "" : songId;
       activeDiagnosticDifficulty = difficulty == null ? "" : difficulty;
+      callbackFailureCounts.clear();
       activeModDirs = modDirs == null ? [] : modDirs.copy();
 
       phase = 'globals.create';

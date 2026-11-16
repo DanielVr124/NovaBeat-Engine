@@ -425,6 +425,8 @@ class PsychModRuntime
    * imported Psych song launch diagnostics. This is intentionally separate
    * from trace(), which is not included in psych-song-launch.log.
    */
+  static final loggedAssetResolutions:Map<String, Bool> = [];
+
   public static function logAssetResolution(request:String, assetType:String, checks:Array<String>, resolvedPath:String):Void
   {
     #if sys
@@ -433,6 +435,12 @@ class PsychModRuntime
       ? playState.currentSong.id
       : lastLaunchSongId;
     if (songId == null || !isImportedSong(songId)) return;
+
+    // These lines are hundreds of bytes each and fire once per note sprite, so
+    // log each distinct resolution once per song instead of per note.
+    var key:String = songId + "|" + assetType + "|" + request + "|" + resolvedPath;
+    if (loggedAssetResolutions.exists(key)) return;
+    loggedAssetResolutions.set(key, true);
 
     var difficulty:String = playState != null ? playState.currentDifficulty : lastLaunchDifficulty;
     var details:String = "type=" + assetType
@@ -887,6 +895,31 @@ class PsychModRuntime
     #end
   }
 
+  /**
+   * One character's Psych healthbar_colors, for getProperty('dad.healthColorArray').
+   * Psych exposes the triplet on every character, and mods iterate it.
+   */
+  public static function getPsychCharacterHealthColors(songId:String, characterId:String):Null<Array<Int>>
+  {
+    #if sys
+    if (songId == null || characterId == null) return null;
+    var modRoot:Null<String> = psychSongModRoots.get(songId);
+    if (modRoot == null) return null;
+    var characterPath:Null<String> = findPsychCharacterDataFile(modRoot, characterId);
+    if (characterPath == null) return null;
+    try
+    {
+      return readPsychHealthBarColor(Json.parse(File.getContent(characterPath)));
+    }
+    catch (error:Dynamic)
+    {
+      return null;
+    }
+    #else
+    return null;
+    #end
+  }
+
   #if sys
   static function readPsychHealthBarColor(characterData:Dynamic):Null<Array<Int>>
   {
@@ -1268,6 +1301,11 @@ class PsychModRuntime
           }
         }
 
+        // Psych draws these in JSON order, in front of the backdrop and behind
+        // the characters. The native placeholder stage also uses zIndex 0, and
+        // the stage sort is not stable, so without an explicit rank the
+        // fallback scenery ended up drawn over the Psych backdrop.
+        sprite.zIndex = -500 + created;
         stage.add(sprite);
         created++;
       }
@@ -1277,7 +1315,26 @@ class PsychModRuntime
       }
     }
 
+    // A Psych stage JSON's objects ARE the stage. The engine still built its
+    // placeholder native stage, and those props were drawing over the Psych
+    // backdrop (reported as "the fallback stage is in front of it"). Keep the
+    // props alive for scripts that reference them, but stop drawing them.
+    if (created > 0) hidePlaceholderStageProps(stage);
+
     logPsychStageStep(songId, "stage-objects", "created=" + created);
+  }
+
+  /** Hide the native stage's own props once a Psych stage supplies its own. */
+  static function hidePlaceholderStageProps(stage:Dynamic):Void
+  {
+    var members:Dynamic = Reflect.field(stage, "members");
+    if (!Std.isOfType(members, Array)) return;
+    for (member in cast(members, Array<Dynamic>))
+    {
+      if (member == null || Std.isOfType(member, BaseCharacter)) continue;
+      if (Std.isOfType(member, FlxSprite)) (cast member : FlxSprite).visible = false;
+    }
+    stage.refresh();
   }
 
   /** Register a Psych stage object's animations, returning the first clip name. */
