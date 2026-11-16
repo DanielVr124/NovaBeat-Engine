@@ -3,6 +3,8 @@ package funkin.modding;
 import funkin.Assets;
 import funkin.util.FileUtil;
 import flixel.FlxG;
+import funkin.Paths;
+import flixel.FlxSprite;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
@@ -47,6 +49,8 @@ class PsychModRuntime
   static final psychStageNamesPersistent:Map<String, String> = [];
   static final psychModRootsPersistent:Map<String, String> = [];
   static final psychSongStagePositions:Map<String, Map<String, Array<Float>>> = [];
+  /** "objects" array from each song's Psych stage JSON, awaiting sprite creation. */
+  static final psychSongStageObjects:Map<String, Dynamic> = [];
   static final psychSongHideGirlfriend:Map<String, Bool> = [];
   static final psychSongOpponentUsesGFPosition:Map<String, Bool> = [];
   static final psychStageBaselines:Map<String, Dynamic> = [];
@@ -1068,6 +1072,10 @@ class PsychModRuntime
     try
     {
       var raw:Dynamic = Json.parse(File.getContent(stagePath));
+      // Anchor and zoom data are read below, but the stage's actual backdrop is
+      // the "objects" array. Without it the song keeps rendering whatever stage
+      // the engine built natively, which read as "the fallback stage".
+      psychSongStageObjects.set(songId, {objects: Reflect.field(raw, "objects"), modRoot: modRoot});
       var zoom:Float = readPsychFloat(raw, "defaultZoom", stage.camZoom);
       if (zoom > 0 && !Math.isNaN(zoom)) Reflect.setField(stageData, "cameraZoom", zoom);
 
@@ -1134,6 +1142,128 @@ class PsychModRuntime
   }
 
   /** Place a Psych character at the x/y coordinates from stages/<stage>.json. */
+  /**
+   * Build the backdrop sprites a Psych stage JSON describes.
+   * Psych stores every prop in "objects", in draw order, and marks the three
+   * character slots with type gf/dad/boyfriend. Those slots are handled by
+   * character placement, so only real props are created here.
+   */
+  public static function applyPsychStageObjects(stage:Dynamic, songId:String):Void
+  {
+    if (stage == null || songId == null) return;
+    var entry:Dynamic = psychSongStageObjects.get(songId);
+    if (entry == null) return;
+
+    var objects:Dynamic = Reflect.field(entry, "objects");
+    if (!Std.isOfType(objects, Array)) return;
+
+    var created:Int = 0;
+    for (object in cast(objects, Array<Dynamic>))
+    {
+      if (object == null) continue;
+      var type:String = Std.string(Reflect.field(object, "type"));
+      if (type == "gf" || type == "girlfriend" || type == "dad" || type == "boyfriend") continue;
+
+      var imageValue:Dynamic = Reflect.field(object, "image");
+      if (imageValue == null) continue;
+      var imageName:String = Std.string(imageValue);
+      if (imageName.length == 0) continue;
+
+      try
+      {
+        var sprite:FlxSprite = new FlxSprite(readPsychFloat(object, "x", 0), readPsychFloat(object, "y", 0));
+        if (type == "animatedSprite")
+        {
+          sprite.frames = Paths.getSparrowAtlas(imageName);
+          var firstClip:Null<String> = addPsychStageObjectAnimations(sprite, Reflect.field(object, "animations"));
+          var requested:Dynamic = Reflect.field(object, "firstAnimation");
+          var wanted:String = requested == null ? "" : Std.string(requested);
+          if (wanted.length > 0 && sprite.animation.exists(wanted))
+            sprite.animation.play(wanted);
+          else if (firstClip != null)
+            sprite.animation.play(firstClip);
+        }
+        else
+        {
+          sprite.loadGraphic(Paths.image(imageName));
+        }
+
+        var scaleValue:Dynamic = Reflect.field(object, "scale");
+        if (Std.isOfType(scaleValue, Array))
+        {
+          var scaleArray:Array<Dynamic> = cast scaleValue;
+          var scaleX:Float = scaleArray.length > 0 ? readPsychNumber(scaleArray[0], 1) : 1;
+          var scaleY:Float = scaleArray.length > 1 ? readPsychNumber(scaleArray[1], scaleX) : scaleX;
+          sprite.scale.set(scaleX, scaleY);
+          sprite.updateHitbox();
+        }
+
+        sprite.antialiasing = Reflect.field(object, "antialiasing") == true;
+        sprite.alpha = readPsychFloat(object, "alpha", 1);
+        sprite.angle = readPsychFloat(object, "angle", 0);
+        sprite.flipX = Reflect.field(object, "flipX") == true;
+        sprite.flipY = Reflect.field(object, "flipY") == true;
+
+        var scrollValue:Dynamic = Reflect.field(object, "scroll");
+        if (Std.isOfType(scrollValue, Array))
+        {
+          var scrollArray:Array<Dynamic> = cast scrollValue;
+          if (scrollArray.length > 0) sprite.scrollFactor.x = readPsychNumber(scrollArray[0], 1);
+          if (scrollArray.length > 1) sprite.scrollFactor.y = readPsychNumber(scrollArray[1], 1);
+        }
+
+        var colorValue:Dynamic = Reflect.field(object, "color");
+        if (colorValue != null)
+        {
+          var colorText:String = Std.string(colorValue);
+          if (colorText.length >= 6 && colorText != "FFFFFF")
+          {
+            var tint:Null<Int> = Std.parseInt("0x" + colorText.substring(colorText.length - 6));
+            if (tint != null) sprite.color = tint;
+          }
+        }
+
+        stage.add(sprite);
+        created++;
+      }
+      catch (error:Dynamic)
+      {
+        logPsychStageStep(songId, "stage-object-failed", "image=" + imageName + " error=" + Std.string(error));
+      }
+    }
+
+    logPsychStageStep(songId, "stage-objects", "created=" + created);
+  }
+
+  /** Register a Psych stage object's animations, returning the first clip name. */
+  static function addPsychStageObjectAnimations(sprite:FlxSprite, animations:Dynamic):Null<String>
+  {
+    if (!Std.isOfType(animations, Array)) return null;
+    var firstClip:Null<String> = null;
+    for (entry in cast(animations, Array<Dynamic>))
+    {
+      if (entry == null) continue;
+      var clipName:Dynamic = Reflect.field(entry, "anim");
+      var prefix:Dynamic = Reflect.field(entry, "name");
+      if (clipName == null || prefix == null) continue;
+      var fps:Int = Std.int(readPsychFloat(entry, "fps", 24));
+      if (fps <= 0) fps = 24;
+      var looped:Bool = Reflect.field(entry, "loop") == true;
+      var clip:String = Std.string(clipName);
+      sprite.animation.addByPrefix(clip, Std.string(prefix), fps, looped);
+      if (firstClip == null) firstClip = clip;
+    }
+    return firstClip;
+  }
+
+  /** Read a JSON number that may arrive as a string or an int. */
+  static function readPsychNumber(value:Dynamic, fallback:Float):Float
+  {
+    if (value == null) return fallback;
+    var parsed:Float = Std.parseFloat(Std.string(value));
+    return Math.isNaN(parsed) ? fallback : parsed;
+  }
+
   public static function applyPsychStageCharacterPosition(character:Dynamic, role:String):Void
   {
     if (character == null || PlayState.instance == null || PlayState.instance.currentSong == null) return;

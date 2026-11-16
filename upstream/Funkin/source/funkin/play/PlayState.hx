@@ -2480,6 +2480,11 @@ class PlayState extends MusicBeatSubState
       var event:ScriptEvent = new ScriptEvent(CREATE, false);
       ScriptEventDispatcher.callEvent(currentStage, event);
 
+      // Psych stages carry their own backdrop in the JSON's "objects" array.
+      // Build it after the native CREATE event so it draws over the stage the
+      // engine would otherwise show on its own.
+      PsychModRuntime.applyPsychStageObjects(currentStage, currentSong == null ? "" : currentSong.id);
+
       resetCameraZoom();
 
       // Add the stage to the scene.
