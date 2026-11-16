@@ -1120,9 +1120,9 @@ class PlayState extends MusicBeatSubState
     return true;
   }
 
-  /** One-shot lane probe for Psych songs whose receptors never appear. */
+  /** Two-shot lane probe for Psych songs whose receptors never appear. */
   var psychLaneProbeElapsed:Float = 0;
-  var psychLaneProbeDone:Bool = false;
+  var psychLaneProbeSamples:Int = 0;
 
   /**
    * Write the real lane geometry to logs/psych-stage.log once, a second into a
@@ -1131,17 +1131,24 @@ class PlayState extends MusicBeatSubState
    */
   function probePsychStrumlines(elapsed:Float):Void
   {
-    if (psychLaneProbeDone || currentSong == null) return;
+    if (psychLaneProbeSamples >= 2 || currentSong == null) return;
     if (!ExperienceManager.isPsychSong(currentSong.id)) return;
     psychLaneProbeElapsed += elapsed;
-    if (psychLaneProbeElapsed < 1.0) return;
-    psychLaneProbeDone = true;
+
+    // Receptors fade in over roughly three seconds (Strumline.fadeInArrow), so
+    // the early sample explains placement and the late one shows what actually
+    // survived the song scripts.
+    var sampleAt:Float = psychLaneProbeSamples == 0 ? 1.0 : 5.0;
+    if (psychLaneProbeElapsed < sampleAt) return;
+    psychLaneProbeSamples++;
+    var sampleLabel:String = psychLaneProbeSamples == 1 ? "t=1s" : "t=5s";
 
     #if sys
     try
     {
-      var report:String = "lane-probe | screen=" + FlxG.width + "x" + FlxG.height
+      var report:String = "lane-probe " + sampleLabel + " | screen=" + FlxG.width + "x" + FlxG.height
         + " downscroll=" + Preferences.downscroll
+        + " middlescroll=" + Preferences.middlescroll
         + " hudZoom=" + camHUD.zoom
         + " camZoom=" + FlxG.camera.zoom;
       report += "\n  player " + describeStrumline(playerStrumline);
