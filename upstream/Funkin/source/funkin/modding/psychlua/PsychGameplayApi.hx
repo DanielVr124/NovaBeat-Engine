@@ -2109,7 +2109,7 @@ class PsychGameplayApi
     PsychScriptRuntime.setGlobal("healthLossMult", 1.0);
     PsychScriptRuntime.setGlobal("guitarHeroSustains", false);
     PsychScriptRuntime.setGlobal("instakillOnMiss", false);
-    PsychScriptRuntime.setGlobal("middlescroll", false);
+    PsychScriptRuntime.setGlobal("middlescroll", Preferences.middlescroll);
     PsychScriptRuntime.setGlobal("ghostTapping", true);
     PsychScriptRuntime.setGlobal("hideHud", state.isMinimalMode);
     PsychScriptRuntime.setGlobal("scoreZoom", true);

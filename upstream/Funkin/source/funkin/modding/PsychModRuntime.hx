@@ -3418,7 +3418,11 @@ class PsychModRuntime
 
       var legacy:Null<FNFLegacyData> = parseLegacyChart(chartPath);
       if (legacy == null || legacy.song == null || legacy.song.notes == null) continue;
-      var chartSong:Dynamic = Reflect.field(chartRoot, "song");
+      // Flat legacy charts keep the real fields at the root and use "song" for
+      // the title string. Reading chartRoot.song directly therefore found no
+      // stage, player1, player2 or gfVersion, so every such song fell back to the
+      // generic "stage" and the default cast, with the wrong anchors and zoom.
+      var chartSong:Dynamic = getPsychChartDataRoot(chartRoot);
       if (extractPsychEvents(Reflect.field(chartSong, "events")).length > 0) hasEmbeddedEvents = true;
       if (!hasPsychSectionStates)
       {

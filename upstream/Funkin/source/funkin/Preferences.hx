@@ -116,6 +116,26 @@ class Preferences
   }
 
   /**
+   * If enabled, the player's receptors sit in the middle of the screen and the
+   * opponent's lane is hidden, like Psych's middlescroll option.
+   * @default `false`
+   */
+  public static var middlescroll(get, set):Bool;
+
+  static function get_middlescroll():Bool
+  {
+    return Save?.instance?.options?.middlescroll ?? false;
+  }
+
+  static function set_middlescroll(value:Bool):Bool
+  {
+    var save:Save = Save.instance;
+    save.options.middlescroll = value;
+    Save.system.flush();
+    return value;
+  }
+
+  /**
    * If disabled, flashing lights in the main menu and other areas will be less intense.
    * @default `true`
    */
