@@ -4,6 +4,7 @@ import flixel.FlxG;
 import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.play.cutscene.VideoCutscene;
+import funkin.play.cutscene.VideoCutscene.CutsceneType;
 import funkin.data.song.SongRegistry;
 import funkin.data.song.SongData.SongNoteData;
 import funkin.play.song.Song;
@@ -885,7 +886,7 @@ class PsychGameplayApi
         var modVideoPath:Null<String> = PsychModRuntime.resolvePsychVideoPath(songId, requestedPath);
         var midSong:Bool = flag3 || flag4 || forMidSong;
         VideoCutscene.play(modVideoPath ?? Paths.videos(requestedPath),
-          midSong ? VideoCutscene.CutsceneType.MIDSONG : VideoCutscene.CutsceneType.STARTING);
+          midSong ? CutsceneType.MIDSONG : CutsceneType.STARTING);
         return true;
       }
       catch (error:Dynamic)
@@ -1610,9 +1611,11 @@ class PsychGameplayApi
       return true;
     });
 
+    // Stage.members is Array<FlxSprite>, so these stays Dynamic: an order
+    // target can also be the stage group itself.
     vars.set("setObjectOrder", function(tag:String, index:Int):Bool
     {
-      var sprite:Null<FlxBasic> = resolveOrderTarget(state, tag);
+      var sprite:Dynamic = resolveOrderTarget(state, tag);
       if (sprite == null) return false;
       var stage = state.currentStage;
       if (stage != null && stage.members.indexOf(sprite) >= 0)
@@ -1631,7 +1634,7 @@ class PsychGameplayApi
     });
     vars.set("getObjectOrder", function(tag:String):Int
     {
-      var sprite:Null<FlxBasic> = resolveOrderTarget(state, tag);
+      var sprite:Dynamic = resolveOrderTarget(state, tag);
       if (sprite == null) return -1;
       var stage = state.currentStage;
       var stageIndex:Int = stage == null ? -1 : stage.members.indexOf(sprite);
