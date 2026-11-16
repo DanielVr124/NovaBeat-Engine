@@ -38,6 +38,18 @@ class StrumlineNote extends FunkinSprite
   public var forceActive:Bool = false;
 
   /**
+   * The strumline this receptor belongs to. Because Strumline is a
+   * FlxSpriteGroup, this receptor's own x/y are relative to it, while Psych
+   * scripts position receptors in screen space.
+   */
+  public var strumlineOwner(default, null):Strumline;
+
+  public function attachStrumline(owner:Strumline):Void
+  {
+    this.strumlineOwner = owner;
+  }
+
+  /**
    * How long to continue the hold note animation after a note is pressed.
    */
   static final CONFIRM_HOLD_TIME:Float = 0.15;

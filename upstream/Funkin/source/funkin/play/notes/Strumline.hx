@@ -276,6 +276,7 @@ class Strumline extends FlxSpriteGroup
       child.x += INITIAL_OFFSET;
       child.y = 0;
       noteStyle.applyStrumlineOffsets(child);
+      child.attachStrumline(this);
       this.strumlineNotes.add(child);
     }
 

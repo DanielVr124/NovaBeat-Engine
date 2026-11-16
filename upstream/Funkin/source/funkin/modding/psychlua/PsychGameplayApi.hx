@@ -2263,6 +2263,22 @@ class PsychGameplayApi
     if (tag == null || tag.length == 0 || target == null || duration < 0) return false;
     cancelTween(tag);
 
+    // Receptor tweens get screen-space targets from Psych scripts, so shift
+    // x/y into the strumline's group-local space like setSegment does.
+    if (Std.isOfType(target, StrumlineNote))
+    {
+      var owner:Strumline = (cast target : StrumlineNote).strumlineOwner;
+      if (owner != null && values != null)
+      {
+        var targetX:Dynamic = Reflect.field(values, "x");
+        if (targetX != null)
+          Reflect.setField(values, "x", Std.parseFloat(Std.string(targetX)) - (owner.x + owner.strumlineNotes.x));
+        var targetY:Dynamic = Reflect.field(values, "y");
+        if (targetY != null)
+          Reflect.setField(values, "y", Std.parseFloat(Std.string(targetY)) - (owner.y + owner.strumlineNotes.y));
+      }
+    }
+
     var tween:FlxTween = FlxTween.tween(target, values, duration, {
       ease: resolveEase(ease),
       onComplete: function(_:FlxTween):Void
@@ -2920,7 +2936,17 @@ class PsychGameplayApi
     if (object == null) return null;
     if (allowMaps && Reflect.hasField(object, "get"))
       return Reflect.callMethod(object, Reflect.field(object, "get"), [field]);
-    return Reflect.getProperty(object, field);
+    var value:Dynamic = Reflect.getProperty(object, field);
+    // Mirror setSegment: report receptor x/y in screen space, the space Psych
+    // scripts read and write.
+    if (Std.isOfType(object, StrumlineNote) && (field == "x" || field == "y") && value != null)
+    {
+      var owner:Strumline = (cast object : StrumlineNote).strumlineOwner;
+      if (owner != null)
+        value = Std.parseFloat(Std.string(value))
+          + (field == "x" ? owner.x + owner.strumlineNotes.x : owner.y + owner.strumlineNotes.y);
+    }
+    return value;
   }
 
   static function setSegment(object:Dynamic, segment:String, value:Dynamic, allowMaps:Bool):Dynamic
@@ -2934,6 +2960,21 @@ class PsychGameplayApi
       if (collection == null) return null;
       collection[index] = value;
       return value;
+    }
+
+    // Psych scripts move receptors with screen-space coordinates, but a
+    // StrumlineNote sits inside the Strumline's FlxSpriteGroup, so its own x/y
+    // are group-local. Without this translation every scripted arrow move
+    // landed at the wrong place on screen.
+    if (Std.isOfType(object, StrumlineNote) && (segment == "x" || segment == "y"))
+    {
+      var receptor:StrumlineNote = cast object;
+      var owner:Strumline = receptor.strumlineOwner;
+      if (owner != null && value != null)
+      {
+        var offset:Float = segment == "x" ? owner.x + owner.strumlineNotes.x : owner.y + owner.strumlineNotes.y;
+        value = Std.parseFloat(Std.string(value)) - offset;
+      }
     }
 
     if (allowMaps && Reflect.hasField(object, "set"))
