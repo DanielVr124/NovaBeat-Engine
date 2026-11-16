@@ -5,6 +5,8 @@ import funkin.util.FileUtil;
 import flixel.FlxG;
 import funkin.Paths;
 import flixel.FlxSprite;
+import flixel.graphics.frames.FlxAtlasFrames;
+import openfl.utils.AssetType;
 import funkin.modding.psychlua.PsychScriptRuntime;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
@@ -1161,6 +1163,36 @@ class PsychModRuntime
    * character slots with type gf/dad/boyfriend. Those slots are handled by
    * character placement, so only real props are created here.
    */
+  /**
+   * Resolve one of a Psych song package's images. Mods routinely reuse image
+   * names across packages, so the plain Paths.image() lookup can return the
+   * wrong mod's file when more than one mod is installed. The song-scoped
+   * variant pins the lookup to the package that owns the current song.
+   */
+  public static function resolvePsychImage(songId:String, key:String):String
+  {
+    if (isImportedSong(songId)) return Paths.imageForPsychSong(key, songId);
+    return Paths.image(key);
+  }
+
+  /** Sparrow atlas for a Psych song package, falling back to the global lookup. */
+  public static function resolvePsychSparrowAtlas(songId:String, key:String):FlxAtlasFrames
+  {
+    if (isImportedSong(songId)) return Paths.getSparrowAtlasForPsychSong(key, songId);
+    return Paths.getSparrowAtlas(key);
+  }
+
+  /** Packer atlas for a Psych song package, falling back to the global lookup. */
+  public static function resolvePsychPackerAtlas(songId:String, key:String):FlxAtlasFrames
+  {
+    if (isImportedSong(songId))
+      return FlxAtlasFrames.fromSpriteSheetPacker(
+        Paths.imageForPsychSong(key, songId),
+        Paths.fileForPsychSong('images/$key.txt', TEXT, songId)
+      );
+    return Paths.getPackerAtlas(key);
+  }
+
   public static function applyPsychStageObjects(stage:Dynamic, songId:String):Void
   {
     if (stage == null || songId == null) return;
@@ -1187,7 +1219,7 @@ class PsychModRuntime
         var sprite:FlxSprite = new FlxSprite(readPsychFloat(object, "x", 0), readPsychFloat(object, "y", 0));
         if (type == "animatedSprite")
         {
-          sprite.frames = Paths.getSparrowAtlas(imageName);
+          sprite.frames = resolvePsychSparrowAtlas(songId, imageName);
           var firstClip:Null<String> = addPsychStageObjectAnimations(sprite, Reflect.field(object, "animations"));
           var requested:Dynamic = Reflect.field(object, "firstAnimation");
           var wanted:String = requested == null ? "" : Std.string(requested);
@@ -1198,7 +1230,7 @@ class PsychModRuntime
         }
         else
         {
-          sprite.loadGraphic(Paths.image(imageName));
+          sprite.loadGraphic(resolvePsychImage(songId, imageName));
         }
 
         var scaleValue:Dynamic = Reflect.field(object, "scale");

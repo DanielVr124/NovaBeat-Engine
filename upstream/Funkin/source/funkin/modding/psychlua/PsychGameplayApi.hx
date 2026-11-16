@@ -1079,7 +1079,8 @@ class PsychGameplayApi
       {
         if (image != null && image.length > 0)
         {
-          var resolvedImage:String = Paths.image(image);
+          var resolvedImage:String = PsychModRuntime.resolvePsychImage(
+            state.currentSong == null ? "" : state.currentSong.id, image);
           sprite.loadGraphic(resolvedImage);
           if (state.currentSong != null)
             PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
@@ -1238,7 +1239,10 @@ class PsychGameplayApi
       try
       {
         var atlasType:String = spriteType == null ? "sparrow" : spriteType.toLowerCase();
-        sprite.frames = atlasType == "packer" ? Paths.getPackerAtlas(image) : Paths.getSparrowAtlas(image);
+        var atlasSongId:String = state.currentSong == null ? "" : state.currentSong.id;
+        sprite.frames = atlasType == "packer"
+          ? PsychModRuntime.resolvePsychPackerAtlas(atlasSongId, image)
+          : PsychModRuntime.resolvePsychSparrowAtlas(atlasSongId, image);
         if (state.currentSong != null)
           PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
             "api=makeAnimatedLuaSprite tag=" + tag + " request=" + image);
@@ -1322,7 +1326,8 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null || image == null || image.length == 0) return false;
-      var resolvedImage:String = Paths.image(image);
+      var resolvedImage:String = PsychModRuntime.resolvePsychImage(
+        state.currentSong == null ? "" : state.currentSong.id, image);
       sprite.loadGraphic(resolvedImage, gridX > 0 && gridY > 0, gridX, gridY);
       if (state.currentSong != null)
         PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
@@ -1335,9 +1340,10 @@ class PsychGameplayApi
       if (sprite == null || image == null || image.length == 0) return false;
       try
       {
+        var framesSongId:String = state.currentSong == null ? "" : state.currentSong.id;
         sprite.frames = StringTools.trim(spriteType).toLowerCase() == "packer"
-          ? Paths.getPackerAtlas(image)
-          : Paths.getSparrowAtlas(image);
+          ? PsychModRuntime.resolvePsychPackerAtlas(framesSongId, image)
+          : PsychModRuntime.resolvePsychSparrowAtlas(framesSongId, image);
         if (state.currentSong != null)
           PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
             "api=loadFrames tag=" + tag + " request=" + image + " type=" + spriteType);
