@@ -118,6 +118,7 @@ class Save implements ConsoleClass
         performanceCameraBops: true,
         naughtyness: true,
         downscroll: false,
+        middlescroll: false,
         flashingLights: true,
         zoomCamera: true,
         debugDisplay: 'Off',
