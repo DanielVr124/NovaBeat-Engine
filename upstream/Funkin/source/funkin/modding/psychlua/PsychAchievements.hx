@@ -32,8 +32,7 @@ class PsychAchievements
 
   static function store():Map<String, AchievementEntry>
   {
-    var cached:Null<Map<String, AchievementEntry>> = entries;
-    if (cached != null) return cached;
+    if (entries != null) return entries;
 
     var loaded:Map<String, AchievementEntry> = [];
     #if sys
@@ -63,8 +62,7 @@ class PsychAchievements
     }
     #end
 
-    entries = loaded;
-    return entries;
+    return entries = loaded;
   }
 
   static function flush():Void
@@ -73,9 +71,10 @@ class PsychAchievements
     try
     {
       var plain:Dynamic = {};
-      for (id in store().keys())
+      var all:Map<String, AchievementEntry> = store();
+      for (id in all.keys())
       {
-        var entry:AchievementEntry = store().get(id);
+        var entry:Null<AchievementEntry> = all.get(id);
         if (entry == null) continue;
         Reflect.setField(plain, id, {unlocked: entry.unlocked, score: entry.score});
       }
@@ -108,29 +107,29 @@ class PsychAchievements
   {
     if (id == null || id.length == 0) return false;
     if (entryFor(id).unlocked) return true;
+    return declaredAchievements().exists(id);
+  }
 
-    var known:Null<Map<String, Bool>> = declaredIds;
-    if (known == null)
+  /** Ids declared by installed mods, scanned once and cached. */
+  static function declaredAchievements():Map<String, Bool>
+  {
+    if (declaredIds != null) return declaredIds;
+
+    var scanned:Map<String, Bool> = [];
+    #if sys
+    for (modRoot in modDirectories())
     {
-      var scanned:Map<String, Bool> = [];
-      #if sys
-      for (modRoot in modDirectories())
+      var folder:String = modRoot + "achievements/";
+      if (!FileSystem.exists(folder) || !FileSystem.isDirectory(folder)) continue;
+      for (file in FileSystem.readDirectory(folder))
       {
-        var folder:String = modRoot + "achievements/";
-        if (!FileSystem.exists(folder) || !FileSystem.isDirectory(folder)) continue;
-        for (file in FileSystem.readDirectory(folder))
-        {
-          if (!StringTools.endsWith(file.toLowerCase(), ".json")) continue;
-          scanned.set(file.substr(0, file.length - 5), true);
-        }
+        if (!StringTools.endsWith(file.toLowerCase(), ".json")) continue;
+        scanned.set(file.substr(0, file.length - 5), true);
       }
-      #end
-      declaredIds = scanned;
-      known = scanned;
     }
+    #end
 
-    if (known == null) return false;
-    return known.exists(id);
+    return declaredIds = scanned;
   }
 
   #if sys

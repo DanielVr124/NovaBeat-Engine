@@ -1207,7 +1207,7 @@ class PsychModRuntime
     {
       if (object == null) continue;
       var type:String = Std.string(Reflect.field(object, "type"));
-      if (type == "gf" || type == "girlfriend" || type == "dad" || type == "boyfriend") continue;
+      if (type == "gf" || type == "dad" || type == "boyfriend") continue;
 
       var imageValue:Dynamic = Reflect.field(object, "image");
       if (imageValue == null) continue;
@@ -3923,10 +3923,7 @@ class PsychModRuntime
 
   static function readPsychFloat(source:Dynamic, field:String, fallback:Float):Float
   {
-    var value:Dynamic = source == null ? null : Reflect.field(source, field);
-    if (value == null) return fallback;
-    var parsed:Float = Std.parseFloat(Std.string(value));
-    return Math.isNaN(parsed) ? fallback : parsed;
+    return readPsychNumber(source == null ? null : Reflect.field(source, field), fallback);
   }
 
   /**

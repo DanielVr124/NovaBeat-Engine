@@ -907,7 +907,7 @@ class PsychGameplayApi
     });
     vars.set("getRandomFloat", function(min:Float, ?max:Float = 1, ?exclude:String = ""):Float
     {
-      return FlxG.random.float(min, max, parseLuaExcludeFloats(exclude));
+      return FlxG.random.float(min, max, parseLuaExclude(exclude));
     });
     vars.set("getRandomBool", function(?chance:Float = 50):Bool return FlxG.random.bool(chance));
     vars.set("getRunningScripts", function():Array<String> return PsychScriptRuntime.getScriptPaths());
@@ -1076,14 +1076,7 @@ class PsychGameplayApi
       try
       {
         if (image != null && image.length > 0)
-        {
-          var resolvedImage:String = PsychModRuntime.resolvePsychImage(
-            state.currentSong == null ? "" : state.currentSong.id, image);
-          sprite.loadGraphic(resolvedImage);
-          if (state.currentSong != null)
-            PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
-              "api=makeLuaSprite tag=" + tag + " request=" + image + " resolved=" + resolvedImage);
-        }
+          sprite.loadGraphic(PsychModRuntime.resolvePsychImage(state.currentSong == null ? "" : state.currentSong.id, image));
         scriptVariables.set(tag, sprite);
         return true;
       }
@@ -1241,9 +1234,6 @@ class PsychGameplayApi
         sprite.frames = atlasType == "packer"
           ? PsychModRuntime.resolvePsychPackerAtlas(atlasSongId, image)
           : PsychModRuntime.resolvePsychSparrowAtlas(atlasSongId, image);
-        if (state.currentSong != null)
-          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
-            "api=makeAnimatedLuaSprite tag=" + tag + " request=" + image);
         scriptVariables.set(tag, sprite);
         return true;
       }
@@ -1324,12 +1314,8 @@ class PsychGameplayApi
     {
       var sprite:Null<FlxSprite> = getSprite(state, tag);
       if (sprite == null || image == null || image.length == 0) return false;
-      var resolvedImage:String = PsychModRuntime.resolvePsychImage(
-        state.currentSong == null ? "" : state.currentSong.id, image);
-      sprite.loadGraphic(resolvedImage, gridX > 0 && gridY > 0, gridX, gridY);
-      if (state.currentSong != null)
-        PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.image.load.complete",
-          "api=loadGraphic tag=" + tag + " request=" + image + " resolved=" + resolvedImage);
+      sprite.loadGraphic(PsychModRuntime.resolvePsychImage(state.currentSong == null ? "" : state.currentSong.id, image),
+        gridX > 0 && gridY > 0, gridX, gridY);
       return true;
     });
     vars.set("loadFrames", function(tag:String, image:String, ?spriteType:String = "sparrow"):Bool
@@ -1342,9 +1328,6 @@ class PsychGameplayApi
         sprite.frames = StringTools.trim(spriteType).toLowerCase() == "packer"
           ? PsychModRuntime.resolvePsychPackerAtlas(framesSongId, image)
           : PsychModRuntime.resolvePsychSparrowAtlas(framesSongId, image);
-        if (state.currentSong != null)
-          PsychModRuntime.logSongLaunchStep(state.currentSong.id, state.currentDifficulty, "lua.atlas.load.complete",
-            "api=loadFrames tag=" + tag + " request=" + image + " type=" + spriteType);
         return true;
       }
       catch (error:Dynamic)
@@ -2746,7 +2729,7 @@ class PsychGameplayApi
 
     return switch (StringTools.trim(tag).toLowerCase())
     {
-      case "bf", "boyfriend", "0", "player": getStageCharacter(state, "getBoyfriend");
+      case "bf", "boyfriend", "0": getStageCharacter(state, "getBoyfriend");
       case "dad", "opponent", "1": getStageCharacter(state, "getDad");
       case "gf", "girlfriend", "2": getStageCharacter(state, "getGirlfriend");
       case "stage": state.currentStage;
@@ -2755,19 +2738,7 @@ class PsychGameplayApi
   }
 
   /** Psych passes excluded random values as a comma-separated string. */
-  static function parseLuaExcludeInts(exclude:String):Array<Int>
-  {
-    var blocked:Array<Int> = [];
-    if (exclude == null || exclude.length == 0) return blocked;
-    for (part in exclude.split(","))
-    {
-      var parsed:Null<Int> = Std.parseInt(StringTools.trim(part));
-      if (parsed != null) blocked.push(parsed);
-    }
-    return blocked;
-  }
-
-  static function parseLuaExcludeFloats(exclude:String):Array<Float>
+  static function parseLuaExclude(exclude:String):Array<Float>
   {
     var blocked:Array<Float> = [];
     if (exclude == null || exclude.length == 0) return blocked;
@@ -2776,6 +2747,13 @@ class PsychGameplayApi
       var parsed:Float = Std.parseFloat(StringTools.trim(part));
       if (!Math.isNaN(parsed)) blocked.push(parsed);
     }
+    return blocked;
+  }
+
+  static function parseLuaExcludeInts(exclude:String):Array<Int>
+  {
+    var blocked:Array<Int> = [];
+    for (value in parseLuaExclude(exclude)) blocked.push(Std.int(value));
     return blocked;
   }
 

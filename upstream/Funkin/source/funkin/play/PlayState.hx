@@ -1153,21 +1153,10 @@ class PlayState extends MusicBeatSubState
         + " camZoom=" + FlxG.camera.zoom;
       report += "\n  player " + describeStrumline(playerStrumline);
       report += "\n  opponent " + describeStrumline(opponentStrumline);
-      report += "\n  chars BF=" + describeCharacterSize(currentStage?.getBoyfriend()) + " dad=" + describeCharacterSize(currentStage?.getDad());
       FileUtil.appendStringToPath("logs/psych-stage.log", report + "\n");
     }
     catch (error:Dynamic) {}
     #end
-  }
-
-  /** Frame size versus rendered size, to catch double-applied character scale. */
-  function describeCharacterSize(target:Null<BaseCharacter>):String
-  {
-    if (target == null) return "(null)";
-    return "frame=" + Std.int(target.frameWidth) + "x" + Std.int(target.frameHeight)
-      + " scale=" + target.scale.x
-      + " rendered=" + Std.int(target.width) + "x" + Std.int(target.height)
-      + " pos=" + Std.int(target.x) + "," + Std.int(target.y);
   }
 
   /** Render state of one strumline and its first receptors. */
