@@ -33,6 +33,10 @@ class PsychApiAudit
 
   static var CALL_PATTERN:EReg = ~/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
   static var DEFINE_PATTERN:EReg = ~/function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+  /** Lua long strings; HScript lives inside these and is not Lua. */
+  static var LONG_STRING:EReg = ~/\[\[[\s\S]*?\]\]/g;
+  /** Single and double quoted literals. */
+  static var STRING_LITERAL:EReg = ~/"([^"\\]|\\[\s\S])*"|'([^'\\]|\\[\s\S])*'/g;
 
   /**
    * Audit every script about to run and report the gaps once.
@@ -60,10 +64,15 @@ class PsychApiAudit
       var path:String = Std.isOfType(pathValue, String) ? cast pathValue : "(script)";
       if (!StringTools.endsWith(path.toLowerCase(), ".lua")) continue;
 
+      // Strip string literals first. runHaxeCode([[...]]) snippets are HScript,
+      // and scanning them reported FlxBar, floor and setFloat as missing Lua API.
+      var scanned:String = LONG_STRING.replace(text, " ");
+      scanned = STRING_LITERAL.replace(scanned, " ");
+
       // Names the script defines itself are local functions, not API gaps.
       var local:Map<String, Bool> = [];
       var position:Int = 0;
-      while (DEFINE_PATTERN.matchSub(text, position))
+      while (DEFINE_PATTERN.matchSub(scanned, position))
       {
         local.set(DEFINE_PATTERN.matched(1), true);
         var where = DEFINE_PATTERN.matchedPos();
@@ -71,7 +80,7 @@ class PsychApiAudit
       }
 
       position = 0;
-      while (CALL_PATTERN.matchSub(text, position))
+      while (CALL_PATTERN.matchSub(scanned, position))
       {
         var name:String = CALL_PATTERN.matched(1);
         var matchPosition = CALL_PATTERN.matchedPos();

@@ -3016,6 +3016,11 @@ class PsychModRuntime
         if (noteIndex >= notes.length) return;
         var importedNote:funkin.data.song.SongData.SongNoteData = notes[noteIndex];
         noteIndex++;
+        // Psych charts often use only lanes 0-3 and let mustHitSection decide the
+        // side, so the flip above has to reach the note. It was computed and then
+        // dropped, which put every mustHitSection=false section on the player's
+        // side instead of the opponent's.
+        importedNote.data = noteData;
         if (!gfSection) continue;
 
         var noteType:Dynamic = values.length > 3 ? values[3] : null;
