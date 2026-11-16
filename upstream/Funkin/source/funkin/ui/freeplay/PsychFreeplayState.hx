@@ -743,11 +743,10 @@ class PsychFreeplayState extends MusicBeatSubState
     var edgeMargin:Float = Math.max(16, FlxG.width * 0.08);
     var iconScale:Float = Math.min(1.0, Math.max(0.5, FlxG.width / 720));
     var iconWidth:Float = HealthIcon.HEALTH_ICON_SIZE * iconScale;
-    // Psych lays each row out as song title first with the character icon on
-    // its right, so the icon sits in a column against the right edge.
-    var iconX:Float = FlxG.width - iconWidth - edgeMargin;
+    // Psych puts the character icon directly after the song title, so it follows
+    // the text instead of sitting in a column at the screen edge.
     var titleX:Float = edgeMargin;
-    var availableTextWidth:Float = Math.max(1, iconX - titleX - 24);
+    var availableTextWidth:Float = Math.max(1, FlxG.width - titleX - edgeMargin);
 
     for (i in 0...songTexts.length)
     {
@@ -764,7 +763,9 @@ class PsychFreeplayState extends MusicBeatSubState
       item.setMenuMaxWidth(availableTextWidth);
       var y:Float = centerY + offset * rowSpacing;
 
-      icon.setPosition(iconX, y - (icon.height * 0.5));
+      // Sit right after the title, but never let a long name push it off-screen.
+      var rowIconX:Float = Math.min(item.x + item.textWidth + 12, FlxG.width - iconWidth - edgeMargin);
+      icon.setPosition(rowIconX, y - (icon.height * 0.5));
       item.setMenuPosition(titleX, y);
     }
   }
