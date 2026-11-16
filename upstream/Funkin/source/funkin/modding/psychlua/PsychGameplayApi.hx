@@ -10,6 +10,10 @@ import funkin.play.song.Song;
 import funkin.ui.transition.LoadingState;
 import funkin.modding.ExperienceManager;
 import funkin.modding.PsychModRuntime;
+import funkin.modding.psychlua.PsychAchievements;
+#if FEATURE_DISCORD_RPC
+import funkin.api.discord.DiscordClient;
+#end
 import funkin.modding.PsychModRuntime.PsychScriptSource;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
@@ -959,6 +963,64 @@ class PsychGameplayApi
       return startTween(state, tag, cameraTag, {zoom: value}, duration, ease));
     vars.set("doTweenColor", function(tag:String, objectTag:String, color:String, duration:Float, ?ease:String = "linear"):Bool
       return startColorTween(state, tag, objectTag, color, duration, ease));
+    // Achievements. Psych keeps these in a save file; this engine has no
+    // achievement system, so they are stored locally per achievement id.
+    vars.set("achievementExists", function(id:String):Bool
+      return PsychAchievements.exists(id));
+    vars.set("isAchievementUnlocked", function(id:String):Bool
+      return PsychAchievements.isUnlocked(id));
+    vars.set("unlockAchievement", function(id:String, ?fromLua:Bool = true):Bool
+    {
+      var unlocked:Bool = PsychAchievements.unlock(id);
+      if (!unlocked && !PsychAchievements.exists(id))
+        trace('[Psych API] unlockAchievement("' + id + '"): no installed mod declares this achievement.');
+      return unlocked;
+    });
+    vars.set("getAchievementScore", function(id:String):Int
+      return PsychAchievements.getScore(id));
+    vars.set("setAchievementScore", function(id:String, score:Dynamic):Bool
+    {
+      var value:Null<Int> = Std.parseInt(Std.string(score));
+      return PsychAchievements.setScore(id, value == null ? 0 : value);
+    });
+    vars.set("addAchievementScore", function(id:String, add:Dynamic):Bool
+    {
+      var value:Null<Int> = Std.parseInt(Std.string(add));
+      return PsychAchievements.addScore(id, value == null ? 0 : value);
+    });
+
+    // Discord. The client id is baked into the build and the native library
+    // binds it at initialize time, so a script cannot switch applications.
+    vars.set("changeDiscordClientID", function(id:String):Bool
+    {
+      trace('[Psych API] changeDiscordClientID("' + id + '") ignored: the Discord application id is fixed at build time.');
+      return false;
+    });
+    vars.set("changeDiscordPresence", function(details:String, state:String, ?largeImage:String, ?largeText:String, ?smallImage:String,
+        ?smallText:String):Bool
+    {
+      #if FEATURE_DISCORD_RPC
+      try
+      {
+        DiscordClient.instance.setPresence({
+          details: details,
+          state: state == null ? "" : state,
+          largeImageKey: largeImage,
+          smallImageKey: smallImage
+        });
+        return true;
+      }
+      catch (error:Dynamic)
+      {
+        trace('[Psych API] changeDiscordPresence failed: ' + Std.string(error));
+        return false;
+      }
+      #else
+      trace('[Psych API] changeDiscordPresence ignored: this build has no Discord RPC (FEATURE_DISCORD_RPC off).');
+      return false;
+      #end
+    });
+
     vars.set("noteTweenX", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
       return noteTween(state, tag, note, {x: value}, duration, ease));
     vars.set("noteTweenY", function(tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear"):Bool
