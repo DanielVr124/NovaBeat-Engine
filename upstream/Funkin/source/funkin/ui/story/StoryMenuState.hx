@@ -2,8 +2,6 @@ package funkin.ui.story;
 
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.FlxSprite;
-import funkin.graphics.FunkinSprite;
-import flixel.FlxG;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
@@ -15,12 +13,12 @@ import flixel.util.FlxStringUtil;
 import funkin.audio.FunkinSound;
 import funkin.data.story.level.LevelRegistry;
 import funkin.data.song.SongRegistry;
+import funkin.graphics.FunkinSprite;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.play.PlayStatePlaylist;
 import funkin.play.song.Song;
 import funkin.save.Save;
-import funkin.Preferences;
 import funkin.save.Save.SaveScoreData;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatState;
@@ -29,7 +27,6 @@ import funkin.ui.transition.stickers.StickerSubState;
 import funkin.util.MathUtil;
 import funkin.util.SwipeUtil;
 import funkin.util.TouchUtil;
-import funkin.util.DeviceUtil;
 import funkin.ui.FullScreenScaleMode;
 #if FEATURE_DISCORD_RPC
 import funkin.api.discord.DiscordClient;
@@ -38,7 +35,6 @@ import funkin.api.discord.DiscordClient;
 class StoryMenuState extends MusicBeatState
 {
   static final DEFAULT_BACKGROUND_COLOR:FlxColor = FlxColor.fromString('#F9CF51');
-  static final BACKGROUND_Y:Int = 56;
   static final BACKGROUND_HEIGHT:Int = 400;
 
   var currentDifficultyId:String = 'normal';
@@ -50,8 +46,6 @@ class StoryMenuState extends MusicBeatState
   var highScoreLerp:Int = 12345678;
   var exitingMenu:Bool = false;
   var selectedLevel:Bool = false;
-  var fnfBrowserDragActive:Bool = false;
-  var fnfBrowserDragAccumulator:Float = 0;
   //
   // RENDER OBJECTS
   //
@@ -155,19 +149,11 @@ class StoryMenuState extends MusicBeatState
     persistentUpdate = persistentDraw = true;
 
     rememberSelection();
-    // The previous experience may have been unloaded since the last visit.
-    // A remembered Psych week ID must not be used if it is no longer registered.
-    if (levelList.indexOf(currentLevelId) < 0)
-    {
-      currentLevelId = levelList[0];
-      rememberedLevelId = currentLevelId;
-    }
 
     updateData();
 
     levelTitles = new FlxTypedGroup<LevelTitle>();
-    // The stock FNF black mask is at zIndex 99, so week titles stay just below it.
-    levelTitles.zIndex = 98;
+    levelTitles.zIndex = 15;
     add(levelTitles);
 
     updateBackground();
@@ -182,7 +168,7 @@ class StoryMenuState extends MusicBeatState
 
     updateProps();
 
-    // Original FNF Story Mode track-list origin.
+    // x on tracklistText is set/updated later, we dont need to init it
     tracklistText = new FlxText(0, levelBackground.x + levelBackground.height + 100, 0, 'Tracks', 32);
     tracklistText.setFormat('VCR OSD Mono', 32);
     tracklistText.alignment = CENTER;
@@ -226,21 +212,18 @@ class StoryMenuState extends MusicBeatState
     changeDifficulty();
     changeLevel();
     refresh();
-    layoutStoryMenu(FlxG.width, FlxG.height);
 
     #if FEATURE_DISCORD_RPC
     // Updating Discord Rich Presence
     DiscordClient.instance.setPresence({state: 'In the Menus', details: null});
     #end
 
-    #if (mobile || FEATURE_TOUCH_CONTROLS)
-    if (DeviceUtil.isMobileBrowser) addBackButton(FlxG.width - 230, FlxG.height - 170, FlxColor.WHITE, goBack, 0.7);
+    #if mobile
+    addBackButton(FlxG.width - 230, FlxG.height - 170, FlxColor.WHITE, goBack, 0.7);
     #end
 
     #if FEATURE_TOUCH_CONTROLS
     FlxG.touches.swipeThreshold.y = 100;
-    #if web
-    #end
     #end
   }
 
@@ -261,13 +244,9 @@ class StoryMenuState extends MusicBeatState
     FunkinSound.playMusic('freakyMenu', {
       overrideExisting: true,
       restartTrack: false,
+      // Continue playing this music between states, until a different music track gets played.
       persist: true
     });
-  }
-
-  function playNavigationSound():Void
-  {
-    FunkinSound.playOnce(Paths.sound("scrollMenu"), 0.4);
   }
 
   function updateData():Void
@@ -301,7 +280,6 @@ class StoryMenuState extends MusicBeatState
 
       difficultySprite.x += (difficultySprites.get(Constants.DEFAULT_DIFFICULTY).width - difficultySprite.width) / 2;
     }
-
     difficultySprite.alpha = 0;
 
     difficultySprite.y = leftDifficultyArrow.y - 15;
@@ -338,13 +316,11 @@ class StoryMenuState extends MusicBeatState
     highScoreLerp = Std.int(MathUtil.snap(MathUtil.smoothLerpPrecision(highScoreLerp, highScore, elapsed, 0.307), highScore, 1));
 
     var commaSeparated:Bool = true;
-    var scoreTextValue:String = 'LEVEL SCORE: ${FlxStringUtil.formatMoney(highScoreLerp, false, commaSeparated)}';
-    if (scoreText.text != scoreTextValue) scoreText.text = scoreTextValue;
+    scoreText.text = 'LEVEL SCORE: ${FlxStringUtil.formatMoney(highScoreLerp, false, commaSeparated)}';
 
-    var levelTitleValue:String = currentLevel.getTitle();
-    if (levelTitleText.text != levelTitleValue) levelTitleText.text = levelTitleValue;
+    levelTitleText.text = currentLevel.getTitle();
 
-    levelTitleText.x = FlxG.width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x));
+    levelTitleText.x = FlxG.width - (levelTitleText.width + Math.max(10, FullScreenScaleMode.gameNotchSize.x)); // Right align.
 
     handleKeyPresses();
 
@@ -356,90 +332,6 @@ class StoryMenuState extends MusicBeatState
     super.update(elapsed);
   }
 
-  // Story Mode uses the upstream FNF mobile touch and swipe recognizers in both themes.
-  inline function menuPointer():Dynamic return TouchUtil.touch;
-
-  inline function menuSwipeUp():Bool return SwipeUtil.swipeUp;
-
-  inline function menuSwipeDown():Bool return SwipeUtil.swipeDown;
-
-  inline function menuSwipeLeft():Bool return SwipeUtil.swipeLeft;
-
-  inline function menuSwipeRight():Bool return SwipeUtil.swipeRight;
-
-  inline function menuPointerPressed():Bool return TouchUtil.pressed;
-
-  inline function menuPointerJustReleased():Bool return TouchUtil.justReleased;
-
-  inline function menuPointerJustSwipedAny():Bool return SwipeUtil.justSwipedAny;
-
-  inline function menuPointerOver(sprite:FlxSprite):Bool return TouchUtil.overlaps(sprite);
-
-  inline function menuPointerPressAction(sprite:FlxSprite):Bool return TouchUtil.pressAction(sprite, null, false);
-
-  /**
-   * FNF mobile Story Mode uses the same continuous row-by-row drag model as
-   * its Options list. A drag must begin on a visible week title so taps and
-   * the difficulty arrows keep their normal behavior.
-   */
-  function handleFNFBrowserLevelDrag():Bool
-  {
-    #if web
-    if (!DeviceUtil.isMobileBrowser || selectedLevel || exitingMenu
-      || !TouchUtil.browserPointerBridgeAvailable())
-    {
-      fnfBrowserDragActive = false;
-      fnfBrowserDragAccumulator = 0;
-      return false;
-    }
-
-    if (!fnfBrowserDragActive)
-    {
-      for (item in levelTitles.members)
-      {
-        if (TouchUtil.browserPointerPressedOn(item, item.camera))
-        {
-          fnfBrowserDragActive = true;
-          fnfBrowserDragAccumulator = 0;
-          break;
-        }
-      }
-    }
-
-    if (!fnfBrowserDragActive) return false;
-
-    final deltaY:Float = TouchUtil.consumeBrowserPointerDeltaY();
-    if (Math.isFinite(deltaY))
-    {
-      // Match the original FNF Options list: drag-down moves toward the
-      // previous week; drag-up moves toward the next week.
-      fnfBrowserDragAccumulator -= deltaY;
-      final rowHeight:Float = currentLevelTitle == null ? 48 : currentLevelTitle.height;
-      final step:Float = Math.max(30, rowHeight * 0.55);
-
-      while (fnfBrowserDragAccumulator >= step)
-      {
-        changeLevel(1);
-        fnfBrowserDragAccumulator -= step;
-      }
-      while (fnfBrowserDragAccumulator <= -step)
-      {
-        changeLevel(-1);
-        fnfBrowserDragAccumulator += step;
-      }
-    }
-
-    if (TouchUtil.browserPointerIsDown()) return true;
-
-    final wasDrag:Bool = TouchUtil.browserPointerHasDragged();
-    fnfBrowserDragActive = false;
-    fnfBrowserDragAccumulator = 0;
-    return wasDrag;
-    #else
-    return false;
-    #end
-  }
-
   function handleKeyPresses():Void
   {
     @:privateAccess
@@ -447,22 +339,15 @@ class StoryMenuState extends MusicBeatState
 
     if (!exitingMenu)
     {
-      // While a browser week-list drag is active, do not also interpret its
-      // release as a one-shot swipe or a tap on a week title.
-      if (handleFNFBrowserLevelDrag()) return;
       if (!selectedLevel)
       {
-        // Browser swipes are one-shot so a held finger cannot repeatedly
-        // advance the week list.
-        final swipeToPrevious:Bool = DeviceUtil.isMobileBrowser ? menuSwipeDown() : menuSwipeUp();
-        final swipeToNext:Bool = DeviceUtil.isMobileBrowser ? menuSwipeUp() : menuSwipeDown();
-        if (controls.UI_UP_P || swipeToPrevious)
+        if (controls.UI_UP_P || SwipeUtil.swipeUp)
         {
           changeLevel(-1);
           changeDifficulty(0);
         }
 
-        if (controls.UI_DOWN_P || swipeToNext)
+        if (controls.UI_DOWN_P || SwipeUtil.swipeDown)
         {
           changeLevel(1);
           changeDifficulty(0);
@@ -537,9 +422,7 @@ class StoryMenuState extends MusicBeatState
       }
 
       #if FEATURE_TOUCH_CONTROLS
-      // pressAction() owns release detection. On mobile HTML5 the browser PointerEvent
-      // bridge can capture a tap even when FlxTouch.justReleased was dropped.
-      if (!selectedLevel && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
+      if (!selectedLevel && TouchUtil.justReleased && !TouchUtil.overlaps(leftDifficultyArrow) && !SwipeUtil.justSwipedAny)
       {
         for (i in 0...levelTitles.members.length)
         {
@@ -566,21 +449,19 @@ class StoryMenuState extends MusicBeatState
   function changeLevel(change:Int = 0):Void
   {
     var currentIndex:Int = levelList.indexOf(currentLevelId);
-    if (currentIndex < 0) currentIndex = 0;
     var prevIndex:Int = currentIndex;
 
     currentIndex += change;
 
-    if (DeviceUtil.isMobileBrowser)
-    {
-      if (currentIndex < 0) currentIndex = 0;
-      if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
-    }
-    else
-    {
-      if (currentIndex < 0) currentIndex = levelList.length - 1;
-      if (currentIndex >= levelList.length) currentIndex = 0;
-    }
+    #if FEATURE_TOUCH_CONTROLS
+    // Dont wrap around w/ touch.
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex >= levelList.length) currentIndex = levelList.length - 1;
+    #else
+    // Wrap around
+    if (currentIndex < 0) currentIndex = levelList.length - 1;
+    if (currentIndex >= levelList.length) currentIndex = 0;
+    #end
 
     var previousLevelId:String = currentLevelId;
     currentLevelId = levelList[currentIndex];
@@ -588,16 +469,28 @@ class StoryMenuState extends MusicBeatState
 
     updateData();
 
-    currentLevelTitle = levelTitles.members[currentIndex];
+    for (index in 0...levelTitles.members.length)
+    {
+      var item:LevelTitle = levelTitles.members[index];
 
-    if (currentIndex != prevIndex) playNavigationSound();
+      if (index == currentIndex)
+      {
+        currentLevelTitle = item;
+        item.alpha = 1.0;
+      }
+      else
+      {
+        item.alpha = 0.6;
+      }
+    }
+
+    if (currentIndex != prevIndex) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
 
     repositionTitles();
     updateText();
     updateBackground(previousLevelId);
     updateProps();
     refresh();
-    layoutStoryMenu(FlxG.width, FlxG.height);
   }
 
   /**
@@ -608,15 +501,10 @@ class StoryMenuState extends MusicBeatState
   {
     // "For now, NO erect in story mode" -Dave
 
-    var difficultyList:Array<String> = currentLevel.getDifficulties()
-      .map(function(value:String):String return value.toLowerCase())
-      .filter(function(value:String):Bool return Constants.DEFAULT_DIFFICULTY_LIST.contains(value));
-    if (difficultyList.length == 0) difficultyList = [Constants.DEFAULT_DIFFICULTY];
-
-    // Some Psych week definitions use a difficulty spelling/case that is not
-    // present in the imported chart list. Fall back to the first valid option.
-    var currentIndex:Int = difficultyList.indexOf(currentDifficultyId.toLowerCase());
-    if (currentIndex < 0) currentIndex = 0;
+    var difficultyList:Array<String> = currentLevel.getDifficulties().filter(e -> Constants.DEFAULT_DIFFICULTY_LIST.contains(e));
+    // Use this line to displays all difficulties
+    // var difficultyList:Array<String> = currentLevel.getDifficulties();
+    var currentIndex:Int = difficultyList.indexOf(currentDifficultyId);
 
     currentIndex += change;
 
@@ -642,7 +530,7 @@ class StoryMenuState extends MusicBeatState
     if (hasChanged)
     {
       buildDifficultySprite();
-      playNavigationSound();
+      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
       // Disable the funny music thing for now.
       // funnyMusicThing();
     }
@@ -707,23 +595,9 @@ class StoryMenuState extends MusicBeatState
     PlayStatePlaylist.isStoryMode = true;
     PlayStatePlaylist.campaignScore = 0;
 
-    if (PlayStatePlaylist.playlistSongIds.length == 0)
-    {
-      FlxG.log.warn('[Story Mode] Week ' + currentLevel.id + ' does not contain any imported songs.');
-      selectedLevel = false;
-      currentLevelTitle.isFlashing = false;
-      return;
-    }
     var targetSongId:String = PlayStatePlaylist.playlistSongIds.shift();
 
-    var targetSong:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId, {variation: Constants.DEFAULT_VARIATION});
-    if (targetSong == null)
-    {
-      FlxG.log.warn('[Story Mode] Week ' + currentLevel.id + ' references a song that is not registered: ' + targetSongId);
-      selectedLevel = false;
-      currentLevelTitle.isFlashing = false;
-      return;
-    }
+    var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId, {variation: Constants.DEFAULT_VARIATION});
 
     PlayStatePlaylist.campaignId = currentLevel.id;
     PlayStatePlaylist.campaignTitle = currentLevel.getTitle();
@@ -733,8 +607,8 @@ class StoryMenuState extends MusicBeatState
 
     new FlxTimer().start(1, function(tmr:FlxTimer)
     {
-      #if (mobile || FEATURE_TOUCH_CONTROLS)
-      if (DeviceUtil.isMobileBrowser && backButton != null) FlxTween.tween(backButton, {alpha: 0}, 0.2, {ease: FlxEase.quadOut});
+      #if mobile
+      FlxTween.tween(backButton, {alpha: 0}, 0.2, {ease: FlxEase.quadOut});
       #end
 
       FlxTransitionableState.skipNextTransIn = false;
@@ -755,14 +629,14 @@ class StoryMenuState extends MusicBeatState
 
   function updateBackground(?previousLevelId:String = ''):Void
   {
-    // Original FNF Story Mode background behavior.
     if (levelBackground == null || previousLevelId == '')
     {
+      // Build a new background and display it immediately.
       levelBackground = currentLevel.buildBackground();
       levelBackground.x = 0;
-      levelBackground.y = BACKGROUND_Y;
+      levelBackground.y = 56;
       levelBackground.zIndex = 100;
-      levelBackground.alpha = 1.0;
+      levelBackground.alpha = 1.0; // Not hidden.
       add(levelBackground);
     }
     else
@@ -775,12 +649,23 @@ class StoryMenuState extends MusicBeatState
         var currentColor:FlxColor = currentLevel.getBackgroundColor();
         if (previousColor != currentColor)
         {
+          // Both the previous and current level were simple backgrounds.
+          // Fade between colors directly, rather than fading one background out and another in.
+          // cancels potential tween in progress, and tweens from there
           FlxTween.cancelTweensOf(levelBackground);
           FlxTween.color(levelBackground, 0.9, levelBackground.color, currentColor, {ease: FlxEase.quartOut});
+        }
+        else
+        {
+          // Do no fade at all if the colors aren't different.
         }
       }
       else
       {
+        // Either the previous or current level has a complex background.
+        // We need to fade the old background out and the new one in.
+
+        // Reference the old background and fade it out.
         var oldBackground:FlxSprite = levelBackground;
         FlxTween.tween(oldBackground, {alpha: 0.0}, 0.6, {
           ease: FlxEase.linear,
@@ -790,10 +675,11 @@ class StoryMenuState extends MusicBeatState
           }
         });
 
+        // Build a new background and fade it in.
         levelBackground = currentLevel.buildBackground();
         levelBackground.x = 0;
-        levelBackground.y = BACKGROUND_Y;
-        levelBackground.alpha = 0.0;
+        levelBackground.y = 56;
+        levelBackground.alpha = 0.0; // Hidden to start.
         levelBackground.zIndex = 100;
         add(levelBackground);
 
@@ -804,146 +690,13 @@ class StoryMenuState extends MusicBeatState
     }
   }
 
-  /**
-   * Recompose Story Mode for narrow portrait screens. Keep the original
-   * landscape composition untouched, but give phones clear, non-overlapping
-   * zones for the week selector, track list, score, and difficulty controls.
-   */
-  function layoutStoryMenu(width:Int, height:Int):Void
-  {
-    if (width <= 0 || height <= 0) return;
-    final portrait:Bool = height > width * 1.12;
-
-    if (!portrait)
-    {
-      if (scoreText != null)
-      {
-        scoreText.setFormat('VCR OSD Mono', 32);
-        scoreText.fieldWidth = 0;
-        scoreText.setPosition(Math.max(FullScreenScaleMode.gameNotchSize.x, 10), 10);
-      }
-      if (levelTitleText != null)
-      {
-        levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
-        levelTitleText.fieldWidth = 0;
-      }
-      if (tracklistText != null)
-      {
-        tracklistText.setFormat('VCR OSD Mono', 32);
-        tracklistText.fieldWidth = 0;
-        tracklistText.alignment = CENTER;
-        updateText();
-      }
-      if (leftDifficultyArrow != null && rightDifficultyArrow != null)
-      {
-        final useNotch:Bool = Math.max(35, FullScreenScaleMode.gameNotchSize.x) != 35;
-        leftDifficultyArrow.scale.set(1, 1);
-        rightDifficultyArrow.scale.set(1, 1);
-        leftDifficultyArrow.updateHitbox();
-        rightDifficultyArrow.updateHitbox();
-        leftDifficultyArrow.setPosition(width - (useNotch ? FullScreenScaleMode.gameNotchSize.x + 410 : 410), 480);
-        rightDifficultyArrow.setPosition(width - (useNotch ? FullScreenScaleMode.gameNotchSize.x * 1.5 : 35), 480);
-      }
-      if (difficultySprite != null)
-      {
-        difficultySprite.scale.set(1, 1);
-        difficultySprite.updateHitbox();
-        final arrowY:Float = leftDifficultyArrow == null ? 480 : leftDifficultyArrow.y;
-        difficultySprite.setPosition((width - difficultySprite.width) * 0.5, arrowY - 15);
-      }
-      if (levelTitles != null)
-      {
-        for (item in levelTitles.members)
-        {
-          if (item == null) continue;
-          item.scale.set(1, 1);
-          item.updateHitbox();
-          item.screenCenter(X);
-        }
-        repositionTitles();
-      }
-      return;
-    }
-
-    if (scoreText != null)
-    {
-      scoreText.setFormat('VCR OSD Mono', 18, FlxColor.WHITE, LEFT);
-      scoreText.setPosition(16, 14);
-      scoreText.fieldWidth = width * 0.48;
-    }
-
-    if (levelTitleText != null)
-    {
-      levelTitleText.setFormat('VCR OSD Mono', 18, FlxColor.WHITE, RIGHT);
-      levelTitleText.fieldWidth = width * 0.48;
-      levelTitleText.setPosition(width * 0.50, 14);
-    }
-
-    if (tracklistText != null)
-    {
-      tracklistText.setFormat('VCR OSD Mono', 19, 0xFFE55777, CENTER);
-      tracklistText.fieldWidth = width - 32;
-      tracklistText.setPosition(16, height * 0.66);
-      tracklistText.alignment = CENTER;
-    }
-
-    if (leftDifficultyArrow != null && rightDifficultyArrow != null)
-    {
-      leftDifficultyArrow.scale.set(0.72, 0.72);
-      rightDifficultyArrow.scale.set(0.72, 0.72);
-      leftDifficultyArrow.updateHitbox();
-      rightDifficultyArrow.updateHitbox();
-      leftDifficultyArrow.setPosition(width * 0.19, height * 0.86);
-      rightDifficultyArrow.setPosition(width * 0.72, height * 0.86);
-    }
-
-    if (difficultySprite != null)
-    {
-      difficultySprite.scale.set(0.72, 0.72);
-      difficultySprite.updateHitbox();
-      difficultySprite.setPosition((width - difficultySprite.width) * 0.5, height * 0.855);
-    }
-
-    if (levelTitles != null)
-    {
-      for (item in levelTitles.members)
-      {
-        if (item == null) continue;
-        item.scale.set(0.82, 0.82);
-        item.updateHitbox();
-        item.x = (width - item.width) * 0.5;
-      }
-      repositionTitles();
-    }
-  }
-
-  override public function onViewportResize(width:Int, height:Int):Void
-  {
-    super.onViewportResize(width, height);
-    layoutStoryMenu(width, height);
-  }
-
   function updateProps():Void
   {
-    var builtProps:Array<LevelProp> = currentLevel.buildProps(levelProps.members);
-    for (ind in 0...builtProps.length)
+    for (ind => prop in currentLevel.buildProps(levelProps.members))
     {
-      var prop:LevelProp = builtProps[ind];
-      // Story Mode previews use one consistent beat cadence. Gameplay stage
-      // props keep their own data-defined cadence.
-      prop.danceEvery = 1.0;
       prop.x += (FullScreenScaleMode.gameCutoutSize.x / 4);
       prop.zIndex = 1000;
-
-      if (ind < levelProps.members.length)
-      {
-        var existingProp:LevelProp = levelProps.members[ind];
-        if (existingProp != prop) levelProps.replace(existingProp, prop) ?? levelProps.add(prop);
-      }
-      else
-      {
-        levelProps.add(prop);
-      }
+      if (levelProps.members[ind] != prop) levelProps.replace(levelProps.members[ind], prop) ?? levelProps.add(prop);
     }
 
     refresh();
@@ -954,7 +707,6 @@ class StoryMenuState extends MusicBeatState
     tracklistText.text = 'TRACKS\n\n';
     tracklistText.text += currentLevel.getSongDisplayNames(currentDifficultyId).join('\n');
 
-    // Original FNF track-list placement and sizing.
     tracklistText.screenCenter(X);
     tracklistText.x -= (FlxG.width * 0.33);
 
@@ -979,14 +731,10 @@ class StoryMenuState extends MusicBeatState
    */
   function repositionTitles()
   {
-    if (levelTitles == null || levelTitles.members.length == 0) return;
-
     var currentIndex:Int = levelList.indexOf(currentLevelId);
-    if (currentIndex < 0 || currentIndex >= levelTitles.members.length) return;
 
-    currentLevelTitle = levelTitles.members[currentIndex];
-    final portraitLayout:Bool = FlxG.height > FlxG.width * 1.12;
-    levelTitles.members[currentIndex].targetY = portraitLayout ? FlxG.height * 0.40 : 480;
+    // The current item should be at y 480.
+    levelTitles.members[currentIndex].targetY = 480;
 
     // Every item above it should be positioned in relation to the next item.
     if (currentIndex > 0)
@@ -995,8 +743,7 @@ class StoryMenuState extends MusicBeatState
       {
         var itemIndex:Int = currentIndex - 1 - i;
         var nextItem:LevelTitle = levelTitles.members[itemIndex + 1];
-        final titleGap:Float = portraitLayout ? Math.max(72, Math.min(112, FlxG.height * 0.12)) : 125;
-        levelTitles.members[itemIndex].targetY = nextItem.targetY - Math.max(levelTitles.members[itemIndex].height + 16, titleGap);
+        levelTitles.members[itemIndex].targetY = nextItem.targetY - Math.max(levelTitles.members[itemIndex].height + 20, 125);
       }
     }
 
@@ -1006,8 +753,7 @@ class StoryMenuState extends MusicBeatState
       for (i in (currentIndex + 1)...levelTitles.members.length)
       {
         var previousItem:LevelTitle = levelTitles.members[i - 1];
-        final titleGap:Float = portraitLayout ? Math.max(72, Math.min(112, FlxG.height * 0.12)) : 125;
-        levelTitles.members[i].targetY = previousItem.targetY + Math.max(previousItem.height + 16, titleGap);
+        levelTitles.members[i].targetY = previousItem.targetY + (previousItem.height + 20);
       }
     }
   }

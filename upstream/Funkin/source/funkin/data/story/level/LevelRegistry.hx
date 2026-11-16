@@ -56,11 +56,15 @@ class LevelRegistry extends BaseRegistry<Level, LevelData, LevelEntryParams> imp
     return result;
   }
 
-  /** Register one Psych week after native level assets have been loaded. */
+  /**
+   * Psych weeks are deliberately NOT added to Story Mode. Story Mode is stock
+   * FNF and its menu only understands native level assets, so imported weeks
+   * rendered into a broken layout there. Psych packs stay available through
+   * their own Freeplay menu instead.
+   */
   public function registerPsychLevel(id:String, data:LevelData):Void
   {
-    if (id == null || id.length == 0 || data == null) return;
-    registerCompatibilityEntry(new Level(id, {psychRuntimeData: data}));
+    // Intentionally empty; see the note above.
   }
 
   /** Remove a previously imported Psych week before re-registering active packs. */

@@ -1,9 +1,7 @@
 package funkin.ui.story;
 
 import funkin.util.SortUtil;
-import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import funkin.play.song.Song;
 import funkin.data.IRegistryEntry;
@@ -23,8 +21,7 @@ class Level implements IRegistryEntry<LevelData>
   public function new(id:String, ?params:Dynamic)
   {
     this.id = id;
-    var psychRuntimeData:Dynamic = params == null ? null : Reflect.field(params, "psychRuntimeData");
-    _data = psychRuntimeData == null ? _fetchData(id) : cast psychRuntimeData;
+    _data = _fetchData(id);
 
     if (_data == null)
     {
@@ -72,14 +69,6 @@ class Level implements IRegistryEntry<LevelData>
    */
   public function buildTitleGraphic():FlxSprite
   {
-    if (Reflect.field(_data, "psychImported") == true)
-    {
-      var title:FlxText = new FlxText(0, 0, 0, _data.name, 32);
-      title.setFormat("VCR OSD Mono", 32, FlxColor.WHITE);
-      title.updateHitbox();
-      return title;
-    }
-
     var result:FlxSprite = new FlxSprite().loadGraphic(Paths.image(_data.titleAsset));
 
     return result;
@@ -116,8 +105,7 @@ class Level implements IRegistryEntry<LevelData>
    */
   public function isUnlocked():Bool
   {
-    var psychStartUnlocked:Dynamic = Reflect.field(_data, "psychStartUnlocked");
-    return psychStartUnlocked == null ? true : psychStartUnlocked == true;
+    return true;
   }
 
   /**
@@ -140,20 +128,8 @@ class Level implements IRegistryEntry<LevelData>
   {
     if (!_data.background.startsWith('#'))
     {
-      // A Psych week may refer to an image that is missing from the extracted
-      // package. Never let a preview-only background asset crash Story Mode.
-      try
-      {
-        var imagePath:String = Paths.image(_data.background);
-        if (!Assets.exists(imagePath))
-          throw 'Background image does not exist: ' + _data.background;
-        return new FlxSprite().loadGraphic(imagePath);
-      }
-      catch (error:Dynamic)
-      {
-        trace('[Story Mode] Could not load background for week ' + id + ': ' + Std.string(error));
-        return new FlxSprite().makeGraphic(FlxG.width, 400, FlxColor.fromRGB(32, 32, 32));
-      }
+      // Image specified
+      return new FlxSprite().loadGraphic(Paths.image(_data.background));
     }
 
     // Color specified
@@ -191,10 +167,9 @@ class Level implements IRegistryEntry<LevelData>
     var difficulties:Array<String> = [];
 
     var songList:Array<String> = getSongs();
-    if (songList.length == 0) return [Constants.DEFAULT_DIFFICULTY];
 
     var firstSongId:String = songList[0];
-    var firstSong:Null<Song> = SongRegistry.instance.fetchEntry(firstSongId, {variation: Constants.DEFAULT_VARIATION});
+    var firstSong:Song = SongRegistry.instance.fetchEntry(firstSongId, {variation: Constants.DEFAULT_VARIATION});
 
     if (firstSong != null)
     {
@@ -212,7 +187,7 @@ class Level implements IRegistryEntry<LevelData>
     for (songIndex in 1...songList.length)
     {
       var songId:String = songList[songIndex];
-      var song:Null<Song> = SongRegistry.instance.fetchEntry(songId, {variation: Constants.DEFAULT_VARIATION});
+      var song:Song = SongRegistry.instance.fetchEntry(songId, {variation: Constants.DEFAULT_VARIATION});
 
       if (song == null) continue;
 
@@ -222,35 +197,6 @@ class Level implements IRegistryEntry<LevelData>
         {
           difficulties.remove(difficulty);
         }
-      }
-    }
-
-    var psychImported:Bool = Reflect.field(_data, "psychImported") == true;
-    var rawPsychDifficulties:Dynamic = Reflect.field(_data, "psychDifficulties");
-    if (psychImported && rawPsychDifficulties != null)
-    {
-      var requested:Array<String> = [];
-      if (Std.isOfType(rawPsychDifficulties, String))
-      {
-        for (part in Std.string(rawPsychDifficulties).split(","))
-        {
-          var value:String = StringTools.trim(part);
-          if (value.length > 0) requested.push(value.toLowerCase());
-        }
-      }
-      else if (Std.isOfType(rawPsychDifficulties, Array))
-      {
-        for (part in (cast rawPsychDifficulties:Array<Dynamic>))
-          if (part != null) requested.push(StringTools.trim(Std.string(part)).toLowerCase());
-      }
-
-      if (requested.length > 0)
-      {
-        var filtered:Array<String> = difficulties.filter(function(difficulty:String):Bool
-        {
-          return requested.indexOf(difficulty.toLowerCase()) >= 0;
-        });
-        if (filtered.length > 0) difficulties = filtered;
       }
     }
 
@@ -268,60 +214,47 @@ class Level implements IRegistryEntry<LevelData>
   {
     var props:Array<LevelProp> = existingProps == null ? [] : [for (x in existingProps) x];
 
-    // A level with no props must still retire props from the previously
-    // selected week; otherwise stale sprites can remain in the camera draw list.
-    if (_data.props.length == 0)
-    {
-      for (prop in props)
-      {
-        if (prop == null) continue;
-        prop.visible = false;
-        prop.active = false;
-      }
-      return props;
-    }
+    if (_data.props.length == 0) return props;
 
-    // Hide surplus entries before rebuilding the active set.
-    for (i in _data.props.length...props.length)
+    // Hides unused props
+    if (_data.props.length < props.length)
     {
-      props[i].visible = false;
-      props[i].active = false;
+      for (i in _data.props.length...props.length)
+      {
+        props[i].visible = false;
+      }
     }
 
     for (propIndex in 0..._data.props.length)
     {
       var propData:LevelPropData = _data.props[propIndex];
-      var existingProp:Null<LevelProp> = propIndex < props.length ? props[propIndex] : null;
 
-      // Reuse only a live sprite with the same underlying asset. Replacing a
-      // destroyed sprite (or one whose texture changes) avoids queuing stale
-      // frames in FunkinCamera after switching weeks.
-      if (existingProp != null && existingProp.exists && existingProp.propData != null
-        && existingProp.propData.assetPath == propData.assetPath)
+      // Attempt to reuse the `LevelProp` object.
+      // This prevents animations from resetting.
+      var existingProp:Null<LevelProp> = props[propIndex];
+      if (existingProp != null)
       {
         existingProp.propData = propData;
-        existingProp.visible = true;
-        existingProp.active = true;
-        existingProp.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
+        if (existingProp.propData == null)
+        {
+          existingProp.visible = false;
+        }
+        else
+        {
+          existingProp.visible = true;
+          existingProp.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
+        }
       }
       else
       {
-        if (existingProp != null)
-        {
-          existingProp.visible = false;
-          existingProp.active = false;
-        }
-
         var propSprite:Null<LevelProp> = LevelProp.build(propData);
         if (propSprite == null) continue;
 
         propSprite.x = propData.offsets[0] + FlxG.width * 0.25 * propIndex;
-        if (propIndex < props.length)
-          props[propIndex] = propSprite;
-        else
-          props.push(propSprite);
+        props.push(propSprite);
       }
     }
 
     return props;
-  }}
+  }
+}

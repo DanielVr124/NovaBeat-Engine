@@ -1,7 +1,6 @@
 package funkin.ui.story;
 
 import funkin.play.stage.Bopper;
-import funkin.Preferences;
 import funkin.util.assets.FlxAnimationUtil;
 import funkin.data.story.level.LevelData.LevelPropData;
 
@@ -17,7 +16,7 @@ class LevelProp extends Bopper
       this.propData = value;
 
       this.visible = this.propData != null;
-      danceEvery = Preferences.menuStyle == "NovaBeat" ? 1.0 : (this.propData?.danceEvery ?? 1.0);
+      danceEvery = this.propData?.danceEvery ?? 1.0;
 
       applyData();
     }
@@ -48,65 +47,54 @@ class LevelProp extends Bopper
       this.visible = true;
     }
 
-    try
+    // Reset animation state.
+    this.shouldAlternate = null;
+
+    var isAnimated:Bool = propData.animations.length > 0;
+    if (isAnimated)
     {
-      // Reset animation state.
-      this.shouldAlternate = null;
-
-      var isAnimated:Bool = propData.animations.length > 0;
-      if (isAnimated)
-      {
-        // Initalize sprite frames.
-        // Sparrow atlas only LEL.
-        this.frames = Paths.getSparrowAtlas(propData.assetPath);
-      }
-      else
-      {
-        // Initalize static sprite.
-        this.loadGraphic(Paths.image(propData.assetPath));
-
-        // Disables calls to update() for a performance boost.
-        this.active = false;
-      }
-
-      if (this.frames == null || this.frames.numFrames == 0)
-      {
-        trace('ERROR: Could not build texture for level prop (${propData.assetPath}).');
-        this.visible = false;
-        this.active = false;
-        return;
-      }
-
-      var scale:Float = propData.scale * (propData.isPixel ? 6 : 1);
-      this.scale.set(scale, scale);
-      this.antialiasing = !propData.isPixel;
-      this.alpha = propData.alpha;
-      this.x = propData.offsets[0];
-      this.y = propData.offsets[1];
-      this.flipX = propData.flipX;
-      this.flipY = propData.flipY;
-
-      FlxAnimationUtil.addAtlasAnimations(this, propData.animations);
-      for (propAnim in propData.animations)
-      {
-        this.setAnimationOffsets(propAnim.name, propAnim.offsets[0], propAnim.offsets[1]);
-      }
-
-      if (propData.startingAnimation != "" && this.hasAnimation(propData.startingAnimation))
-      {
-        this.playAnimation(propData.startingAnimation, true);
-      }
-      else
-      {
-        this.dance();
-        this.animation.paused = true;
-      }
+      // Initalize sprite frames.
+      // Sparrow atlas only LEL.
+      this.frames = Paths.getSparrowAtlas(propData.assetPath);
     }
-    catch (error:Dynamic)
+    else
     {
-      this.visible = false;
+      // Initalize static sprite.
+      this.loadGraphic(Paths.image(propData.assetPath));
+
+      // Disables calls to update() for a performance boost.
       this.active = false;
-      trace('[Story Mode] Could not build week character prop: ' + Std.string(error));
+    }
+
+    if (this.frames == null || this.frames.numFrames == 0)
+    {
+      trace('ERROR: Could not build texture for level prop (${propData.assetPath}).');
+      return;
+    }
+
+    var scale:Float = propData.scale * (propData.isPixel ? 6 : 1);
+    this.scale.set(scale, scale);
+    this.antialiasing = !propData.isPixel;
+    this.alpha = propData.alpha;
+    this.x = propData.offsets[0];
+    this.y = propData.offsets[1];
+    this.flipX = propData.flipX;
+    this.flipY = propData.flipY;
+
+    FlxAnimationUtil.addAtlasAnimations(this, propData.animations);
+    for (propAnim in propData.animations)
+    {
+      this.setAnimationOffsets(propAnim.name, propAnim.offsets[0], propAnim.offsets[1]);
+    }
+
+    if (propData.startingAnimation != "" && this.hasAnimation(propData.startingAnimation))
+    {
+      this.playAnimation(propData.startingAnimation, true);
+    }
+    else
+    {
+      this.dance();
+      this.animation.paused = true;
     }
   }
 
