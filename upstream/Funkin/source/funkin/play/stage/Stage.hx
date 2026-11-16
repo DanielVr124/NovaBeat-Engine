@@ -363,6 +363,26 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
   }
 
   /**
+   * Hide every prop this stage built for itself, keeping characters visible.
+   *
+   * A Psych stage JSON describes the whole backdrop, so its objects replace the
+   * native props instead of drawing alongside them. Returns how many props were
+   * hidden so the Psych load log can prove it ran.
+   */
+  public function hideNativeProps():Int
+  {
+    var hidden:Int = 0;
+    for (member in members)
+    {
+      if (member == null || Std.isOfType(member, BaseCharacter)) continue;
+      if (member.visible) hidden++;
+      member.visible = false;
+    }
+    refresh();
+    return hidden;
+  }
+
+  /**
    * Sets a shader for each prop in the stage
    * @param shader The shader to apply to each prop
    */

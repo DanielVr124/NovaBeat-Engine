@@ -906,20 +906,35 @@ class PsychModRuntime
     if (songId == null || characterId == null) return null;
     var modRoot:Null<String> = psychSongModRoots.get(songId);
     if (modRoot == null) return null;
+    // Psych exposes healthbar_colors through getProperty, and mods poll it every
+    // frame (FlxTrail tints its trail with it). Reading and parsing the character
+    // JSON on each call meant two file reads per frame, so the parsed colours are
+    // cached per mod and character.
+    var cacheKey:String = modRoot + "|" + characterId;
+    if (psychHealthColorCache.exists(cacheKey)) return psychHealthColorCache.get(cacheKey);
+    var colors:Null<Array<Int>> = null;
     var characterPath:Null<String> = findPsychCharacterDataFile(modRoot, characterId);
-    if (characterPath == null) return null;
-    try
+    if (characterPath != null)
     {
-      return readPsychHealthBarColor(Json.parse(File.getContent(characterPath)));
+      try
+      {
+        colors = readPsychHealthBarColor(Json.parse(File.getContent(characterPath)));
+      }
+      catch (error:Dynamic)
+      {
+        colors = null;
+      }
     }
-    catch (error:Dynamic)
-    {
-      return null;
-    }
+    psychHealthColorCache.set(cacheKey, colors);
+    return colors;
     #else
     return null;
     #end
   }
+
+  #if sys
+  static final psychHealthColorCache:Map<String, Null<Array<Int>>> = new Map();
+  #end
 
   #if sys
   static function readPsychHealthBarColor(characterData:Dynamic):Null<Array<Int>>
@@ -1320,23 +1335,33 @@ class PsychModRuntime
     // placeholder native stage, and those props were drawing over the Psych
     // backdrop (reported as "the fallback stage is in front of it"). Keep the
     // props alive for scripts that reference them, but stop drawing them.
-    if (created > 0) hidePlaceholderStageProps(stage);
+    if (created > 0)
+    {
+      psychSongsWithStageObjects.set(songId, true);
+      hidePlaceholderStageProps(stage, songId);
+    }
 
     logPsychStageStep(songId, "stage-objects", "created=" + created);
   }
 
   /** Hide the native stage's own props once a Psych stage supplies its own. */
-  static function hidePlaceholderStageProps(stage:Dynamic):Void
+  static function hidePlaceholderStageProps(stage:Dynamic, songId:String):Void
   {
-    var members:Dynamic = Reflect.field(stage, "members");
-    if (!Std.isOfType(members, Array)) return;
-    for (member in cast(members, Array<Dynamic>))
-    {
-      if (member == null || Std.isOfType(member, BaseCharacter)) continue;
-      if (Std.isOfType(member, FlxSprite)) (cast member : FlxSprite).visible = false;
-    }
-    stage.refresh();
+    // Stage.members is a (get, never) property, so Reflect.field never saw it and
+    // the native backdrop stayed on screen. Stage.hideNativeProps does the walk
+    // with typed access.
+    if (stage == null) return;
+    var hidden:Dynamic = stage.hideNativeProps();
+    logPsychStageStep(songId, "stage-hidden", "props=" + Std.string(hidden));
   }
+
+  /** True when the song's Psych stage JSON supplied its own objects. */
+  public static function hasPsychStageObjects(songId:String):Bool
+  {
+    return songId != null && psychSongsWithStageObjects.exists(songId);
+  }
+
+  static final psychSongsWithStageObjects:Map<String, Bool> = new Map();
 
   /** Register a Psych stage object's animations, returning the first clip name. */
   static function addPsychStageObjectAnimations(sprite:FlxSprite, animations:Dynamic):Null<String>
