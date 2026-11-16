@@ -12,6 +12,7 @@ import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongMetadata;
 import funkin.data.character.CharacterData.CharacterDataParser;
+import funkin.play.character.BaseCharacter;
 import funkin.data.character.CharacterData.CharacterData;
 import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongRegistry;

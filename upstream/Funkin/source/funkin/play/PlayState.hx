@@ -1153,6 +1153,8 @@ class PlayState extends MusicBeatSubState
         + " camZoom=" + FlxG.camera.zoom;
       report += "\n  player " + describeStrumline(playerStrumline);
       report += "\n  opponent " + describeStrumline(opponentStrumline);
+      report += "\n  musics: " + (FlxG.sound.music == null ? "none" : "playing=" + FlxG.sound.music.playing
+        + " time=" + Std.int(FlxG.sound.music.time) + " len=" + Std.int(FlxG.sound.music.length));
       FileUtil.appendStringToPath("logs/psych-stage.log", report + "\n");
     }
     catch (error:Dynamic) {}
@@ -1163,9 +1165,14 @@ class PlayState extends MusicBeatSubState
   function describeStrumline(lineData:Strumline):String
   {
     if (lineData == null) return "(null)";
+    // isPlayer and chartNoteCount say which side the chart put the notes on,
+    // which is what distinguishes a lane-assignment bug from a drawing bug.
     var text:String = "x=" + Std.int(lineData.x) + " y=" + Std.int(lineData.y)
       + " alpha=" + lineData.alpha + " visible=" + lineData.visible
-      + " notes=" + lineData.strumlineNotes.length + " strumScale=" + lineData.strumlineScale.x;
+      + " notes=" + lineData.strumlineNotes.length
+      + " isPlayer=" + lineData.isPlayer
+      + " chartNotes=" + lineData.noteData.length
+      + " strumScale=" + lineData.strumlineScale.x;
 
     var index:Int = 0;
     for (note in lineData.strumlineNotes.members)
