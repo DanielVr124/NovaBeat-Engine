@@ -1588,7 +1588,7 @@ class PsychGameplayApi
 
     vars.set("setObjectOrder", function(tag:String, index:Int):Bool
     {
-      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      var sprite:Null<FlxBasic> = resolveOrderTarget(state, tag);
       if (sprite == null) return false;
       var stage = state.currentStage;
       if (stage != null && stage.members.indexOf(sprite) >= 0)
@@ -1607,7 +1607,7 @@ class PsychGameplayApi
     });
     vars.set("getObjectOrder", function(tag:String):Int
     {
-      var sprite:Null<FlxSprite> = getSprite(state, tag);
+      var sprite:Null<FlxBasic> = resolveOrderTarget(state, tag);
       if (sprite == null) return -1;
       var stage = state.currentStage;
       var stageIndex:Int = stage == null ? -1 : stage.members.indexOf(sprite);
@@ -2694,6 +2694,28 @@ class PsychGameplayApi
   public static function findLuaObject(state:PlayState, tag:String):Dynamic
   {
     return state == null || tag == null ? null : getSprite(state, tag);
+  }
+
+  /**
+   * Resolve a tag for the object-order functions. Psych indexes the display
+   * list, and in this engine the characters live inside the stage group, so
+   * "dad" and a Lua sprite share one list. Only resolving Lua sprites made
+   * getObjectOrder("dad") return -1, which scripts use for relative ordering.
+   */
+  static function resolveOrderTarget(state:PlayState, tag:String):Null<FlxBasic>
+  {
+    var luaSprite:Null<FlxSprite> = getSprite(state, tag);
+    if (luaSprite != null) return luaSprite;
+    if (tag == null || state == null) return null;
+
+    return switch (StringTools.trim(tag).toLowerCase())
+    {
+      case "bf", "boyfriend", "0", "player": getStageCharacter(state, "getBoyfriend");
+      case "dad", "opponent", "1": getStageCharacter(state, "getDad");
+      case "gf", "girlfriend", "2": getStageCharacter(state, "getGirlfriend");
+      case "stage": state.currentStage;
+      default: null;
+    };
   }
 
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
