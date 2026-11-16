@@ -25,13 +25,22 @@ class PsychApiAudit
     "print" => true, "string" => true, "table" => true, "math" => true, "os" => true, "io" => true,
     "setmetatable" => true, "getmetatable" => true, "pcall" => true, "xpcall" => true, "error" => true,
     "assert" => true, "unpack" => true, "select" => true, "rawget" => true, "rawset" => true,
-    "next" => true, "require" => true, "coroutine" => true, "debug" => true, "utf8" => true
+    "next" => true, "require" => true, "coroutine" => true, "debug" => true, "utf8" => true,
+    // Keywords that can sit directly before a parenthesis, e.g. `a or (b)`.
+    "or" => true, "and" => true, "not" => true, "then" => true, "do" => true, "end" => true,
+    "for" => true, "in" => true, "local" => true, "repeat" => true, "until" => true,
+    "break" => true, "nil" => true, "true" => true, "false" => true
   ];
 
   /** Last audit result, for callers that want to inspect it. */
   public static var missing:Array<String> = [];
 
-  static var CALL_PATTERN:EReg = ~/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  /**
+   * A plain function call, not a method call. `string.sub(` and `math.floor(`
+   * are Lua standard library usage, and reporting them as missing Psych API
+   * only buried the real gaps.
+   */
+  static var CALL_PATTERN:EReg = ~/(^|[^.:A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
   static var DEFINE_PATTERN:EReg = ~/function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
   /** Lua long strings; HScript lives inside these and is not Lua. */
   static var LONG_STRING:EReg = ~/\[\[[\s\S]*?\]\]/g;
@@ -82,7 +91,7 @@ class PsychApiAudit
       position = 0;
       while (CALL_PATTERN.matchSub(scanned, position))
       {
-        var name:String = CALL_PATTERN.matched(1);
+        var name:String = CALL_PATTERN.matched(2);
         var matchPosition = CALL_PATTERN.matchedPos();
         position = matchPosition.pos + matchPosition.len;
 

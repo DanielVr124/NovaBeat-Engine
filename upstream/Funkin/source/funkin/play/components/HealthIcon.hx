@@ -294,14 +294,19 @@ class HealthIcon extends FunkinSprite
         case 0: // Boyfriend
           // Update the animation based on the current state.
           updateHealthIcon(PlayState.instance.health);
-          // Anchor to the right end of the bar. Following the fill boundary put
-          // both icons near the middle, only an icon-width apart.
-          this.x = PlayState.instance.healthBar.x + PlayState.instance.healthBar.width - POSITION_OFFSET;
+          // Follow the health fill boundary, sitting just to its right. The old
+          // formula overlapped the two icons by roughly half an icon width,
+          // which read as them touching instead of flanking the divide.
+          this.x = PlayState.instance.healthBar.x
+            + (PlayState.instance.healthBar.width * (FlxMath.remapToRange(PlayState.instance.healthBar.value, 0, 2, 100, 0) * 0.01))
+            + POSITION_OFFSET;
         case 1: // Dad
           // Update the animation based on the current state.
           updateHealthIcon(MAXIMUM_HEALTH - PlayState.instance.health);
-          // Anchor to the left end of the bar, mirrored against Dad's icon.
-          this.x = PlayState.instance.healthBar.x - (this.width - POSITION_OFFSET);
+          // Mirrored against the boundary, leaving the same gap on this side.
+          this.x = PlayState.instance.healthBar.x
+            + (PlayState.instance.healthBar.width * (FlxMath.remapToRange(PlayState.instance.healthBar.value, 0, 2, 100, 0) * 0.01))
+            - this.width - POSITION_OFFSET;
       }
       // Keep the icon centered vertically on the health bar.
       this.y = PlayState.instance.healthBar.y - (this.height / 2); // - (PlayState.instance.healthBar.height / 2)

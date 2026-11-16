@@ -2788,12 +2788,17 @@ class PlayState extends MusicBeatSubState
     opponentStrumline.x = Constants.STRUMLINE_X_OFFSET + cutoutSize;
     #end
 
-    playerStrumline.y = Preferences.downscroll ? FlxG.height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
+    // The Strumline group also holds a full-screen background sprite, so its
+    // height is the viewport height. Using it here produced FlxG.height -
+    // FlxG.height - offset and parked the receptors just above the top edge,
+    // where downscroll notes could never reach them.
+    final receptorHeight:Float = getPlayerStrumlineReceptorHeight();
+    playerStrumline.y = Preferences.downscroll ? FlxG.height - receptorHeight - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
 
     playerStrumline.zIndex = 1001;
     playerStrumline.cameras = [camHUD];
 
-    opponentStrumline.y = Preferences.downscroll ? FlxG.height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
+    opponentStrumline.y = Preferences.downscroll ? FlxG.height - receptorHeight - Constants.STRUMLINE_Y_OFFSET - noteStyle.getStrumlineOffsets()[1] : Constants.STRUMLINE_Y_OFFSET;
 
     opponentStrumline.zIndex = 1000;
     opponentStrumline.cameras = [camHUD];
