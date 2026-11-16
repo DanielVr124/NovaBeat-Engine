@@ -93,6 +93,11 @@ class PsychScriptRuntime
       "flixel.tweens.FlxEase",
       "flixel.util.FlxColor",
       "flixel.util.FlxTimer",
+      // Psych mods build custom health bars and shader filters directly.
+      "flixel.ui.FlxBar",
+      "flixel.addons.display.FlxRuntimeShader",
+      "openfl.filters.ShaderFilter",
+      "openfl.display.Shader",
       "funkin.Paths",
       "funkin.Conductor",
       "funkin.play.PlayState",
