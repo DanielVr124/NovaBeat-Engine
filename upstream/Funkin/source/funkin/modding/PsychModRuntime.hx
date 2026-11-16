@@ -1162,8 +1162,12 @@ class PsychModRuntime
     var offsets:Dynamic = Reflect.field(character, "globalOffsets");
     var offsetX:Float = offsets != null && offsets.length > 0 ? cast offsets[0] : 0;
     var offsetY:Float = offsets != null && offsets.length > 1 ? cast offsets[1] : 0;
-    var x:Float = position[0] + offsetX;
-    var y:Float = position[1] + offsetY;
+    // Psych's stage anchor is already the character's top-left corner, so
+    // V-Slice's own artwork padding (globalOffsets) must not be added on top of
+    // it. Adding it pushed GF 400px away from the stage's -100 (into the middle
+    // of the screen, between the opponent and BF) and sank BF by 380px.
+    var x:Float = position[0];
+    var y:Float = position[1];
     Reflect.setProperty(character, "x", x);
     Reflect.setProperty(character, "y", y);
 
@@ -1177,7 +1181,7 @@ class PsychModRuntime
       "anchor=" + position[0] + "," + position[1]
       + " charOffset=" + offsetX + "," + offsetY
       + " final=" + x + "," + y
-      + " origin=" + Std.string(Reflect.field(character, "characterOrigin"))
+      + " origin=" + Std.string(Reflect.getProperty(character, "characterOrigin"))
       + " height=" + Std.string(Reflect.field(character, "height"))
       + " scale=" + Std.string(Reflect.field(character, "scale")));
     trace('[Psych Compatibility] Positioned ' + role + ' for ' + songId
