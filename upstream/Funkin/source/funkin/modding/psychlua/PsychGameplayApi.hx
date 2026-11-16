@@ -1647,6 +1647,10 @@ class PsychGameplayApi
     vars.set("Function_StopHScript", PsychScriptRuntime.getGlobal("Function_StopHScript"));
     vars.set("Function_StopAll", PsychScriptRuntime.getGlobal("Function_StopAll"));
 
+    // Snapshot the engine-provided names so the audit can tell a missing Psych
+    // API apart from a function the script defines for itself.
+    knownApiNames = [for (name in vars.keys()) name];
+
     return vars;
   }
 
@@ -2663,6 +2667,12 @@ class PsychGameplayApi
     removeFromGroupTree(state.currentStage, object, visited);
     removeFromGroupTree(state, object, visited);
   }
+
+  /** Engine-provided script globals, captured when the API table is built. */
+  static var knownApiNames:Array<String> = [];
+
+  /** @return Every function and value name the compatibility layer provides. */
+  public static function getKnownApiNames():Array<String> return knownApiNames;
 
   static function getProperty(state:PlayState, path:String, allowMaps:Bool = false):Dynamic
   {

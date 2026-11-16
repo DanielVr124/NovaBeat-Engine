@@ -248,6 +248,10 @@ class PsychScriptRuntime
       PsychModRuntime.logSongLaunchStep(songId, difficulty, 'scripts.sources.discover.complete',
         'count=' + sources.length);
 
+      // Report API gaps up front: a missing global aborts the script, which
+      // would otherwise hide every later problem behind the first failure.
+      PsychApiAudit.audit(playState, cast sources);
+
       // Psych stage/song scripts commonly call startVideo() from onCreate or
       // onStartCountdown. Resolve literal filenames now and warm the native
       // decoder while the rest of the song is initializing, rather than
