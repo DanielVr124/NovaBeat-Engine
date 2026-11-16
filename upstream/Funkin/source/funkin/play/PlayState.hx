@@ -253,6 +253,13 @@ class PlayState extends MusicBeatSubState
   public var health:Float = Constants.HEALTH_STARTING;
 
   /**
+   * Set by Psych mods through setProperty('skipCountdown', true), usually in
+   * onCreate. The countdown starts very soon after that, so the request is kept
+   * here and honoured in startCountdown().
+   */
+  public var psychSkipCountdown:Bool = false;
+
+  /**
    * The player's current score.
    * This needs to be a float because you gain partial points as you hold a hold note,
    * possibly less than one point each update depending on your framerate.
@@ -3173,8 +3180,45 @@ class PlayState extends MusicBeatSubState
      * Ends any running cutscenes, creates the strumlines, and starts the countdown.
      * This is public so that scripts can call it.
      */
+  /**
+   * Psych compatibility: HScript snippets reach script-created sprites through
+   * game.getLuaObject('tag').
+   */
+  public function getLuaObject(tag:String):Dynamic
+  {
+    return funkin.modding.psychlua.PsychGameplayApi.findLuaObject(this, tag);
+  }
+
+  /**
+   * Psych compatibility: HScript snippets call back into Lua with
+   * game.callOnLuas('functionName', [args]).
+   */
+  public function callOnLuas(callback:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false):Dynamic
+  {
+    return funkin.modding.psychlua.PsychScriptRuntime.callOnLuas(callback, args, ignoreStops);
+  }
+
+  /**
+   * Psych compatibility: game.createRuntimeShader('name') builds a shader from
+   * the mod's shaders/name.frag so scripts can attach ShaderFilters themselves.
+   */
+  public function createRuntimeShader(name:String):Dynamic
+  {
+    return funkin.modding.psychlua.PsychGameplayApi.createRuntimeShader(name);
+  }
+
   public function startCountdown():Void
   {
+    if (psychSkipCountdown)
+    {
+      // Psych's own skip path: stop the countdown and let the conductor start
+      // the song immediately, exactly as if it had finished.
+      Countdown.skipCountdown();
+      isInCutscene = false;
+      camHUD.visible = true;
+      return;
+    }
+
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
     var result:Bool = Countdown.performCountdown();
     if (!result) return;

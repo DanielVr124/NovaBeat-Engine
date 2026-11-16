@@ -2593,6 +2593,12 @@ class PsychGameplayApi
     };
   }
 
+  /** Psych compatibility hook for game.getLuaObject() inside runHaxeCode. */
+  public static function findLuaObject(state:PlayState, tag:String):Dynamic
+  {
+    return state == null || tag == null ? null : getSprite(state, tag);
+  }
+
   static function getSprite(state:PlayState, tag:String):Null<FlxSprite>
   {
     if (tag == null || !scriptVariables.exists(tag)) return null;
@@ -2662,6 +2668,10 @@ class PsychGameplayApi
   {
     if (path == null || path.length == 0) return null;
 
+    // Engine-level Psych flag: there is no PlayState field of this name to
+    // reflect onto, so it is read explicitly.
+    if (path == "skipCountdown") return state.psychSkipCountdown;
+
     // Psych character objects expose imageFile and animation.frameName,
     // properties that the native FlxAnimate character class does not name
     // identically. Resolve these aliases before ordinary reflection.
@@ -2722,6 +2732,15 @@ class PsychGameplayApi
   static function setProperty(state:PlayState, path:String, value:Dynamic, allowMaps:Bool = false):Dynamic
   {
     if (path == null || path.length == 0) return null;
+
+    // Without this the assignment fell through to reflection on a PlayState
+    // field that does not exist, so setProperty('skipCountdown', true) did
+    // nothing at all.
+    if (path == "skipCountdown")
+    {
+      state.psychSkipCountdown = (value == true || Std.string(value).toLowerCase() == "true");
+      return value;
+    }
     try
     {
       var parts:Array<String> = path.split(".");
@@ -3230,6 +3249,26 @@ class PsychGameplayApi
   static function initLuaShader(name:String, glslVersion:Int):Bool return false;
   static function setSpriteShader(state:PlayState, objectPath:String, shaderName:String):Bool return false;
   #end
+
+  /** Psych compatibility hook for game.createRuntimeShader() inside runHaxeCode. */
+  public static function createRuntimeShader(name:String):Null<FlxRuntimeShader>
+  {
+    if (name == null || StringTools.trim(name).length == 0) return null;
+    var shaderName:String = StringTools.trim(name);
+    if (StringTools.endsWith(shaderName.toLowerCase(), ".frag")) shaderName = shaderName.substr(0, shaderName.length - 5);
+    var key:String = shaderCacheKey(shaderName);
+    if (!runtimeShaderSources.exists(key) && !initLuaShader(shaderName, 120)) return null;
+    var source:Array<String> = runtimeShaderSources.get(key);
+    try
+    {
+      return new FlxRuntimeShader(source[0], source[1]);
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych API] Could not create runtime shader ' + shaderName + ': ' + Std.string(error));
+      return null;
+    }
+  }
 
   static function removeSpriteShader(state:PlayState, objectPath:String):Bool
   {
