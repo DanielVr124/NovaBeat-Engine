@@ -1033,6 +1033,7 @@ class PsychModRuntime
     if (stageName == null) stageName = psychSongStageNames.get(songId);
     var modRoot:Null<String> = psychModRootsPersistent.get(songId);
     if (modRoot == null) modRoot = psychSongModRoots.get(songId);
+    logPsychStageStep(songId, "resolve", "stage=" + Std.string(stageName) + " modRoot=" + Std.string(modRoot));
     if (modRoot == null) return;
 
     // Psych's fallback stage anchors all three character roles. A package's
@@ -1043,7 +1044,11 @@ class PsychModRuntime
     positions.set("opponent", [100.0, 100.0]);
     psychSongStagePositions.set(songId, positions);
 
-    if (stageName == null || stageName.length == 0) return;
+    if (stageName == null || stageName.length == 0)
+    {
+      logPsychStageStep(songId, "no-stage-name", "falling back to Psych default BF/GF/opponent anchors");
+      return;
+    }
 
     // Stage names are file basenames, never arbitrary paths.
     if (stageName.indexOf("/") >= 0 || stageName.indexOf("\\") >= 0
@@ -1052,10 +1057,13 @@ class PsychModRuntime
     var stagePath:Null<String> = findPsychStageDataFile(modRoot, stageName);
     if (stagePath == null)
     {
+      logPsychStageStep(songId, "stage-not-found", "stage=" + stageName + " searched=" + psychStageDirectories(modRoot).join(", "));
       trace('[Psych Compatibility] Could not find stages/' + stageName + '.json for ' + songId
         + ' under ' + modRoot + '. Using Psych default character anchors.');
       return;
     }
+
+    logPsychStageStep(songId, "stage-found", stagePath);
 
     try
     {
@@ -1093,6 +1101,9 @@ class PsychModRuntime
         Reflect.setField(entry, "alpha", 1.0);
         Reflect.setField(entry, "angle", 0.0);
       }
+      logPsychStageStep(songId, "stage-applied", "zoom=" + Reflect.field(stageData, "cameraZoom")
+        + " BF=" + positions.get("boyfriend") + " GF=" + positions.get("girlfriend")
+        + " opponent=" + positions.get("opponent"));
       trace('[Psych Compatibility] Applied Psych stage JSON for ' + stageName + ' (' + songId
         + '): BF=' + positions.get("boyfriend") + ', GF=' + positions.get("girlfriend")
         + ', opponent=' + positions.get("opponent") + '.');
@@ -1159,6 +1170,16 @@ class PsychModRuntime
     var originalPosition:Dynamic = Reflect.field(character, "originalPosition");
     if (originalPosition != null)
       Reflect.callMethod(originalPosition, Reflect.field(originalPosition, "set"), [x, y]);
+    // Record what was actually applied, plus the sprite geometry that decides
+    // where the art lands on screen. Without these numbers the only way to
+    // judge Psych anchoring was to guess from screenshots.
+    logPsychStageStep(songId, "place-" + role,
+      "anchor=" + position[0] + "," + position[1]
+      + " charOffset=" + offsetX + "," + offsetY
+      + " final=" + x + "," + y
+      + " origin=" + Std.string(Reflect.field(character, "characterOrigin"))
+      + " height=" + Std.string(Reflect.field(character, "height"))
+      + " scale=" + Std.string(Reflect.field(character, "scale")));
     trace('[Psych Compatibility] Positioned ' + role + ' for ' + songId
       + ' (stage=' + psychSongStageNames.get(songId) + ', anchor=' + position[0] + ',' + position[1]
       + ', characterOffset=' + offsetX + ',' + offsetY + ', final=' + x + ',' + y + ').');
@@ -1530,6 +1551,30 @@ class PsychModRuntime
   public static function isPsychDirectory(modPath:String):Bool
   {
     return EngineBridge.hasPsychMarkersForRuntime(modPath);
+  }
+
+  /**
+   * Append a line to logs/psych-stage.log. Stage placement is the hardest part
+   * of Psych compatibility to reason about from the outside, and trace() output
+   * is invisible in release builds, so every resolution step is written to a
+   * file the player can send back.
+   */
+  public static function logPsychStageStep(songId:String, phase:String, ?details:String = ""):Void
+  {
+    #if sys
+    var cleanDetails:String = details == null ? "" : StringTools.replace(StringTools.replace(details, "\n", " "), "\r", " ");
+    var line:String = Date.now().toString() + " | " + songId + " | " + phase;
+    if (cleanDetails.length > 0) line += " | " + cleanDetails;
+
+    try
+    {
+      FileUtil.appendStringToPath("logs/psych-stage.log", line + "\n");
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Psych Compatibility] Could not write stage diagnostic: ' + Std.string(error));
+    }
+    #end
   }
 
   /**
