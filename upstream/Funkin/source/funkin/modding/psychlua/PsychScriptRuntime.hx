@@ -250,7 +250,7 @@ class PsychScriptRuntime
 
       // Report API gaps up front: a missing global aborts the script, which
       // would otherwise hide every later problem behind the first failure.
-      PsychApiAudit.audit(playState, cast sources);
+      PsychApiAudit.audit(playState, [for (source in sources) (source:Dynamic)]);
 
       // Psych stage/song scripts commonly call startVideo() from onCreate or
       // onStartCountdown. Resolve literal filenames now and warm the native

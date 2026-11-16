@@ -3260,6 +3260,7 @@ class PsychGameplayApi
   static function setSpriteShader(state:PlayState, objectPath:String, shaderName:String):Bool return false;
   #end
 
+  #if (!flash && sys)
   /** Psych compatibility hook for game.createRuntimeShader() inside runHaxeCode. */
   public static function createRuntimeShader(name:String):Null<FlxRuntimeShader>
   {
@@ -3279,6 +3280,9 @@ class PsychGameplayApi
       return null;
     }
   }
+  #else
+  public static function createRuntimeShader(name:String):Dynamic return null;
+  #end
 
   static function removeSpriteShader(state:PlayState, objectPath:String):Bool
   {

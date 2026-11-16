@@ -2,7 +2,6 @@ package funkin.modding.psychlua;
 
 import flixel.FlxState;
 import flixel.text.FlxText;
-import flixel.text.FlxTextAlign;
 import flixel.text.FlxTextBorderStyle;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
@@ -112,7 +111,9 @@ class PsychApiAudit
     try
     {
       var label:FlxText = new FlxText(8, 8, 900, summary, 12);
-      label.setFormat(null, 12, FlxColor.YELLOW, FlxTextAlign.LEFT);
+      // This Flixel build types text alignment as a String, not an enum.
+      label.alignment = "left";
+      label.setFormat(null, 12, FlxColor.YELLOW);
       label.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
       label.scrollFactor.set(0, 0);
       state.add(label);
