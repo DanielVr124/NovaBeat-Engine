@@ -1183,8 +1183,14 @@ class Strumline extends FlxSpriteGroup
       // Match the original FNF desktop coordinate calculation. Receptor.x
       // already includes strumlineNotes.x, so adding that group offset again
       // double-counts the lane displacement.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      final lane:Int = note.getDirection() % KEY_COUNT;
+      // Only the displacement a script applied is added, so notes that no
+      // script touched keep the exact position they had before, while notes on
+      // a moved receptor fall with it instead of staying on the old lane.
+      final scriptedDx:Float = receptor.x - (getXPos(DIRECTIONS[lane]) + this.strumlineNotes.x + INITIAL_OFFSET);
       noteSprite.x = this.x;
-      noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      noteSprite.x += getXPos(DIRECTIONS[lane]) + scriptedDx;
       noteSprite.x -= (noteSprite.width - Strumline.STRUMLINE_SIZE) / 2;
       noteSprite.x -= NUDGE;
       #end
@@ -1234,8 +1240,11 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.x = strumlineNotes.x + receptor.x + (receptor.width - holdNoteSprite.width) / 2 - NUDGE;
       #else
       // Match the original FNF desktop sustain-trail positioning.
+      final receptor:StrumlineNote = getByDirection(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      final lane:Int = note.getDirection() % KEY_COUNT;
+      final scriptedDx:Float = receptor.x - (getXPos(DIRECTIONS[lane]) + this.strumlineNotes.x + INITIAL_OFFSET);
       holdNoteSprite.x = this.x;
-      holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      holdNoteSprite.x += getXPos(DIRECTIONS[lane]) + scriptedDx;
       holdNoteSprite.x += STRUMLINE_SIZE / 2;
       holdNoteSprite.x -= holdNoteSprite.width / 2;
       #end

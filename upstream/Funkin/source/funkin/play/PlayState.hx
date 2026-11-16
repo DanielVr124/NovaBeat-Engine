@@ -2730,12 +2730,13 @@ class PlayState extends MusicBeatSubState
       // Re-center both lanes using the live PC viewport. Do not use the
       // fullscreen cutout offset here: it can be larger than the window's
       // available margin and place playable notes offscreen.
-      // Psych middlescroll: the player's lane sits in the centre of the screen
-      // and the opponent's lane is hidden, so only one column of notes is read.
-      playerStrumline.x = (Preferences.middlescroll ? width * 0.5 : width * 0.75)
+      // Psych middlescroll: the player's lane moves to the left side and the
+      // opponent's lane dims, as Psych does with STRUM_X_MIDDLESCROLL.
+      playerStrumline.x = (Preferences.middlescroll ? width * 0.25 : width * 0.75)
         - playerStrumline.width * 0.5;
-      opponentStrumline.x = width * 0.25 - opponentStrumline.width * 0.5;
-      opponentStrumline.visible = !Preferences.middlescroll;
+      opponentStrumline.x = (Preferences.middlescroll ? width * 0.75 : width * 0.25)
+        - opponentStrumline.width * 0.5;
+      opponentStrumline.alpha = Preferences.middlescroll ? 0.35 : 1.0;
       #else
       // Preserve the existing touch/web layout.
       playerStrumline.x = (width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0);
@@ -2776,10 +2777,11 @@ class PlayState extends MusicBeatSubState
     // offsets were derived from the fullscreen layout and could push the
     // player receptors beyond the right edge in ordinary windowed PC play.
     #if !(mobile || FEATURE_TOUCH_CONTROLS)
-    playerStrumline.x = (Preferences.middlescroll ? FlxG.width * 0.5 : FlxG.width * 0.75)
+    playerStrumline.x = (Preferences.middlescroll ? FlxG.width * 0.25 : FlxG.width * 0.75)
       - playerStrumline.width * 0.5;
-    opponentStrumline.x = FlxG.width * 0.25 - opponentStrumline.width * 0.5;
-    opponentStrumline.visible = !Preferences.middlescroll;
+    opponentStrumline.x = (Preferences.middlescroll ? FlxG.width * 0.75 : FlxG.width * 0.25)
+      - opponentStrumline.width * 0.5;
+    opponentStrumline.alpha = Preferences.middlescroll ? 0.35 : 1.0;
     #else
     final cutoutSize = FullScreenScaleMode.gameCutoutSize.x / 2.5;
     playerStrumline.x = (FlxG.width / 2 + Constants.STRUMLINE_X_OFFSET) + (cutoutSize / 2.0);
