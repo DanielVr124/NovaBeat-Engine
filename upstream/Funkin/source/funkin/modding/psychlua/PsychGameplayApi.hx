@@ -1070,8 +1070,9 @@ class PsychGameplayApi
     vars.set("customSubstate", null);
     vars.set("customSubstateName", "");
 
-    vars.set("makeLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0):Bool
+    vars.set("makeLuaSprite", function(tag:String, ?image:String = null, ?x:Float = 0, ?y:Float = 0):Bool
     {
+      releasePsychSpriteTag(state, tag);
       var sprite = new FlxSprite(x, y);
       try
       {
@@ -1226,6 +1227,7 @@ class PsychGameplayApi
     vars.set("makeAnimatedLuaSprite", function(tag:String, image:String, ?x:Float = 0, ?y:Float = 0,
         ?spriteType:String = "sparrow"):Bool
     {
+      releasePsychSpriteTag(state, tag);
       var sprite = new FlxSprite(x, y);
       try
       {
@@ -1476,19 +1478,22 @@ class PsychGameplayApi
       if (destroy) sprite.destroy();
       return true;
     });
-    vars.set("setObjectCamera", function(tag:String, camera:String):Bool
+    // Psych accepts any object here, not just sprites made by the script:
+    // it falls back to resolving the name against PlayState.
+    vars.set("setObjectCamera", function(tag:String, ?camera:String = "game"):Bool
     {
-      var sprite:Null<FlxSprite> = getSprite(state, tag);
-      if (sprite == null) return false;
-      var normalized:String = camera == null ? "game" : camera.toLowerCase();
-      sprite.cameras = [resolveCamera(state, normalized)];
+      var object:Dynamic = getSprite(state, tag);
+      if (object == null) object = getProperty(state, tag);
+      if (object == null || !Std.isOfType(object, FlxSprite)) return false;
+      (cast object:FlxSprite).cameras = [resolveCamera(state, camera)];
       return true;
     });
     vars.set("setScrollFactor", function(tag:String, x:Float, ?y:Null<Float>):Bool
     {
-      var sprite:Null<FlxSprite> = getSprite(state, tag);
-      if (sprite == null) return false;
-      sprite.scrollFactor.set(x, y == null ? x : y);
+      var object:Dynamic = getSprite(state, tag);
+      if (object == null) object = getProperty(state, tag);
+      if (object == null || !Std.isOfType(object, FlxObject)) return false;
+      (cast object:FlxObject).scrollFactor.set(x, y == null ? x : y);
       return true;
     });
     vars.set("scaleObject", function(tag:String, x:Float, y:Float, ?updateHitbox:Bool = true):Bool
@@ -2765,6 +2770,20 @@ class PsychGameplayApi
   }
 
   /**
+   * Psych's makeLuaSprite/makeAnimatedLuaSprite destroy any sprite already
+   * using the tag. Without this a re-created tag left the old sprite on the
+   * stage, still drawing and still tweening.
+   */
+  static function releasePsychSpriteTag(state:PlayState, tag:String):Void
+  {
+    var previous:Null<FlxSprite> = getSprite(state, tag);
+    if (previous == null) return;
+    removeFromParent(state, previous);
+    scriptVariables.remove(tag);
+    previous.destroy();
+  }
+
+  /**
    * Remove an object from the group that actually owns it. Psych Lua sprites
    * added with addLuaSprite() are children of currentStage, not PlayState.
    * Destroying one through PlayState.remove() alone leaves a dead member in
@@ -2893,7 +2912,7 @@ class PsychGameplayApi
     try
     {
       var parts:Array<String> = path.split(".");
-      var current:Dynamic = resolveRoot(state, parts.shift());
+      var current:Dynamic = resolvePathRoot(state, parts.shift());
       if (current == null) return null;
       for (part in parts)
       {
@@ -2925,6 +2944,12 @@ class PsychGameplayApi
     {
       var parts:Array<String> = path.split(".");
       var rootName:String = parts.shift();
+      if (parts.length == 0 && rootName.indexOf("[") > -1)
+      {
+        // Psych writes 'notes[0]' style paths by splitting on '['.
+        writeBracketPath(state, rootName, value);
+        return value;
+      }
       var current:Dynamic = resolveRoot(state, rootName);
       if (current == null) return null;
       if (parts.length == 0)
@@ -3025,6 +3050,35 @@ class PsychGameplayApi
         if (scriptVariables.exists(name)) return scriptVariables.get(name);
         return Reflect.getProperty(state, name);
     }
+  }
+
+  /**
+   * Psych splits 'notes[0]' inside getVarInArray, so a bracketed root segment
+   * has to resolve to the element rather than to a state field of that name.
+   */
+  static function resolvePathRoot(state:PlayState, name:String):Dynamic
+  {
+    var bracketAt:Int = name.indexOf("[");
+    if (bracketAt == -1) return resolveRoot(state, name);
+    var collection:Dynamic = resolveRoot(state, name.substr(0, bracketAt));
+    var index:Null<Int> = bracketIndex(name);
+    return collection == null || index == null ? null : collection[index];
+  }
+
+  static function writeBracketPath(state:PlayState, name:String, value:Dynamic):Void
+  {
+    var collection:Dynamic = resolveRoot(state, name.substr(0, name.indexOf("[")));
+    var index:Null<Int> = bracketIndex(name);
+    if (collection == null || index == null) return;
+    collection[index] = value;
+  }
+
+  static function bracketIndex(name:String):Null<Int>
+  {
+    var open:Int = name.indexOf("[");
+    var close:Int = name.lastIndexOf("]");
+    if (open == -1 || close < open) return null;
+    return Std.parseInt(name.substring(open + 1, close));
   }
 
   static function getStageCharacter(state:PlayState, getter:String):Null<BaseCharacter>
@@ -3779,13 +3833,10 @@ class PsychGameplayApi
     switch (StringTools.trim(name).toLowerCase())
     {
       case "add camera zoom":
-        var gameZoom:Float = parseFloatOr(value1, 0);
-        var hudZoom:Float = parseFloatOr(value2, 0);
-        // Psych's beat/event zoom is softened consistently with the native
-        // beat bop so Add Camera Zoom events do not reintroduce the old punch.
-        var psychZoomScale:Float = ExperienceManager.isPsychSong(state.currentSong.id) ? 0.35 : 1.0;
-        if (gameZoom != 0) state.camGame.zoom += gameZoom * psychZoomScale;
-        if (hudZoom != 0) state.camHUD.zoom += hudZoom * psychZoomScale;
+        // Psych turns an empty value into +0.015 game / +0.03 HUD zoom and stops
+        // zooming the game camera in past 1.35, so a bare event still nudges it.
+        if (state.camGame.zoom < 1.35) state.camGame.zoom += parseFloatOr(value1, 0.015);
+        state.camHUD.zoom += parseFloatOr(value2, 0.03);
       case "screen shake":
         var gameParts:Array<String> = value1.split(",");
         var hudParts:Array<String> = value2.split(",");
@@ -3796,32 +3847,46 @@ class PsychGameplayApi
       case "set property":
         setProperty(state, value1, value2);
       case "camera follow pos":
-        if (value1 != null && value1.length > 0 && value2 != null && value2.length > 0)
-        {
-          var x:Float = parseFloatOr(value1, state.cameraFollowPoint.x);
-          var y:Float = parseFloatOr(value2, state.cameraFollowPoint.y);
-          state.cameraFollowPoint.setPosition(x, y);
-        }
+        // Psych applies whichever coordinate is present and treats the missing
+        // one as 0, so a one-argument event still pins the camera.
+        if ((value1 != null && value1.length > 0) || (value2 != null && value2.length > 0))
+          state.cameraFollowPoint.setPosition(parseFloatOr(value1, 0), parseFloatOr(value2, 0));
       case "play animation":
-        var characterId:String = value2 == null || value2.length == 0 ? "bf" : value2.toLowerCase();
-        if (characterId == "boyfriend" || characterId == "player") characterId = "bf";
-        if (characterId == "opponent") characterId = "dad";
-        if (state.currentStage != null)
+        // value1 is the animation and value2 picks the character. Psych only
+        // uses BF for 'bf'/'boyfriend' or 1 and otherwise animates the
+        // opponent, so an event without value2 must not move the player.
+        var animatedRole:String = psychEventCharacterRole(value2);
+        if (state.currentStage != null && value1 != null && value1.length > 0)
         {
-          var character:Null<BaseCharacter> = state.currentStage.getCharacter(characterId);
-          if (character != null && value1 != null && value1.length > 0)
-            character.playAnimation(value1, true);
+          var animated:Null<BaseCharacter> = state.currentStage.getCharacter(animatedRole);
+          if (animated != null) animated.playAnimation(value1, true);
         }
       case "hey!":
-        var heyCharacter:String = value1 == null || value1.length == 0 ? "bf" : value1.toLowerCase();
-        if (heyCharacter == "boyfriend" || heyCharacter == "player") heyCharacter = "bf";
-        if (heyCharacter == "opponent") heyCharacter = "dad";
+        // Psych cheers on both characters by default and uses value1 only to
+        // narrow that down ('bf'/'0' or 'gf'/'1'); value2 is how many seconds
+        // the cheer is held before the character dances again.
+        var heyRole:String = value1 == null ? "" : value1.toLowerCase().trim();
+        var heyDuration:Float = parseFloatOr(value2, 0.6);
+        if (heyDuration <= 0) heyDuration = 0.6;
         if (state.currentStage != null)
         {
-          var character:Null<BaseCharacter> = state.currentStage.getCharacter(heyCharacter);
-          if (character != null && character.hasAnimation("hey"))
-            character.playAnimation("hey", true);
+          // Tutorials make GF the opponent; Psych cheers that character slot.
+          var opponent:Null<BaseCharacter> = state.currentStage.getDad();
+          var cheering:Null<BaseCharacter> = opponent != null && StringTools.startsWith(opponent.characterId.toLowerCase(), "gf")
+            ? opponent
+            : state.currentStage.getGirlfriend();
+          if (heyRole != "bf" && heyRole != "boyfriend" && heyRole != "0")
+            playPsychHey(cheering, "cheer", heyDuration);
+          if (heyRole != "gf" && heyRole != "girlfriend" && heyRole != "1")
+            playPsychHey(state.currentStage.getBoyfriend(), "hey", heyDuration);
         }
+      case "alt idle animation":
+        // Psych appends value2 to the idle suffix. NovaBeat picks the dance idle
+        // from the character JSON and has no idle-suffix hook, so say so instead
+        // of pretending the idle changed.
+        trace('[Psych API] Alt Idle Animation is not supported: characters use their chart-defined idle animations.');
+      case "play sound":
+        if (value1 != null && value1.length > 0) FlxG.sound.play(Paths.sound(value1), parseFloatOr(value2, 1));
       case "set gf speed":
         var girlfriend:Null<BaseCharacter> = state.currentStage == null ? null : state.currentStage.getGirlfriend();
         var speed:Int = Std.int(parseFloatOr(value1, 1));
@@ -3855,6 +3920,34 @@ class PsychGameplayApi
     // Dispatch it for chart events and Lua-triggered events alike, after the
     // native built-in event has applied its own behavior.
     PsychScriptRuntime.dispatch("onEvent", [name, value1, value2]);
+  }
+
+  /** Psych maps Play Animation's value2 to a character, defaulting to dad. */
+  static function psychEventCharacterRole(value:String):String
+  {
+    switch (value == null ? "" : value.toLowerCase().trim())
+    {
+      case "bf", "boyfriend": return "bf";
+      case "gf", "girlfriend": return "gf";
+      case "dad", "opponent": return "dad";
+    }
+    var index:Null<Int> = value == null ? null : Std.parseInt(value);
+    return switch (index)
+    {
+      case 1: "bf";
+      case 2: "gf";
+      default: "dad";
+    };
+  }
+
+  /** Psych holds the cheer for the event's duration, then returns to idle. */
+  static function playPsychHey(character:Null<BaseCharacter>, animation:String, duration:Float):Void
+  {
+    if (character == null || !character.hasAnimation(animation)) return;
+    character.playAnimation(animation, true);
+    new FlxTimer().start(duration, function(_:FlxTimer):Void {
+      if (character.exists && character.getCurrentAnimation() == animation) character.dance(true);
+    });
   }
 
   static function parseDynamicFloatOr(value:Dynamic, fallback:Float):Float
