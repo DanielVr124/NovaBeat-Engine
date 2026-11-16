@@ -9,6 +9,7 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import funkin.data.character.CharacterData.CharacterDataParser;
 import funkin.graphics.FunkinSprite;
+import funkin.modding.ExperienceManager;
 import funkin.util.MathUtil;
 
 /**
@@ -128,6 +129,17 @@ class HealthIcon extends FunkinSprite
    * shitty hardcoded value for a specific positioning!!!
    */
   static final POSITION_OFFSET:Int = 26;
+
+  /**
+   * Psych mods expect the two icons to flank the health divide with a clear gap.
+   * Stock songs keep the original V-Slice overlap, so this must not leak out of
+   * the Psych compatibility path.
+   */
+  static function usePsychIconGap():Bool
+  {
+    if (PlayState.instance == null || PlayState.instance.currentSong == null) return false;
+    return ExperienceManager.isPsychSong(PlayState.instance.currentSong.id);
+  }
 
   public var iconOffset:FlxPoint = FlxPoint.get();
 
@@ -299,14 +311,14 @@ class HealthIcon extends FunkinSprite
           // which read as them touching instead of flanking the divide.
           this.x = PlayState.instance.healthBar.x
             + (PlayState.instance.healthBar.width * (FlxMath.remapToRange(PlayState.instance.healthBar.value, 0, 2, 100, 0) * 0.01))
-            + POSITION_OFFSET;
+            + (usePsychIconGap() ? POSITION_OFFSET : -POSITION_OFFSET);
         case 1: // Dad
           // Update the animation based on the current state.
           updateHealthIcon(MAXIMUM_HEALTH - PlayState.instance.health);
           // Mirrored against the boundary, leaving the same gap on this side.
           this.x = PlayState.instance.healthBar.x
             + (PlayState.instance.healthBar.width * (FlxMath.remapToRange(PlayState.instance.healthBar.value, 0, 2, 100, 0) * 0.01))
-            - this.width - POSITION_OFFSET;
+            - this.width - (usePsychIconGap() ? POSITION_OFFSET : -POSITION_OFFSET);
       }
       // Keep the icon centered vertically on the health bar.
       this.y = PlayState.instance.healthBar.y - (this.height / 2); // - (PlayState.instance.healthBar.height / 2)
