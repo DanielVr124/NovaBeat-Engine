@@ -459,6 +459,52 @@ class HealthIcon extends FunkinSprite
     }
   }
 
+  /**
+   * Width of the idle frame inside a trimmed icon strip. Returns the full width
+   * when the image is a single frame with no internal gap.
+   */
+  static function idleFrameWidth(bitmap:openfl.display.BitmapData):Int
+  {
+    var width:Int = bitmap.width;
+    var height:Int = bitmap.height;
+    var bestStart:Int = -1;
+    var bestLength:Int = 0;
+    var runStart:Int = -1;
+
+    for (x in 0...width)
+    {
+      var empty:Bool = true;
+      for (y in 0...height)
+      {
+        if ((bitmap.getPixel32(x, y) >>> 24) != 0)
+        {
+          empty = false;
+          break;
+        }
+      }
+
+      if (empty)
+      {
+        if (runStart < 0) runStart = x;
+      }
+      else if (runStart >= 0)
+      {
+        var runLength:Int = x - runStart;
+        if (runLength > bestLength)
+        {
+          bestLength = runLength;
+          bestStart = runStart;
+        }
+        runStart = -1;
+      }
+    }
+
+    // A gap that touches an edge is just transparent padding, not a frame break.
+    if (bestStart <= 0 || bestStart + bestLength >= width) return width;
+    if (bestLength < 4) return width;
+    return bestStart;
+  }
+
   function resolveIconImagePath(charId:String):String
   {
     if (psychAssetSongId == null) return Paths.image('icons/icon-$charId');
@@ -540,6 +586,8 @@ class HealthIcon extends FunkinSprite
         var frameWidth:Int = cellSize;
         var frameHeight:Int = cellSize;
 
+        var croppedIdle:Null<openfl.display.BitmapData> = null;
+
         var bitmap:Null<openfl.display.BitmapData> = openfl.Assets.getBitmapData(iconPath);
         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0)
         {
@@ -548,21 +596,33 @@ class HealthIcon extends FunkinSprite
             frameWidth = cellSize;
             frameHeight = cellSize;
           }
-          else if (bitmap.width >= Math.round(bitmap.height * 1.4))
-          {
-            // Two trimmed frames side by side (idle + losing). Treated as one
-            // image both faces were drawn at once; split them instead.
-            frameWidth = Math.round(bitmap.width / 2);
-            frameHeight = bitmap.height;
-          }
           else
           {
-            frameWidth = bitmap.width;
-            frameHeight = bitmap.height;
+            // Mods trim each frame separately, so the cells are NOT equal width
+            // (Capuchin's faces are 104 and 108 wide with a 31px gap). A uniform
+            // grid therefore draws two half-faces at once. Cut at the real gap
+            // and use the idle face.
+            var idleWidth:Int = idleFrameWidth(bitmap);
+            if (idleWidth < bitmap.width)
+            {
+              croppedIdle = new openfl.display.BitmapData(idleWidth, bitmap.height, true, 0x00000000);
+              croppedIdle.copyPixels(bitmap, new openfl.geom.Rectangle(0, 0, idleWidth, bitmap.height),
+                new openfl.geom.Point(0, 0));
+              frameWidth = idleWidth;
+              frameHeight = bitmap.height;
+            }
+            else
+            {
+              frameWidth = bitmap.width;
+              frameHeight = bitmap.height;
+            }
           }
         }
 
-        loadGraphic(iconPath, true, frameWidth, frameHeight);
+        if (croppedIdle != null)
+          loadGraphic(croppedIdle, true, frameWidth, frameHeight);
+        else
+          loadGraphic(iconPath, true, frameWidth, frameHeight);
         loadAnimationOld();
       }
 
