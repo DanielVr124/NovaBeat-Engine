@@ -2312,9 +2312,17 @@ class PsychGameplayApi
       for (member in stage.members)
         if (member != null && member.visible) visibleMembers++;
       collectScreenCovers(state, stage.members, covers);
+      // The camera matters as much as the props: a stage scrolled or zoomed off
+      // screen renders exactly like a black world.
+      var cameraInfo:String = 'noCamGame';
+      if (state.camGame != null)
+        cameraInfo = 'scroll=' + Std.string(Math.round(state.camGame.scroll.x)) + ',' + Std.string(Math.round(state.camGame.scroll.y))
+          + ' zoom=' + Std.string(Math.round(state.camGame.zoom * 100) / 100)
+          + ' target=' + (state.camGame.target == null ? 'none' : Type.getClassName(Type.getClass(state.camGame.target)));
       trace('[Psych API] World at ' + phase + ': stageVisible=' + stage.visible + ' stageAlpha=' + Std.string(stage.alpha)
         + ' stageMembers=' + stage.members.length + ' visible=' + visibleMembers
-        + ' scriptProps=' + scriptStageProps.length + ' drawable=' + scriptDrawable);
+        + ' scriptProps=' + scriptStageProps.length + ' drawable=' + scriptDrawable
+        + ' inState=' + (state.members.indexOf(stage) >= 0) + ' ' + cameraInfo);
     }
     else
       trace('[Psych API] World at ' + phase + ': no current stage.');
