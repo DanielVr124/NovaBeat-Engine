@@ -2332,18 +2332,22 @@ class PsychGameplayApi
       trace('[Psych API] World at ' + phase + ': screen covers -> ' + covers.join(' | '));
   }
 
-  static function collectScreenCovers(state:PlayState, list:Array<FlxBasic>, covers:Array<String>):Void
+  static function collectScreenCovers(state:PlayState, list:Array<Dynamic>, covers:Array<String>):Void
   {
-    for (member in list)
+    for (entry in list)
     {
-      if (member == null || !member.visible) continue;
-      if (!Std.isOfType(member, FlxSprite)) continue;
-      var sprite:FlxSprite = cast member;
+      if (entry == null) continue;
+      if (!Std.isOfType(entry, FlxSprite)) continue;
+      var sprite:FlxSprite = cast entry;
+      if (!sprite.visible) continue;
       if (sprite.graphic == null) continue;
       if (sprite.alpha <= 0.9) continue;
       if (sprite.width * Math.abs(sprite.scale.x) < FlxG.width * 0.95) continue;
       if (sprite.height * Math.abs(sprite.scale.y) < FlxG.height * 0.95) continue;
-      var tag:String = sprite.name == null || sprite.name.length == 0 ? 'sprite' : sprite.name;
+      // FlxSprite has no name field here, so report the class: it still tells
+      // a Psych script sprite from engine scenery in the log.
+      var tag:Null<String> = Type.getClassName(Type.getClass(sprite));
+      if (tag == null) tag = 'sprite';
       var cameraLayer:String = sprite.cameras == null ? 'none' : (sprite.cameras.indexOf(state.camHUD) >= 0 ? 'hud' : 'world');
       covers.push(tag + ' cam=' + cameraLayer + ' z=' + Std.string(sprite.zIndex)
         + ' ' + Std.string(Math.round(sprite.width * Math.abs(sprite.scale.x))) + 'x'
