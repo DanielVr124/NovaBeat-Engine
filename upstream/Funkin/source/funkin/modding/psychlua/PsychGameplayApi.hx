@@ -2243,6 +2243,30 @@ class PsychGameplayApi
     }
   }
 
+  /**
+   * Hide the native placeholder stage only once a Psych stage script has
+   * actually built scenery.
+   *
+   * Psych's stages/<name>.lua scripts construct the backdrop by adding sprites
+   * to the state during onCreate. The placeholder used to be hidden as soon as
+   * such a script existed, so a script whose images failed to resolve, or that
+   * errored before adding anything, left the song with a black world and a
+   * fully working HUD. Compare the state's child count across the lifecycle
+   * callbacks and only hide the placeholder when the script added props.
+   */
+  public static function hideDefaultStagePropsIfScriptsBuiltScenery(state:PlayState, childrenBeforeCreate:Int):Void
+  {
+    if (state == null || state.currentStage == null) return;
+    var added:Int = state.members.length - childrenBeforeCreate;
+    if (added <= 0)
+    {
+      trace('[Psych API] Stage script added no props during onCreate; keeping the native stage visible.');
+      return;
+    }
+    hideDefaultStageProps(state);
+    trace('[Psych API] Stage script added ' + added + ' props; hid the native stage.');
+  }
+
   static function playTaggedSound(soundPath:String, volume:Float, tag:String):Bool
   {
     if (soundPath == null || soundPath.length == 0) return false;

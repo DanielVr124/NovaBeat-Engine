@@ -326,7 +326,12 @@ class PsychScriptRuntime
       phase = 'scripts.stage.setup';
       if (loaded > 0)
       {
-        if (hasCustomStageScript) PsychGameplayApi.hideDefaultStageProps(playState);
+        // Psych stage scripts build their backdrop during onCreate by adding
+        // sprites to the state, so the native placeholder may only be hidden
+        // once that callback has proven it drew something. Hiding it here, on
+        // the mere existence of a stages/*.lua file, turned a script whose
+        // images failed to resolve into a black song with a working HUD.
+        pendingStageHideState = hasCustomStageScript ? playState : null;
         if (deferLifecycleCallbacks)
           pendingSongLifecycleCallbacks = true;
         else
@@ -356,12 +361,19 @@ class PsychScriptRuntime
     return loaded;
   }
 
+  /** PlayState whose stage script may replace the native stage's props. */
+  static var pendingStageHideState:Null<PlayState> = null;
+
   /** Dispatch lifecycle callbacks after song notes and chart events have been prepared. */
   public static function dispatchLoadedCallbacks():Void
   {
     if (!pendingSongLifecycleCallbacks) return;
     pendingSongLifecycleCallbacks = false;
     if (scripts.length == 0) return;
+
+    var stageHideState:Null<PlayState> = pendingStageHideState;
+    pendingStageHideState = null;
+    var childrenBeforeCreate:Int = stageHideState == null ? 0 : stageHideState.members.length;
 
     if (activeDiagnosticSongId.length > 0)
       PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onCreate.begin');
@@ -374,6 +386,9 @@ class PsychScriptRuntime
     dispatch("onSongLoaded", []);
     if (activeDiagnosticSongId.length > 0)
       PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onSongLoaded.complete');
+
+    if (stageHideState != null)
+      PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(stageHideState, childrenBeforeCreate);
   }
 
   public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
@@ -531,9 +546,34 @@ class PsychScriptRuntime
     if (state != null) PsychGameplayApi.updateGlobals(state);
   }
 
+  /** Peak/mean cost of one per-frame onUpdate pass, reported every ~2 seconds. */
+  static var updateCostFrames:Int = 0;
+  static var updateCostTotal:Float = 0;
+  static var updateCostPeak:Float = 0;
+
   public static function updateFrame(elapsed:Float):Void
   {
+    var started:Float = haxe.Timer.stamp();
     dispatch("onUpdate", [elapsed]);
+    var costMs:Float = (haxe.Timer.stamp() - started) * 1000;
+
+    updateCostFrames++;
+    updateCostTotal += costMs;
+    if (costMs > updateCostPeak) updateCostPeak = costMs;
+    if (updateCostFrames < 120) return;
+
+    // A 60fps frame is 16.6ms. Only report passes that actually eat frame time,
+    // so a mod whose scripts are cheap leaves no line in the log at all.
+    if (updateCostPeak > 4 || updateCostTotal / updateCostFrames > 2)
+    {
+      var average:Float = updateCostTotal / updateCostFrames;
+      trace('[Psych Lua] onUpdate cost: avg=' + Std.string(Math.round(average * 100) / 100)
+        + 'ms peak=' + Std.string(Math.round(updateCostPeak * 100) / 100)
+        + 'ms scripts=' + scripts.length);
+    }
+    updateCostFrames = 0;
+    updateCostTotal = 0;
+    updateCostPeak = 0;
   }
 
   /**
