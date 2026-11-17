@@ -364,6 +364,9 @@ class PsychScriptRuntime
   /** PlayState whose stage script may replace the native stage's props. */
   static var pendingStageHideState:Null<PlayState> = null;
 
+  /** PlayState still waiting for scenery to appear after the countdown. */
+  static var stageHideCandidate:Null<PlayState> = null;
+
   /** Dispatch lifecycle callbacks after song notes and chart events have been prepared. */
   public static function dispatchLoadedCallbacks():Void
   {
@@ -373,7 +376,6 @@ class PsychScriptRuntime
 
     var stageHideState:Null<PlayState> = pendingStageHideState;
     pendingStageHideState = null;
-    var childrenBeforeCreate:Int = stageHideState == null ? 0 : stageHideState.members.length;
 
     if (activeDiagnosticSongId.length > 0)
       PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onCreate.begin');
@@ -387,8 +389,34 @@ class PsychScriptRuntime
     if (activeDiagnosticSongId.length > 0)
       PsychModRuntime.logSongLaunchStep(activeDiagnosticSongId, activeDiagnosticDifficulty, 'scripts.lifecycle.onSongLoaded.complete');
 
-    if (stageHideState != null)
-      PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(stageHideState, childrenBeforeCreate);
+    if (stageHideState != null
+      && !PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(stageHideState, 'onCreate/onSongLoaded'))
+    {
+      // Psych stage scripts often build their backdrop in onStartCountdown or
+      // from timers started there, after onCreate has already run. Keep the
+      // song on the native stage for now and give that scenery a second chance
+      // once the countdown is over, so a script that did draw is not stuck
+      // behind the placeholder and a script that drew nothing never leaves a
+      // black world.
+      stageHideCandidate = stageHideState;
+    }
+  }
+
+  /**
+   * Re-check stage scenery once the countdown has ended.
+   *
+   * The native placeholder is only ever hidden when the script has props of
+   * its own, so a stage script whose images never resolved keeps the native
+   * stage instead of leaving the song black behind a working HUD.
+   *
+   * @return true when the native stage props were hidden.
+   */
+  public static function evaluateStageHideAfterCountdown():Bool
+  {
+    var state:Null<PlayState> = stageHideCandidate;
+    stageHideCandidate = null;
+    if (state == null) return false;
+    return PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(state, 'the countdown');
   }
 
   public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
@@ -947,6 +975,8 @@ class PsychScriptRuntime
   {
     executingScript = null;
     pendingSongLifecycleCallbacks = false;
+    pendingStageHideState = null;
+    stageHideCandidate = null;
     for (script in scripts)
       script.destroy();
     scripts.resize(0);

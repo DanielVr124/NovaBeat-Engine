@@ -3448,6 +3448,10 @@ class PlayState extends MusicBeatSubState
 
     dispatchEvent(new ScriptEvent(SONG_START));
     PsychScriptRuntime.dispatch("onSongStart", []);
+    // Psych stages may build their backdrop after onCreate (onStartCountdown,
+    // timers), so re-check once the countdown is over. A script that never
+    // drew anything keeps the native stage rather than a black world.
+    PsychScriptRuntime.evaluateStageHideAfterCountdown();
 
     #if FEATURE_NEWGROUNDS
     Events.logStartSong(currentSong.id, currentVariation);

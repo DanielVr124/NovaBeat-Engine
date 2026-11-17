@@ -1468,6 +1468,7 @@ class PsychGameplayApi
         if (inFront) state.add(sprite);
         else state.insert(0, sprite);
       }
+      markScriptStageProp(sprite);
       return true;
     });
     vars.set("removeLuaSprite", function(tag:String, ?destroy:Bool = true):Bool
@@ -1701,13 +1702,19 @@ class PsychGameplayApi
     vars.set("add", function(object:Dynamic):Dynamic
     {
       if (object != null && Std.isOfType(object, FlxBasic))
+      {
         state.add(cast object);
+        markScriptStageProp(object);
+      }
       return object;
     });
     vars.set("insert", function(index:Int, object:Dynamic):Dynamic
     {
       if (object != null && Std.isOfType(object, FlxBasic))
+      {
         state.insert(index, cast object);
+        markScriptStageProp(object);
+      }
       return object;
     });
     vars.set("remove", function(object:Dynamic, ?destroy:Bool = false):Dynamic
@@ -2233,38 +2240,84 @@ class PsychGameplayApi
     #end
   }
 
+  /** Every prop a Psych script added to the world this song. */
+  static var scriptStageProps:Array<FlxBasic> = [];
+
+  /** True once the native stage props were replaced by a Psych script. */
+  public static var nativeStagePropsHidden:Bool = false;
+
+  /**
+   * Remember that a Psych script added this object to the world.
+   *
+   * Psych scenery is added into the stage group, next to the native props, so
+   * hiding "every non-character stage member" also hid the mod's own backdrop
+   * and left the song black. Tracking the script's objects lets the hide skip
+   * them.
+   */
+  public static function markScriptStageProp(object:Dynamic):Void
+  {
+    if (object == null || !Std.isOfType(object, FlxBasic)) return;
+    var basic:FlxBasic = cast object;
+    if (scriptStageProps.indexOf(basic) >= 0) return;
+    scriptStageProps.push(basic);
+  }
+
+  static function isScriptStageProp(member:FlxBasic):Bool
+  {
+    for (prop in scriptStageProps)
+      if (prop == member) return true;
+    return false;
+  }
+
+  /** Hide the props the engine built for the stage, keeping characters and
+   * props a Psych script added itself visible. */
   public static function hideDefaultStageProps(state:PlayState):Void
   {
     if (state == null || state.currentStage == null) return;
+    var hidden:Int = 0;
     for (member in state.currentStage.members)
     {
       if (member == null || Std.isOfType(member, BaseCharacter)) continue;
+      if (isScriptStageProp(member)) continue;
+      if (!member.visible) continue;
       member.visible = false;
+      hidden++;
     }
+    state.currentStage.refresh();
+    nativeStagePropsHidden = true;
+    trace('[Psych API] Hid ' + hidden + ' native stage props, kept ' + scriptStageProps.length + ' script props visible.');
   }
 
   /**
    * Hide the native placeholder stage only once a Psych stage script has
    * actually built scenery.
    *
-   * Psych's stages/<name>.lua scripts construct the backdrop by adding sprites
-   * to the state during onCreate. The placeholder used to be hidden as soon as
-   * such a script existed, so a script whose images failed to resolve, or that
+   * Psych's stages/<name>.lua scripts construct the backdrop with their own
+   * sprites, and they may do it in onCreate, in onStartCountdown, or from a
+   * timer started in either. The placeholder used to be hidden as soon as such
+   * a script existed, so a script whose images failed to resolve, or that
    * errored before adding anything, left the song with a black world and a
-   * fully working HUD. Compare the state's child count across the lifecycle
-   * callbacks and only hide the placeholder when the script added props.
+   * fully working HUD.
+   *
+   * Counting the script's own props - rather than the state's child count,
+   * which the countdown sprites change too, and which addLuaSprite never
+   * touches because it builds the backdrop inside the stage group - lets the
+   * stage be hidden whenever scenery exists and kept whenever it does not.
+   *
+   * @return true when the native stage is hidden (now or earlier this song).
    */
-  public static function hideDefaultStagePropsIfScriptsBuiltScenery(state:PlayState, childrenBeforeCreate:Int):Void
+  public static function hideDefaultStagePropsIfScriptsBuiltScenery(state:PlayState, phase:String):Bool
   {
-    if (state == null || state.currentStage == null) return;
-    var added:Int = state.members.length - childrenBeforeCreate;
-    if (added <= 0)
+    if (nativeStagePropsHidden) return true;
+    if (state == null || state.currentStage == null) return false;
+    if (scriptStageProps.length == 0)
     {
-      trace('[Psych API] Stage script added no props during onCreate; keeping the native stage visible.');
-      return;
+      trace('[Psych API] Stage script built no props by ' + phase + '; keeping the native stage visible.');
+      return false;
     }
     hideDefaultStageProps(state);
-    trace('[Psych API] Stage script added ' + added + ' props; hid the native stage.');
+    trace('[Psych API] Stage script built ' + scriptStageProps.length + ' props, checked at ' + phase + '; hid the native stage.');
+    return true;
   }
 
   static function playTaggedSound(soundPath:String, volume:Float, tag:String):Bool
@@ -2505,6 +2558,8 @@ class PsychGameplayApi
 
   public static function clear():Void
   {
+    scriptStageProps.resize(0);
+    nativeStagePropsHidden = false;
     activeCustomSubstate = null;
     customSubstateObjects.clear();
     for (tween in activeTweens)
@@ -3503,6 +3558,7 @@ class PsychGameplayApi
     if (!Std.isOfType(instance, FlxBasic)) return false;
     if (inFront) state.add(cast instance);
     else state.insert(0, cast instance);
+    markScriptStageProp(instance);
     return true;
   }
 
