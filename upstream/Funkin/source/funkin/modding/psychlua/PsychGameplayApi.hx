@@ -2269,6 +2269,80 @@ class PsychGameplayApi
     return false;
   }
 
+  /**
+   * True when a prop a script added has something to draw.
+   *
+   * A sprite whose image never resolved, or that the script made invisible,
+   * covers nothing: counting it as scenery would hide the native stage for a
+   * backdrop that does not exist.
+   */
+  static function isDrawableStageProp(prop:FlxBasic):Bool
+  {
+    if (prop == null) return false;
+    if (Std.isOfType(prop, FlxSprite))
+    {
+      var sprite:FlxSprite = cast prop;
+      var hasGraphic:Bool = sprite.graphic != null || (sprite.frames != null && sprite.frames.numFrames > 0);
+      return hasGraphic && sprite.visible && sprite.alpha > 0 && sprite.scale.x != 0 && sprite.scale.y != 0;
+    }
+    // Characters and other drawable objects are assumed to render.
+    return true;
+  }
+
+  /**
+   * Log what is actually drawing on the world camera.
+   *
+   * A world that renders black with a working HUD means something is covering
+   * camGame, or the stage group is hidden or empty. Printing the stage state
+   * and every visible sprite large enough to cover the screen names the cause
+   * instead of leaving it to be guessed from pixels.
+   */
+  public static function logWorldScreenState(state:PlayState, phase:String):Void
+  {
+    if (state == null) return;
+    var covers:Array<String> = [];
+    var scriptDrawable:Int = 0;
+    for (prop in scriptStageProps)
+      if (isDrawableStageProp(prop)) scriptDrawable++;
+
+    var stage = state.currentStage;
+    if (stage != null)
+    {
+      var visibleMembers:Int = 0;
+      for (member in stage.members)
+        if (member != null && member.visible) visibleMembers++;
+      collectScreenCovers(state, stage.members, covers);
+      trace('[Psych API] World at ' + phase + ': stageVisible=' + stage.visible + ' stageAlpha=' + Std.string(stage.alpha)
+        + ' stageMembers=' + stage.members.length + ' visible=' + visibleMembers
+        + ' scriptProps=' + scriptStageProps.length + ' drawable=' + scriptDrawable);
+    }
+    else
+      trace('[Psych API] World at ' + phase + ': no current stage.');
+
+    collectScreenCovers(state, state.members, covers);
+    if (covers.length > 0)
+      trace('[Psych API] World at ' + phase + ': screen covers -> ' + covers.join(' | '));
+  }
+
+  static function collectScreenCovers(state:PlayState, list:Array<FlxBasic>, covers:Array<String>):Void
+  {
+    for (member in list)
+    {
+      if (member == null || !member.visible) continue;
+      if (!Std.isOfType(member, FlxSprite)) continue;
+      var sprite:FlxSprite = cast member;
+      if (sprite.graphic == null) continue;
+      if (sprite.alpha <= 0.9) continue;
+      if (sprite.width * Math.abs(sprite.scale.x) < FlxG.width * 0.95) continue;
+      if (sprite.height * Math.abs(sprite.scale.y) < FlxG.height * 0.95) continue;
+      var tag:String = sprite.name == null || sprite.name.length == 0 ? 'sprite' : sprite.name;
+      var cameraLayer:String = sprite.cameras == null ? 'none' : (sprite.cameras.indexOf(state.camHUD) >= 0 ? 'hud' : 'world');
+      covers.push(tag + ' cam=' + cameraLayer + ' z=' + Std.string(sprite.zIndex)
+        + ' ' + Std.string(Math.round(sprite.width * Math.abs(sprite.scale.x))) + 'x'
+        + Std.string(Math.round(sprite.height * Math.abs(sprite.scale.y))) + ' a=' + Std.string(sprite.alpha));
+    }
+  }
+
   /** Hide the props the engine built for the stage, keeping characters and
    * props a Psych script added itself visible. */
   public static function hideDefaultStageProps(state:PlayState):Void
@@ -2310,13 +2384,19 @@ class PsychGameplayApi
   {
     if (nativeStagePropsHidden) return true;
     if (state == null || state.currentStage == null) return false;
-    if (scriptStageProps.length == 0)
+
+    var drawable:Int = 0;
+    for (prop in scriptStageProps)
+      if (isDrawableStageProp(prop)) drawable++;
+
+    if (drawable == 0)
     {
-      trace('[Psych API] Stage script built no props by ' + phase + '; keeping the native stage visible.');
+      trace('[Psych API] Stage script added ' + scriptStageProps.length + ' props but none can draw by ' + phase
+        + '; keeping the native stage visible.');
       return false;
     }
     hideDefaultStageProps(state);
-    trace('[Psych API] Stage script built ' + scriptStageProps.length + ' props, checked at ' + phase + '; hid the native stage.');
+    trace('[Psych API] Stage script built ' + drawable + ' drawable props, checked at ' + phase + '; hid the native stage.');
     return true;
   }
 

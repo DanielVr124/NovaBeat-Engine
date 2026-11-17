@@ -1386,6 +1386,19 @@ class PsychModRuntime
           }
         }
 
+        // A stage object whose image never resolved draws nothing. Counting it
+        // still hid the native stage for a backdrop that was not there, which
+        // is a black world behind a working HUD; keep the placeholder instead
+        // and log the name so the missing asset is obvious.
+        var loadedContent:Bool = type == "animatedSprite"
+          ? (sprite.frames != null && sprite.frames.numFrames > 0)
+          : (sprite.graphic != null);
+        if (!loadedContent)
+        {
+          logPsychStageStep(songId, "stage-object-missing", "type=" + type + " image=" + imageName);
+          continue;
+        }
+
         // Psych draws these in JSON order, in front of the backdrop and behind
         // the characters. The native placeholder stage also uses zIndex 0, and
         // the stage sort is not stable, so without an explicit rank the
@@ -1408,6 +1421,11 @@ class PsychModRuntime
     {
       psychSongsWithStageObjects.set(songId, true);
       hidePlaceholderStageProps(stage, songId);
+    }
+    else
+    {
+      var listed:Int = cast(objects, Array<Dynamic>).length;
+      logPsychStageStep(songId, "stage-objects.none-loaded", "listed=" + listed + " - keeping the native stage visible");
     }
 
     logPsychStageStep(songId, "stage-objects", "created=" + created);

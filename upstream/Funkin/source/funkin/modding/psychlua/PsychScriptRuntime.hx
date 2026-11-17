@@ -416,8 +416,18 @@ class PsychScriptRuntime
     var state:Null<PlayState> = stageHideCandidate;
     stageHideCandidate = null;
     if (state == null) return false;
-    return PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(state, 'the countdown');
+    var hidden:Bool = PsychGameplayApi.hideDefaultStagePropsIfScriptsBuiltScenery(state, 'the countdown');
+    PsychGameplayApi.logWorldScreenState(state, 'the countdown end');
+    // Report again once the song has been running for a moment: a cover sprite
+    // a script shows later is otherwise only visible on the player's screen.
+    worldProbeState = state;
+    worldProbeFrames = 200;
+    return hidden;
   }
+
+  /** PlayState waiting for the second world-state report. */
+  static var worldProbeState:Null<PlayState> = null;
+  static var worldProbeFrames:Int = 0;
 
   public static function openCustomSubstate(playState:PlayState, name:String, pauseGame:Bool = false):Bool
   {
@@ -581,6 +591,16 @@ class PsychScriptRuntime
 
   public static function updateFrame(elapsed:Float):Void
   {
+    if (worldProbeFrames > 0)
+    {
+      worldProbeFrames--;
+      if (worldProbeFrames == 0)
+      {
+        PsychGameplayApi.logWorldScreenState(worldProbeState, 'about 3 seconds into the song');
+        worldProbeState = null;
+      }
+    }
+
     var started:Float = haxe.Timer.stamp();
     dispatch("onUpdate", [elapsed]);
     var costMs:Float = (haxe.Timer.stamp() - started) * 1000;
@@ -977,6 +997,8 @@ class PsychScriptRuntime
     pendingSongLifecycleCallbacks = false;
     pendingStageHideState = null;
     stageHideCandidate = null;
+    worldProbeState = null;
+    worldProbeFrames = 0;
     for (script in scripts)
       script.destroy();
     scripts.resize(0);
